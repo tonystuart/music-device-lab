@@ -13,6 +13,7 @@
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "esp_log.h"
+#include "driver/gpio.h"
 #include "driver/dac.h"
 #include "driver/i2s.h"
 #include "ysw_common.h"

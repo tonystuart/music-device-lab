@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "stdint.h"
+
 typedef enum {
     YSW_SYNTHESIZER_NOTE_ON,
     YSW_SYNTHESIZER_NOTE_OFF,

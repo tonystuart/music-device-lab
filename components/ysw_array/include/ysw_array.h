@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "assert.h"
 #include "esp_log.h"
 #include "ysw_heap.h"
 
