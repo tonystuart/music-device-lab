@@ -485,7 +485,11 @@ gatts_event_handler BLEDevice::m_customGattsHandler = nullptr;
  */
 void BLEDevice::whiteListAdd(BLEAddress address) {
 	ESP_LOGD(LOG_TAG, ">> whiteListAdd: %s", address.toString().c_str());
+#if ESP_IDF_VERSION_MAJOR == 3
 	esp_err_t errRc = esp_ble_gap_update_whitelist(true, *address.getNative());  // True to add an entry.
+#elif ESP_IDF_VERSION_MAJOR >= 4
+	esp_err_t errRc = esp_ble_gap_update_whitelist(true, *address.getNative(), BLE_WL_ADDR_TYPE_PUBLIC);  // True to add an entry.
+#endif
 	if (errRc != ESP_OK) {
 		ESP_LOGE(LOG_TAG, "esp_ble_gap_update_whitelist: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
 	}
@@ -499,7 +503,11 @@ void BLEDevice::whiteListAdd(BLEAddress address) {
  */
 void BLEDevice::whiteListRemove(BLEAddress address) {
 	ESP_LOGD(LOG_TAG, ">> whiteListRemove: %s", address.toString().c_str());
+#if ESP_IDF_VERSION_MAJOR == 3
 	esp_err_t errRc = esp_ble_gap_update_whitelist(false, *address.getNative());  // False to remove an entry.
+#elif ESP_IDF_VERSION_MAJOR >= 4
+	esp_err_t errRc = esp_ble_gap_update_whitelist(false, *address.getNative(), BLE_WL_ADDR_TYPE_PUBLIC);  // False to remove an entry.
+#endif
 	if (errRc != ESP_OK) {
 		ESP_LOGE(LOG_TAG, "esp_ble_gap_update_whitelist: rc=%d %s", errRc, GeneralUtils::errorToString(errRc));
 	}
