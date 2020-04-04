@@ -40,7 +40,7 @@ class MyServerCallbacks: public BLEServerCallbacks {
 };
 
 static void initialize() {
-    BLEDevice::init("ESP32 MIDI Synthesizer Client");
+    BLEDevice::init("ESP32 MIDI");
 
     // Create the BLE Server
     BLEServer *pServer = BLEDevice::createServer();
