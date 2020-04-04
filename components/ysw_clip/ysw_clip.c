@@ -99,3 +99,7 @@ note_t *ysw_clip_get_notes(ysw_clip_t *sequence)
     return notes;
 }
 
+uint32_t ysw_get_note_count(ysw_clip_t *sequence)
+{
+    return ysw_array_get_count(sequence->chords) * ysw_array_get_count(sequence->chord_notes);
+}

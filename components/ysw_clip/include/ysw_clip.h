@@ -60,4 +60,4 @@ void ysw_clip_set_instrument(ysw_clip_t *sequence, uint8_t instrument);
 void ysw_clip_set_percent_tempo(ysw_clip_t *sequence, uint8_t percent_tempo);
 void ysw_clip_set_measure_duration(ysw_clip_t *sequence, uint32_t measure_duration);
 note_t *ysw_clip_get_notes(ysw_clip_t *sequence);
-
+uint32_t ysw_get_note_count(ysw_clip_t *sequence);
