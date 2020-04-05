@@ -106,7 +106,7 @@ void app_main()
 
     for (int i = 15; i > 0; i--) {
         ESP_LOGW(TAG, "%d - please connect the synthesizer", i);
-        vTaskDelay(15000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 
     message = (ysw_sequencer_message_t){
