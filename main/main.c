@@ -13,6 +13,8 @@
 #include "ysw_message.h"
 #include "ysw_clip.h"
 
+#define TAG "MAIN"
+
 static QueueHandle_t synthesizer_queue;
 static QueueHandle_t sequencer_queue;
 
@@ -78,10 +80,9 @@ void app_main()
     ysw_clip_add_chord(s, I);
 
     ysw_clip_set_tonic(s, 36);
-    ysw_clip_set_instrument(s, 32);
     ysw_clip_set_measure_duration(s, 2000);
     ysw_clip_set_percent_tempo(s, 100);
-    ysw_clip_set_instrument(s, 0);
+    ysw_clip_set_instrument(s, 32);
     note_t *notes = ysw_clip_get_notes(s);
     assert(notes);
 
@@ -108,6 +109,11 @@ void app_main()
     };
 
     ysw_message_send(sequencer_queue, &message);
+
+    for (int i = 15; i > 0; i--) {
+        ESP_LOGW(TAG, "%d - please connect the synthesizer", i);
+        vTaskDelay(15000 / portTICK_PERIOD_MS);
+    }
 
     message = (ysw_sequencer_message_t){
         .type = YSW_SEQUENCER_PLAY,
