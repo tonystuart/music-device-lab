@@ -49,6 +49,8 @@ static void on_program_change(uint8_t channel, uint8_t program)
     ysw_message_send(synthesizer_queue, &message);
 }
 
+#define TWELVE_BAR_BLUES 1
+
 void app_main()
 {
     esp_log_level_set("BLEServer", ESP_LOG_INFO);
@@ -57,6 +59,7 @@ void app_main()
 
     ysw_clip_t *s = ysw_clip_create();
 
+#ifdef TWELVE_BAR_BLUES
     ysw_clip_add_chord_note(s, ysw_chord_note_create(1, 100, 0, 230));
     ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 250, 230));
     ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 80, 500, 230));
@@ -65,6 +68,10 @@ void app_main()
     ysw_clip_add_chord_note(s, ysw_chord_note_create(6, 80, 1250, 230));
     ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 80, 1500, 230));
     ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 1750, 230));
+
+    ysw_clip_set_chord_duration(s, 2000);
+    ysw_clip_set_instrument(s, 32);
+    ysw_clip_set_tonic(s, 36);
 
     ysw_clip_add_chord(s, I);
     ysw_clip_add_chord(s, I);
@@ -78,11 +85,73 @@ void app_main()
     ysw_clip_add_chord(s, IV);
     ysw_clip_add_chord(s, I);
     ysw_clip_add_chord(s, I);
+#endif
 
-    ysw_clip_set_tonic(s, 36);
-    ysw_clip_set_measure_duration(s, 2000);
+#ifdef LET_IT_BE
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(1, 100, 0, 1000));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 50, 1000));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 80, 100, 1000));
+
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(1, 100, 1100, 500));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 1150, 500));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 80, 1200, 500));
+
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(1, 100, 1700, 250));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 1750, 250));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 80, 1800, 250));
+
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 100, 2050, 250));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 2100, 250));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(1, 80, 2150, 250));
+    ysw_clip_set_chord_duration(s, 2400);
+
+    ysw_clip_set_instrument(s, 25);
+    ysw_clip_set_tonic(s, 48);
+
+    // Verse
+
+    ysw_clip_add_chord(s, I);
+    ysw_clip_add_chord(s, V);
+
+    ysw_clip_add_chord(s, vi);
+    ysw_clip_add_chord(s, IV);
+
+    ysw_clip_add_chord(s, I);
+    ysw_clip_add_chord(s, V);
+
+    ysw_clip_add_chord(s, IV);
+    ysw_clip_add_chord(s, I);
+
+    // Repeat
+
+    ysw_clip_add_chord(s, I);
+    ysw_clip_add_chord(s, V);
+
+    ysw_clip_add_chord(s, vi);
+    ysw_clip_add_chord(s, IV);
+
+    ysw_clip_add_chord(s, I);
+    ysw_clip_add_chord(s, V);
+
+    ysw_clip_add_chord(s, IV);
+    ysw_clip_add_chord(s, I);
+
+    // Chorus
+
+    ysw_clip_add_chord(s, vi);
+    ysw_clip_add_chord(s, V);
+
+    ysw_clip_add_chord(s, IV);
+    ysw_clip_add_chord(s, I);
+
+    ysw_clip_add_chord(s, I);
+    ysw_clip_add_chord(s, V);
+
+    ysw_clip_add_chord(s, IV);
+    ysw_clip_add_chord(s, I);
+#endif
+
     ysw_clip_set_percent_tempo(s, 100);
-    ysw_clip_set_instrument(s, 32);
     note_t *notes = ysw_clip_get_notes(s);
     assert(notes);
 
@@ -104,7 +173,7 @@ void app_main()
 
     ysw_message_send(sequencer_queue, &message);
 
-    for (int i = 15; i > 0; i--) {
+    for (int i = 20; i > 0; i--) {
         ESP_LOGW(TAG, "%d - please connect the synthesizer", i);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }

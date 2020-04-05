@@ -47,7 +47,7 @@ typedef struct {
     uint8_t tonic;
     uint8_t instrument;
     uint8_t percent_tempo;
-    uint32_t measure_duration;
+    uint32_t chord_duration;
 } ysw_clip_t;
 
 ysw_clip_t *ysw_clip_create();
@@ -59,6 +59,6 @@ void ysw_chord_note_free(ysw_chord_note_t *ysw_chord_note);
 void ysw_clip_set_tonic(ysw_clip_t *sequence, uint8_t tonic);
 void ysw_clip_set_instrument(ysw_clip_t *sequence, uint8_t instrument);
 void ysw_clip_set_percent_tempo(ysw_clip_t *sequence, uint8_t percent_tempo);
-void ysw_clip_set_measure_duration(ysw_clip_t *sequence, uint32_t measure_duration);
+void ysw_clip_set_chord_duration(ysw_clip_t *sequence, uint32_t chord_duration);
 note_t *ysw_clip_get_notes(ysw_clip_t *sequence);
 uint32_t ysw_get_note_count(ysw_clip_t *sequence);

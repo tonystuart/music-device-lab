@@ -11,17 +11,27 @@
 
 #define TAG "YSW_CLIP"
 
-static inline int to_offset(int number)
-{
-    return number - 1;
-}
+// TODO: Change type of MIDI 7 bit quantities to int8_t
 
-static inline int to_note(int degree)
+static inline int to_note(int tonic_index, int root_number, int degree_number)
 {
-    static uint8_t major_intervals[] = {
-        0, 2, 4, 5, 7, 9, 11
+    static uint8_t intervals[7][7] = {
+        /* C */ { 0, 2, 4, 5, 7, 9, 11 },
+        /* D */ { 0, 2, 3, 5, 7, 9, 10 },
+        /* E */ { 0, 1, 3, 5, 7, 8, 10 },
+        /* F */ { 0, 2, 4, 6, 7, 9, 11 },
+        /* G */ { 0, 2, 4, 5, 7, 9, 10 },
+        /* A */ { 0, 2, 3, 5, 7, 8, 10 },
+        /* B */ { 0, 1, 3, 5, 6, 8, 10 },
     };
-    return major_intervals[to_offset(degree) % 7];
+
+    int root_index = (root_number - 1) % 7;
+    int degree_index = (degree_number - 1) % 7;
+    int root_interval = intervals[0][root_index];
+    int degree_interval = intervals[root_index][degree_index];
+    int note = tonic_index + root_interval + degree_interval;
+    ESP_LOGD(TAG, "tonic_index=%d, root_number=%d, degree_number=%d, root_interval=%d, degree_interval=%d, note=%d", tonic_index, root_number, degree_number, root_interval, degree_interval, note);
+    return note;
 }
 
 ysw_clip_t *ysw_clip_create()
@@ -32,7 +42,7 @@ ysw_clip_t *ysw_clip_create()
     ysw_clip->instrument = 0;
     ysw_clip->percent_tempo = 100;
     ysw_clip->tonic = 60;
-    ysw_clip->measure_duration = 2000;
+    ysw_clip->chord_duration = 2000;
     ESP_LOGD(TAG, "create sequence=%p", ysw_clip);
     return ysw_clip;
 }
@@ -57,7 +67,7 @@ void ysw_clip_free(ysw_clip_t *ysw_clip)
 
 ysw_chord_note_t *ysw_chord_note_create(uint8_t degree, uint8_t velocity, uint32_t time, uint32_t duration)
 {
-    ESP_LOGD(TAG, "chord_note_crate degree=%u, velocity=%u, time=%u, duration=%u", degree, velocity, time, duration);
+    ESP_LOGD(TAG, "chord_note_create degree=%u, velocity=%u, time=%u, duration=%u", degree, velocity, time, duration);
     ysw_chord_note_t *ysw_chord_note = ysw_heap_allocate(sizeof(ysw_chord_note_t));
     ysw_chord_note->time = time;
     ysw_chord_note->duration = duration;
@@ -87,14 +97,14 @@ void ysw_clip_set_percent_tempo(ysw_clip_t *sequence, uint8_t percent_tempo)
     sequence->percent_tempo = percent_tempo;
 }
 
-void ysw_clip_set_measure_duration(ysw_clip_t *sequence, uint32_t measure_duration)
+void ysw_clip_set_chord_duration(ysw_clip_t *sequence, uint32_t chord_duration)
 {
-    sequence->measure_duration = measure_duration;
+    sequence->chord_duration = chord_duration;
 }
 
 note_t *ysw_clip_get_notes(ysw_clip_t *sequence)
 {
-    int measure_time = 0;
+    int chord_time = 0;
     int chord_count = ysw_array_get_count(sequence->chords);
     int chord_note_count = ysw_array_get_count(sequence->chord_notes);
     int note_count = chord_count * chord_note_count;
@@ -104,16 +114,16 @@ note_t *ysw_clip_get_notes(ysw_clip_t *sequence)
         uint8_t chord_root = (ysw_chord_t)ysw_array_get(sequence->chords, i);
         for (int j = 0; j < chord_note_count; j++) {
             ysw_chord_note_t *chord_note = ysw_array_get(sequence->chord_notes, j);
-            note_p->time = measure_time + chord_note->time;
+            note_p->time = chord_time + chord_note->time;
             note_p->duration = chord_note->duration;
             note_p->channel = 0;
-            note_p->midi_note = sequence->tonic + to_note(chord_root) + to_note(chord_note->degree);
+            note_p->midi_note = to_note(sequence->tonic, chord_root, chord_note->degree);
             note_p->velocity = chord_note->velocity;
             note_p->instrument = sequence->instrument;
             ESP_LOGD(TAG, "time=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->time, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
             note_p++;
         }
-        measure_time += sequence->measure_duration;
+        chord_time += sequence->chord_duration;
     }
     return notes;
 }
