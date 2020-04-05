@@ -25,9 +25,9 @@ typedef bool (*visitor_t)(active_note_t *active_note, int32_t context);
 static ysw_sequencer_config_t config;
 static QueueHandle_t input_queue;
 
-static bool is_loop;
 static note_t *notes;
-static uint8_t playback_speed = PLAYBACK_SPEED_PERCENT;
+static uint8_t playback_speed = YSW_SEQUENCER_SPEED_DEFAULT;
+static int16_t loop_count;
 static uint32_t note_count;
 static uint32_t next_note;
 static uint32_t start_millis;
@@ -134,13 +134,12 @@ static void select_part(uint8_t part_index)
 
 static void initialize(ysw_sequencer_initialize_t *message)
 {
-    ESP_LOGD(TAG, "initialize notes=%p, note_count=%d, is_loop=%d", message->notes, message->note_count, message->is_loop);
+    ESP_LOGD(TAG, "initialize notes=%p, note_count=%d", message->notes, message->note_count);
     if (start_millis) {
         release_notes(all_note_visitor, 0);
     }
     notes = message->notes;
     note_count = message->note_count;
-    is_loop = message->is_loop;
     next_note = 0;
     select_part(0);
     if (start_millis) {
@@ -164,6 +163,13 @@ static void play_song()
     }
 }
 
+static void process_play(ysw_sequencer_play_t *message)
+{
+    ESP_LOGD(TAG, "process_play loop_count=%d", message->loop_count);
+    loop_count = message->loop_count;
+    play_song();
+}
+
 static void pause_song()
 {
     ESP_LOGD(TAG, "pause_song start_millis=%d, next_note=%d, note_count=%d", start_millis, next_note, note_count);
@@ -180,16 +186,16 @@ static void process_message(ysw_sequencer_message_t *message)
 {
     switch (message->type) {
         case YSW_SEQUENCER_INITIALIZE:
-            initialize(&message->initialize_message);
+            initialize(&message->initialize);
             break;
         case YSW_SEQUENCER_PLAY:
-            play_song();
+            process_play(&message->play);
             break;
         case YSW_SEQUENCER_PAUSE:
             pause_song();
             break;
         case YSW_SEQUENCER_SET_TEMPO:
-            set_tempo(message->set_tempo_message.percent);
+            set_tempo(message->set_tempo.percent);
             break;
         default:
             break;
@@ -228,8 +234,14 @@ static void run_sequencer(void* parameters)
                     ESP_LOGD(TAG, "waiting for final notes to end");
                     uint32_t delay_millis = next_note_to_end->end_time - playback_millis;
                     ticks_to_wait = to_ticks(delay_millis);
-                } else if (is_loop) {
-                    ESP_LOGD(TAG, "looping to beginning");
+                } else if (loop_count) {
+                    if (loop_count != YSW_SEQUENCER_LOOP_REPEATEDLY) {
+                        loop_count--;
+                    }
+                    ESP_LOGD(TAG, "loop_count=%d", loop_count);
+                    if (config.on_status_update) {
+                        config.on_status_update(YSW_SEQUENCER_STATUS_LOOP);
+                    }
                     next_note = 0;
                     play_song();
                     ticks_to_wait = 0;
@@ -237,6 +249,9 @@ static void run_sequencer(void* parameters)
                     next_note = 0;
                     start_millis = 0;
                     ESP_LOGD(TAG, "playback of notes is complete");
+                    if (config.on_status_update) {
+                        config.on_status_update(YSW_SEQUENCER_STATUS_DONE);
+                    }
                 }
             }
         }

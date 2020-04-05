@@ -96,16 +96,10 @@ void app_main()
 
     sequencer_queue = ysw_sequencer_create_task(&config);
 
-    // TODO: rename initialize_message -> initialize
-    // TODO: synthesizer should send message when it's done
-    // TODO: replace is_loop with loop_count (-1 for continuous, 0 for no loop, 1 to place twice, etc.
-    // TODO: consider whether loop_count should actually be part of the play message.
-
     ysw_sequencer_message_t message = {
         .type = YSW_SEQUENCER_INITIALIZE,
-        .initialize_message.notes = notes,
-        .initialize_message.note_count = ysw_get_note_count(s),
-        .initialize_message.is_loop = true,
+        .initialize.notes = notes,
+        .initialize.note_count = ysw_get_note_count(s),
     };
 
     ysw_message_send(sequencer_queue, &message);
@@ -117,6 +111,7 @@ void app_main()
 
     message = (ysw_sequencer_message_t){
         .type = YSW_SEQUENCER_PLAY,
+            .play.loop_count = YSW_SEQUENCER_LOOP_REPEATEDLY,
     };
 
     ysw_message_send(sequencer_queue, &message);

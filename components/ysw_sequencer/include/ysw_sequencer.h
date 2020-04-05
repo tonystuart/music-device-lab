@@ -15,16 +15,24 @@
 #include "ysw_song.h"
 #include "ysw_task.h"
 
-#define PLAYBACK_SPEED_PERCENT 100
+#define YSW_SEQUENCER_SPEED_DEFAULT 100
+#define YSW_SEQUENCER_LOOP_REPEATEDLY (-1)
+
+typedef enum {
+    YSW_SEQUENCER_STATUS_DONE,
+    YSW_SEQUENCER_STATUS_LOOP,
+} ysw_sequencer_status_t;
 
 typedef void (*ysw_sequencer_on_note_on_t)(uint8_t channel, uint8_t midi_note, uint8_t velocity);
 typedef void (*ysw_sequencer_on_note_off_t)(uint8_t channel, uint8_t midi_note);
 typedef void (*ysw_sequencer_on_program_change_t)(uint8_t channel, uint8_t program);
+typedef void (*ysw_sequencer_on_status_update_t)(ysw_sequencer_status_t status);
 
 typedef struct {
     ysw_sequencer_on_note_on_t on_note_on;
     ysw_sequencer_on_note_off_t on_note_off;
     ysw_sequencer_on_program_change_t on_program_change;
+    ysw_sequencer_on_status_update_t on_status_update;
 } ysw_sequencer_config_t;
 
 typedef enum {
@@ -37,7 +45,6 @@ typedef enum {
 typedef struct {
     note_t *notes; // must remain accessible for duration of playback
     uint32_t note_count;
-    bool is_loop;
 } ysw_sequencer_initialize_t;
 
 typedef struct {
@@ -45,10 +52,15 @@ typedef struct {
 } ysw_sequencer_set_tempo_t;
 
 typedef struct {
+    int16_t loop_count;
+} ysw_sequencer_play_t;
+
+typedef struct {
     ysw_sequencer_message_type_t type;
     union {
-        ysw_sequencer_initialize_t initialize_message;
-        ysw_sequencer_set_tempo_t set_tempo_message;
+        ysw_sequencer_initialize_t initialize;
+        ysw_sequencer_set_tempo_t set_tempo;
+        ysw_sequencer_play_t play;
     };
 } ysw_sequencer_message_t;
 
