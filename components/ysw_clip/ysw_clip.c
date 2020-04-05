@@ -9,7 +9,20 @@
 
 #include "ysw_clip.h"
 
-#define TAG "ysw_clip"
+#define TAG "YSW_CLIP"
+
+static inline int to_offset(int number)
+{
+    return number - 1;
+}
+
+static inline int to_note(int degree)
+{
+    static uint8_t major_intervals[] = {
+        0, 2, 4, 5, 7, 9, 11
+    };
+    return major_intervals[to_offset(degree) % 7];
+}
 
 ysw_clip_t *ysw_clip_create()
 {
@@ -59,6 +72,11 @@ void ysw_chord_note_free(ysw_chord_note_t *ysw_chord_note)
     ysw_heap_free(ysw_chord_note);
 }
 
+void ysw_clip_set_tonic(ysw_clip_t *sequence, uint8_t tonic)
+{
+    sequence->tonic = tonic;
+}
+
 void ysw_clip_set_instrument(ysw_clip_t *sequence, uint8_t instrument)
 {
     sequence->instrument = instrument;
@@ -89,9 +107,10 @@ note_t *ysw_clip_get_notes(ysw_clip_t *sequence)
             note_p->time = measure_time + chord_note->time;
             note_p->duration = chord_note->duration;
             note_p->channel = 0;
-            note_p->midi_note = sequence->tonic + chord_root + chord_note->degree;
+            note_p->midi_note = sequence->tonic + to_note(chord_root) + to_note(chord_note->degree);
             note_p->velocity = chord_note->velocity;
             note_p->instrument = sequence->instrument;
+            ESP_LOGD(TAG, "time=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->time, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
             note_p++;
         }
         measure_time += sequence->measure_duration;

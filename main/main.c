@@ -7,6 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
+#include "esp_log.h"
 #include "ysw_ble_synthesizer.h"
 #include "ysw_sequencer.h"
 #include "ysw_message.h"
@@ -48,20 +49,20 @@ static void on_program_change(uint8_t channel, uint8_t program)
 
 void app_main()
 {
-    esp_log_level_set("BLEServier", ESP_LOG_INFO);
+    esp_log_level_set("BLEServer", ESP_LOG_INFO);
     esp_log_level_set("BLEDevice", ESP_LOG_INFO);
     esp_log_level_set("BLECharacteristic", ESP_LOG_INFO);
 
     ysw_clip_t *s = ysw_clip_create();
 
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(TONIC, 100, 0, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(MEDIANT, 80, 250, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(DOMINANT, 80, 500, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(SUBMEDIANT, 80, 750, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(SUBTONIC, 100, 1000, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(SUBMEDIANT, 80, 1250, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(DOMINANT, 80, 1500, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(MEDIANT, 80, 1750, 230));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(1, 100, 0, 230));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 250, 230));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 80, 500, 230));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(6, 80, 750, 230));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(7, 100, 1000, 230));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(6, 80, 1250, 230));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 80, 1500, 230));
+    ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 1750, 230));
 
     ysw_clip_add_chord(s, I);
     ysw_clip_add_chord(s, I);
@@ -76,6 +77,8 @@ void app_main()
     ysw_clip_add_chord(s, I);
     ysw_clip_add_chord(s, I);
 
+    ysw_clip_set_tonic(s, 36);
+    ysw_clip_set_instrument(s, 32);
     ysw_clip_set_measure_duration(s, 2000);
     ysw_clip_set_percent_tempo(s, 100);
     ysw_clip_set_instrument(s, 0);

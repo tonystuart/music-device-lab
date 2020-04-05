@@ -14,7 +14,7 @@
 #include "ysw_song.h"
 
 typedef enum {
-    I,
+    I = 1,
     ii,
     iii,
     IV,
@@ -24,7 +24,7 @@ typedef enum {
 } ysw_chord_t;
 
 typedef enum {
-    TONIC,
+    TONIC = 1,
     SUPERTONIC,
     MEDIANT,
     SUBDOMINANT,
@@ -56,6 +56,7 @@ int ysw_clip_add_chord(ysw_clip_t *s, ysw_chord_t chord);
 void ysw_clip_free(ysw_clip_t *ysw_clip);
 ysw_chord_note_t *ysw_chord_note_create(uint8_t degree, uint8_t velocity, uint32_t time, uint32_t duration);
 void ysw_chord_note_free(ysw_chord_note_t *ysw_chord_note);
+void ysw_clip_set_tonic(ysw_clip_t *sequence, uint8_t tonic);
 void ysw_clip_set_instrument(ysw_clip_t *sequence, uint8_t instrument);
 void ysw_clip_set_percent_tempo(ysw_clip_t *sequence, uint8_t percent_tempo);
 void ysw_clip_set_measure_duration(ysw_clip_t *sequence, uint32_t measure_duration);
