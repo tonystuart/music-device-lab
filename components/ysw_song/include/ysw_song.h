@@ -131,13 +131,13 @@ static inline char *ysw_song_get_lyric_text(song_t *song, int16_t lyric_index)
 
 static inline uint16_t ysw_song_to_angle(uint8_t midi_note)
 {
-    if (midi_note < LOWEST) {
-        midi_note = LOWEST;
-    } else if (midi_note > HIGHEST) {
-        midi_note = HIGHEST;
+    if (midi_note < YSW_MIDI_LPN) {
+        midi_note = YSW_MIDI_LPN;
+    } else if (midi_note > YSW_MIDI_HPN) {
+        midi_note = YSW_MIDI_HPN;
     }
-    uint8_t normalized = midi_note - LOWEST;
-    uint8_t range = HIGHEST - LOWEST;
+    uint8_t normalized = midi_note - YSW_MIDI_LPN;
+    uint8_t range = YSW_MIDI_HPN - YSW_MIDI_LPN;
     uint16_t angle = (normalized * 360) / range;
     return angle;
 }

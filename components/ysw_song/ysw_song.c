@@ -72,8 +72,8 @@ static char *notes[] = {
 
 char *ysw_song_get_note_name(uint8_t midi_note, char buf[4])
 {
-    uint8_t octave = midi_note / SEMITONES_PER_OCTAVE;
-    uint8_t note = midi_note % SEMITONES_PER_OCTAVE;
+    uint8_t octave = midi_note / YSW_MIDI_USPO;
+    uint8_t note = midi_note % YSW_MIDI_USPO;
     sprintf(buf, "%s%d", notes[note], octave);
     return (buf);
 }

@@ -171,7 +171,7 @@ static void play(uint8_t channel, uint8_t midi_key, uint8_t velocity, uint16_t m
 
 void play_note(uint8_t channel, uint8_t midi_key, uint8_t velocity, uint16_t millis)
 {
-    if (channel != DRUM_CHANNEL) {
+    if (channel != YSW_MIDI_DRUM_CHANNEL) {
         if (velocity) {
             play(channel, midi_key, BACKGROUND_VOLUME, millis);
         }
@@ -180,7 +180,7 @@ void play_note(uint8_t channel, uint8_t midi_key, uint8_t velocity, uint16_t mil
 
 void release_midi_key(uint8_t channel, uint8_t midi_key)
 {
-    if (channel != DRUM_CHANNEL) {
+    if (channel != YSW_MIDI_DRUM_CHANNEL) {
         enter_critical_section();
         uint8_t osc = channel_notes[channel][midi_key];
         increments_pot[ osc ] = 0;
@@ -194,7 +194,7 @@ void release_midi_key(uint8_t channel, uint8_t midi_key)
 
 void press_midi_key(uint8_t channel, uint8_t midi_key, uint8_t velocity)
 {
-    if (channel != DRUM_CHANNEL) {
+    if (channel != YSW_MIDI_DRUM_CHANNEL) {
         if (velocity) {
             ESP_LOGD(TAG, "press_midi_key: channel=%d, midi_key=%d, velocity=%d",
                     channel, midi_key, velocity);

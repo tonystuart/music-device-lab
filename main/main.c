@@ -60,16 +60,29 @@ void app_main()
     ysw_clip_t *s = ysw_clip_create();
 
 #ifdef TWELVE_BAR_BLUES
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(1, 100, 0, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 250, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 80, 500, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(6, 80, 750, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(7, 100, 1000, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(6, 80, 1250, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 80, 1500, 230));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 1750, 230));
+    ysw_chord_style_t *cs1 = ysw_chord_style_create();
+    ysw_chord_style_add_note(cs1, ysw_chord_note_create(1, 100, 0, 230));
+    ysw_chord_style_add_note(cs1, ysw_chord_note_create(3, 80, 250, 230));
+    ysw_chord_style_add_note(cs1, ysw_chord_note_create(5, 80, 500, 230));
+    ysw_chord_style_add_note(cs1, ysw_chord_note_create(6, 80, 750, 230));
+    ysw_chord_style_add_note(cs1, ysw_chord_note_create(-7, 100, 1000, 230));
+    ysw_chord_style_add_note(cs1, ysw_chord_note_create(6, 80, 1250, 230));
+    ysw_chord_style_add_note(cs1, ysw_chord_note_create(5, 80, 1500, 230));
+    ysw_chord_style_add_note(cs1, ysw_chord_note_create(3, 80, 1750, 230));
+    ysw_chord_style_set_duration(cs1, 2000);
 
-    ysw_clip_set_chord_duration(s, 2000);
+    ysw_chord_style_t *cs2 = ysw_chord_style_create();
+    ysw_chord_style_add_note(cs2, ysw_chord_note_create(1, 100, 0, 230));
+    ysw_chord_style_add_note(cs2, ysw_chord_note_create(3, 80, 250, 230));
+    ysw_chord_style_add_note(cs2, ysw_chord_note_create(5, 80, 500, 230));
+    ysw_chord_style_add_note(cs2, ysw_chord_note_create(6, 80, 750, 230));
+    ysw_chord_style_add_note(cs2, ysw_chord_note_create(7, 100, 1000, 230));
+    ysw_chord_style_add_note(cs2, ysw_chord_note_create(6, 80, 1250, 230));
+    ysw_chord_style_add_note(cs2, ysw_chord_note_create(5, 80, 1500, 230));
+    ysw_chord_style_add_note(cs2, ysw_chord_note_create(3, 80, 1750, 230));
+    ysw_chord_style_set_duration(cs2, 2000);
+
+    ysw_clip_set_chord_style(s, cs1);
     ysw_clip_set_instrument(s, 32);
     ysw_clip_set_tonic(s, 36);
 
@@ -81,30 +94,32 @@ void app_main()
     ysw_clip_add_chord(s, IV);
     ysw_clip_add_chord(s, I);
     ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord(s, V);
+    ysw_clip_add_chord_with_style(s, V, cs2);
     ysw_clip_add_chord(s, IV);
     ysw_clip_add_chord(s, I);
     ysw_clip_add_chord(s, I);
 #endif
 
 #ifdef LET_IT_BE
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(1, 100, 0, 1000));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 50, 1000));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 80, 100, 1000));
+    ysw_chord_style_t *cs = ysw_chord_style_create();
+    ysw_chord_style_add_note(cs, ysw_chord_note_create(1, 100, 0, 1000));
+    ysw_chord_style_add_note(cs, ysw_chord_note_create(3, 80, 50, 1000));
+    ysw_chord_style_add_note(cs, ysw_chord_note_create(5, 80, 100, 1000));
 
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(1, 100, 1100, 500));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 1150, 500));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 80, 1200, 500));
+    ysw_chord_style_add_note(cs, ysw_chord_note_create(1, 100, 1100, 500));
+    ysw_chord_style_add_note(cs, ysw_chord_note_create(3, 80, 1150, 500));
+    ysw_chord_style_add_note(cs, ysw_chord_note_create(5, 80, 1200, 500));
 
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(1, 100, 1700, 250));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 1750, 250));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 80, 1800, 250));
+    ysw_chord_style_add_note(cs, ysw_chord_note_create(1, 100, 1700, 250));
+    ysw_chord_style_add_note(cs, ysw_chord_note_create(3, 80, 1750, 250));
+    ysw_chord_style_add_note(cs, ysw_chord_note_create(5, 80, 1800, 250));
 
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(5, 100, 2050, 250));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(3, 80, 2100, 250));
-    ysw_clip_add_chord_note(s, ysw_chord_note_create(1, 80, 2150, 250));
-    ysw_clip_set_chord_duration(s, 2400);
+    ysw_chord_style_add_note(cs, ysw_chord_note_create(5, 100, 2050, 250));
+    ysw_chord_style_add_note(cs, ysw_chord_note_create(3, 80, 2100, 250));
+    ysw_chord_style_add_note(cs, ysw_chord_note_create(1, 80, 2150, 250));
+    ysw_chord_style_set_duration(cs, 2400);
 
+    ysw_clip_set_chord_style(s, cs);
     ysw_clip_set_instrument(s, 25);
     ysw_clip_set_tonic(s, 48);
 
