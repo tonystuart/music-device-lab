@@ -32,6 +32,7 @@ static lv_obj_t *page;
 static lv_obj_t *table;
 static lv_signal_cb_t old_signal_cb;
 static lv_style_t value_cell;
+static lv_style_t win_style_content;
 
 static QueueHandle_t synthesizer_queue;
 static QueueHandle_t sequencer_queue;
@@ -227,16 +228,34 @@ static void play_clip(ysw_clip_t *s)
     }
 }
 
+static void create_field(lv_obj_t *parent, char *name, char *value)
+{
+    lv_obj_t *name_label = lv_label_create(parent, NULL);
+    lv_label_set_text(name_label, name);
+    lv_obj_set_width(name_label, 240);
+
+    lv_obj_t *value_ta = lv_ta_create(parent, NULL);
+    lv_obj_set_width(value_ta, 240);
+    lv_ta_set_style(value_ta, LV_TA_STYLE_BG, &value_cell);
+    lv_ta_set_one_line(value_ta, true);
+    //lv_obj_set_size(value_ta, 200, 100);
+    //lv_obj_align(value_ta, NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_ta_set_cursor_type(value_ta, LV_CURSOR_NONE);
+    lv_ta_set_text(value_ta, value);
+    //lv_obj_set_event_cb(value_ta, event_handler);
+}
 
 static void open_value_editor(int16_t row, int16_t column)
 {
     lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
-    lv_obj_set_width(win, 280);
-    lv_obj_set_height(win, 160);
+    //lv_obj_set_width(win, 340);
+    //lv_obj_set_height(win, 240);
     lv_obj_align(win, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_win_set_style(win, LV_WIN_STYLE_BG, &lv_style_pretty);
+    lv_win_set_style(win, LV_WIN_STYLE_CONTENT, &win_style_content);
     lv_win_set_title(win, "Editor");
     lv_win_set_layout(win, LV_LAYOUT_COL_L);
+    //lv_win_set_layout(win, LV_LAYOUT_GRID);
     lv_win_set_drag(win, true);
 
     lv_obj_t * close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
@@ -249,20 +268,10 @@ static void open_value_editor(int16_t row, int16_t column)
     //lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
     //lv_obj_t *scrl = lv_page_get_scrl(ext->page);
 
-    lv_obj_t *name = lv_label_create(win, NULL);
-    lv_label_set_text(name, "Name:");
-    lv_obj_set_width(name, 240);
-
-    lv_obj_t *value = lv_ta_create(win, NULL);
-    lv_obj_set_width(value, 240);
-    lv_ta_set_style(value, LV_TA_STYLE_BG, &value_cell);
-    lv_ta_set_one_line(value, true);
-    //lv_obj_set_size(value, 200, 100);
-    //lv_obj_align(value, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_ta_set_cursor_type(value, LV_CURSOR_BLOCK);
-    lv_ta_set_text(value, "Up / Down");
-    //lv_obj_set_event_cb(value, event_handler);
-
+    create_field(win, "Degree", "1");
+    create_field(win, "Volume", "100");
+    create_field(win, "Time", "0");
+    create_field(win, "Duration", "230");
 }
 
 static lv_res_t my_scrl_signal_cb(lv_obj_t *scrl, lv_signal_t sign, void *param)
@@ -357,6 +366,17 @@ void app_main()
     table_bg_style.body.padding.left = 0;
     table_bg_style.body.padding.right = 0;
     table_bg_style.body.padding.inner = 0;
+
+    lv_style_copy(&win_style_content, &lv_style_transp);
+    ESP_LOGD(TAG, "win_style_content radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", win_style_content.body.radius, win_style_content.body.border.width, win_style_content.body.border.part, win_style_content.body.padding.top, win_style_content.body.padding.bottom, win_style_content.body.padding.left, win_style_content.body.padding.right, win_style_content.body.padding.inner);
+    win_style_content.body.radius = 0;
+    win_style_content.body.border.width = 0;
+    win_style_content.body.border.part = LV_BORDER_NONE;
+    win_style_content.body.padding.top = 5;
+    win_style_content.body.padding.bottom = 0;
+    win_style_content.body.padding.left = 5;
+    win_style_content.body.padding.right = 0;
+    win_style_content.body.padding.inner = 5;
 
     /*Create a normal cell style*/
     lv_style_copy(&value_cell, &lv_style_plain);
