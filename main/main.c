@@ -28,6 +28,7 @@ static selection_t selection = {
     .row = -1,
 };
 
+static lv_obj_t *kb;
 static lv_obj_t *page;
 static lv_obj_t *table;
 static lv_signal_cb_t old_signal_cb;
@@ -228,6 +229,39 @@ static void play_clip(ysw_clip_t *s)
     }
 }
 
+static void keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event)
+{
+    lv_kb_def_event_cb(kb, event);
+
+    if(event == LV_EVENT_APPLY || event == LV_EVENT_CANCEL) {
+        lv_obj_t *ta = lv_kb_get_ta(kb);
+        if (ta) {
+            lv_ta_set_cursor_type(ta, LV_CURSOR_LINE|LV_CURSOR_HIDDEN);
+        }
+
+        lv_obj_del(kb);
+        kb = NULL;
+    }
+}
+
+static void text_area_event_handler(lv_obj_t *ta, lv_event_t event)
+{
+    if(event == LV_EVENT_CLICKED) {
+        lv_obj_t *container = lv_obj_get_parent(ta);
+        lv_obj_t *page = lv_obj_get_parent(container);
+        lv_cont_set_layout(container, LV_LAYOUT_OFF);
+        if (kb == NULL) {
+            kb = lv_kb_create(page, NULL);
+            lv_obj_set_width(kb, 290);
+            lv_obj_set_event_cb(kb, keyboard_event_cb);
+            lv_kb_set_cursor_manage(kb, true);
+        }
+        lv_kb_set_ta(kb, ta);
+        lv_ll_move_before(&container->child_ll, kb, ta);
+        lv_cont_set_layout(container, LV_LAYOUT_PRETTY);
+    }
+}
+
 static void create_field(lv_obj_t *parent, char *name, char *value)
 {
     lv_obj_t *name_label = lv_label_create(parent, NULL);
@@ -241,8 +275,10 @@ static void create_field(lv_obj_t *parent, char *name, char *value)
     lv_obj_set_protect(value_ta, LV_PROTECT_FOLLOW);
     lv_ta_set_style(value_ta, LV_TA_STYLE_BG, &value_cell);
     lv_ta_set_one_line(value_ta, true);
-    lv_ta_set_cursor_type(value_ta, LV_CURSOR_NONE);
+    lv_ta_set_cursor_type(value_ta, LV_CURSOR_LINE|LV_CURSOR_HIDDEN);
     lv_ta_set_text(value_ta, value);
+
+    lv_obj_set_event_cb(value_ta, text_area_event_handler);
 }
 
 static void open_value_editor(int16_t row, int16_t column)
@@ -492,6 +528,7 @@ static void create_marquis_mock_up()
     lv_table_set_cell_value(table, 11, 1, "80");
     lv_table_set_cell_value(table, 11, 2, "1750");
     lv_table_set_cell_value(table, 11, 3, "230");
+
 }
 
 void app_main()
