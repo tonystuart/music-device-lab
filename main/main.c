@@ -228,14 +228,17 @@ static void play_clip(ysw_clip_t *s)
     }
 }
 
-static void create_field(lv_obj_t *parent, char *name, char *value)
+static int create_field(lv_obj_t *parent, char *name, char *value, int y)
 {
     lv_obj_t *name_label = lv_label_create(parent, NULL);
+    lv_label_set_long_mode(name_label, LV_LABEL_LONG_BREAK);
     lv_label_set_text(name_label, name);
-    lv_obj_set_width(name_label, 240);
+    lv_label_set_align(name_label, LV_LABEL_ALIGN_RIGHT);
+    lv_obj_set_width(name_label, 100);
 
     lv_obj_t *value_ta = lv_ta_create(parent, NULL);
-    lv_obj_set_width(value_ta, 240);
+    lv_obj_set_width(value_ta, 175);
+    lv_obj_set_protect(value_ta, LV_PROTECT_FOLLOW);
     lv_ta_set_style(value_ta, LV_TA_STYLE_BG, &value_cell);
     lv_ta_set_one_line(value_ta, true);
     //lv_obj_set_size(value_ta, 200, 100);
@@ -243,6 +246,7 @@ static void create_field(lv_obj_t *parent, char *name, char *value)
     lv_ta_set_cursor_type(value_ta, LV_CURSOR_NONE);
     lv_ta_set_text(value_ta, value);
     //lv_obj_set_event_cb(value_ta, event_handler);
+    return 0;
 }
 
 static void open_value_editor(int16_t row, int16_t column)
@@ -254,9 +258,10 @@ static void open_value_editor(int16_t row, int16_t column)
     lv_win_set_style(win, LV_WIN_STYLE_BG, &lv_style_pretty);
     lv_win_set_style(win, LV_WIN_STYLE_CONTENT, &win_style_content);
     lv_win_set_title(win, "Editor");
-    lv_win_set_layout(win, LV_LAYOUT_COL_L);
+    //lv_win_set_layout(win, LV_LAYOUT_COL_L);
     //lv_win_set_layout(win, LV_LAYOUT_GRID);
-    lv_win_set_drag(win, true);
+    lv_win_set_layout(win, LV_LAYOUT_OFF);
+    //lv_win_set_drag(win, true);
 
     lv_obj_t * close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
     lv_obj_set_event_cb(close_btn, lv_win_close_event_cb);
@@ -268,10 +273,12 @@ static void open_value_editor(int16_t row, int16_t column)
     //lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
     //lv_obj_t *scrl = lv_page_get_scrl(ext->page);
 
-    create_field(win, "Degree", "1");
-    create_field(win, "Volume", "100");
-    create_field(win, "Time", "0");
-    create_field(win, "Duration", "230");
+    int y = create_field(win, "Degree", "1", 0);
+    y = create_field(win, "Volume", "100", y);
+    y = create_field(win, "Time", "0", y);
+    y = create_field(win, "Duration", "230", y);
+
+    lv_win_set_layout(win, LV_LAYOUT_PRETTY);
 }
 
 static lv_res_t my_scrl_signal_cb(lv_obj_t *scrl, lv_signal_t sign, void *param)
@@ -306,31 +313,9 @@ static lv_res_t my_scrl_signal_cb(lv_obj_t *scrl, lv_signal_t sign, void *param)
     return old_signal_cb(scrl, sign, param);
 }
 
-void app_main()
+UNUSED
+static void create_marquis_mock_up()
 {
-    esp_log_level_set("BLEServer", ESP_LOG_INFO);
-    esp_log_level_set("BLEDevice", ESP_LOG_INFO);
-    esp_log_level_set("BLECharacteristic", ESP_LOG_INFO);
-
-    eli_ili9341_xpt2046_config_t new_config = {
-        .mosi = 21,
-        .clk = 22,
-        .ili9341_cs = 5,
-        .xpt2046_cs = 32,
-        .dc = 19,
-        .rst = 18,
-        .bckl = 23,
-        .miso = 27,
-        .irq = 14,
-        .x_min = 346,
-        .y_min = 235,
-        .x_max = 3919,
-        .y_max = 3883,
-        .spi_host = HSPI_HOST,
-    };
-
-    eli_ili9341_xpt2046_initialize(&new_config);
-
     static lv_style_t page_bg_style;
     lv_style_copy(&page_bg_style, &lv_style_pretty_color);
     ESP_LOGD(TAG, "page_bg_style radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", page_bg_style.body.radius, page_bg_style.body.border.width, page_bg_style.body.border.part, page_bg_style.body.padding.top, page_bg_style.body.padding.bottom, page_bg_style.body.padding.left, page_bg_style.body.padding.right, page_bg_style.body.padding.inner);
@@ -517,6 +502,34 @@ void app_main()
     lv_table_set_cell_value(table, 11, 1, "80");
     lv_table_set_cell_value(table, 11, 2, "1750");
     lv_table_set_cell_value(table, 11, 3, "230");
+}
+
+void app_main()
+{
+    esp_log_level_set("BLEServer", ESP_LOG_INFO);
+    esp_log_level_set("BLEDevice", ESP_LOG_INFO);
+    esp_log_level_set("BLECharacteristic", ESP_LOG_INFO);
+
+    eli_ili9341_xpt2046_config_t new_config = {
+        .mosi = 21,
+        .clk = 22,
+        .ili9341_cs = 5,
+        .xpt2046_cs = 32,
+        .dc = 19,
+        .rst = 18,
+        .bckl = 23,
+        .miso = 27,
+        .irq = 14,
+        .x_min = 346,
+        .y_min = 235,
+        .x_max = 3919,
+        .y_max = 3883,
+        .spi_host = HSPI_HOST,
+    };
+
+    eli_ili9341_xpt2046_initialize(&new_config);
+
+    create_marquis_mock_up();
 
     while (1) {
         vTaskDelay(1);
