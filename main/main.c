@@ -228,55 +228,45 @@ static void play_clip(ysw_clip_t *s)
     }
 }
 
-static int create_field(lv_obj_t *parent, char *name, char *value, int y)
+static void create_field(lv_obj_t *parent, char *name, char *value)
 {
     lv_obj_t *name_label = lv_label_create(parent, NULL);
     lv_label_set_long_mode(name_label, LV_LABEL_LONG_BREAK);
     lv_label_set_text(name_label, name);
     lv_label_set_align(name_label, LV_LABEL_ALIGN_RIGHT);
-    lv_obj_set_width(name_label, 100);
+    lv_obj_set_width(name_label, 75);
 
     lv_obj_t *value_ta = lv_ta_create(parent, NULL);
-    lv_obj_set_width(value_ta, 175);
+    lv_obj_set_width(value_ta, 200);
     lv_obj_set_protect(value_ta, LV_PROTECT_FOLLOW);
     lv_ta_set_style(value_ta, LV_TA_STYLE_BG, &value_cell);
     lv_ta_set_one_line(value_ta, true);
-    //lv_obj_set_size(value_ta, 200, 100);
-    //lv_obj_align(value_ta, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_ta_set_cursor_type(value_ta, LV_CURSOR_NONE);
     lv_ta_set_text(value_ta, value);
-    //lv_obj_set_event_cb(value_ta, event_handler);
-    return 0;
 }
 
 static void open_value_editor(int16_t row, int16_t column)
 {
     lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
-    //lv_obj_set_width(win, 340);
-    //lv_obj_set_height(win, 240);
     lv_obj_align(win, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_win_set_style(win, LV_WIN_STYLE_BG, &lv_style_pretty);
     lv_win_set_style(win, LV_WIN_STYLE_CONTENT, &win_style_content);
-    lv_win_set_title(win, "Editor");
-    //lv_win_set_layout(win, LV_LAYOUT_COL_L);
-    //lv_win_set_layout(win, LV_LAYOUT_GRID);
+    lv_win_set_title(win, "Chord Note (1 of 8)");
     lv_win_set_layout(win, LV_LAYOUT_OFF);
-    //lv_win_set_drag(win, true);
 
     lv_obj_t * close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
     lv_obj_set_event_cb(close_btn, lv_win_close_event_cb);
 
     lv_win_add_btn(win, LV_SYMBOL_SETTINGS);
     lv_win_set_btn_size(win, 20);
-    // lv_win_set_content_size(win, 280, 240);
 
     //lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
     //lv_obj_t *scrl = lv_page_get_scrl(ext->page);
 
-    int y = create_field(win, "Degree", "1", 0);
-    y = create_field(win, "Volume", "100", y);
-    y = create_field(win, "Time", "0", y);
-    y = create_field(win, "Duration", "230", y);
+    create_field(win, "Degree:", "1");
+    create_field(win, "Volume:", "100");
+    create_field(win, "Time:", "0");
+    create_field(win, "Duration:", "230");
 
     lv_win_set_layout(win, LV_LAYOUT_PRETTY);
 }
