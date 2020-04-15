@@ -1,7 +1,7 @@
 build
-sdkconfig
 sdkconfig.old
 a
 .vscode
 .*.swp
 tags
+spiffs.bin

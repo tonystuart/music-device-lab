@@ -8,6 +8,8 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "esp_log.h"
+#include "esp_spiffs.h"
+
 #include "ysw_ble_synthesizer.h"
 #include "ysw_sequencer.h"
 #include "ysw_message.h"
@@ -531,6 +533,53 @@ static void create_marquis_mock_up()
 
 }
 
+void initialize_spiffs()
+{
+    esp_vfs_spiffs_conf_t conf = {
+        .base_path = "/spiffs",
+        .partition_label = NULL,
+        .max_files = 5,
+        .format_if_mount_failed = true
+    };
+
+    // Use settings defined above to initialize and mount SPIFFS filesystem.
+    // Note: esp_vfs_spiffs_register is an all-in-one convenience function.
+    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+
+    if (ret != ESP_OK) {
+        if (ret == ESP_FAIL) {
+            ESP_LOGE(TAG, "Failed to mount or format filesystem");
+        } else if (ret == ESP_ERR_NOT_FOUND) {
+            ESP_LOGE(TAG, "Failed to find SPIFFS partition");
+        } else {
+            ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+        }
+        return;
+    }
+
+    size_t total = 0, used = 0;
+    ret = esp_spiffs_info(conf.partition_label, &total, &used);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
+    }
+
+    ESP_LOGI(TAG, "Opening file");
+    FILE* f = fopen("/spiffs/0", "r");
+    if (f == NULL) {
+        ESP_LOGE(TAG, "Failed to open file for reading");
+        return;
+    }
+    ESP_LOGI(TAG, "Reading file");
+    char buf[128];
+    while (fgets(buf, sizeof(buf), f)) {
+        ESP_LOGI(TAG, "buf=%s", buf);
+    }
+    ESP_LOGI(TAG, "Closing file");
+    fclose(f);
+}
+
 void app_main()
 {
     esp_log_level_set("BLEServer", ESP_LOG_INFO);
@@ -556,6 +605,7 @@ void app_main()
 
     eli_ili9341_xpt2046_initialize(&new_config);
 
+    initialize_spiffs();
     create_marquis_mock_up();
 
     while (1) {
