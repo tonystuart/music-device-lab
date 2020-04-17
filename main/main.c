@@ -20,6 +20,8 @@
 #include "eli_ili9341_xpt2046.h"
 
 #define TAG "MAIN"
+#define RECORD_SIZE 128
+#define TOKENS_SIZE 20
 
 typedef struct {
     int16_t row;
@@ -530,53 +532,97 @@ static void create_marquis_mock_up()
     lv_table_set_cell_value(table, 11, 1, "80");
     lv_table_set_cell_value(table, 11, 2, "1750");
     lv_table_set_cell_value(table, 11, 3, "230");
+}
 
+int parse_csv(char *buffer, char *tokens[], int max_tokens)
+{
+    typedef enum {
+        INITIAL,
+        ESCAPE,
+        ASSIGN
+    } parser_state_t;
+
+    char *p = buffer;
+    char *q = buffer;
+    int token_count = 0;
+    bool new_token = true;
+    bool scanning = true;
+    parser_state_t state = INITIAL;
+
+    while (scanning) {
+        //ESP_LOGD(TAG, "*p=%c, *q=%c, token_count=%d, new_token=%d, scanning=%d, state=%d", *p, *q, token_count, new_token, scanning, state);
+        switch (state) {
+            case INITIAL:
+                if (!*p || *p == '#' || *p == '\n') {
+                    scanning = false;
+                } else if (*p == '\\') {
+                    p++;
+                    state = ESCAPE;
+                } else {
+                    state = ASSIGN;
+                }
+                break;
+            case ESCAPE:
+                if (!*p) {
+                    scanning = false;
+                } else if (*p == '\n') {
+                    // skip newline
+                    p++;
+                } else {
+                    state = ASSIGN;
+                }
+                break;
+            case ASSIGN:
+                if (new_token) {
+                    if (token_count < max_tokens) {
+                        tokens[token_count++] = q;
+                        new_token = false;
+                    } else {
+                        scanning = false;
+                    }
+                }
+                if (*p == ',') {
+                    *p = 0;
+                    new_token = true;
+                }
+                *q++ = *p++;
+                state = INITIAL;
+                break;
+        }
+    }
+    *q = 0;
+    return token_count;
 }
 
 void initialize_spiffs()
 {
-    esp_vfs_spiffs_conf_t conf = {
+    esp_vfs_spiffs_conf_t config = {
         .base_path = "/spiffs",
         .partition_label = NULL,
         .max_files = 5,
         .format_if_mount_failed = true
     };
 
-    // Use settings defined above to initialize and mount SPIFFS filesystem.
-    // Note: esp_vfs_spiffs_register is an all-in-one convenience function.
-    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+    $(esp_vfs_spiffs_register(&config));
 
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            ESP_LOGE(TAG, "Failed to mount or format filesystem");
-        } else if (ret == ESP_ERR_NOT_FOUND) {
-            ESP_LOGE(TAG, "Failed to find SPIFFS partition");
-        } else {
-            ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+    size_t total = 0;
+    size_t used = 0;
+    $(esp_spiffs_info(config.partition_label, &total, &used));
+
+    FILE* f = fopen("/spiffs/player.csv", "r");
+    assert(f);
+
+    int record = 0;
+    char buffer[RECORD_SIZE];
+    while (fgets(buffer, RECORD_SIZE, f)) {
+        ESP_LOGD(TAG, "record=%d, buffer=%s", record, buffer);
+        char *tokens[TOKENS_SIZE];
+        int token_count = parse_csv(buffer, tokens, TOKENS_SIZE);
+        for (int i = 0; i < token_count; i++) {
+            ESP_LOGD(TAG, "token[%d]=%s", i, tokens[i]);
         }
-        return;
+        record++;
     }
-
-    size_t total = 0, used = 0;
-    ret = esp_spiffs_info(conf.partition_label, &total, &used);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
-    } else {
-        ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
-    }
-
-    ESP_LOGI(TAG, "Opening file");
-    FILE* f = fopen("/spiffs/0", "r");
-    if (f == NULL) {
-        ESP_LOGE(TAG, "Failed to open file for reading");
-        return;
-    }
-    ESP_LOGI(TAG, "Reading file");
-    char buf[128];
-    while (fgets(buf, sizeof(buf), f)) {
-        ESP_LOGI(TAG, "buf=%s", buf);
-    }
-    ESP_LOGI(TAG, "Closing file");
     fclose(f);
 }
 
