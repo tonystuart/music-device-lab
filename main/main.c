@@ -15,7 +15,7 @@
 #include "ysw_sequencer.h"
 #include "ysw_message.h"
 #include "ysw_music.h"
-#include "ysw_player_data.h"
+#include "ysw_music_parser.h"
 
 #include "driver/spi_master.h"
 #include "lvgl/lvgl.h"
