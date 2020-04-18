@@ -7,9 +7,28 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#pragma once
+#include "ysw_common.h"
 
 #include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
+#include "freertos/task.h"
 
-QueueHandle_t ysw_ble_synthesizer_create_task();
+uint32_t to_millis(uint32_t ticks)
+{
+    return ticks * portTICK_PERIOD_MS;
+}
+
+uint32_t to_ticks(uint32_t millis)
+{
+    return millis / portTICK_PERIOD_MS;
+}
+
+uint32_t get_millis()
+{
+    return to_millis(xTaskGetTickCount());
+}
+
+void wait_millis(int millis)
+{
+    vTaskDelay(to_ticks(millis));
+}
+

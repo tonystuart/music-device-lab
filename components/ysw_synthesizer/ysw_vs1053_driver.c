@@ -9,6 +9,11 @@
 
 #include "ysw_vs1053_driver.h"
 
+#include "esp_log.h"
+#include "driver/gpio.h"
+#include "driver/spi_master.h"
+#include "ysw_common.h"
+
 // http://www.vlsi.fi/fileadmin/software/VS10XX/rtmidi.pdf
 // Section 1.2 Loading Through SCI
 

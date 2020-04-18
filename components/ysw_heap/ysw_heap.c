@@ -9,6 +9,8 @@
 
 #include "ysw_heap.h"
 
+#include "esp_log.h"
+
 #define TAG "HEAP"
 
 void *ysw_heap_allocate(size_t size)

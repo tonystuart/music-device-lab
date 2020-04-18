@@ -11,9 +11,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
-#include "esp_log.h"
 #include "ysw_song.h"
-#include "ysw_task.h"
 
 #define YSW_SEQUENCER_SPEED_DEFAULT 100
 #define YSW_SEQUENCER_LOOP_REPEATEDLY (-1)

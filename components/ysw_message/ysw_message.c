@@ -9,6 +9,8 @@
 
 #include "ysw_message.h"
 
+#include "freertos/task.h"
+
 #define TAG "YSW_MESSAGE"
 #define MAX_WAIT_MS 100
 

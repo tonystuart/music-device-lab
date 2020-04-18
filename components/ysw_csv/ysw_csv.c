@@ -9,6 +9,8 @@
 
 #include "ysw_csv.h"
 
+#include "stdbool.h"
+
 #define TAG "YSW_CSV"
 
 int parse_csv(char *buffer, char *tokens[], int max_tokens)

@@ -9,9 +9,7 @@
 
 #pragma once
 
-#include "assert.h"
-#include "esp_log.h"
-#include "ysw_heap.h"
+#include "stddef.h"
 
 typedef struct {
     void **data;

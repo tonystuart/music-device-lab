@@ -9,6 +9,8 @@
 
 #include "ysw_song.h"
 
+#include "stdio.h"
+
 #define TAG "SONG"
 #define MAGIC "SONG"
 #define MAGIC_SIZE (sizeof(MAGIC) - 1)

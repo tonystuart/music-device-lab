@@ -9,6 +9,10 @@
 
 #include "ysw_array.h"
 
+#include "assert.h"
+#include "esp_log.h"
+#include "ysw_heap.h"
+
 #define TAG "YSW_ARRAY"
 
 ysw_array_t *ysw_array_create(size_t initial_size)

@@ -12,18 +12,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
-#include "esp_log.h"
-#include "driver/gpio.h"
-#include "driver/dac.h"
-#include "driver/i2s.h"
-#include "ysw_common.h"
-#include "ysw_midi.h"
-#include "ysw_task.h"
-#include "ysw_wavetable.h"
-#include "ysw_synthesizer.h"
-
-//#define SAMPLE_RATE 22050.0
-#define SAMPLE_RATE 44100.0
 
 QueueHandle_t ysw_wavetable_synthesizer_create_task(uint8_t dac_left_gpio, uint8_t dac_right_gpio);
 

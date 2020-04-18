@@ -9,6 +9,15 @@
 
 #include "ysw_vs1053_synthesizer.h"
 
+#include "esp_log.h"
+#include "esp_system.h"
+#include "driver/gpio.h"
+#include "driver/spi_master.h"
+#include "ysw_common.h"
+#include "ysw_vs1053_driver.h"
+#include "ysw_task.h"
+#include "ysw_synthesizer.h"
+
 #define TAG "VS1053"
 
 static ysw_vs1053_synthesizer_config_t config;

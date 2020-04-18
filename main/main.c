@@ -10,6 +10,7 @@
 #include "esp_log.h"
 #include "esp_spiffs.h"
 
+#include "ysw_synthesizer.h"
 #include "ysw_ble_synthesizer.h"
 #include "ysw_sequencer.h"
 #include "ysw_message.h"
@@ -217,7 +218,7 @@ static void play_clip(ysw_clip_t *s)
 
     for (int i = 20; i > 0; i--) {
         ESP_LOGW(TAG, "%d - please connect the synthesizer", i);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        wait_millis(1000);
     }
 
     message = (ysw_sequencer_message_t){
@@ -228,7 +229,7 @@ static void play_clip(ysw_clip_t *s)
     ysw_message_send(sequencer_queue, &message);
 
     for (;;) {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        wait_millis(1000);
     }
 }
 
@@ -593,7 +594,7 @@ void app_main()
     ysw_player_data_t *player_data = ysw_player_data_parse(PLAYER_DEFINITIONS);
 
     while (1) {
-        vTaskDelay(1);
+        wait_millis(1);
         lv_task_handler();
     }
 }

@@ -10,7 +10,6 @@
 #pragma once
 
 #include "string.h"
-#include "esp_log.h"
 
 void *ysw_heap_allocate(size_t size);
 void *ysw_heap_reallocate(void *old_p, size_t size);

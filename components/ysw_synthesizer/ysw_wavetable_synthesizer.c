@@ -9,12 +9,25 @@
 
 #include "ysw_wavetable_synthesizer.h"
 
+#include "esp_log.h"
+#include "driver/gpio.h"
+#include "driver/dac.h"
+#include "driver/i2s.h"
+#include "ysw_common.h"
+#include "ysw_midi.h"
+#include "ysw_task.h"
+#include "ysw_wavetable.h"
+#include "ysw_synthesizer.h"
+
 #define TAG "WAVETABLE"
 
 #define GAIN_IN_DB (-10.0f)
 #define BUFFER_COUNT 16
 #define SAMPLE_COUNT 8
 #define CHANNEL_COUNT 2
+
+//#define SAMPLE_RATE 22050.0
+#define SAMPLE_RATE 44100.0
 
 #define POT 8 // power of two; must match with scale_table values
 #define ENVPOT 7

@@ -11,9 +11,6 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
-#include "esp_log.h"
-#include "ysw_task.h"
 #include "ysw_vs1053_driver.h"
-#include "ysw_synthesizer.h"
 
 QueueHandle_t ysw_vs1053_synthesizer_create_task(ysw_vs1053_synthesizer_config_t *vs1053_config);

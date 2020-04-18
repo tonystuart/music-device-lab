@@ -9,13 +9,7 @@
 
 #pragma once
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_system.h"
-#include "esp_log.h"
-#include "driver/gpio.h"
-#include "driver/spi_master.h"
-#include "ysw_common.h"
+#include "stdint.h"
 
 typedef struct {
     uint8_t dreq_gpio;

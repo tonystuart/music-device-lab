@@ -12,6 +12,5 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
-#include "freertos/task.h"
 
 void ysw_message_send(QueueHandle_t queue, void *message);

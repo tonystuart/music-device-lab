@@ -9,6 +9,9 @@
 
 #include "ysw_clip.h"
 
+#include "assert.h"
+#include "ysw_heap.h"
+
 #define TAG "YSW_CLIP"
 
 // TODO: Change type of MIDI 7 bit quantities to int8_t

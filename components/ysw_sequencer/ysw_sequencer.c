@@ -9,9 +9,12 @@
 
 #include "ysw_sequencer.h"
 
+#include "esp_log.h"
+#include "ysw_task.h"
+#include "ysw_midi.h"
+
 #define TAG "YSW_SEQUENCER"
 
-#define DRUMS 9
 #define MAX_POLYPHONY 64
 
 typedef struct {
@@ -40,7 +43,7 @@ static uint8_t programs[16];
 static void change(uint8_t channel, uint8_t program)
 {
     ESP_LOGD(TAG, "program change channel=%d, old=%d, new=%d", channel, programs[channel], program);
-    if (channel != DRUMS) {
+    if (channel != YSW_MIDI_DRUM_CHANNEL) {
         config.on_program_change(channel, program);
     }
 }
@@ -96,7 +99,7 @@ static void play_note(note_t *note)
     }
     if (active_count < MAX_POLYPHONY) {
         uint8_t active_note;
-        if (note->channel == DRUMS) {
+        if (note->channel == YSW_MIDI_DRUM_CHANNEL) {
             active_note = note->midi_note;
         } else {
             active_note = ysw_song_transpose(note->midi_note);

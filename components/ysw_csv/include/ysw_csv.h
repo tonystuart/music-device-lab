@@ -9,6 +9,4 @@
 
 #pragma once
 
-#include "stdbool.h"
-
 int parse_csv(char *buffer, char *tokens[], int max_tokens);

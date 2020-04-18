@@ -9,9 +9,9 @@
 
 #pragma once
 
+#include "stdint.h"
+#include "stdbool.h"
 #include "string.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 
 #define RC_OK 0
 #define RC_ERR (-1)
@@ -32,35 +32,6 @@
 #define PACKED __attribute__((__packed__))
 
 #define $ ESP_ERROR_CHECK
-
-#define _(x) { \
-    BaseType_t __rtos_rc = (x); \
-    if (__rtos_rc != ESP_OK) { \
-        ESP_LOGD(TAG, "function call failed, rc=%d, file=%s, line=%d fn=%s", \
-                __rtos_rc, __FILE__, __LINE__, #x); \
-        abort(); \
-    } \
-}
-
-static inline uint32_t to_millis(uint32_t ticks)
-{
-    return ticks * portTICK_PERIOD_MS;
-}
-
-static inline uint32_t to_ticks(uint32_t millis)
-{
-    return millis / portTICK_PERIOD_MS;
-}
-
-static inline uint32_t get_millis()
-{
-    return to_millis(xTaskGetTickCount());
-}
-
-static inline void wait_millis(int millis)
-{
-    vTaskDelay(to_ticks(millis));
-}
 
 static inline int min(int x, int y)
 {
@@ -86,4 +57,9 @@ static inline bool match(char *left, char *right)
 {
     return left && right ? strcmp(left, right) == 0 : 0;
 }
+
+uint32_t to_millis(uint32_t ticks);
+uint32_t to_ticks(uint32_t millis);
+uint32_t get_millis();
+void wait_millis(int millis);
 
