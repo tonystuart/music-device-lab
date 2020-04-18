@@ -10,11 +10,7 @@
 #pragma once
 
 #include "stdio.h"
-#include "ysw_array.h"
-
-typedef struct {
-    ysw_array_t *chords;
-} ysw_music_t;
+#include "ysw_music.h"
 
 ysw_music_t *ysw_music_parse(char *filename);
 ysw_music_t *ysw_music_parse_file(FILE *file);

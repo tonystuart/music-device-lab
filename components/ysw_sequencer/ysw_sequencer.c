@@ -242,8 +242,8 @@ static void run_sequencer(void* parameters)
                         loop_count--;
                     }
                     ESP_LOGD(TAG, "loop_count=%d", loop_count);
-                    if (config.on_status_update) {
-                        config.on_status_update(YSW_SEQUENCER_STATUS_LOOP);
+                    if (config.on_state_change) {
+                        config.on_state_change(YSW_SEQUENCER_STATE_LOOP_COMPLETE);
                     }
                     next_note = 0;
                     play_song();
@@ -252,8 +252,8 @@ static void run_sequencer(void* parameters)
                     next_note = 0;
                     start_millis = 0;
                     ESP_LOGD(TAG, "playback of notes is complete");
-                    if (config.on_status_update) {
-                        config.on_status_update(YSW_SEQUENCER_STATUS_DONE);
+                    if (config.on_state_change) {
+                        config.on_state_change(YSW_SEQUENCER_STATE_PLAYBACK_COMPLETE);
                     }
                 }
             }

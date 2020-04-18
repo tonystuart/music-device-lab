@@ -42,6 +42,21 @@ static lv_style_t win_style_content;
 static QueueHandle_t synthesizer_queue;
 static QueueHandle_t sequencer_queue;
 
+static ysw_music_t *music;
+static uint32_t progression_index;
+
+static void play_progression(ysw_progression_t *s);
+
+static void play_next()
+{
+    ESP_LOGI(TAG, "play_next progression_index=%d", progression_index);
+    if (music && progression_index < ysw_array_get_count(music->progressions)) {
+        ysw_progression_t *progression = ysw_array_get(music->progressions, progression_index);
+        play_progression(progression);
+        progression_index++;
+    }
+}
+
 static void on_note_on(uint8_t channel, uint8_t midi_note, uint8_t velocity)
 {
     ysw_synthesizer_message_t message = {
@@ -73,123 +88,13 @@ static void on_program_change(uint8_t channel, uint8_t program)
     ysw_message_send(synthesizer_queue, &message);
 }
 
-
-ysw_progression_t *create_twelve_bar_blues()
+static void on_state_change(ysw_sequencer_state_t new_state)
 {
-    ysw_progression_t *s = ysw_progression_create();
-
-    ysw_chord_t *cs1 = ysw_chord_create();
-    ysw_chord_add_note(cs1, ysw_chord_note_create(1, 100, 0, 230));
-    ysw_chord_add_note(cs1, ysw_chord_note_create(3, 80, 250, 230));
-    ysw_chord_add_note(cs1, ysw_chord_note_create(5, 80, 500, 230));
-    ysw_chord_add_note(cs1, ysw_chord_note_create(6, 80, 750, 230));
-    ysw_chord_add_note(cs1, ysw_chord_note_create(-7, 100, 1000, 230));
-    ysw_chord_add_note(cs1, ysw_chord_note_create(6, 80, 1250, 230));
-    ysw_chord_add_note(cs1, ysw_chord_note_create(5, 80, 1500, 230));
-    ysw_chord_add_note(cs1, ysw_chord_note_create(3, 80, 1750, 230));
-    ysw_chord_set_duration(cs1, 2000);
-
-    ysw_chord_t *cs2 = ysw_chord_create();
-    ysw_chord_add_note(cs2, ysw_chord_note_create(1, 100, 0, 230));
-    ysw_chord_add_note(cs2, ysw_chord_note_create(3, 80, 250, 230));
-    ysw_chord_add_note(cs2, ysw_chord_note_create(5, 80, 500, 230));
-    ysw_chord_add_note(cs2, ysw_chord_note_create(6, 80, 750, 230));
-    ysw_chord_add_note(cs2, ysw_chord_note_create(7, 100, 1000, 230));
-    ysw_chord_add_note(cs2, ysw_chord_note_create(6, 80, 1250, 230));
-    ysw_chord_add_note(cs2, ysw_chord_note_create(5, 80, 1500, 230));
-    ysw_chord_add_note(cs2, ysw_chord_note_create(3, 80, 1750, 230));
-    ysw_chord_set_duration(cs2, 2000);
-
-    ysw_progression_set_instrument(s, 32);
-    ysw_progression_set_tonic(s, 36);
-
-    ysw_progression_add_chord(s, I, cs1);
-    ysw_progression_add_chord(s, I, cs1);
-    ysw_progression_add_chord(s, I, cs1);
-    ysw_progression_add_chord(s, I, cs1);
-    ysw_progression_add_chord(s, IV, cs1);
-    ysw_progression_add_chord(s, IV, cs1);
-    ysw_progression_add_chord(s, I, cs1);
-    ysw_progression_add_chord(s, I, cs1);
-    ysw_progression_add_chord(s, V, cs2);
-    ysw_progression_add_chord(s, IV, cs1);
-    ysw_progression_add_chord(s, I, cs1);
-    ysw_progression_add_chord(s, I, cs1);
-
-    return s;
+    if (new_state == YSW_SEQUENCER_STATE_PLAYBACK_COMPLETE) {
+        play_next();
+    }
 }
 
-ysw_progression_t *create_let_it_be()
-{
-    ysw_progression_t *s = ysw_progression_create();
-
-    ysw_chord_t *cs = ysw_chord_create();
-    ysw_chord_add_note(cs, ysw_chord_note_create(1, 100, 0, 1000));
-    ysw_chord_add_note(cs, ysw_chord_note_create(3, 80, 50, 1000));
-    ysw_chord_add_note(cs, ysw_chord_note_create(5, 80, 100, 1000));
-
-    ysw_chord_add_note(cs, ysw_chord_note_create(1, 100, 1100, 500));
-    ysw_chord_add_note(cs, ysw_chord_note_create(3, 80, 1150, 500));
-    ysw_chord_add_note(cs, ysw_chord_note_create(5, 80, 1200, 500));
-
-    ysw_chord_add_note(cs, ysw_chord_note_create(1, 100, 1700, 250));
-    ysw_chord_add_note(cs, ysw_chord_note_create(3, 80, 1750, 250));
-    ysw_chord_add_note(cs, ysw_chord_note_create(5, 80, 1800, 250));
-
-    ysw_chord_add_note(cs, ysw_chord_note_create(5, 100, 2050, 250));
-    ysw_chord_add_note(cs, ysw_chord_note_create(3, 80, 2100, 250));
-    ysw_chord_add_note(cs, ysw_chord_note_create(1, 80, 2150, 250));
-    ysw_chord_set_duration(cs, 2400);
-
-    ysw_progression_set_instrument(s, 25);
-    ysw_progression_set_tonic(s, 48);
-
-    // Verse
-
-    ysw_progression_add_chord(s, I, cs);
-    ysw_progression_add_chord(s, V, cs);
-
-    ysw_progression_add_chord(s, vi, cs);
-    ysw_progression_add_chord(s, IV, cs);
-
-    ysw_progression_add_chord(s, I, cs);
-    ysw_progression_add_chord(s, V, cs);
-
-    ysw_progression_add_chord(s, IV, cs);
-    ysw_progression_add_chord(s, I, cs);
-
-    // Repeat
-
-    ysw_progression_add_chord(s, I, cs);
-    ysw_progression_add_chord(s, V, cs);
-
-    ysw_progression_add_chord(s, vi, cs);
-    ysw_progression_add_chord(s, IV, cs);
-
-    ysw_progression_add_chord(s, I, cs);
-    ysw_progression_add_chord(s, V, cs);
-
-    ysw_progression_add_chord(s, IV, cs);
-    ysw_progression_add_chord(s, I, cs);
-
-    // Chorus
-
-    ysw_progression_add_chord(s, vi, cs);
-    ysw_progression_add_chord(s, V, cs);
-
-    ysw_progression_add_chord(s, IV, cs);
-    ysw_progression_add_chord(s, I, cs);
-
-    ysw_progression_add_chord(s, I, cs);
-    ysw_progression_add_chord(s, V, cs);
-
-    ysw_progression_add_chord(s, IV, cs);
-    ysw_progression_add_chord(s, I, cs);
-
-    return s;
-}
-
-    UNUSED
 static void play_progression(ysw_progression_t *s)
 {
     ysw_progression_set_percent_tempo(s, 100);
@@ -202,6 +107,7 @@ static void play_progression(ysw_progression_t *s)
         .on_note_on = on_note_on,
         .on_note_off = on_note_off,
         .on_program_change = on_program_change,
+        .on_state_change = on_state_change,
     };
 
     sequencer_queue = ysw_sequencer_create_task(&config);
@@ -221,14 +127,10 @@ static void play_progression(ysw_progression_t *s)
 
     message = (ysw_sequencer_message_t){
         .type = YSW_SEQUENCER_PLAY,
-            .play.loop_count = YSW_SEQUENCER_LOOP_REPEATEDLY,
+        .play.loop_count = 1
     };
 
     ysw_message_send(sequencer_queue, &message);
-
-    for (;;) {
-        wait_millis(1000);
-    }
 }
 
 static void keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event)
@@ -532,18 +434,8 @@ static void create_marquis_mock_up()
     lv_table_set_cell_value(table, 11, 3, "230");
 }
 
-typedef enum {
-    INVALID,
-    CHORD,
-    CHORD_NOTE,
-    PROGRESSION,
-    MELODY,
-    RHYTHM,
-    MIX,
-} ysw_record_type_t;
-
 #define SPIFFS_PARTITION "/spiffs"
-#define PLAYER_DEFINITIONS "/spiffs/player.csv"
+#define MUSIC_DEFINITIONS "/spiffs/music.csv"
 
 static void initialize_spiffs()
 {
@@ -568,6 +460,9 @@ void app_main()
     esp_log_level_set("BLEDevice", ESP_LOG_INFO);
     esp_log_level_set("BLECharacteristic", ESP_LOG_INFO);
 
+    esp_log_level_set("YSW_HEAP", ESP_LOG_INFO);
+    esp_log_level_set("YSW_ARRAY", ESP_LOG_INFO);
+
     eli_ili9341_xpt2046_config_t new_config = {
         .mosi = 21,
         .clk = 22,
@@ -588,8 +483,24 @@ void app_main()
     eli_ili9341_xpt2046_initialize(&new_config);
 
     initialize_spiffs();
+
     create_marquis_mock_up();
-    ysw_music_t *music = ysw_music_parse(PLAYER_DEFINITIONS);
+
+    music = ysw_music_parse(MUSIC_DEFINITIONS);
+
+    uint32_t chord_count = ysw_array_get_count(music->chords);
+    for (uint32_t i = 0; i < chord_count; i++) {
+        ysw_chord_t *chord = ysw_array_get(music->chords, i);
+        ESP_LOGI(TAG, "chord[%d]=%s", i, chord->name);
+    }
+
+    uint32_t progression_count = ysw_array_get_count(music->progressions);
+    for (uint32_t i = 0; i < progression_count; i++) {
+        ysw_progression_t *progression = ysw_array_get(music->progressions, i);
+        ESP_LOGI(TAG, "progression[%d]=%s", i, progression->name);
+    }
+
+    play_next();
 
     while (1) {
         wait_millis(1);

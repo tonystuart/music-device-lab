@@ -11,7 +11,7 @@
 
 #include "esp_log.h"
 
-#define TAG "HEAP"
+#define TAG "YSW_HEAP"
 
 void *ysw_heap_allocate(size_t size)
 {

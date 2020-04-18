@@ -17,20 +17,20 @@
 #define YSW_SEQUENCER_LOOP_REPEATEDLY (-1)
 
 typedef enum {
-    YSW_SEQUENCER_STATUS_DONE,
-    YSW_SEQUENCER_STATUS_LOOP,
-} ysw_sequencer_status_t;
+    YSW_SEQUENCER_STATE_LOOP_COMPLETE,
+    YSW_SEQUENCER_STATE_PLAYBACK_COMPLETE,
+} ysw_sequencer_state_t;
 
 typedef void (*ysw_sequencer_on_note_on_t)(uint8_t channel, uint8_t midi_note, uint8_t velocity);
 typedef void (*ysw_sequencer_on_note_off_t)(uint8_t channel, uint8_t midi_note);
 typedef void (*ysw_sequencer_on_program_change_t)(uint8_t channel, uint8_t program);
-typedef void (*ysw_sequencer_on_status_update_t)(ysw_sequencer_status_t status);
+typedef void (*ysw_sequencer_on_state_change_t)(ysw_sequencer_state_t state);
 
 typedef struct {
     ysw_sequencer_on_note_on_t on_note_on;
     ysw_sequencer_on_note_off_t on_note_off;
     ysw_sequencer_on_program_change_t on_program_change;
-    ysw_sequencer_on_status_update_t on_status_update;
+    ysw_sequencer_on_state_change_t on_state_change;
 } ysw_sequencer_config_t;
 
 typedef enum {

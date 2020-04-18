@@ -9,6 +9,7 @@
 
 #include "ysw_music_parser.h"
 
+#include "setjmp.h"
 #include "assert.h"
 #include "esp_log.h"
 #include "hash.h"
@@ -33,17 +34,29 @@ typedef enum {
     CHORD = 1,
     CHORD_NOTE,
     PROGRESSION,
+    PROGRESSION_CHORD,
+    MELODY,
+    RHYTHM,
+    MIX,
 } record_type_t;
 
 typedef struct {
     FILE *file;
-    int record_count;
-    int token_count;
+    uint32_t record_count;
     char buffer[RECORD_SIZE];
     char *tokens[TOKENS_SIZE];
-    ysw_array_t *addresses;
+    ysw_music_t *music;
+    uint8_t token_count;
     bool reuse_tokens;
 } this_t;
+
+#define V(args...) \
+    if (!(args)) { \
+        ESP_LOGW(TAG, "validation failed on '" #args "', file=%s, line=%d", __FILE__, __LINE__);\
+        longjmp(error_return, 1);\
+    }
+
+static jmp_buf error_return;
 
 static int get_tokens(this_t *this)
 {
@@ -54,12 +67,9 @@ static int get_tokens(this_t *this)
 
     bool done = false;
 
-    while (fgets(this->buffer, RECORD_SIZE, this->file) && !done) {
-        ESP_LOGD(TAG, "record=%d, buffer=%s", this->record_count, this->buffer);
+    while (!done && fgets(this->buffer, RECORD_SIZE, this->file)) {
         this->token_count = parse_csv(this->buffer, this->tokens, TOKENS_SIZE);
-        for (int i = 0; i < this->token_count; i++) {
-            ESP_LOGD(TAG, "token[%d]=%s", i, this->tokens[i]);
-        }
+        this->record_count++;
         if (this->token_count > 0) {
             done = true;
         }
@@ -74,24 +84,31 @@ static void push_back_tokens(this_t *this)
     this->reuse_tokens = true;
 }
 
-static ysw_chord_t *parse_chord(this_t *this)
+static void parse_chord(this_t *this)
 {
-    int id = atoi(this->tokens[1]);
+    ESP_LOGD(TAG, "parse_chord record_count=%d", this->record_count);
+    uint32_t index = atoi(this->tokens[1]);
     char *name = this->tokens[2];
-    int duration = atoi(this->tokens[3]);
+    uint32_t duration = atoi(this->tokens[3]);
+
+    uint32_t count = ysw_array_get_count(this->music->chords);
+    if (index != count) {
+        ESP_LOGW(TAG, "parse_cord index=%d, count=%d", index, count);
+        return;
+    }
+
     ysw_chord_t *chord = ysw_chord_create(name, duration);
-    int index = ysw_array_push(this->addresses, chord);
-    assert(index == id);
+    ysw_array_push(this->music->chords, chord);
 
     bool done = false;
 
-    while (get_tokens(this) && !done) {
+    while (!done && get_tokens(this)) {
         record_type_t type = atoi(this->tokens[0]);
         if (type == CHORD_NOTE) {
-            int degree = atoi(this->tokens[1]);
-            int velocity = atoi(this->tokens[2]);
-            int time = atoi(this->tokens[3]);
-            int duration = atoi(this->tokens[4]);
+            int8_t degree = atoi(this->tokens[1]);
+            uint8_t velocity = atoi(this->tokens[2]);
+            uint32_t time = atoi(this->tokens[3]);
+            uint32_t duration = atoi(this->tokens[4]);
             ysw_chord_note_t *note = ysw_chord_note_create(degree, velocity, time, duration);
             ysw_chord_add_note(chord, note);
         } else {
@@ -99,41 +116,107 @@ static ysw_chord_t *parse_chord(this_t *this)
             done = true;
         }
     }
+}
 
-    return chord;
+static void parse_progression(this_t *this)
+{
+    ESP_LOGD(TAG, "parse_progression record_count=%d", this->record_count);
+    uint32_t index = atoi(this->tokens[1]);
+    char *name = this->tokens[2];
+    uint8_t tonic = atoi(this->tokens[3]);
+    uint8_t instrument = atoi(this->tokens[3]);
+    uint8_t bpm = atoi(this->tokens[5]);
+
+    uint32_t count = ysw_array_get_count(this->music->progressions);
+    if (index != count) {
+        ESP_LOGW(TAG, "parse_progression index=%d, count=%d", index, count);
+        return;
+    }
+
+    ysw_progression_t *progression = ysw_progression_create(name, tonic, instrument, bpm);
+    ysw_array_push(this->music->progressions, progression);
+
+    bool done = false;
+
+    while (!done && get_tokens(this)) {
+        record_type_t type = atoi(this->tokens[0]);
+        if (type == PROGRESSION_CHORD) {
+            uint8_t degree = atoi(this->tokens[1]);
+            uint32_t chord_index = atoi(this->tokens[2]);
+            uint32_t chord_count = ysw_array_get_count(this->music->chords);
+            if (chord_index >= chord_count) {
+                ESP_LOGW(TAG, "parse_progression chord_index=%d, chord_count=%d", chord_index, chord_count);
+                ysw_progression_free(progression);
+                return;
+            }
+            ysw_chord_t *chord = ysw_array_get(this->music->chords, chord_index);
+            ysw_progression_add_chord(progression, degree, chord);
+        } else {
+            push_back_tokens(this);
+            done = true;
+        }
+    }
 }
 
 static ysw_music_t *create_music()
 {
     ysw_music_t *music = ysw_heap_allocate(sizeof(ysw_music_t));
-    music->chords = ysw_array_create(8);
+    music->chords = ysw_array_create(64);
+    music->progressions = ysw_array_create(64);
     return music;
 }
 
 void ysw_music_free(ysw_music_t *music)
 {
+    uint32_t chord_count = ysw_array_get_count(music->chords);
+    for (uint32_t i = 0; i < chord_count; i++) {
+        ysw_chord_t *chord = ysw_array_get(music->chords, i);
+        ysw_chord_free(chord);
+    }
+    ysw_array_free(music->chords);
+    uint32_t progression_count = ysw_array_get_count(music->progressions);
+    for (uint32_t i = 0; i < progression_count; i++) {
+        ysw_progression_t *progression = ysw_array_get(music->progressions, i);
+        ysw_progression_free(progression);
+    }
+    ysw_array_free(music->progressions);
 }
 
 ysw_music_t *ysw_music_parse_file(FILE *file)
 {
     this_t *this = &(this_t){};
-    ysw_music_t *music = create_music();
-    this->addresses = ysw_array_create(100);
+
+    if (setjmp(error_return)) {
+        ESP_LOGW(TAG, "caught parser exception");
+        if (this->music) {
+            ysw_music_free(this->music);
+        }
+        return NULL;
+    }
+
     this->file = file;
+    this->music = create_music();
+
     while (get_tokens(this)) {
         record_type_t type = atoi(this->tokens[0]);
         if (type == CHORD && this->token_count == 4) {
-            ysw_chord_t *chord = parse_chord(this);
-            ysw_array_push(music->chords, chord);
+            parse_chord(this);
         } else if (type == PROGRESSION && this->token_count == 6) {
+            parse_progression(this);
+        } else {
+            ESP_LOGW(TAG, "invalid record type=%d, token_count=%d", type, this->token_count);
+            for (uint32_t i = 0; i < this->token_count; i++) {
+                ESP_LOGW(TAG, "token[%d]=%s", i, this->tokens[i]);
+            }
         }
     }
-    ysw_array_free(this->addresses);
-    return music;
+
+    return this->music;
 }
 
 ysw_music_t *ysw_music_parse(char *filename)
 {
+    ESP_LOGD(TAG, "ysw_music_parse filename=%s", filename);
     ysw_music_t *music = NULL;
     FILE *file = fopen(filename, "r");
     if (file) {

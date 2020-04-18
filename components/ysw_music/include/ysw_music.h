@@ -52,11 +52,17 @@ typedef struct {
 } ysw_progression_chord_t;
 
 typedef struct {
+    char *name;
     ysw_array_t *chords;
     uint8_t tonic;
     uint8_t instrument;
     uint8_t percent_tempo;
 } ysw_progression_t;
+
+typedef struct {
+    ysw_array_t *chords;
+    ysw_array_t *progressions;
+} ysw_music_t;
 
 note_t *ysw_progression_get_notes(ysw_progression_t *progression);
 uint32_t ysw_get_note_count(ysw_progression_t *progression);
@@ -65,9 +71,9 @@ void ysw_progression_set_instrument(ysw_progression_t *progression, uint8_t inst
 void ysw_progression_set_tonic(ysw_progression_t *progression, uint8_t tonic);
 int ysw_progression_add_chord(ysw_progression_t *progression, uint8_t degree, ysw_chord_t *chord);
 void ysw_progression_free(ysw_progression_t *progression);
-ysw_progression_t *ysw_progression_create();
+ysw_progression_t *ysw_progression_create(char *name, uint8_t tonic, uint8_t instrument, uint8_t bpm);
 void ysw_chord_note_free(ysw_chord_note_t *ysw_chord_note);
-ysw_chord_note_t *ysw_chord_note_create(uint8_t degree, uint8_t velocity, uint32_t time, uint32_t duration);
+ysw_chord_note_t *ysw_chord_note_create(int8_t degree, uint8_t velocity, uint32_t time, uint32_t duration);
 void ysw_chord_set_duration(ysw_chord_t *chord, uint32_t duration);
 int ysw_chord_add_note(ysw_chord_t *chord, ysw_chord_note_t *chord_note);
 void ysw_chord_free(ysw_chord_t *chord);

@@ -76,6 +76,7 @@ void ysw_chord_free(ysw_chord_t *chord)
 {
     assert(chord);
     ysw_array_free(chord->chord_notes);
+    ysw_heap_free(chord->name);
     ysw_heap_free(chord);
 }
 
@@ -94,7 +95,7 @@ void ysw_chord_set_duration(ysw_chord_t *chord, uint32_t duration)
     chord->duration = duration;
 }
 
-ysw_chord_note_t *ysw_chord_note_create(uint8_t degree, uint8_t velocity, uint32_t time, uint32_t duration)
+ysw_chord_note_t *ysw_chord_note_create(int8_t degree, uint8_t velocity, uint32_t time, uint32_t duration)
 {
     ESP_LOGD(TAG, "chord_note_create degree=%u, velocity=%u, time=%u, duration=%u", degree, velocity, time, duration);
     ysw_chord_note_t *ysw_chord_note = ysw_heap_allocate(sizeof(ysw_chord_note_t));
@@ -112,13 +113,14 @@ void ysw_chord_note_free(ysw_chord_note_t *ysw_chord_note)
     ysw_heap_free(ysw_chord_note);
 }
 
-ysw_progression_t *ysw_progression_create()
+ysw_progression_t *ysw_progression_create(char *name, uint8_t tonic, uint8_t instrument, uint8_t bpm)
 {
     ysw_progression_t *progression = ysw_heap_allocate(sizeof(ysw_progression_t));
+    progression->name = ysw_heap_strdup(name);
     progression->chords = ysw_array_create(8);
-    progression->instrument = 0;
+    progression->instrument = instrument;
     progression->percent_tempo = 100;
-    progression->tonic = 60;
+    progression->tonic = tonic;
     ESP_LOGD(TAG, "create progression=%p", progression);
     return progression;
 }
@@ -133,6 +135,7 @@ void ysw_progression_free(ysw_progression_t *progression)
         ysw_heap_free(progression_chord);
     }
     ysw_array_free(progression->chords);
+    ysw_heap_free(progression->name);
     ysw_heap_free(progression);
 }
 
