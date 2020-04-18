@@ -14,7 +14,7 @@
 #include "ysw_ble_synthesizer.h"
 #include "ysw_sequencer.h"
 #include "ysw_message.h"
-#include "ysw_clip.h"
+#include "ysw_music.h"
 #include "ysw_player_data.h"
 
 #include "driver/spi_master.h"

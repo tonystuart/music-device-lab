@@ -7,12 +7,12 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_clip.h"
+#include "ysw_music.h"
 
 #include "assert.h"
 #include "ysw_heap.h"
 
-#define TAG "YSW_CLIP"
+#define TAG "YSW_MUSIC"
 
 // TODO: Change type of MIDI 7 bit quantities to int8_t
 

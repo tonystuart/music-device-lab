@@ -13,7 +13,7 @@
 #include "esp_log.h"
 #include "hash.h"
 #include "ysw_heap.h"
-#include "ysw_clip.h"
+#include "ysw_music.h"
 #include "ysw_csv.h"
 
 #define TAG "YSW_PLAYER_DATA"
