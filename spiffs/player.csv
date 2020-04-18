@@ -1,5 +1,5 @@
 #record_type (chord),group_id,name,chord_duration
-1,1,Let it be strum,2000
+1,0,Let it be strum,2000
 
 #type (chord_note),degree,velocity,time,duration
 2,1,100,0,1000
@@ -15,10 +15,10 @@
 2,3,80,2100,250
 2,5,80,2150,250
 
-#type,group,name,chord_duration
-1,2,Twelve bar blues main,2000
+#type (chord),group,name,chord_duration
+1,1,Twelve bar blues main,2000
 
-#type,group,degree,velocity,time,duration
+#type (chord_note),group,degree,velocity,time,duration
 2,1,100,0,230
 2,3,80,250,230
 2,5,80,500,230
@@ -28,8 +28,8 @@
 2,5,80,1500,230
 2,3,80,1750,230
 
-#type,group,name,chord_duration
-1,3,Twelve bar blues alt,2000
+#type (chord),group,name,chord_duration
+1,2,Twelve bar blues alt,2000
 
 #type,group,degree,velocity,time,duration
 2,1,100,0,230
@@ -41,50 +41,50 @@
 2,5,80,1500,230
 2,3,80,1750,230
 
-#type,group,name,tonic,instrument,bpm
-3,4,Let it be progression,48,25,80
+#type (progression),group,name,tonic,instrument,bpm
+3,3,Let it be progression,48,25,80
 
-#type,group,chord_number,chord
-4,1,1
-4,5,1
-4,6,1
-4,4,1
-4,1,1
-4,5,1
-4,4,1
-4,1,1
+#type (progression_chord),degree,chord
+4,1,0
+4,5,0
+4,6,0
+4,4,0
+4,1,0
+4,5,0
+4,4,0
+4,1,0
 
-4,1,1
-4,5,1
-4,6,1
-4,4,1
-4,1,1
-4,5,1
-4,4,1
-4,1,1
+4,1,0
+4,5,0
+4,6,0
+4,4,0
+4,1,0
+4,5,0
+4,4,0
+4,1,0
 
-4,6,1
-4,5,1
+4,6,0
+4,5,0
+4,4,0
+4,1,0
+4,1,0
+4,5,0
+4,4,0
+4,1,0
+
+#type (progression),group,name,tonic,instrument,bpm
+3,4,Twelve bar blues progression,32,36,80
+
+#type (progression chord),group,degree,chord
+4,1,1
+4,1,1
+4,1,1
+4,1,1
+4,4,1
 4,4,1
 4,1,1
 4,1,1
-4,5,1
+4,5,2
 4,4,1
 4,1,1
-
-#type,group,name,tonic,instrument,bpm
-3,5,Twelve bar blues progression,32,36,80
-
-#type,group,chord_number,chord
-4,1,2
-4,1,2
-4,1,2
-4,1,2
-4,4,2
-4,4,2
-4,1,2
-4,1,2
-4,5,3
-4,4,2
-4,1,2
-4,1,2
+4,1,1

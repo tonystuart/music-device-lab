@@ -10,15 +10,11 @@
 #pragma once
 
 #include "stdio.h"
-#include "assert.h"
-#include "esp_log.h"
-#include "hash.h"
-#include "ysw_heap.h"
-#include "ysw_clip.h"
-#include "ysw_csv.h"
+#include "ysw_array.h"
 
 typedef struct {
     ysw_array_t *chords;
 } ysw_player_data_t;
 
 ysw_player_data_t *ysw_player_data_parse(char *filename);
+ysw_player_data_t *ysw_player_data_parse_file(FILE *file);

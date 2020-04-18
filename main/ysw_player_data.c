@@ -9,6 +9,13 @@
 
 #include "ysw_player_data.h"
 
+#include "assert.h"
+#include "esp_log.h"
+#include "hash.h"
+#include "ysw_heap.h"
+#include "ysw_clip.h"
+#include "ysw_csv.h"
+
 #define TAG "YSW_PLAYER_DATA"
 
 #define RECORD_SIZE 128
@@ -24,7 +31,8 @@
 
 typedef enum {
     CHORD = 1,
-    CHORD_NOTE
+    CHORD_NOTE,
+    PROGRESSION,
 } record_type_t;
 
 typedef struct {
@@ -102,22 +110,36 @@ static ysw_player_data_t *create_player_data()
     return player_data;
 }
 
-ysw_player_data_t *ysw_player_data_parse(char *filename)
+void ysw_player_data_free(ysw_player_data_t *player_data)
+{
+}
+
+ysw_player_data_t *ysw_player_data_parse_file(FILE *file)
 {
     this_t *this = &(this_t){};
     ysw_player_data_t *player_data = create_player_data();
     this->addresses = ysw_array_create(100);
-    this->file = fopen(filename, "r");
-    assert(this->file);
+    this->file = file;
     while (get_tokens(this)) {
         record_type_t type = atoi(this->tokens[0]);
         if (type == CHORD && this->token_count == 4) {
             ysw_chord_style_t *chord = parse_chord(this);
             ysw_array_push(player_data->chords, chord);
+        } else if (type == PROGRESSION && this->token_count == 6) {
         }
     }
-    fclose(this->file);
     ysw_array_free(this->addresses);
+    return player_data;
+}
+
+ysw_player_data_t *ysw_player_data_parse(char *filename)
+{
+    ysw_player_data_t *player_data = NULL;
+    FILE *file = fopen(filename, "r");
+    if (file) {
+        player_data = ysw_player_data_parse_file(file);
+        fclose(file);
+    }
     return player_data;
 }
 
