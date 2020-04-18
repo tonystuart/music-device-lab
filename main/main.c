@@ -74,128 +74,126 @@ static void on_program_change(uint8_t channel, uint8_t program)
 }
 
 
-ysw_clip_t *create_twelve_bar_blues()
+ysw_progression_t *create_twelve_bar_blues()
 {
-    ysw_clip_t *s = ysw_clip_create();
+    ysw_progression_t *s = ysw_progression_create();
 
-    ysw_chord_style_t *cs1 = ysw_chord_style_create();
-    ysw_chord_style_add_note(cs1, ysw_chord_note_create(1, 100, 0, 230));
-    ysw_chord_style_add_note(cs1, ysw_chord_note_create(3, 80, 250, 230));
-    ysw_chord_style_add_note(cs1, ysw_chord_note_create(5, 80, 500, 230));
-    ysw_chord_style_add_note(cs1, ysw_chord_note_create(6, 80, 750, 230));
-    ysw_chord_style_add_note(cs1, ysw_chord_note_create(-7, 100, 1000, 230));
-    ysw_chord_style_add_note(cs1, ysw_chord_note_create(6, 80, 1250, 230));
-    ysw_chord_style_add_note(cs1, ysw_chord_note_create(5, 80, 1500, 230));
-    ysw_chord_style_add_note(cs1, ysw_chord_note_create(3, 80, 1750, 230));
-    ysw_chord_style_set_duration(cs1, 2000);
+    ysw_chord_t *cs1 = ysw_chord_create();
+    ysw_chord_add_note(cs1, ysw_chord_note_create(1, 100, 0, 230));
+    ysw_chord_add_note(cs1, ysw_chord_note_create(3, 80, 250, 230));
+    ysw_chord_add_note(cs1, ysw_chord_note_create(5, 80, 500, 230));
+    ysw_chord_add_note(cs1, ysw_chord_note_create(6, 80, 750, 230));
+    ysw_chord_add_note(cs1, ysw_chord_note_create(-7, 100, 1000, 230));
+    ysw_chord_add_note(cs1, ysw_chord_note_create(6, 80, 1250, 230));
+    ysw_chord_add_note(cs1, ysw_chord_note_create(5, 80, 1500, 230));
+    ysw_chord_add_note(cs1, ysw_chord_note_create(3, 80, 1750, 230));
+    ysw_chord_set_duration(cs1, 2000);
 
-    ysw_chord_style_t *cs2 = ysw_chord_style_create();
-    ysw_chord_style_add_note(cs2, ysw_chord_note_create(1, 100, 0, 230));
-    ysw_chord_style_add_note(cs2, ysw_chord_note_create(3, 80, 250, 230));
-    ysw_chord_style_add_note(cs2, ysw_chord_note_create(5, 80, 500, 230));
-    ysw_chord_style_add_note(cs2, ysw_chord_note_create(6, 80, 750, 230));
-    ysw_chord_style_add_note(cs2, ysw_chord_note_create(7, 100, 1000, 230));
-    ysw_chord_style_add_note(cs2, ysw_chord_note_create(6, 80, 1250, 230));
-    ysw_chord_style_add_note(cs2, ysw_chord_note_create(5, 80, 1500, 230));
-    ysw_chord_style_add_note(cs2, ysw_chord_note_create(3, 80, 1750, 230));
-    ysw_chord_style_set_duration(cs2, 2000);
+    ysw_chord_t *cs2 = ysw_chord_create();
+    ysw_chord_add_note(cs2, ysw_chord_note_create(1, 100, 0, 230));
+    ysw_chord_add_note(cs2, ysw_chord_note_create(3, 80, 250, 230));
+    ysw_chord_add_note(cs2, ysw_chord_note_create(5, 80, 500, 230));
+    ysw_chord_add_note(cs2, ysw_chord_note_create(6, 80, 750, 230));
+    ysw_chord_add_note(cs2, ysw_chord_note_create(7, 100, 1000, 230));
+    ysw_chord_add_note(cs2, ysw_chord_note_create(6, 80, 1250, 230));
+    ysw_chord_add_note(cs2, ysw_chord_note_create(5, 80, 1500, 230));
+    ysw_chord_add_note(cs2, ysw_chord_note_create(3, 80, 1750, 230));
+    ysw_chord_set_duration(cs2, 2000);
 
-    ysw_clip_set_chord_style(s, cs1);
-    ysw_clip_set_instrument(s, 32);
-    ysw_clip_set_tonic(s, 36);
+    ysw_progression_set_instrument(s, 32);
+    ysw_progression_set_tonic(s, 36);
 
-    ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord(s, IV);
-    ysw_clip_add_chord(s, IV);
-    ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord_with_style(s, V, cs2);
-    ysw_clip_add_chord(s, IV);
-    ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord(s, I);
+    ysw_progression_add_chord(s, I, cs1);
+    ysw_progression_add_chord(s, I, cs1);
+    ysw_progression_add_chord(s, I, cs1);
+    ysw_progression_add_chord(s, I, cs1);
+    ysw_progression_add_chord(s, IV, cs1);
+    ysw_progression_add_chord(s, IV, cs1);
+    ysw_progression_add_chord(s, I, cs1);
+    ysw_progression_add_chord(s, I, cs1);
+    ysw_progression_add_chord(s, V, cs2);
+    ysw_progression_add_chord(s, IV, cs1);
+    ysw_progression_add_chord(s, I, cs1);
+    ysw_progression_add_chord(s, I, cs1);
 
     return s;
 }
 
-ysw_clip_t *create_let_it_be()
+ysw_progression_t *create_let_it_be()
 {
-    ysw_clip_t *s = ysw_clip_create();
+    ysw_progression_t *s = ysw_progression_create();
 
-    ysw_chord_style_t *cs = ysw_chord_style_create();
-    ysw_chord_style_add_note(cs, ysw_chord_note_create(1, 100, 0, 1000));
-    ysw_chord_style_add_note(cs, ysw_chord_note_create(3, 80, 50, 1000));
-    ysw_chord_style_add_note(cs, ysw_chord_note_create(5, 80, 100, 1000));
+    ysw_chord_t *cs = ysw_chord_create();
+    ysw_chord_add_note(cs, ysw_chord_note_create(1, 100, 0, 1000));
+    ysw_chord_add_note(cs, ysw_chord_note_create(3, 80, 50, 1000));
+    ysw_chord_add_note(cs, ysw_chord_note_create(5, 80, 100, 1000));
 
-    ysw_chord_style_add_note(cs, ysw_chord_note_create(1, 100, 1100, 500));
-    ysw_chord_style_add_note(cs, ysw_chord_note_create(3, 80, 1150, 500));
-    ysw_chord_style_add_note(cs, ysw_chord_note_create(5, 80, 1200, 500));
+    ysw_chord_add_note(cs, ysw_chord_note_create(1, 100, 1100, 500));
+    ysw_chord_add_note(cs, ysw_chord_note_create(3, 80, 1150, 500));
+    ysw_chord_add_note(cs, ysw_chord_note_create(5, 80, 1200, 500));
 
-    ysw_chord_style_add_note(cs, ysw_chord_note_create(1, 100, 1700, 250));
-    ysw_chord_style_add_note(cs, ysw_chord_note_create(3, 80, 1750, 250));
-    ysw_chord_style_add_note(cs, ysw_chord_note_create(5, 80, 1800, 250));
+    ysw_chord_add_note(cs, ysw_chord_note_create(1, 100, 1700, 250));
+    ysw_chord_add_note(cs, ysw_chord_note_create(3, 80, 1750, 250));
+    ysw_chord_add_note(cs, ysw_chord_note_create(5, 80, 1800, 250));
 
-    ysw_chord_style_add_note(cs, ysw_chord_note_create(5, 100, 2050, 250));
-    ysw_chord_style_add_note(cs, ysw_chord_note_create(3, 80, 2100, 250));
-    ysw_chord_style_add_note(cs, ysw_chord_note_create(1, 80, 2150, 250));
-    ysw_chord_style_set_duration(cs, 2400);
+    ysw_chord_add_note(cs, ysw_chord_note_create(5, 100, 2050, 250));
+    ysw_chord_add_note(cs, ysw_chord_note_create(3, 80, 2100, 250));
+    ysw_chord_add_note(cs, ysw_chord_note_create(1, 80, 2150, 250));
+    ysw_chord_set_duration(cs, 2400);
 
-    ysw_clip_set_chord_style(s, cs);
-    ysw_clip_set_instrument(s, 25);
-    ysw_clip_set_tonic(s, 48);
+    ysw_progression_set_instrument(s, 25);
+    ysw_progression_set_tonic(s, 48);
 
     // Verse
 
-    ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord(s, V);
+    ysw_progression_add_chord(s, I, cs);
+    ysw_progression_add_chord(s, V, cs);
 
-    ysw_clip_add_chord(s, vi);
-    ysw_clip_add_chord(s, IV);
+    ysw_progression_add_chord(s, vi, cs);
+    ysw_progression_add_chord(s, IV, cs);
 
-    ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord(s, V);
+    ysw_progression_add_chord(s, I, cs);
+    ysw_progression_add_chord(s, V, cs);
 
-    ysw_clip_add_chord(s, IV);
-    ysw_clip_add_chord(s, I);
+    ysw_progression_add_chord(s, IV, cs);
+    ysw_progression_add_chord(s, I, cs);
 
     // Repeat
 
-    ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord(s, V);
+    ysw_progression_add_chord(s, I, cs);
+    ysw_progression_add_chord(s, V, cs);
 
-    ysw_clip_add_chord(s, vi);
-    ysw_clip_add_chord(s, IV);
+    ysw_progression_add_chord(s, vi, cs);
+    ysw_progression_add_chord(s, IV, cs);
 
-    ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord(s, V);
+    ysw_progression_add_chord(s, I, cs);
+    ysw_progression_add_chord(s, V, cs);
 
-    ysw_clip_add_chord(s, IV);
-    ysw_clip_add_chord(s, I);
+    ysw_progression_add_chord(s, IV, cs);
+    ysw_progression_add_chord(s, I, cs);
 
     // Chorus
 
-    ysw_clip_add_chord(s, vi);
-    ysw_clip_add_chord(s, V);
+    ysw_progression_add_chord(s, vi, cs);
+    ysw_progression_add_chord(s, V, cs);
 
-    ysw_clip_add_chord(s, IV);
-    ysw_clip_add_chord(s, I);
+    ysw_progression_add_chord(s, IV, cs);
+    ysw_progression_add_chord(s, I, cs);
 
-    ysw_clip_add_chord(s, I);
-    ysw_clip_add_chord(s, V);
+    ysw_progression_add_chord(s, I, cs);
+    ysw_progression_add_chord(s, V, cs);
 
-    ysw_clip_add_chord(s, IV);
-    ysw_clip_add_chord(s, I);
+    ysw_progression_add_chord(s, IV, cs);
+    ysw_progression_add_chord(s, I, cs);
 
     return s;
 }
 
     UNUSED
-static void play_clip(ysw_clip_t *s)
+static void play_progression(ysw_progression_t *s)
 {
-    ysw_clip_set_percent_tempo(s, 100);
-    note_t *notes = ysw_clip_get_notes(s);
+    ysw_progression_set_percent_tempo(s, 100);
+    note_t *notes = ysw_progression_get_notes(s);
     assert(notes);
 
     synthesizer_queue = ysw_ble_synthesizer_create_task();

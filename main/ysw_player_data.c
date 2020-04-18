@@ -74,12 +74,12 @@ static void push_back_tokens(this_t *this)
     this->reuse_tokens = true;
 }
 
-static ysw_chord_style_t *parse_chord(this_t *this)
+static ysw_chord_t *parse_chord(this_t *this)
 {
     int id = atoi(this->tokens[1]);
     char *name = this->tokens[2];
     int duration = atoi(this->tokens[3]);
-    ysw_chord_style_t *chord = ysw_chord_style_create(name, duration);
+    ysw_chord_t *chord = ysw_chord_create(name, duration);
     int index = ysw_array_push(this->addresses, chord);
     assert(index == id);
 
@@ -93,7 +93,7 @@ static ysw_chord_style_t *parse_chord(this_t *this)
             int time = atoi(this->tokens[3]);
             int duration = atoi(this->tokens[4]);
             ysw_chord_note_t *note = ysw_chord_note_create(degree, velocity, time, duration);
-            ysw_chord_style_add_note(chord, note);
+            ysw_chord_add_note(chord, note);
         } else {
             push_back_tokens(this);
             done = true;
@@ -123,7 +123,7 @@ ysw_player_data_t *ysw_player_data_parse_file(FILE *file)
     while (get_tokens(this)) {
         record_type_t type = atoi(this->tokens[0]);
         if (type == CHORD && this->token_count == 4) {
-            ysw_chord_style_t *chord = parse_chord(this);
+            ysw_chord_t *chord = parse_chord(this);
             ysw_array_push(player_data->chords, chord);
         } else if (type == PROGRESSION && this->token_count == 6) {
         }

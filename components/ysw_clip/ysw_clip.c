@@ -63,35 +63,35 @@ static inline int8_t to_note(int8_t tonic_index, int8_t root_number, int8_t degr
     return note;
 }
 
-ysw_chord_style_t *ysw_chord_style_create(char *name, uint32_t duration)
+ysw_chord_t *ysw_chord_create(char *name, uint32_t duration)
 {
-    ysw_chord_style_t *chord_style = ysw_heap_allocate(sizeof(ysw_chord_style_t));
-    chord_style->name = ysw_heap_strdup(name);
-    chord_style->chord_notes = ysw_array_create(8);
-    chord_style->duration = duration;
-    return chord_style;
+    ysw_chord_t *chord = ysw_heap_allocate(sizeof(ysw_chord_t));
+    chord->name = ysw_heap_strdup(name);
+    chord->chord_notes = ysw_array_create(8);
+    chord->duration = duration;
+    return chord;
 }
 
-void ysw_chord_style_free(ysw_chord_style_t *chord_style)
+void ysw_chord_free(ysw_chord_t *chord)
 {
-    assert(chord_style);
-    ysw_array_free(chord_style->chord_notes);
-    ysw_heap_free(chord_style);
+    assert(chord);
+    ysw_array_free(chord->chord_notes);
+    ysw_heap_free(chord);
 }
 
-int ysw_chord_style_add_note(ysw_chord_style_t *chord_style, ysw_chord_note_t *chord_note)
+int ysw_chord_add_note(ysw_chord_t *chord, ysw_chord_note_t *chord_note)
 {
-    assert(chord_style);
+    assert(chord);
     assert(chord_note);
-    chord_style->duration = max(chord_style->duration, chord_note->time + chord_note->duration);
-    int index = ysw_array_push(chord_style->chord_notes, chord_note);
+    chord->duration = max(chord->duration, chord_note->time + chord_note->duration);
+    int index = ysw_array_push(chord->chord_notes, chord_note);
     return index;
 }
 
-void ysw_chord_style_set_duration(ysw_chord_style_t *chord_style, uint32_t duration)
+void ysw_chord_set_duration(ysw_chord_t *chord, uint32_t duration)
 {
-    assert(chord_style);
-    chord_style->duration = duration;
+    assert(chord);
+    chord->duration = duration;
 }
 
 ysw_chord_note_t *ysw_chord_note_create(uint8_t degree, uint8_t velocity, uint32_t time, uint32_t duration)
@@ -112,114 +112,98 @@ void ysw_chord_note_free(ysw_chord_note_t *ysw_chord_note)
     ysw_heap_free(ysw_chord_note);
 }
 
-ysw_clip_t *ysw_clip_create()
+ysw_progression_t *ysw_progression_create()
 {
-    ysw_clip_t *clip = ysw_heap_allocate(sizeof(ysw_clip_t));
-    clip->chords = ysw_array_create(8);
-    clip->chord_style = NULL;
-    clip->instrument = 0;
-    clip->percent_tempo = 100;
-    clip->tonic = 60;
-    ESP_LOGD(TAG, "create clip=%p", clip);
-    return clip;
+    ysw_progression_t *progression = ysw_heap_allocate(sizeof(ysw_progression_t));
+    progression->chords = ysw_array_create(8);
+    progression->instrument = 0;
+    progression->percent_tempo = 100;
+    progression->tonic = 60;
+    ESP_LOGD(TAG, "create progression=%p", progression);
+    return progression;
 }
 
-void ysw_clip_free(ysw_clip_t *clip)
+void ysw_progression_free(ysw_progression_t *progression)
 {
-    assert(clip);
-    ESP_LOGD(TAG, "free clip=%p, chords=%d", clip, ysw_array_get_count(clip->chords));
-    int chord_count = ysw_array_get_count(clip->chords);
+    assert(progression);
+    ESP_LOGD(TAG, "free progression=%p, chords=%d", progression, ysw_array_get_count(progression->chords));
+    int chord_count = ysw_array_get_count(progression->chords);
     for (int i = 0; i < chord_count; i++) {
-        ysw_chord_t *chord = ysw_array_get(clip->chords, i);
-        ysw_heap_free(chord);
+        ysw_progression_chord_t *progression_chord = ysw_array_get(progression->chords, i);
+        ysw_heap_free(progression_chord);
     }
-    ysw_array_free(clip->chords);
-    ysw_heap_free(clip);
+    ysw_array_free(progression->chords);
+    ysw_heap_free(progression);
 }
 
-int ysw_clip_add_chord_with_style(ysw_clip_t *clip, uint8_t chord_number, ysw_chord_style_t *chord_style)
+int ysw_progression_add_chord(ysw_progression_t *progression, uint8_t degree, ysw_chord_t *chord)
 {
-    assert(clip);
-    assert(chord_number < YSW_MIDI_MAX);
-    assert(chord_style);
-    ysw_chord_t *chord = ysw_heap_allocate(sizeof(ysw_chord_t));
-    chord->chord_number = chord_number;
-    chord->chord_style = chord_style;
-    int index = ysw_array_push(clip->chords, chord);
+    assert(progression);
+    assert(degree < YSW_MIDI_MAX);
+    assert(chord);
+    ysw_progression_chord_t *progression_chord = ysw_heap_allocate(sizeof(ysw_progression_chord_t));
+    progression_chord->degree = degree;
+    int index = ysw_array_push(progression->chords, chord);
     return index;
 }
 
-int ysw_clip_add_chord(ysw_clip_t *clip, uint8_t chord_number)
+void ysw_progression_set_tonic(ysw_progression_t *progression, uint8_t tonic)
 {
-    assert(clip);
-    assert(chord_number < YSW_MIDI_MAX);
-    return ysw_clip_add_chord_with_style(clip, chord_number, clip->chord_style);
-}
-
-void ysw_clip_set_chord_style(ysw_clip_t *clip, ysw_chord_style_t *chord_style)
-{
-    assert(clip);
-    assert(chord_style);
-    clip->chord_style = chord_style;
-}
-
-void ysw_clip_set_tonic(ysw_clip_t *clip, uint8_t tonic)
-{
-    assert(clip);
+    assert(progression);
     assert(tonic < YSW_MIDI_MAX);
-    clip->tonic = tonic;
+    progression->tonic = tonic;
 }
 
-void ysw_clip_set_instrument(ysw_clip_t *clip, uint8_t instrument)
+void ysw_progression_set_instrument(ysw_progression_t *progression, uint8_t instrument)
 {
-    assert(clip);
+    assert(progression);
     assert(instrument < YSW_MIDI_MAX);
-    clip->instrument = instrument;
+    progression->instrument = instrument;
 }
 
-void ysw_clip_set_percent_tempo(ysw_clip_t *clip, uint8_t percent_tempo)
+void ysw_progression_set_percent_tempo(ysw_progression_t *progression, uint8_t percent_tempo)
 {
-    assert(clip);
-    clip->percent_tempo = percent_tempo;
+    assert(progression);
+    progression->percent_tempo = percent_tempo;
 }
 
-uint32_t ysw_get_note_count(ysw_clip_t *clip)
+uint32_t ysw_get_note_count(ysw_progression_t *progression)
 {
-    assert(clip);
+    assert(progression);
     uint32_t note_count = 0;
-    int chord_count = ysw_array_get_count(clip->chords);
+    int chord_count = ysw_array_get_count(progression->chords);
     for (int i = 0; i < chord_count; i++) {
-        ysw_chord_t *chord = ysw_array_get(clip->chords, i);
-        int chord_note_count = ysw_array_get_count(chord->chord_style->chord_notes);
+        ysw_progression_chord_t *progression_chord = ysw_array_get(progression->chords, i);
+        int chord_note_count = ysw_array_get_count(progression_chord->chord->chord_notes);
         note_count += chord_note_count;
     }
     return note_count;
 }
 
-note_t *ysw_clip_get_notes(ysw_clip_t *clip)
+note_t *ysw_progression_get_notes(ysw_progression_t *progression)
 {
-    assert(clip);
+    assert(progression);
     int chord_time = 0;
-    int chord_count = ysw_array_get_count(clip->chords);
-    int note_count = ysw_get_note_count(clip);
+    int chord_count = ysw_array_get_count(progression->chords);
+    int note_count = ysw_get_note_count(progression);
     note_t *notes = ysw_heap_allocate(sizeof(note_t) * note_count);
     note_t *note_p = notes;
     for (int i = 0; i < chord_count; i++) {
-        ysw_chord_t *chord = ysw_array_get(clip->chords, i);
-        uint8_t chord_root = chord->chord_number;
-        int chord_note_count = ysw_array_get_count(chord->chord_style->chord_notes);
+        ysw_progression_chord_t *progression_chord = ysw_array_get(progression->chords, i);
+        uint8_t chord_root = progression_chord->degree;
+        int chord_note_count = ysw_array_get_count(progression_chord->chord->chord_notes);
         for (int j = 0; j < chord_note_count; j++) {
-            ysw_chord_note_t *chord_note = ysw_array_get(chord->chord_style->chord_notes, j);
+            ysw_chord_note_t *chord_note = ysw_array_get(progression_chord->chord->chord_notes, j);
             note_p->time = chord_time + chord_note->time;
             note_p->duration = chord_note->duration;
             note_p->channel = 0;
-            note_p->midi_note = to_note(clip->tonic, chord_root, chord_note->degree);
+            note_p->midi_note = to_note(progression->tonic, chord_root, chord_note->degree);
             note_p->velocity = chord_note->velocity;
-            note_p->instrument = clip->instrument;
+            note_p->instrument = progression->instrument;
             ESP_LOGD(TAG, "time=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->time, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
             note_p++;
         }
-        chord_time += chord->chord_style->duration;
+        chord_time += progression_chord->chord->duration;
     }
     return notes;
 }
