@@ -86,10 +86,11 @@ static void push_back_tokens(this_t *this)
 
 static void parse_chord(this_t *this)
 {
-    ESP_LOGD(TAG, "parse_chord record_count=%d", this->record_count);
     uint32_t index = atoi(this->tokens[1]);
     char *name = this->tokens[2];
     uint32_t duration = atoi(this->tokens[3]);
+
+    ESP_LOGD(TAG, "parse_chord index=%d, name=%s, duration=%d, record_count=%d", index, name, duration, this->record_count);
 
     uint32_t count = ysw_array_get_count(this->music->chords);
     if (index != count) {
@@ -98,6 +99,7 @@ static void parse_chord(this_t *this)
     }
 
     ysw_chord_t *chord = ysw_chord_create(name, duration);
+    ESP_LOGD(TAG, "pushing index=%d, chord=%p, name=%s", count, chord, chord->name);
     ysw_array_push(this->music->chords, chord);
 
     bool done = false;
@@ -116,16 +118,19 @@ static void parse_chord(this_t *this)
             done = true;
         }
     }
+
+    ysw_chord_dump(TAG, chord);
 }
 
 static void parse_progression(this_t *this)
 {
-    ESP_LOGD(TAG, "parse_progression record_count=%d", this->record_count);
     uint32_t index = atoi(this->tokens[1]);
     char *name = this->tokens[2];
     uint8_t tonic = atoi(this->tokens[3]);
     uint8_t instrument = atoi(this->tokens[3]);
     uint8_t bpm = atoi(this->tokens[5]);
+
+    ESP_LOGD(TAG, "parse_progression index=%d, name=%s, tonic=%d, instrument=%d, bpm=%d, record_count=%d", index, name, tonic, instrument, bpm, this->record_count);
 
     uint32_t count = ysw_array_get_count(this->music->progressions);
     if (index != count) {
@@ -150,12 +155,15 @@ static void parse_progression(this_t *this)
                 return;
             }
             ysw_chord_t *chord = ysw_array_get(this->music->chords, chord_index);
+            ESP_LOGD(TAG, "using index=%d, chord=%p, name=%s", chord_index, chord, chord->name);
             ysw_progression_add_chord(progression, degree, chord);
         } else {
             push_back_tokens(this);
             done = true;
         }
     }
+
+    ysw_progression_dump(TAG, progression);
 }
 
 static ysw_music_t *create_music()

@@ -492,12 +492,14 @@ void app_main()
     for (uint32_t i = 0; i < chord_count; i++) {
         ysw_chord_t *chord = ysw_array_get(music->chords, i);
         ESP_LOGI(TAG, "chord[%d]=%s", i, chord->name);
+        ysw_chord_dump(TAG, chord);
     }
 
     uint32_t progression_count = ysw_array_get_count(music->progressions);
     for (uint32_t i = 0; i < progression_count; i++) {
         ysw_progression_t *progression = ysw_array_get(music->progressions, i);
         ESP_LOGI(TAG, "progression[%d]=%s", i, progression->name);
+        ysw_progression_dump(TAG, progression);
     }
 
     play_next();

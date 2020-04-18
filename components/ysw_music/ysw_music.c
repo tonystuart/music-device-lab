@@ -146,7 +146,8 @@ int ysw_progression_add_chord(ysw_progression_t *progression, uint8_t degree, ys
     assert(chord);
     ysw_progression_chord_t *progression_chord = ysw_heap_allocate(sizeof(ysw_progression_chord_t));
     progression_chord->degree = degree;
-    int index = ysw_array_push(progression->chords, chord);
+    progression_chord->chord = chord;
+    int index = ysw_array_push(progression->chords, progression_chord);
     return index;
 }
 
@@ -170,12 +171,38 @@ void ysw_progression_set_percent_tempo(ysw_progression_t *progression, uint8_t p
     progression->percent_tempo = percent_tempo;
 }
 
+void ysw_chord_dump(char *tag, ysw_chord_t *chord)
+{
+    ESP_LOGD(tag, "ysw_chord_dump chord=%p", chord);
+    ESP_LOGD(tag, "name=%s", chord->name);
+    ESP_LOGD(tag, "duration=%d", chord->duration);
+    uint32_t note_count = ysw_array_get_count(chord->chord_notes);
+    ESP_LOGD(tag, "note_count=%d", note_count);
+}
+
+void ysw_progression_dump(char *tag, ysw_progression_t *progresssion)
+{
+    ESP_LOGD(tag, "ysw_progression_dump progression=%p", progresssion);
+    ESP_LOGD(tag, "name=%s", progresssion->name);
+    ESP_LOGD(tag, "tonic=%d", progresssion->tonic);
+    ESP_LOGD(tag, "instrument=%d", progresssion->instrument);
+    ESP_LOGD(tag, "percent_tempo=%d", progresssion->percent_tempo);
+    uint32_t chord_count = ysw_array_get_count(progresssion->chords);
+    ESP_LOGD(tag, "chord_count=%d", chord_count);
+    for (uint32_t i = 0; i < chord_count; i++) {
+        ysw_progression_chord_t *progression_chord = ysw_array_get(progresssion->chords, i);
+        ESP_LOGD(tag, "chord index=%d, degree=%d", i, progression_chord->degree);
+        ysw_chord_dump(tag, progression_chord->chord);
+    }
+}
+
 uint32_t ysw_get_note_count(ysw_progression_t *progression)
 {
     assert(progression);
     uint32_t note_count = 0;
     int chord_count = ysw_array_get_count(progression->chords);
     for (int i = 0; i < chord_count; i++) {
+        ESP_LOGD(TAG, "i=%d, chord_count=%d", i, chord_count);
         ysw_progression_chord_t *progression_chord = ysw_array_get(progression->chords, i);
         int chord_note_count = ysw_array_get_count(progression_chord->chord->chord_notes);
         note_count += chord_note_count;

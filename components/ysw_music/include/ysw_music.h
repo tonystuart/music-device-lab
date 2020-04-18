@@ -79,3 +79,5 @@ int ysw_chord_add_note(ysw_chord_t *chord, ysw_chord_note_t *chord_note);
 void ysw_chord_free(ysw_chord_t *chord);
 ysw_chord_t *ysw_chord_create();
 
+void ysw_chord_dump(char *tag, ysw_chord_t *chord);
+void ysw_progression_dump(char *tag, ysw_progression_t *progresssion);
