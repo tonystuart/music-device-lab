@@ -60,11 +60,12 @@ static inline int8_t to_note(int8_t tonic_index, int8_t root_number, int8_t degr
     return note;
 }
 
-ysw_chord_style_t *ysw_chord_style_create()
+ysw_chord_style_t *ysw_chord_style_create(char *name, uint32_t duration)
 {
     ysw_chord_style_t *chord_style = ysw_heap_allocate(sizeof(ysw_chord_style_t));
+    chord_style->name = ysw_heap_strdup(name);
     chord_style->chord_notes = ysw_array_create(8);
-    chord_style->duration = 0;
+    chord_style->duration = duration;
     return chord_style;
 }
 

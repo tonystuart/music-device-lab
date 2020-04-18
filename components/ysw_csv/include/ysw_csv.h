@@ -9,10 +9,6 @@
 
 #pragma once
 
-#include "string.h"
-#include "esp_log.h"
+#include "stdbool.h"
 
-void *ysw_heap_allocate(size_t size);
-void *ysw_heap_reallocate(void *old_p, size_t size);
-char *ysw_heap_strdup(char *source);
-void ysw_heap_free(void *p);
+int parse_csv(char *buffer, char *tokens[], int max_tokens);

@@ -9,10 +9,16 @@
 
 #pragma once
 
-#include "string.h"
+#include "stdio.h"
+#include "assert.h"
 #include "esp_log.h"
+#include "hash.h"
+#include "ysw_heap.h"
+#include "ysw_clip.h"
+#include "ysw_csv.h"
 
-void *ysw_heap_allocate(size_t size);
-void *ysw_heap_reallocate(void *old_p, size_t size);
-char *ysw_heap_strdup(char *source);
-void ysw_heap_free(void *p);
+typedef struct {
+    ysw_array_t *chords;
+} ysw_player_data_t;
+
+ysw_player_data_t *ysw_player_data_parse(char *filename);

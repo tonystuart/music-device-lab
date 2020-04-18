@@ -14,14 +14,13 @@
 #include "ysw_sequencer.h"
 #include "ysw_message.h"
 #include "ysw_clip.h"
+#include "ysw_player_data.h"
 
 #include "driver/spi_master.h"
 #include "lvgl/lvgl.h"
 #include "eli_ili9341_xpt2046.h"
 
 #define TAG "MAIN"
-#define RECORD_SIZE 128
-#define TOKENS_SIZE 20
 
 typedef struct {
     int16_t row;
@@ -191,7 +190,7 @@ ysw_clip_t *create_let_it_be()
     return s;
 }
 
-UNUSED
+    UNUSED
 static void play_clip(ysw_clip_t *s)
 {
     ysw_clip_set_percent_tempo(s, 100);
@@ -343,7 +342,7 @@ static lv_res_t my_scrl_signal_cb(lv_obj_t *scrl, lv_signal_t sign, void *param)
     return old_signal_cb(scrl, sign, param);
 }
 
-UNUSED
+    UNUSED
 static void create_marquis_mock_up()
 {
     static lv_style_t page_bg_style;
@@ -534,70 +533,23 @@ static void create_marquis_mock_up()
     lv_table_set_cell_value(table, 11, 3, "230");
 }
 
-int parse_csv(char *buffer, char *tokens[], int max_tokens)
-{
-    typedef enum {
-        INITIAL,
-        ESCAPE,
-        ASSIGN
-    } parser_state_t;
+typedef enum {
+    INVALID,
+    CHORD,
+    CHORD_NOTE,
+    PROGRESSION,
+    MELODY,
+    RHYTHM,
+    MIX,
+} ysw_record_type_t;
 
-    char *p = buffer;
-    char *q = buffer;
-    int token_count = 0;
-    bool new_token = true;
-    bool scanning = true;
-    parser_state_t state = INITIAL;
+#define SPIFFS_PARTITION "/spiffs"
+#define PLAYER_DEFINITIONS "/spiffs/player.csv"
 
-    while (scanning) {
-        //ESP_LOGD(TAG, "*p=%c, *q=%c, token_count=%d, new_token=%d, scanning=%d, state=%d", *p, *q, token_count, new_token, scanning, state);
-        switch (state) {
-            case INITIAL:
-                if (!*p || *p == '#' || *p == '\n') {
-                    scanning = false;
-                } else if (*p == '\\') {
-                    p++;
-                    state = ESCAPE;
-                } else {
-                    state = ASSIGN;
-                }
-                break;
-            case ESCAPE:
-                if (!*p) {
-                    scanning = false;
-                } else if (*p == '\n') {
-                    // skip newline
-                    p++;
-                } else {
-                    state = ASSIGN;
-                }
-                break;
-            case ASSIGN:
-                if (new_token) {
-                    if (token_count < max_tokens) {
-                        tokens[token_count++] = q;
-                        new_token = false;
-                    } else {
-                        scanning = false;
-                    }
-                }
-                if (*p == ',') {
-                    *p = 0;
-                    new_token = true;
-                }
-                *q++ = *p++;
-                state = INITIAL;
-                break;
-        }
-    }
-    *q = 0;
-    return token_count;
-}
-
-void initialize_spiffs()
+static void initialize_spiffs()
 {
     esp_vfs_spiffs_conf_t config = {
-        .base_path = "/spiffs",
+        .base_path = SPIFFS_PARTITION,
         .partition_label = NULL,
         .max_files = 5,
         .format_if_mount_failed = true
@@ -605,25 +557,10 @@ void initialize_spiffs()
 
     $(esp_vfs_spiffs_register(&config));
 
-    size_t total = 0;
-    size_t used = 0;
-    $(esp_spiffs_info(config.partition_label, &total, &used));
-
-    FILE* f = fopen("/spiffs/player.csv", "r");
-    assert(f);
-
-    int record = 0;
-    char buffer[RECORD_SIZE];
-    while (fgets(buffer, RECORD_SIZE, f)) {
-        ESP_LOGD(TAG, "record=%d, buffer=%s", record, buffer);
-        char *tokens[TOKENS_SIZE];
-        int token_count = parse_csv(buffer, tokens, TOKENS_SIZE);
-        for (int i = 0; i < token_count; i++) {
-            ESP_LOGD(TAG, "token[%d]=%s", i, tokens[i]);
-        }
-        record++;
-    }
-    fclose(f);
+    size_t total_size = 0;
+    size_t amount_used = 0;
+    $(esp_spiffs_info(config.partition_label, &total_size, &amount_used));
+    ESP_LOGD(TAG, "initialize_spiffs total_size=%d, amount_used=%d", total_size, amount_used);
 }
 
 void app_main()
@@ -653,6 +590,7 @@ void app_main()
 
     initialize_spiffs();
     create_marquis_mock_up();
+    ysw_player_data_t *player_data = ysw_player_data_parse(PLAYER_DEFINITIONS);
 
     while (1) {
         vTaskDelay(1);

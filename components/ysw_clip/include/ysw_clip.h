@@ -41,6 +41,7 @@ typedef struct {
 } ysw_chord_note_t;
 
 typedef struct {
+    char *name;
     ysw_array_t *chord_notes;
     uint32_t duration;
 } ysw_chord_style_t;

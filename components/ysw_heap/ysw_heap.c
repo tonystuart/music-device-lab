@@ -7,7 +7,6 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "esp_log.h"
 #include "ysw_heap.h"
 
 #define TAG "HEAP"
@@ -32,6 +31,16 @@ void *ysw_heap_reallocate(void *old_p, size_t size)
         abort();
     }
     return p;
+}
+
+char *ysw_heap_strdup(char *source)
+{
+    char *target = strdup(source);
+    if (!target) {
+        ESP_LOGE(TAG, "strdup failed, size=%d", strlen(source));
+        abort();
+    }
+    return target;
 }
 
 void ysw_heap_free(void *p)
