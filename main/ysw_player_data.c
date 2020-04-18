@@ -16,7 +16,7 @@
 #include "ysw_music.h"
 #include "ysw_csv.h"
 
-#define TAG "YSW_PLAYER_DATA"
+#define TAG "YSW_MUSIC_PARSER"
 
 #define RECORD_SIZE 128
 #define TOKENS_SIZE 20
@@ -103,43 +103,43 @@ static ysw_chord_t *parse_chord(this_t *this)
     return chord;
 }
 
-static ysw_player_data_t *create_player_data()
+static ysw_music_t *create_music()
 {
-    ysw_player_data_t *player_data = ysw_heap_allocate(sizeof(ysw_player_data_t));
-    player_data->chords = ysw_array_create(8);
-    return player_data;
+    ysw_music_t *music = ysw_heap_allocate(sizeof(ysw_music_t));
+    music->chords = ysw_array_create(8);
+    return music;
 }
 
-void ysw_player_data_free(ysw_player_data_t *player_data)
+void ysw_music_free(ysw_music_t *music)
 {
 }
 
-ysw_player_data_t *ysw_player_data_parse_file(FILE *file)
+ysw_music_t *ysw_music_parse_file(FILE *file)
 {
     this_t *this = &(this_t){};
-    ysw_player_data_t *player_data = create_player_data();
+    ysw_music_t *music = create_music();
     this->addresses = ysw_array_create(100);
     this->file = file;
     while (get_tokens(this)) {
         record_type_t type = atoi(this->tokens[0]);
         if (type == CHORD && this->token_count == 4) {
             ysw_chord_t *chord = parse_chord(this);
-            ysw_array_push(player_data->chords, chord);
+            ysw_array_push(music->chords, chord);
         } else if (type == PROGRESSION && this->token_count == 6) {
         }
     }
     ysw_array_free(this->addresses);
-    return player_data;
+    return music;
 }
 
-ysw_player_data_t *ysw_player_data_parse(char *filename)
+ysw_music_t *ysw_music_parse(char *filename)
 {
-    ysw_player_data_t *player_data = NULL;
+    ysw_music_t *music = NULL;
     FILE *file = fopen(filename, "r");
     if (file) {
-        player_data = ysw_player_data_parse_file(file);
+        music = ysw_music_parse_file(file);
         fclose(file);
     }
-    return player_data;
+    return music;
 }
 

@@ -14,7 +14,7 @@
 
 typedef struct {
     ysw_array_t *chords;
-} ysw_player_data_t;
+} ysw_music_t;
 
-ysw_player_data_t *ysw_player_data_parse(char *filename);
-ysw_player_data_t *ysw_player_data_parse_file(FILE *file);
+ysw_music_t *ysw_music_parse(char *filename);
+ysw_music_t *ysw_music_parse_file(FILE *file);

@@ -589,7 +589,7 @@ void app_main()
 
     initialize_spiffs();
     create_marquis_mock_up();
-    ysw_player_data_t *player_data = ysw_player_data_parse(PLAYER_DEFINITIONS);
+    ysw_music_t *music = ysw_music_parse(PLAYER_DEFINITIONS);
 
     while (1) {
         wait_millis(1);
