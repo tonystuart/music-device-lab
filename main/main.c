@@ -340,6 +340,12 @@ static lv_res_t my_scrl_signal_cb(lv_obj_t *scrl, lv_signal_t sign, void *param)
     return old_signal_cb(scrl, sign, param);
 }
 
+static char *headings[] = {
+    "Degree", "Time", "Length", "Volume"
+};
+
+#define COLUMN_COUNT (sizeof(headings) / sizeof(char*))
+
 static void edit_chord(ysw_chord_t *chord)
 {
     lv_obj_t *win = lv_win_create(lv_scr_act(), NULL);
@@ -394,19 +400,15 @@ static void edit_chord(ysw_chord_t *chord)
 
     uint32_t note_count = ysw_chord_get_note_count(chord);
 
-    lv_table_set_col_cnt(table, 5);
-    lv_table_set_row_cnt(table, note_count);
+    lv_table_set_col_cnt(table, COLUMN_COUNT);
+    lv_table_set_row_cnt(table, note_count + 1); // +1 for heading
 
-    static char *headings[] = {
-        "", "Degree", "Time", "Length", "Vol"
-    };
-
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < COLUMN_COUNT; i++) {
         ESP_LOGD(TAG, "setting column attributes");
         lv_table_set_cell_type(table, 0, i, 3);
         lv_table_set_cell_align(table, 0, i, LV_LABEL_ALIGN_CENTER);
         lv_table_set_cell_value(table, 0, i, headings[i]);
-        lv_table_set_col_width(table, i, 63);
+        lv_table_set_col_width(table, i, 79);
     }
 
     lv_obj_t *scroller = lv_page_get_scrl(page);
@@ -418,12 +420,11 @@ static void edit_chord(ysw_chord_t *chord)
         char buffer[16];
         int n = i + 1;
         ysw_chord_note_t *chord_note = ysw_chord_get_chord_note(chord, i);
-        lv_table_set_cell_value(table, n, 0, ysw_itoa(n, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 1, ysw_itoa(chord_note->degree, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 2, ysw_itoa(chord_note->time, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 3, ysw_itoa(chord_note->duration, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 4, ysw_itoa(chord_note->velocity, buffer, sizeof(buffer)));
-        for (int j = 0; j < 5; j++) {
+        lv_table_set_cell_value(table, n, 0, ysw_itoa(chord_note->degree, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 1, ysw_itoa(chord_note->time, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 2, ysw_itoa(chord_note->duration, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 3, ysw_itoa(chord_note->velocity, buffer, sizeof(buffer)));
+        for (int j = 0; j < COLUMN_COUNT; j++) {
             lv_table_set_cell_align(table, n, j, LV_LABEL_ALIGN_CENTER);
         }
     }
