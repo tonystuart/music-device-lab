@@ -11,6 +11,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "stdio.h"
 
 uint32_t to_millis(uint32_t ticks)
 {
@@ -30,5 +31,10 @@ uint32_t get_millis()
 void wait_millis(int millis)
 {
     vTaskDelay(to_ticks(millis));
+}
+
+char *ysw_itoa(int input_value, char *buffer, int buffer_size)
+{
+    return snprintf(buffer, buffer_size, "%d", input_value) < buffer_size ? buffer : "";
 }
 

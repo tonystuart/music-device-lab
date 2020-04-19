@@ -62,4 +62,5 @@ uint32_t to_millis(uint32_t ticks);
 uint32_t to_ticks(uint32_t millis);
 uint32_t get_millis();
 void wait_millis(int millis);
+char *ysw_itoa(int input_value, char *buffer, int buffer_size);
 

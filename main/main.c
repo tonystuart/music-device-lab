@@ -23,6 +23,9 @@
 
 #define TAG "MAIN"
 
+#define SPIFFS_PARTITION "/spiffs"
+#define MUSIC_DEFINITIONS "/spiffs/music.csv"
+
 typedef struct {
     int16_t row;
     int16_t column;
@@ -33,11 +36,17 @@ static selection_t selection = {
 };
 
 static lv_obj_t *kb;
-static lv_obj_t *page;
 static lv_obj_t *table;
 static lv_signal_cb_t old_signal_cb;
+
 static lv_style_t value_cell;
 static lv_style_t win_style_content;
+static lv_style_t page_bg_style;
+static lv_style_t page_scrl_style;
+static lv_style_t table_bg_style;
+static lv_style_t title_cell;
+static lv_style_t name_cell;
+static lv_style_t selected_cell;
 
 static QueueHandle_t synthesizer_queue;
 static QueueHandle_t sequencer_queue;
@@ -46,6 +55,94 @@ static ysw_music_t *music;
 static uint32_t progression_index;
 
 static void play_progression(ysw_progression_t *s);
+
+static void initialize_spiffs()
+{
+    esp_vfs_spiffs_conf_t config = {
+        .base_path = SPIFFS_PARTITION,
+        .partition_label = NULL,
+        .max_files = 5,
+        .format_if_mount_failed = true
+    };
+
+    $(esp_vfs_spiffs_register(&config));
+
+    size_t total_size = 0;
+    size_t amount_used = 0;
+    $(esp_spiffs_info(config.partition_label, &total_size, &amount_used));
+    ESP_LOGD(TAG, "initialize_spiffs total_size=%d, amount_used=%d", total_size, amount_used);
+}
+
+static void initialize_styles()
+{
+    ESP_LOGD(TAG, "sizeof(style)=%d", sizeof(lv_style_pretty_color));
+    lv_style_copy(&page_bg_style, &lv_style_pretty_color);
+    ESP_LOGD(TAG, "page_bg_style radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", page_bg_style.body.radius, page_bg_style.body.border.width, page_bg_style.body.border.part, page_bg_style.body.padding.top, page_bg_style.body.padding.bottom, page_bg_style.body.padding.left, page_bg_style.body.padding.right, page_bg_style.body.padding.inner);
+    page_bg_style.body.radius = 0;
+    page_bg_style.body.border.width = 0;
+    page_bg_style.body.border.part = LV_BORDER_NONE;
+    page_bg_style.body.padding.top = 0;
+    page_bg_style.body.padding.bottom = 0;
+    page_bg_style.body.padding.left = 0;
+    page_bg_style.body.padding.right = 0;
+    page_bg_style.body.padding.inner = 0;
+
+    lv_style_copy(&page_scrl_style, &lv_style_pretty_color);
+    ESP_LOGD(TAG, "page_scrl_style radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", page_scrl_style.body.radius, page_scrl_style.body.border.width, page_scrl_style.body.border.part, page_scrl_style.body.padding.top, page_scrl_style.body.padding.bottom, page_scrl_style.body.padding.left, page_scrl_style.body.padding.right, page_scrl_style.body.padding.inner);
+    page_scrl_style.body.radius = 0;
+    page_scrl_style.body.border.width = 0;
+    page_scrl_style.body.border.part = LV_BORDER_NONE;
+    page_scrl_style.body.padding.top = 0;
+    page_scrl_style.body.padding.bottom = 0;
+    page_scrl_style.body.padding.left = 0;
+    page_scrl_style.body.padding.right = 0;
+    page_scrl_style.body.padding.inner = 0;
+
+    lv_style_copy(&table_bg_style, &lv_style_plain_color);
+    ESP_LOGD(TAG, "table_bg_style radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", table_bg_style.body.radius, table_bg_style.body.border.width, table_bg_style.body.border.part, table_bg_style.body.padding.top, table_bg_style.body.padding.bottom, table_bg_style.body.padding.left, table_bg_style.body.padding.right, table_bg_style.body.padding.inner);
+    table_bg_style.body.radius = 0;
+    table_bg_style.body.border.width = 0;
+    table_bg_style.body.border.part = LV_BORDER_NONE;
+    table_bg_style.body.padding.top = 0;
+    table_bg_style.body.padding.bottom = 0;
+    table_bg_style.body.padding.left = 0;
+    table_bg_style.body.padding.right = 0;
+    table_bg_style.body.padding.inner = 0;
+
+    lv_style_copy(&win_style_content, &lv_style_transp);
+    ESP_LOGD(TAG, "win_style_content radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", win_style_content.body.radius, win_style_content.body.border.width, win_style_content.body.border.part, win_style_content.body.padding.top, win_style_content.body.padding.bottom, win_style_content.body.padding.left, win_style_content.body.padding.right, win_style_content.body.padding.inner);
+    win_style_content.body.radius = 0;
+    win_style_content.body.border.width = 0;
+    win_style_content.body.border.part = LV_BORDER_NONE;
+    win_style_content.body.padding.top = 5;
+    win_style_content.body.padding.bottom = 0;
+    win_style_content.body.padding.left = 5;
+    win_style_content.body.padding.right = 0;
+    win_style_content.body.padding.inner = 5;
+
+    lv_style_copy(&value_cell, &lv_style_plain);
+    value_cell.body.border.width = 1;
+    value_cell.body.border.color = LV_COLOR_BLACK;
+
+    lv_style_copy(&title_cell, &lv_style_plain);
+    title_cell.body.border.width = 1;
+    title_cell.body.border.color = LV_COLOR_BLACK;
+    title_cell.body.main_color = LV_COLOR_RED;
+    title_cell.body.grad_color = LV_COLOR_RED;
+    title_cell.text.color = LV_COLOR_BLACK;
+
+    lv_style_copy(&name_cell, &lv_style_plain);
+    name_cell.body.border.width = 1;
+    name_cell.body.border.color = LV_COLOR_BLACK;
+    name_cell.body.main_color = LV_COLOR_SILVER;
+    name_cell.body.grad_color = LV_COLOR_SILVER;
+
+    lv_style_copy(&selected_cell, &lv_style_plain);
+    selected_cell.body.border.width = 1;
+    selected_cell.body.border.color = LV_COLOR_BLACK;
+    selected_cell.body.main_color = LV_COLOR_YELLOW;
+    selected_cell.body.grad_color = LV_COLOR_YELLOW;
+}
 
 static void play_next()
 {
@@ -115,7 +212,7 @@ static void play_progression(ysw_progression_t *s)
     ysw_sequencer_message_t message = {
         .type = YSW_SEQUENCER_INITIALIZE,
         .initialize.notes = notes,
-        .initialize.note_count = ysw_get_note_count(s),
+        .initialize.note_count = ysw_progression_get_note_count(s),
     };
 
     ysw_message_send(sequencer_queue, &message);
@@ -243,215 +340,84 @@ static lv_res_t my_scrl_signal_cb(lv_obj_t *scrl, lv_signal_t sign, void *param)
     return old_signal_cb(scrl, sign, param);
 }
 
-    UNUSED
-static void create_marquis_mock_up()
+static void edit_chord(ysw_chord_t *chord)
 {
-    static lv_style_t page_bg_style;
-    lv_style_copy(&page_bg_style, &lv_style_pretty_color);
-    ESP_LOGD(TAG, "page_bg_style radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", page_bg_style.body.radius, page_bg_style.body.border.width, page_bg_style.body.border.part, page_bg_style.body.padding.top, page_bg_style.body.padding.bottom, page_bg_style.body.padding.left, page_bg_style.body.padding.right, page_bg_style.body.padding.inner);
-    page_bg_style.body.radius = 0;
-    page_bg_style.body.border.width = 0;
-    page_bg_style.body.border.part = LV_BORDER_NONE;
-    page_bg_style.body.padding.top = 0;
-    page_bg_style.body.padding.bottom = 0;
-    page_bg_style.body.padding.left = 0;
-    page_bg_style.body.padding.right = 0;
-    page_bg_style.body.padding.inner = 0;
+    lv_obj_t *win = lv_win_create(lv_scr_act(), NULL);
+    lv_obj_align(win, NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_win_set_style(win, LV_WIN_STYLE_BG, &lv_style_pretty);
+    lv_win_set_style(win, LV_WIN_STYLE_CONTENT, &win_style_content);
+    lv_win_set_title(win, chord->name);
+    //lv_win_set_layout(win, LV_LAYOUT_OFF);
+    lv_win_set_btn_size(win, 20);
 
-    static lv_style_t page_scrl_style;
-    lv_style_copy(&page_scrl_style, &lv_style_pretty_color);
-    ESP_LOGD(TAG, "page_scrl_style radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", page_scrl_style.body.radius, page_scrl_style.body.border.width, page_scrl_style.body.border.part, page_scrl_style.body.padding.top, page_scrl_style.body.padding.bottom, page_scrl_style.body.padding.left, page_scrl_style.body.padding.right, page_scrl_style.body.padding.inner);
-    page_scrl_style.body.radius = 0;
-    page_scrl_style.body.border.width = 0;
-    page_scrl_style.body.border.part = LV_BORDER_NONE;
-    page_scrl_style.body.padding.top = 0;
-    page_scrl_style.body.padding.bottom = 0;
-    page_scrl_style.body.padding.left = 0;
-    page_scrl_style.body.padding.right = 0;
-    page_scrl_style.body.padding.inner = 0;
+    lv_obj_t *close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
+    lv_obj_set_event_cb(close_btn, lv_win_close_event_cb);
 
-    static lv_style_t table_bg_style;
-    lv_style_copy(&table_bg_style, &lv_style_plain_color);
-    ESP_LOGD(TAG, "table_bg_style radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", table_bg_style.body.radius, table_bg_style.body.border.width, table_bg_style.body.border.part, table_bg_style.body.padding.top, table_bg_style.body.padding.bottom, table_bg_style.body.padding.left, table_bg_style.body.padding.right, table_bg_style.body.padding.inner);
-    table_bg_style.body.radius = 0;
-    table_bg_style.body.border.width = 0;
-    table_bg_style.body.border.part = LV_BORDER_NONE;
-    table_bg_style.body.padding.top = 0;
-    table_bg_style.body.padding.bottom = 0;
-    table_bg_style.body.padding.left = 0;
-    table_bg_style.body.padding.right = 0;
-    table_bg_style.body.padding.inner = 0;
+    for (int i = 0; i < 7; i++) {
+        lv_win_add_btn(win, LV_SYMBOL_SETTINGS);
+    }
 
-    lv_style_copy(&win_style_content, &lv_style_transp);
-    ESP_LOGD(TAG, "win_style_content radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", win_style_content.body.radius, win_style_content.body.border.width, win_style_content.body.border.part, win_style_content.body.padding.top, win_style_content.body.padding.bottom, win_style_content.body.padding.left, win_style_content.body.padding.right, win_style_content.body.padding.inner);
-    win_style_content.body.radius = 0;
-    win_style_content.body.border.width = 0;
-    win_style_content.body.border.part = LV_BORDER_NONE;
-    win_style_content.body.padding.top = 5;
-    win_style_content.body.padding.bottom = 0;
-    win_style_content.body.padding.left = 5;
-    win_style_content.body.padding.right = 0;
-    win_style_content.body.padding.inner = 5;
+    //lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
+    //lv_obj_t *scrl = lv_page_get_scrl(ext->page);
 
-    /*Create a normal cell style*/
-    lv_style_copy(&value_cell, &lv_style_plain);
-    value_cell.body.border.width = 1;
-    value_cell.body.border.color = LV_COLOR_BLACK;
+    //create_field(win, "Degree:", "1");
+    //create_field(win, "Volume:", "100");
+    //create_field(win, "Time:", "0");
+    //create_field(win, "Duration:", "230");
 
-    /*Create a title cell style*/
-    static lv_style_t title_cell;
-    lv_style_copy(&title_cell, &lv_style_plain);
-    title_cell.body.border.width = 1;
-    title_cell.body.border.color = LV_COLOR_BLACK;
-    title_cell.body.main_color = LV_COLOR_RED;
-    title_cell.body.grad_color = LV_COLOR_RED;
-    title_cell.text.color = LV_COLOR_BLACK;
 
-    /*Create a field name cell style*/
-    static lv_style_t name_cell;
-    lv_style_copy(&name_cell, &lv_style_plain);
-    name_cell.body.border.width = 1;
-    name_cell.body.border.color = LV_COLOR_BLACK;
-    name_cell.body.main_color = LV_COLOR_SILVER;
-    name_cell.body.grad_color = LV_COLOR_SILVER;
 
-    /*Create a selection cell style*/
-    static lv_style_t selected_cell;
-    lv_style_copy(&selected_cell, &lv_style_plain);
-    selected_cell.body.border.width = 1;
-    selected_cell.body.border.color = LV_COLOR_BLACK;
-    selected_cell.body.main_color = LV_COLOR_YELLOW;
-    selected_cell.body.grad_color = LV_COLOR_YELLOW;
+    //page = lv_page_create(lv_scr_act(), NULL);
+    //lv_obj_set_size(page, 320, 240);
+    //lv_obj_align(page, NULL, LV_ALIGN_CENTER, 0, 0);
+    //lv_page_set_style(page, LV_PAGE_STYLE_BG, &page_bg_style);
+    //lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &page_scrl_style);
 
-    page = lv_page_create(lv_scr_act(), NULL);
-    lv_obj_set_size(page, 320, 240);
-    lv_obj_align(page, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_page_set_style(page, LV_PAGE_STYLE_BG, &page_bg_style);
+    lv_obj_t *page = lv_win_get_content(win);
     lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &page_scrl_style);
 
+    table = lv_table_create(win, NULL);
 
-    table = lv_table_create(page, NULL);
+    lv_obj_align(table, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
     lv_table_set_style(table, LV_TABLE_STYLE_BG, &table_bg_style);
     lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &value_cell);
     lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &title_cell);
     lv_table_set_style(table, LV_TABLE_STYLE_CELL3, &name_cell);
     lv_table_set_style(table, LV_TABLE_STYLE_CELL4, &selected_cell);
 
+    uint32_t note_count = ysw_chord_get_note_count(chord);
+
     lv_table_set_col_cnt(table, 4);
-    lv_table_set_row_cnt(table, 12);
-    lv_obj_align(table, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_table_set_row_cnt(table, note_count);
 
-    lv_table_set_cell_type(table, 0, 0, 2);
-    lv_table_set_cell_align(table, 0, 0, LV_LABEL_ALIGN_CENTER);
+    static char *chord_note_headings[] = {
+        "Degree", "Velocity", "Time", "Duration"
+    };
 
-    lv_table_set_cell_type(table, 1, 0, 3);
-    lv_table_set_cell_align(table, 1, 0, LV_LABEL_ALIGN_RIGHT);
-
-    lv_table_set_cell_type(table, 2, 0, 3);
-    lv_table_set_cell_align(table, 2, 0, LV_LABEL_ALIGN_RIGHT);
-
-    lv_table_set_cell_type(table, 3, 0, 3);
-    lv_table_set_cell_align(table, 3, 0, LV_LABEL_ALIGN_CENTER);
-
-    lv_table_set_cell_type(table, 3, 1, 3);
-    lv_table_set_cell_align(table, 3, 1, LV_LABEL_ALIGN_CENTER);
-
-    lv_table_set_cell_type(table, 3, 2, 3);
-    lv_table_set_cell_align(table, 3, 2, LV_LABEL_ALIGN_CENTER);
-
-    lv_table_set_cell_type(table, 3, 3, 3);
-    lv_table_set_cell_align(table, 3, 3, LV_LABEL_ALIGN_CENTER);
+    for (int i = 0; i < 4; i++) {
+        ESP_LOGD(TAG, "setting column attributes");
+        lv_table_set_col_width(table, i, 79);
+        lv_table_set_cell_type(table, 0, i, 3);
+        lv_table_set_cell_align(table, 0, i, LV_LABEL_ALIGN_CENTER);
+        lv_table_set_cell_value(table, 0, i, chord_note_headings[i]);
+    }
 
     lv_obj_t *scroller = lv_page_get_scrl(page);
     old_signal_cb = lv_obj_get_signal_cb(scroller);
     lv_obj_set_signal_cb(scroller, my_scrl_signal_cb);
 
-    lv_table_set_col_width(table, 0, 79);
-    lv_table_set_col_width(table, 1, 79);
-    lv_table_set_col_width(table, 2, 79);
-    lv_table_set_col_width(table, 3, 79);
+    for (uint32_t i = 0; i < note_count; i++) {
+        ESP_LOGD(TAG, "setting note attributes, i=%d", i);
+        char buffer[16];
+        ysw_chord_note_t *chord_note = ysw_chord_get_chord_note(chord, i);
+        lv_table_set_cell_value(table, i + 1, 0, ysw_itoa(chord_note->degree, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, i + 1, 1, ysw_itoa(chord_note->velocity, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, i + 1, 2, ysw_itoa(chord_note->time, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, i + 1, 3, ysw_itoa(chord_note->duration, buffer, sizeof(buffer)));
+    }
 
-    lv_table_set_cell_merge_right(table, 0, 2, true);
-    lv_table_set_cell_merge_right(table, 0, 1, true);
-    lv_table_set_cell_merge_right(table, 0, 0, true);
-
-    lv_table_set_cell_merge_right(table, 1, 2, true);
-    lv_table_set_cell_merge_right(table, 1, 1, true);
-
-    lv_table_set_cell_merge_right(table, 2, 2, true);
-    lv_table_set_cell_merge_right(table, 2, 1, true);
-
-    lv_table_set_cell_value(table, 0, 0, "Chord Style");
-
-    lv_table_set_cell_value(table, 1, 0, "Name");
-    lv_table_set_cell_value(table, 1, 1, "Up / Down");
-    lv_table_set_cell_value(table, 2, 0, "Duration");
-    lv_table_set_cell_value(table, 2, 1, "2000 (minimum 1980)");
-
-    lv_table_set_cell_value(table, 3, 0, "Degree");
-    lv_table_set_cell_value(table, 3, 1, "Volume");
-    lv_table_set_cell_value(table, 3, 2, "Time");
-    lv_table_set_cell_value(table, 3, 3, "Duration");
-
-    lv_table_set_cell_value(table, 4, 0, "1");
-    lv_table_set_cell_value(table, 4, 1, "100");
-    lv_table_set_cell_value(table, 4, 2, "0");
-    lv_table_set_cell_value(table, 4, 3, "230");
-
-    lv_table_set_cell_value(table, 5, 0, "3");
-    lv_table_set_cell_value(table, 5, 1, "80");
-    lv_table_set_cell_value(table, 5, 2, "250");
-    lv_table_set_cell_value(table, 5, 3, "230");
-
-    lv_table_set_cell_value(table, 6, 0, "5");
-    lv_table_set_cell_value(table, 6, 1, "80");
-    lv_table_set_cell_value(table, 6, 2, "500");
-    lv_table_set_cell_value(table, 6, 3, "230");
-
-    lv_table_set_cell_value(table, 7, 0, "6");
-    lv_table_set_cell_value(table, 7, 1, "80");
-    lv_table_set_cell_value(table, 7, 2, "750");
-    lv_table_set_cell_value(table, 7, 3, "230");
-
-    lv_table_set_cell_value(table, 8, 0, "7");
-    lv_table_set_cell_value(table, 8, 1, "100");
-    lv_table_set_cell_value(table, 8, 2, "1000");
-    lv_table_set_cell_value(table, 8, 3, "230");
-
-    lv_table_set_cell_value(table, 9, 0, "6");
-    lv_table_set_cell_value(table, 9, 1, "80");
-    lv_table_set_cell_value(table, 9, 2, "1250");
-    lv_table_set_cell_value(table, 9, 3, "230");
-
-    lv_table_set_cell_value(table, 10, 0, "5");
-    lv_table_set_cell_value(table, 10, 1, "80");
-    lv_table_set_cell_value(table, 10, 2, "1500");
-    lv_table_set_cell_value(table, 10, 3, "230");
-
-    lv_table_set_cell_value(table, 11, 0, "3");
-    lv_table_set_cell_value(table, 11, 1, "80");
-    lv_table_set_cell_value(table, 11, 2, "1750");
-    lv_table_set_cell_value(table, 11, 3, "230");
-}
-
-#define SPIFFS_PARTITION "/spiffs"
-#define MUSIC_DEFINITIONS "/spiffs/music.csv"
-
-static void initialize_spiffs()
-{
-    esp_vfs_spiffs_conf_t config = {
-        .base_path = SPIFFS_PARTITION,
-        .partition_label = NULL,
-        .max_files = 5,
-        .format_if_mount_failed = true
-    };
-
-    $(esp_vfs_spiffs_register(&config));
-
-    size_t total_size = 0;
-    size_t amount_used = 0;
-    $(esp_spiffs_info(config.partition_label, &total_size, &amount_used));
-    ESP_LOGD(TAG, "initialize_spiffs total_size=%d, amount_used=%d", total_size, amount_used);
+    //lv_win_set_layout(win, LV_LAYOUT_PRETTY);
 }
 
 void app_main()
@@ -483,26 +449,29 @@ void app_main()
     eli_ili9341_xpt2046_initialize(&new_config);
 
     initialize_spiffs();
-
-    create_marquis_mock_up();
+    initialize_styles();
 
     music = ysw_music_parse(MUSIC_DEFINITIONS);
 
-    uint32_t chord_count = ysw_array_get_count(music->chords);
+    uint32_t chord_count = ysw_music_get_chord_count(music);
     for (uint32_t i = 0; i < chord_count; i++) {
-        ysw_chord_t *chord = ysw_array_get(music->chords, i);
+        ysw_chord_t *chord = ysw_music_get_chord(music, i);
         ESP_LOGI(TAG, "chord[%d]=%s", i, chord->name);
-        ysw_chord_dump(TAG, chord);
+        ysw_chord_dump(chord, TAG);
     }
 
-    uint32_t progression_count = ysw_array_get_count(music->progressions);
+    uint32_t progression_count = ysw_music_get_progression_count(music);
     for (uint32_t i = 0; i < progression_count; i++) {
-        ysw_progression_t *progression = ysw_array_get(music->progressions, i);
+        ysw_progression_t *progression = ysw_music_get_progression(music, i);
         ESP_LOGI(TAG, "progression[%d]=%s", i, progression->name);
-        ysw_progression_dump(TAG, progression);
+        ysw_progression_dump(progression, TAG);
     }
 
-    play_next();
+    if (chord_count) {
+        edit_chord(ysw_music_get_chord(music, 0));
+    }
+
+    // play_next();
 
     while (1) {
         wait_millis(1);

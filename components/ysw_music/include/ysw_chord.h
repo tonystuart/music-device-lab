@@ -51,7 +51,7 @@ static inline uint32_t ysw_chord_get_note_count(ysw_chord_t *chord)
     return ysw_array_get_count(chord->chord_notes);
 }
 
-static inline note_t *ysw_chord_get_note(ysw_chord_t *chord, uint32_t index)
+static inline ysw_chord_note_t *ysw_chord_get_chord_note(ysw_chord_t *chord, uint32_t index)
 {
     return ysw_array_get(chord->chord_notes, index);
 }
