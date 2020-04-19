@@ -353,9 +353,10 @@ static void edit_chord(ysw_chord_t *chord)
     lv_obj_t *close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
     lv_obj_set_event_cb(close_btn, lv_win_close_event_cb);
 
-    for (int i = 0; i < 7; i++) {
-        lv_win_add_btn(win, LV_SYMBOL_SETTINGS);
-    }
+    lv_win_add_btn(win, LV_SYMBOL_SETTINGS);
+    lv_win_add_btn(win, LV_SYMBOL_EDIT);
+    lv_win_add_btn(win, LV_SYMBOL_PAUSE);
+    lv_win_add_btn(win, LV_SYMBOL_PLAY);
 
     //lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
     //lv_obj_t *scrl = lv_page_get_scrl(ext->page);
@@ -374,6 +375,11 @@ static void edit_chord(ysw_chord_t *chord)
     //lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &page_scrl_style);
 
     lv_obj_t *page = lv_win_get_content(win);
+
+    // Trying to get rid of one pixel to left of table. It's not these:
+    //lv_page_set_style(page, LV_PAGE_STYLE_BG, &page_bg_style);
+    //lv_win_set_style(win, LV_WIN_STYLE_BG, &page_bg_style);
+
     lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &page_scrl_style);
 
     table = lv_table_create(win, NULL);
@@ -388,19 +394,19 @@ static void edit_chord(ysw_chord_t *chord)
 
     uint32_t note_count = ysw_chord_get_note_count(chord);
 
-    lv_table_set_col_cnt(table, 4);
+    lv_table_set_col_cnt(table, 5);
     lv_table_set_row_cnt(table, note_count);
 
-    static char *chord_note_headings[] = {
-        "Degree", "Velocity", "Time", "Duration"
+    static char *headings[] = {
+        "", "Degree", "Time", "Length", "Vol"
     };
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
         ESP_LOGD(TAG, "setting column attributes");
-        lv_table_set_col_width(table, i, 79);
         lv_table_set_cell_type(table, 0, i, 3);
         lv_table_set_cell_align(table, 0, i, LV_LABEL_ALIGN_CENTER);
-        lv_table_set_cell_value(table, 0, i, chord_note_headings[i]);
+        lv_table_set_cell_value(table, 0, i, headings[i]);
+        lv_table_set_col_width(table, i, 63);
     }
 
     lv_obj_t *scroller = lv_page_get_scrl(page);
@@ -410,11 +416,16 @@ static void edit_chord(ysw_chord_t *chord)
     for (uint32_t i = 0; i < note_count; i++) {
         ESP_LOGD(TAG, "setting note attributes, i=%d", i);
         char buffer[16];
+        int n = i + 1;
         ysw_chord_note_t *chord_note = ysw_chord_get_chord_note(chord, i);
-        lv_table_set_cell_value(table, i + 1, 0, ysw_itoa(chord_note->degree, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, i + 1, 1, ysw_itoa(chord_note->velocity, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, i + 1, 2, ysw_itoa(chord_note->time, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, i + 1, 3, ysw_itoa(chord_note->duration, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 0, ysw_itoa(n, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 1, ysw_itoa(chord_note->degree, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 2, ysw_itoa(chord_note->time, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 3, ysw_itoa(chord_note->duration, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 4, ysw_itoa(chord_note->velocity, buffer, sizeof(buffer)));
+        for (int j = 0; j < 5; j++) {
+            lv_table_set_cell_align(table, n, j, LV_LABEL_ALIGN_CENTER);
+        }
     }
 
     //lv_win_set_layout(win, LV_LAYOUT_PRETTY);
