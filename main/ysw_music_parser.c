@@ -119,7 +119,7 @@ static void parse_chord(this_t *this)
         }
     }
 
-    ysw_chord_dump(TAG, chord);
+    ysw_chord_dump(chord, TAG);
 }
 
 static void parse_progression(this_t *this)
@@ -163,7 +163,7 @@ static void parse_progression(this_t *this)
         }
     }
 
-    ysw_progression_dump(TAG, progression);
+    ysw_progression_dump(progression, TAG);
 }
 
 static ysw_music_t *create_music()
