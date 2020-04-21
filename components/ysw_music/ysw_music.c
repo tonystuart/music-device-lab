@@ -33,3 +33,19 @@ ysw_progression_t *ysw_music_get_progression(ysw_music_t *music, uint32_t index)
     return ysw_array_get(music->progressions, index);
 }
 
+void ysw_music_dump(ysw_music_t *music, char *tag)
+{
+    uint32_t chord_count = ysw_music_get_chord_count(music);
+    for (uint32_t i = 0; i < chord_count; i++) {
+        ysw_chord_t *chord = ysw_music_get_chord(music, i);
+        ESP_LOGI(tag, "chord[%d]=%s", i, chord->name);
+        ysw_chord_dump(chord, tag);
+    }
+
+    uint32_t progression_count = ysw_music_get_progression_count(music);
+    for (uint32_t i = 0; i < progression_count; i++) {
+        ysw_progression_t *progression = ysw_music_get_progression(music, i);
+        ESP_LOGI(tag, "progression[%d]=%s", i, progression->name);
+        ysw_progression_dump(progression, tag);
+    }
+}

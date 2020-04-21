@@ -43,7 +43,7 @@ static lv_style_t value_cell;
 static lv_style_t win_style_content;
 static lv_style_t page_bg_style;
 static lv_style_t page_scrl_style;
-static lv_style_t table_bg_style;
+static lv_style_t plain_color_tight;
 static lv_style_t title_cell;
 static lv_style_t name_cell;
 static lv_style_t selected_cell;
@@ -98,16 +98,16 @@ static void initialize_styles()
     page_scrl_style.body.padding.right = 0;
     page_scrl_style.body.padding.inner = 0;
 
-    lv_style_copy(&table_bg_style, &lv_style_plain_color);
-    ESP_LOGD(TAG, "table_bg_style radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", table_bg_style.body.radius, table_bg_style.body.border.width, table_bg_style.body.border.part, table_bg_style.body.padding.top, table_bg_style.body.padding.bottom, table_bg_style.body.padding.left, table_bg_style.body.padding.right, table_bg_style.body.padding.inner);
-    table_bg_style.body.radius = 0;
-    table_bg_style.body.border.width = 0;
-    table_bg_style.body.border.part = LV_BORDER_NONE;
-    table_bg_style.body.padding.top = 0;
-    table_bg_style.body.padding.bottom = 0;
-    table_bg_style.body.padding.left = 0;
-    table_bg_style.body.padding.right = 0;
-    table_bg_style.body.padding.inner = 0;
+    lv_style_copy(&plain_color_tight, &lv_style_plain_color);
+    ESP_LOGD(TAG, "lv_style_plain_color radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", plain_color_tight.body.radius, plain_color_tight.body.border.width, plain_color_tight.body.border.part, plain_color_tight.body.padding.top, plain_color_tight.body.padding.bottom, plain_color_tight.body.padding.left, plain_color_tight.body.padding.right, plain_color_tight.body.padding.inner);
+    plain_color_tight.body.radius = 0;
+    plain_color_tight.body.border.width = 0;
+    plain_color_tight.body.border.part = LV_BORDER_NONE;
+    plain_color_tight.body.padding.top = 0;
+    plain_color_tight.body.padding.bottom = 0;
+    plain_color_tight.body.padding.left = 0;
+    plain_color_tight.body.padding.right = 0;
+    plain_color_tight.body.padding.inner = 0;
 
     lv_style_copy(&win_style_content, &lv_style_transp);
     ESP_LOGD(TAG, "win_style_content radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", win_style_content.body.radius, win_style_content.body.border.width, win_style_content.body.border.part, win_style_content.body.padding.top, win_style_content.body.padding.bottom, win_style_content.body.padding.left, win_style_content.body.padding.right, win_style_content.body.padding.inner);
@@ -224,7 +224,7 @@ static void play_progression(ysw_progression_t *s)
 
     message = (ysw_sequencer_message_t){
         .type = YSW_SEQUENCER_PLAY,
-        .play.loop_count = 1
+            .play.loop_count = 1
     };
 
     ysw_message_send(sequencer_queue, &message);
@@ -346,21 +346,78 @@ static char *headings[] = {
 
 #define COLUMN_COUNT (sizeof(headings) / sizeof(char*))
 
+static lv_obj_t * add_btn(lv_obj_t *win, lv_obj_t *footer, const void * img_src)
+{
+    LV_ASSERT_OBJ(win, LV_OBJX_NAME);
+    LV_ASSERT_NULL(img_src);
+
+    lv_win_ext_t * ext = lv_obj_get_ext_attr(win);
+
+    lv_obj_t * btn = lv_btn_create(footer, NULL);
+    lv_btn_set_style(btn, LV_BTN_STYLE_REL, ext->style_btn_rel);
+    lv_btn_set_style(btn, LV_BTN_STYLE_PR, ext->style_btn_pr);
+    lv_obj_set_size(btn, ext->btn_size, ext->btn_size);
+
+    lv_obj_t * img = lv_img_create(btn, NULL);
+    lv_obj_set_click(img, false);
+    lv_img_set_src(img, img_src);
+
+    //lv_win_realign(win);
+
+    return btn;
+}
+
 static void edit_chord(ysw_chord_t *chord)
 {
-    lv_obj_t *win = lv_win_create(lv_scr_act(), NULL);
-    lv_obj_align(win, NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_t *editor = lv_obj_create(lv_scr_act(), NULL);
+    lv_obj_set_style(editor, &plain_color_tight);
+        lv_coord_t display_w = lv_disp_get_hor_res(NULL);
+        lv_coord_t display_h = lv_disp_get_ver_res(NULL);
+        lv_obj_set_size(editor, display_w, display_h);
+
+    lv_obj_t *win = lv_win_create(editor, NULL);
+
+        lv_obj_t *footer = lv_obj_create(editor, NULL);
+
+        lv_obj_t *footer_label = lv_label_create(footer, NULL);
+
+        //lv_style_t *footer_style = &lv_style_plain_color;
+        //lv_obj_set_style(footer_label, footer_style);
+        lv_label_set_text(footer_label, "Footer");
+        lv_coord_t footer_label_h = lv_obj_get_height(footer_label);
+        ESP_LOGD(TAG, "footer_label_h=%d", footer_label_h);
+
+        //lv_coord_t footer_h = footer_label_h + footer_style->body.padding.top +
+            //footer_style->body.padding.bottom;
+        lv_coord_t footer_h = footer_label_h + 5 + 5;
+
+        ESP_LOGD(TAG, "footer_h=%d", footer_h);
+        lv_obj_set_size(footer, display_w, footer_h);
+        lv_obj_set_height(win, display_h - footer_h);
+
+        lv_obj_align(footer, win, LV_ALIGN_OUT_BOTTOM_RIGHT, 5, 5);
+
+        lv_obj_t *b1 = add_btn(win, footer, LV_SYMBOL_SETTINGS);
+        lv_obj_t *b2 = add_btn(win, footer, LV_SYMBOL_EDIT);
+
+        lv_obj_align(b1, footer, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+        lv_obj_align(b2, b1, LV_ALIGN_OUT_RIGHT_MID, 0, 0);
+
+        lv_obj_set_size(b1, 20, 20);
+        lv_obj_set_size(b2, 20, 20);
+
+        // TODO: Group these logically (or factor out function)
+        lv_obj_align(footer_label, footer, LV_ALIGN_IN_TOP_RIGHT, -20, 0);
+
+
     lv_win_set_style(win, LV_WIN_STYLE_BG, &lv_style_pretty);
     lv_win_set_style(win, LV_WIN_STYLE_CONTENT, &win_style_content);
     lv_win_set_title(win, chord->name);
-    //lv_win_set_layout(win, LV_LAYOUT_OFF);
     lv_win_set_btn_size(win, 20);
 
     lv_obj_t *close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
     lv_obj_set_event_cb(close_btn, lv_win_close_event_cb);
 
-    lv_win_add_btn(win, LV_SYMBOL_SETTINGS);
-    lv_win_add_btn(win, LV_SYMBOL_EDIT);
     lv_win_add_btn(win, LV_SYMBOL_PAUSE);
     lv_win_add_btn(win, LV_SYMBOL_PLAY);
 
@@ -392,7 +449,7 @@ static void edit_chord(ysw_chord_t *chord)
 
     lv_obj_align(table, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-    lv_table_set_style(table, LV_TABLE_STYLE_BG, &table_bg_style);
+    lv_table_set_style(table, LV_TABLE_STYLE_BG, &plain_color_tight);
     lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &value_cell);
     lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &title_cell);
     lv_table_set_style(table, LV_TABLE_STYLE_CELL3, &name_cell);
@@ -428,8 +485,6 @@ static void edit_chord(ysw_chord_t *chord)
             lv_table_set_cell_align(table, n, j, LV_LABEL_ALIGN_CENTER);
         }
     }
-
-    //lv_win_set_layout(win, LV_LAYOUT_PRETTY);
 }
 
 void app_main()
@@ -465,21 +520,7 @@ void app_main()
 
     music = ysw_music_parse(MUSIC_DEFINITIONS);
 
-    uint32_t chord_count = ysw_music_get_chord_count(music);
-    for (uint32_t i = 0; i < chord_count; i++) {
-        ysw_chord_t *chord = ysw_music_get_chord(music, i);
-        ESP_LOGI(TAG, "chord[%d]=%s", i, chord->name);
-        ysw_chord_dump(chord, TAG);
-    }
-
-    uint32_t progression_count = ysw_music_get_progression_count(music);
-    for (uint32_t i = 0; i < progression_count; i++) {
-        ysw_progression_t *progression = ysw_music_get_progression(music, i);
-        ESP_LOGI(TAG, "progression[%d]=%s", i, progression->name);
-        ysw_progression_dump(progression, TAG);
-    }
-
-    if (chord_count) {
+    if (ysw_music_get_chord_count(music)) {
         edit_chord(ysw_music_get_chord(music, 0));
     }
 

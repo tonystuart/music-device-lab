@@ -23,4 +23,4 @@ uint32_t ysw_music_get_chord_count(ysw_music_t *music);
 ysw_chord_t *ysw_music_get_chord(ysw_music_t *music, uint32_t index);
 uint32_t ysw_music_get_progression_count(ysw_music_t *music);
 ysw_progression_t *ysw_music_get_progression(ysw_music_t *music, uint32_t index);
-
+void ysw_music_dump(ysw_music_t *music, char *tag);

@@ -119,7 +119,7 @@ static void parse_chord(this_t *this)
         }
     }
 
-    ysw_chord_dump(chord, TAG);
+    //ysw_chord_dump(chord, TAG);
 }
 
 static void parse_progression(this_t *this)
@@ -155,7 +155,7 @@ static void parse_progression(this_t *this)
                 return;
             }
             ysw_chord_t *chord = ysw_array_get(this->music->chords, chord_index);
-            ESP_LOGD(TAG, "using index=%d, chord=%p, name=%s", chord_index, chord, chord->name);
+            //ESP_LOGD(TAG, "using index=%d, chord=%p, name=%s", chord_index, chord, chord->name);
             ysw_progression_add_chord(progression, degree, chord);
         } else {
             push_back_tokens(this);
@@ -163,7 +163,7 @@ static void parse_progression(this_t *this)
         }
     }
 
-    ysw_progression_dump(progression, TAG);
+    //ysw_progression_dump(progression, TAG);
 }
 
 static ysw_music_t *create_music()
