@@ -18,6 +18,7 @@
 #include "ysw_ble_synthesizer.h"
 #include "ysw_sequencer.h"
 #include "ysw_message.h"
+#include "ysw_chord.h"
 #include "ysw_music.h"
 #include "ysw_music_parser.h"
 #include "ysw_lv_styles.h"
@@ -51,6 +52,11 @@ static ysw_music_t *music;
 static uint32_t progression_index;
 
 static void play_progression(ysw_progression_t *s);
+
+static uint32_t chord_index;
+static uint32_t note_index;
+static lv_obj_t *footer_label;
+static lv_obj_t *win;
 
 static void initialize_spiffs()
 {
@@ -207,8 +213,26 @@ static void create_field(lv_obj_t *parent, char *name, char *value)
     lv_obj_set_event_cb(value_ta, text_area_event_handler);
 }
 
-static void open_value_editor(int16_t row, int16_t column)
+static void open_value_editor(lv_obj_t * btn, lv_event_t event)
 {
+    if(event != LV_EVENT_RELEASED) {
+        return;
+    }
+
+    uint32_t chord_count = ysw_music_get_chord_count(music);
+    if (chord_index >= chord_count) {
+        return;
+    }
+
+    ysw_chord_t *chord = ysw_music_get_chord(music, chord_index);
+
+    uint32_t note_count = ysw_chord_get_note_count(chord);
+    if (note_index >= note_count) {
+        return;
+    }
+
+    ysw_chord_note_t *chord_note = ysw_chord_get_chord_note(chord, note_index);
+
     lv_obj_t *win = lv_win_create(lv_scr_act(), NULL);
     lv_obj_align(win, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_win_set_style(win, LV_WIN_STYLE_BG, &lv_style_pretty);
@@ -225,10 +249,12 @@ static void open_value_editor(int16_t row, int16_t column)
     //lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
     //lv_obj_t *scrl = lv_page_get_scrl(ext->page);
 
-    create_field(win, "Degree:", "1");
-    create_field(win, "Volume:", "100");
-    create_field(win, "Time:", "0");
-    create_field(win, "Duration:", "230");
+    char buf[MDBUF_SZ];
+
+    create_field(win, "Degree:", ysw_itoa(chord_note->degree, buf, MDBUF_SZ));
+    create_field(win, "Start:", ysw_itoa(chord_note->time, buf, MDBUF_SZ));
+    create_field(win, "Duration:", ysw_itoa(chord_note->duration, buf, MDBUF_SZ));
+    create_field(win, "Volume:", ysw_itoa(chord_note->velocity, buf, MDBUF_SZ));
 
     lv_win_set_layout(win, LV_LAYOUT_PRETTY);
 }
@@ -239,14 +265,37 @@ static char *headings[] = {
 
 #define COLUMN_COUNT (sizeof(headings) / sizeof(char*))
 
-static lv_obj_t *add_btn(lv_obj_t *footer, const void *img_src)
+static lv_obj_t *add_header_button(lv_obj_t *win, const void *img_src, lv_event_cb_t event_cb)
+{
+    lv_obj_t *btn = lv_win_add_btn(win, img_src);
+    if (event_cb) {
+        lv_obj_set_event_cb(btn, event_cb);
+    }
+    return btn;
+}
+
+static void log_type(lv_obj_t *obj, char *tag)
+{
+    lv_obj_type_t types;
+    lv_obj_get_type(obj, &types);
+
+    uint8_t i;
+    for(i = 0; i < LV_MAX_ANCESTOR_NUM; i++) {
+        if (types.type[i]) {
+            ESP_LOGD(tag, "types.type[%d]=%s", i, types.type[i]);
+        }
+    }
+}
+
+static lv_obj_t *add_footer_button(lv_obj_t *footer, const void *img_src, lv_event_cb_t event_cb)
 {
     lv_obj_t *editor = lv_obj_get_parent(footer);
     lv_obj_t *win = lv_obj_get_child_back(editor, NULL);
-
     lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
+    lv_obj_t *previous = lv_ll_get_head(&footer->child_ll); // get prev before adding new
 
     lv_obj_t *btn = lv_btn_create(footer, NULL);
+
     lv_btn_set_style(btn, LV_BTN_STYLE_REL, ext->style_btn_rel);
     lv_btn_set_style(btn, LV_BTN_STYLE_PR, ext->style_btn_pr);
     lv_obj_set_size(btn, ext->btn_size, ext->btn_size);
@@ -255,13 +304,18 @@ static lv_obj_t *add_btn(lv_obj_t *footer, const void *img_src)
     lv_obj_set_click(img, false);
     lv_img_set_src(img, img_src);
 
+    if (!previous) {
+        lv_obj_align(btn, footer, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    } else {
+        lv_obj_align(btn, previous, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
+    }
+
+    if (event_cb) {
+        lv_obj_set_event_cb(btn, event_cb);
+    }
+
     return btn;
 }
-
-static uint32_t chord_index;
-static uint32_t note_index;
-static lv_obj_t *footer_label;
-static lv_obj_t *win;
 
 static void clear_selected_note_highlight()
 {
@@ -291,6 +345,7 @@ static void select_note()
     char buf[MDBUF_SZ];
     snprintf(buf, MDBUF_SZ, "Note %d of %d", to_count(note_index), note_count);
     lv_label_set_text(footer_label, buf);
+    lv_obj_realign(footer_label);
 
     clear_selected_note_highlight();
     for (int i = 0; i < COLUMN_COUNT; i++) {
@@ -405,36 +460,26 @@ static void display_chords()
     lv_obj_set_height(win, display_h - footer_h);
 
     lv_obj_t *footer = lv_obj_create(editor, NULL);
-    footer_label = lv_label_create(footer, NULL);
-    lv_label_set_text(footer_label, "Chord Note");
-
     lv_obj_set_size(footer, display_w, footer_h);
     lv_obj_align(footer, win, LV_ALIGN_OUT_BOTTOM_RIGHT, 5, 5);
 
-    lv_obj_t *b1 = add_btn(footer, LV_SYMBOL_SETTINGS);
-    lv_obj_t *b2 = add_btn(footer, LV_SYMBOL_EDIT);
-    lv_obj_t *b3 = add_btn(footer, LV_SYMBOL_PLUS);
-    lv_obj_t *b4 = add_btn(footer, LV_SYMBOL_MINUS);
+    add_footer_button(footer, LV_SYMBOL_SETTINGS, NULL);
+    add_footer_button(footer, LV_SYMBOL_EDIT, open_value_editor);
+    add_footer_button(footer, LV_SYMBOL_PLUS, NULL);
+    add_footer_button(footer, LV_SYMBOL_MINUS, NULL);
+    add_footer_button(footer, LV_SYMBOL_UP, NULL);
+    add_footer_button(footer, LV_SYMBOL_DOWN, NULL);
 
-    lv_obj_align(b1, footer, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    lv_obj_align(b2, b1, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
-    lv_obj_align(b3, b2, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
-    lv_obj_align(b4, b3, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
-
+    footer_label = lv_label_create(footer, NULL);
+    lv_label_set_text(footer_label, "Chord Note");
     lv_obj_align(footer_label, footer, LV_ALIGN_IN_TOP_RIGHT, -20, 0);
 
-
-    lv_obj_t *close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
-    lv_obj_set_event_cb(close_btn, lv_win_close_event_cb);
-
-    lv_obj_t *next_btn = lv_win_add_btn(win, LV_SYMBOL_NEXT);
-    lv_win_add_btn(win, LV_SYMBOL_REFRESH);
-    lv_win_add_btn(win, LV_SYMBOL_PAUSE);
-    lv_win_add_btn(win, LV_SYMBOL_PLAY);
-    lv_obj_t *prev_btn = lv_win_add_btn(win, LV_SYMBOL_PREV);
-
-    lv_obj_set_event_cb(next_btn, select_next_chord);
-    lv_obj_set_event_cb(prev_btn, select_prev_chord);
+    add_header_button(win, LV_SYMBOL_CLOSE, lv_win_close_event_cb);
+    add_header_button(win, LV_SYMBOL_NEXT, select_next_chord);
+    add_header_button(win, LV_SYMBOL_LOOP, NULL);
+    add_header_button(win, LV_SYMBOL_PAUSE, NULL);
+    add_header_button(win, LV_SYMBOL_PLAY, NULL);
+    add_header_button(win, LV_SYMBOL_PREV, select_prev_chord);
 
     lv_obj_t *page = lv_win_get_content(win);
 
@@ -482,6 +527,10 @@ static void process_chords()
     }
 }
 
+void mbox_callback(struct _lv_obj_t * obj, lv_event_t event)
+{
+}
+
 void app_main()
 {
     esp_log_level_set("BLEServer", ESP_LOG_INFO);
@@ -515,7 +564,15 @@ void app_main()
 
     music = ysw_music_parse(MUSIC_DEFINITIONS);
 
-    process_chords();
+    if (music) {
+        process_chords();
+    } else {
+        lv_obj_t * mbox1 = lv_mbox_create(lv_scr_act(), NULL);
+        lv_mbox_set_text(mbox1, "The music partition is empty");
+        lv_obj_set_width(mbox1, 200);
+        lv_obj_set_event_cb(mbox1, mbox_callback);
+        lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0);
+    }
 
     // play_next();
 
