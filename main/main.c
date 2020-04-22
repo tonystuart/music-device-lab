@@ -10,43 +10,39 @@
 #include "esp_log.h"
 #include "esp_spiffs.h"
 
+#include "lvgl/lvgl.h"
+#include "driver/spi_master.h"
+#include "eli_ili9341_xpt2046.h"
+
 #include "ysw_synthesizer.h"
 #include "ysw_ble_synthesizer.h"
 #include "ysw_sequencer.h"
 #include "ysw_message.h"
 #include "ysw_music.h"
 #include "ysw_music_parser.h"
-
-#include "driver/spi_master.h"
-#include "lvgl/lvgl.h"
-#include "eli_ili9341_xpt2046.h"
+#include "ysw_lv_styles.h"
 
 #define TAG "MAIN"
 
 #define SPIFFS_PARTITION "/spiffs"
 #define MUSIC_DEFINITIONS "/spiffs/music.csv"
 
+#define BUTTON_SIZE 20
+
+// Example of getting component objects
+// lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
+// lv_obj_t *scrl = lv_page_get_scrl(ext->page);
+
 typedef struct {
     int16_t row;
     int16_t column;
 } selection_t;
 
-static selection_t selection = {
-    .row = -1,
-};
+static selection_t selection = { .row = -1 };
 
 static lv_obj_t *kb;
 static lv_obj_t *table;
 static lv_signal_cb_t old_signal_cb;
-
-static lv_style_t value_cell;
-static lv_style_t win_style_content;
-static lv_style_t page_bg_style;
-static lv_style_t page_scrl_style;
-static lv_style_t plain_color_tight;
-static lv_style_t title_cell;
-static lv_style_t name_cell;
-static lv_style_t selected_cell;
 
 static QueueHandle_t synthesizer_queue;
 static QueueHandle_t sequencer_queue;
@@ -71,77 +67,6 @@ static void initialize_spiffs()
     size_t amount_used = 0;
     $(esp_spiffs_info(config.partition_label, &total_size, &amount_used));
     ESP_LOGD(TAG, "initialize_spiffs total_size=%d, amount_used=%d", total_size, amount_used);
-}
-
-static void initialize_styles()
-{
-    ESP_LOGD(TAG, "sizeof(style)=%d", sizeof(lv_style_pretty_color));
-    lv_style_copy(&page_bg_style, &lv_style_pretty_color);
-    ESP_LOGD(TAG, "page_bg_style radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", page_bg_style.body.radius, page_bg_style.body.border.width, page_bg_style.body.border.part, page_bg_style.body.padding.top, page_bg_style.body.padding.bottom, page_bg_style.body.padding.left, page_bg_style.body.padding.right, page_bg_style.body.padding.inner);
-    page_bg_style.body.radius = 0;
-    page_bg_style.body.border.width = 0;
-    page_bg_style.body.border.part = LV_BORDER_NONE;
-    page_bg_style.body.padding.top = 0;
-    page_bg_style.body.padding.bottom = 0;
-    page_bg_style.body.padding.left = 0;
-    page_bg_style.body.padding.right = 0;
-    page_bg_style.body.padding.inner = 0;
-
-    lv_style_copy(&page_scrl_style, &lv_style_pretty_color);
-    ESP_LOGD(TAG, "page_scrl_style radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", page_scrl_style.body.radius, page_scrl_style.body.border.width, page_scrl_style.body.border.part, page_scrl_style.body.padding.top, page_scrl_style.body.padding.bottom, page_scrl_style.body.padding.left, page_scrl_style.body.padding.right, page_scrl_style.body.padding.inner);
-    page_scrl_style.body.radius = 0;
-    page_scrl_style.body.border.width = 0;
-    page_scrl_style.body.border.part = LV_BORDER_NONE;
-    page_scrl_style.body.padding.top = 0;
-    page_scrl_style.body.padding.bottom = 0;
-    page_scrl_style.body.padding.left = 0;
-    page_scrl_style.body.padding.right = 0;
-    page_scrl_style.body.padding.inner = 0;
-
-    lv_style_copy(&plain_color_tight, &lv_style_plain_color);
-    ESP_LOGD(TAG, "lv_style_plain_color radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", plain_color_tight.body.radius, plain_color_tight.body.border.width, plain_color_tight.body.border.part, plain_color_tight.body.padding.top, plain_color_tight.body.padding.bottom, plain_color_tight.body.padding.left, plain_color_tight.body.padding.right, plain_color_tight.body.padding.inner);
-    plain_color_tight.body.radius = 0;
-    plain_color_tight.body.border.width = 0;
-    plain_color_tight.body.border.part = LV_BORDER_NONE;
-    plain_color_tight.body.padding.top = 0;
-    plain_color_tight.body.padding.bottom = 0;
-    plain_color_tight.body.padding.left = 0;
-    plain_color_tight.body.padding.right = 0;
-    plain_color_tight.body.padding.inner = 0;
-
-    lv_style_copy(&win_style_content, &lv_style_transp);
-    ESP_LOGD(TAG, "win_style_content radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", win_style_content.body.radius, win_style_content.body.border.width, win_style_content.body.border.part, win_style_content.body.padding.top, win_style_content.body.padding.bottom, win_style_content.body.padding.left, win_style_content.body.padding.right, win_style_content.body.padding.inner);
-    win_style_content.body.radius = 0;
-    win_style_content.body.border.width = 0;
-    win_style_content.body.border.part = LV_BORDER_NONE;
-    win_style_content.body.padding.top = 5;
-    win_style_content.body.padding.bottom = 0;
-    win_style_content.body.padding.left = 5;
-    win_style_content.body.padding.right = 0;
-    win_style_content.body.padding.inner = 5;
-
-    lv_style_copy(&value_cell, &lv_style_plain);
-    value_cell.body.border.width = 1;
-    value_cell.body.border.color = LV_COLOR_BLACK;
-
-    lv_style_copy(&title_cell, &lv_style_plain);
-    title_cell.body.border.width = 1;
-    title_cell.body.border.color = LV_COLOR_BLACK;
-    title_cell.body.main_color = LV_COLOR_RED;
-    title_cell.body.grad_color = LV_COLOR_RED;
-    title_cell.text.color = LV_COLOR_BLACK;
-
-    lv_style_copy(&name_cell, &lv_style_plain);
-    name_cell.body.border.width = 1;
-    name_cell.body.border.color = LV_COLOR_BLACK;
-    name_cell.body.main_color = LV_COLOR_SILVER;
-    name_cell.body.grad_color = LV_COLOR_SILVER;
-
-    lv_style_copy(&selected_cell, &lv_style_plain);
-    selected_cell.body.border.width = 1;
-    selected_cell.body.border.color = LV_COLOR_BLACK;
-    selected_cell.body.main_color = LV_COLOR_YELLOW;
-    selected_cell.body.grad_color = LV_COLOR_YELLOW;
 }
 
 static void play_next()
@@ -230,7 +155,7 @@ static void play_progression(ysw_progression_t *s)
     ysw_message_send(sequencer_queue, &message);
 }
 
-static void keyboard_event_cb(lv_obj_t * keyboard, lv_event_t event)
+static void keyboard_event_cb(lv_obj_t *keyboard, lv_event_t event)
 {
     lv_kb_def_event_cb(kb, event);
 
@@ -284,14 +209,14 @@ static void create_field(lv_obj_t *parent, char *name, char *value)
 
 static void open_value_editor(int16_t row, int16_t column)
 {
-    lv_obj_t * win = lv_win_create(lv_scr_act(), NULL);
+    lv_obj_t *win = lv_win_create(lv_scr_act(), NULL);
     lv_obj_align(win, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_win_set_style(win, LV_WIN_STYLE_BG, &lv_style_pretty);
     lv_win_set_style(win, LV_WIN_STYLE_CONTENT, &win_style_content);
     lv_win_set_title(win, "Chord Note (1 of 8)");
     lv_win_set_layout(win, LV_LAYOUT_OFF);
 
-    lv_obj_t * close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
+    lv_obj_t *close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
     lv_obj_set_event_cb(close_btn, lv_win_close_event_cb);
 
     lv_win_add_btn(win, LV_SYMBOL_SETTINGS);
@@ -308,169 +233,90 @@ static void open_value_editor(int16_t row, int16_t column)
     lv_win_set_layout(win, LV_LAYOUT_PRETTY);
 }
 
-static lv_res_t my_scrl_signal_cb(lv_obj_t *scrl, lv_signal_t sign, void *param)
-{
-    //ESP_LOGD(TAG, "my_scrl_signal_cb sign=%d", sign);
-    if (sign == LV_SIGNAL_PRESSED) {
-        lv_indev_t* indev_act = (lv_indev_t*)param;
-        lv_indev_proc_t *proc = &indev_act->proc;
-        lv_area_t scrl_coords;
-        lv_obj_get_coords(scrl, &scrl_coords);
-        int16_t row = (proc->types.pointer.act_point.y + -scrl_coords.y1) / 30;
-        int16_t column = proc->types.pointer.act_point.x / 79;
-        ESP_LOGD(TAG, "act_point x=%d, y=%d, scrl_coords x1=%d, y1=%d, x2=%d, y2=%d, row+1=%d, column+1=%d", proc->types.pointer.act_point.x, proc->types.pointer.act_point.y, scrl_coords.x1, scrl_coords.y1, scrl_coords.x2, scrl_coords.y2, row+1, column+1);
-
-        // TODO: use a metdata structure to hold info about the cells
-        if (row == 0 || row == 3) {
-        } else if (row < 3 && column == 0) {
-        } else {
-            if (selection.row != -1) {
-                lv_table_set_cell_type(table, selection.row, selection.column, 1);
-            }
-            lv_table_set_cell_type(table, row, column, 4);
-            lv_obj_refresh_style(table);
-            if (selection.row == row && selection.column == column) {
-                open_value_editor(row, column);
-            } else {
-                selection.row = row;
-                selection.column = column;
-            }
-        }
-    }
-    return old_signal_cb(scrl, sign, param);
-}
-
 static char *headings[] = {
-    "Degree", "Time", "Length", "Volume"
+    "Degree", "Start", "Duration", "Volume"
 };
 
 #define COLUMN_COUNT (sizeof(headings) / sizeof(char*))
 
-static lv_obj_t * add_btn(lv_obj_t *win, lv_obj_t *footer, const void * img_src)
+static lv_obj_t *add_btn(lv_obj_t *footer, const void *img_src)
 {
-    LV_ASSERT_OBJ(win, LV_OBJX_NAME);
-    LV_ASSERT_NULL(img_src);
+    lv_obj_t *editor = lv_obj_get_parent(footer);
+    lv_obj_t *win = lv_obj_get_child_back(editor, NULL);
 
-    lv_win_ext_t * ext = lv_obj_get_ext_attr(win);
+    lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
 
-    lv_obj_t * btn = lv_btn_create(footer, NULL);
+    lv_obj_t *btn = lv_btn_create(footer, NULL);
     lv_btn_set_style(btn, LV_BTN_STYLE_REL, ext->style_btn_rel);
     lv_btn_set_style(btn, LV_BTN_STYLE_PR, ext->style_btn_pr);
     lv_obj_set_size(btn, ext->btn_size, ext->btn_size);
 
-    lv_obj_t * img = lv_img_create(btn, NULL);
+    lv_obj_t *img = lv_img_create(btn, NULL);
     lv_obj_set_click(img, false);
     lv_img_set_src(img, img_src);
-
-    //lv_win_realign(win);
 
     return btn;
 }
 
-static void edit_chord(ysw_chord_t *chord)
+static uint32_t chord_index;
+static uint32_t note_index;
+static lv_obj_t *footer_label;
+static lv_obj_t *win;
+
+static void clear_selected_note_highlight()
 {
-    lv_obj_t *editor = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_set_style(editor, &plain_color_tight);
-        lv_coord_t display_w = lv_disp_get_hor_res(NULL);
-        lv_coord_t display_h = lv_disp_get_ver_res(NULL);
-        lv_obj_set_size(editor, display_w, display_h);
+    if (selection.row != -1) {
+        for (int i = 0; i < COLUMN_COUNT; i++) {
+            lv_table_set_cell_type(table, selection.row + 1, i, 1); // +1 for heading
+        }
+    }
+    selection.row = -1;
+    lv_obj_refresh_style(table);
+}
 
-    lv_obj_t *win = lv_win_create(editor, NULL);
-
-        lv_obj_t *footer = lv_obj_create(editor, NULL);
-
-        lv_obj_t *footer_label = lv_label_create(footer, NULL);
-
-        //lv_style_t *footer_style = &lv_style_plain_color;
-        //lv_obj_set_style(footer_label, footer_style);
-        lv_label_set_text(footer_label, "Footer");
-        lv_coord_t footer_label_h = lv_obj_get_height(footer_label);
-        ESP_LOGD(TAG, "footer_label_h=%d", footer_label_h);
-
-        //lv_coord_t footer_h = footer_label_h + footer_style->body.padding.top +
-            //footer_style->body.padding.bottom;
-        lv_coord_t footer_h = footer_label_h + 5 + 5;
-
-        ESP_LOGD(TAG, "footer_h=%d", footer_h);
-        lv_obj_set_size(footer, display_w, footer_h);
-        lv_obj_set_height(win, display_h - footer_h);
-
-        lv_obj_align(footer, win, LV_ALIGN_OUT_BOTTOM_RIGHT, 5, 5);
-
-        lv_obj_t *b1 = add_btn(win, footer, LV_SYMBOL_SETTINGS);
-        lv_obj_t *b2 = add_btn(win, footer, LV_SYMBOL_EDIT);
-
-        lv_obj_align(b1, footer, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-        lv_obj_align(b2, b1, LV_ALIGN_OUT_RIGHT_MID, 0, 0);
-
-        lv_obj_set_size(b1, 20, 20);
-        lv_obj_set_size(b2, 20, 20);
-
-        // TODO: Group these logically (or factor out function)
-        lv_obj_align(footer_label, footer, LV_ALIGN_IN_TOP_RIGHT, -20, 0);
-
-
-    lv_win_set_style(win, LV_WIN_STYLE_BG, &lv_style_pretty);
-    lv_win_set_style(win, LV_WIN_STYLE_CONTENT, &win_style_content);
-    lv_win_set_title(win, chord->name);
-    lv_win_set_btn_size(win, 20);
-
-    lv_obj_t *close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
-    lv_obj_set_event_cb(close_btn, lv_win_close_event_cb);
-
-    lv_win_add_btn(win, LV_SYMBOL_PAUSE);
-    lv_win_add_btn(win, LV_SYMBOL_PLAY);
-
-    //lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
-    //lv_obj_t *scrl = lv_page_get_scrl(ext->page);
-
-    //create_field(win, "Degree:", "1");
-    //create_field(win, "Volume:", "100");
-    //create_field(win, "Time:", "0");
-    //create_field(win, "Duration:", "230");
-
-
-
-    //page = lv_page_create(lv_scr_act(), NULL);
-    //lv_obj_set_size(page, 320, 240);
-    //lv_obj_align(page, NULL, LV_ALIGN_CENTER, 0, 0);
-    //lv_page_set_style(page, LV_PAGE_STYLE_BG, &page_bg_style);
-    //lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &page_scrl_style);
-
-    lv_obj_t *page = lv_win_get_content(win);
-
-    // Trying to get rid of one pixel to left of table. It's not these:
-    //lv_page_set_style(page, LV_PAGE_STYLE_BG, &page_bg_style);
-    //lv_win_set_style(win, LV_WIN_STYLE_BG, &page_bg_style);
-
-    lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &page_scrl_style);
-
-    table = lv_table_create(win, NULL);
-
-    lv_obj_align(table, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-
-    lv_table_set_style(table, LV_TABLE_STYLE_BG, &plain_color_tight);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &value_cell);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &title_cell);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL3, &name_cell);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL4, &selected_cell);
-
-    uint32_t note_count = ysw_chord_get_note_count(chord);
-
-    lv_table_set_col_cnt(table, COLUMN_COUNT);
-    lv_table_set_row_cnt(table, note_count + 1); // +1 for heading
-
-    for (int i = 0; i < COLUMN_COUNT; i++) {
-        ESP_LOGD(TAG, "setting column attributes");
-        lv_table_set_cell_type(table, 0, i, 3);
-        lv_table_set_cell_align(table, 0, i, LV_LABEL_ALIGN_CENTER);
-        lv_table_set_cell_value(table, 0, i, headings[i]);
-        lv_table_set_col_width(table, i, 79);
+static void select_note()
+{
+    uint32_t chord_count = ysw_music_get_chord_count(music);
+    if (chord_index >= chord_count) {
+        return;
     }
 
-    lv_obj_t *scroller = lv_page_get_scrl(page);
-    old_signal_cb = lv_obj_get_signal_cb(scroller);
-    lv_obj_set_signal_cb(scroller, my_scrl_signal_cb);
+    ysw_chord_t *chord = ysw_music_get_chord(music, chord_index);
+
+    uint32_t note_count = ysw_chord_get_note_count(chord);
+    if (note_index >= note_count) {
+        return;
+    }
+
+    char buf[MDBUF_SZ];
+    snprintf(buf, MDBUF_SZ, "Note %d of %d", to_count(note_index), note_count);
+    lv_label_set_text(footer_label, buf);
+
+    clear_selected_note_highlight();
+    for (int i = 0; i < COLUMN_COUNT; i++) {
+        lv_table_set_cell_type(table, note_index + 1, i, 4); // +1 for heading
+    }
+    lv_obj_refresh_style(table);
+
+    selection.row = note_index;
+}
+
+static void select_chord()
+{
+    // TODO: Preserve (as close as possible) selection across chords
+    clear_selected_note_highlight();
+
+    uint32_t chord_count = ysw_music_get_chord_count(music);
+    if (chord_index >= chord_count) {
+        return;
+    }
+
+    ysw_chord_t *chord = ysw_music_get_chord(music, chord_index);
+
+    lv_win_set_title(win, chord->name);
+
+    uint32_t note_count = ysw_chord_get_note_count(chord);
+    lv_table_set_row_cnt(table, note_count + 1); // +1 for the headings
 
     for (uint32_t i = 0; i < note_count; i++) {
         ESP_LOGD(TAG, "setting note attributes, i=%d", i);
@@ -484,6 +330,155 @@ static void edit_chord(ysw_chord_t *chord)
         for (int j = 0; j < COLUMN_COUNT; j++) {
             lv_table_set_cell_align(table, n, j, LV_LABEL_ALIGN_CENTER);
         }
+    }
+
+    if (note_count) {
+        note_index = 0;
+        select_note();
+    }
+}
+
+static lv_res_t my_scrl_signal_cb(lv_obj_t *scrl, lv_signal_t sign, void *param)
+{
+    //ESP_LOGD(TAG, "my_scrl_signal_cb sign=%d", sign);
+    if (sign == LV_SIGNAL_PRESSED) {
+        lv_indev_t *indev_act = (lv_indev_t*)param;
+        lv_indev_proc_t *proc = &indev_act->proc;
+        lv_area_t scrl_coords;
+        lv_obj_get_coords(scrl, &scrl_coords);
+        uint16_t row = (proc->types.pointer.act_point.y + -scrl_coords.y1) / 30;
+        uint16_t column = proc->types.pointer.act_point.x / 79;
+        ESP_LOGD(TAG, "act_point x=%d, y=%d, scrl_coords x1=%d, y1=%d, x2=%d, y2=%d, row+1=%d, column+1=%d", proc->types.pointer.act_point.x, proc->types.pointer.act_point.y, scrl_coords.x1, scrl_coords.y1, scrl_coords.x2, scrl_coords.y2, row+1, column+1);
+
+        // TODO: use a metdata structure to hold info about the cells
+        if (row) {
+            note_index = row - 1; // -1 for headings
+            select_note();
+        }
+    }
+    return old_signal_cb(scrl, sign, param);
+}
+
+void select_next_chord(lv_obj_t * btn, lv_event_t event)
+{
+    if(event == LV_EVENT_RELEASED) {
+        ESP_LOGD(TAG, "next old chord_index=%d", chord_index);
+        uint32_t chord_count = ysw_music_get_chord_count(music);
+        if (++chord_index >= chord_count) {
+            ESP_LOGD(TAG, "wrapping chord_index=%d", chord_index);
+            chord_index = 0;
+        }
+        ESP_LOGD(TAG, "new chord_index=%d", chord_index);
+        select_chord(chord_index);
+    }
+}
+
+void select_prev_chord(lv_obj_t * btn, lv_event_t event)
+{
+    if(event == LV_EVENT_RELEASED) {
+        ESP_LOGD(TAG, "prev old chord_index=%d", chord_index);
+        uint32_t chord_count = ysw_music_get_chord_count(music);
+        if (--chord_index >= chord_count) {
+            ESP_LOGD(TAG, "wrapping chord_index=%d", chord_index);
+            chord_index = chord_count - 1;
+        }
+        select_chord(chord_index);
+        ESP_LOGD(TAG, "new chord_index=%d", chord_index);
+    }
+}
+
+static void display_chords()
+{
+    lv_coord_t display_w = lv_disp_get_hor_res(NULL);
+    lv_coord_t display_h = lv_disp_get_ver_res(NULL);
+    lv_coord_t footer_h = BUTTON_SIZE + 5 + 5;
+
+    lv_obj_t *editor = lv_obj_create(lv_scr_act(), NULL);
+    lv_obj_set_style(editor, &plain_color_tight);
+    lv_obj_set_size(editor, display_w, display_h);
+
+    win = lv_win_create(editor, NULL);
+    lv_win_set_style(win, LV_WIN_STYLE_BG, &lv_style_pretty);
+    lv_win_set_style(win, LV_WIN_STYLE_CONTENT, &win_style_content);
+    lv_win_set_title(win, "Chord Name");
+    lv_win_set_btn_size(win, BUTTON_SIZE);
+    lv_obj_set_height(win, display_h - footer_h);
+
+    lv_obj_t *footer = lv_obj_create(editor, NULL);
+    footer_label = lv_label_create(footer, NULL);
+    lv_label_set_text(footer_label, "Chord Note");
+
+    lv_obj_set_size(footer, display_w, footer_h);
+    lv_obj_align(footer, win, LV_ALIGN_OUT_BOTTOM_RIGHT, 5, 5);
+
+    lv_obj_t *b1 = add_btn(footer, LV_SYMBOL_SETTINGS);
+    lv_obj_t *b2 = add_btn(footer, LV_SYMBOL_EDIT);
+    lv_obj_t *b3 = add_btn(footer, LV_SYMBOL_PLUS);
+    lv_obj_t *b4 = add_btn(footer, LV_SYMBOL_MINUS);
+
+    lv_obj_align(b1, footer, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_obj_align(b2, b1, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
+    lv_obj_align(b3, b2, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
+    lv_obj_align(b4, b3, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
+
+    lv_obj_align(footer_label, footer, LV_ALIGN_IN_TOP_RIGHT, -20, 0);
+
+
+    lv_obj_t *close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
+    lv_obj_set_event_cb(close_btn, lv_win_close_event_cb);
+
+    lv_obj_t *next_btn = lv_win_add_btn(win, LV_SYMBOL_NEXT);
+    lv_win_add_btn(win, LV_SYMBOL_REFRESH);
+    lv_win_add_btn(win, LV_SYMBOL_PAUSE);
+    lv_win_add_btn(win, LV_SYMBOL_PLAY);
+    lv_obj_t *prev_btn = lv_win_add_btn(win, LV_SYMBOL_PREV);
+
+    lv_obj_set_event_cb(next_btn, select_next_chord);
+    lv_obj_set_event_cb(prev_btn, select_prev_chord);
+
+    lv_obj_t *page = lv_win_get_content(win);
+
+    // Trying to get rid of one pixel to left of table. It's not these:
+    //lv_page_set_style(page, LV_PAGE_STYLE_BG, &page_bg_style);
+    //lv_win_set_style(win, LV_WIN_STYLE_BG, &page_bg_style);
+
+    lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &page_scrl_style);
+
+    lv_obj_t *scroller = lv_page_get_scrl(page);
+    old_signal_cb = lv_obj_get_signal_cb(scroller);
+    lv_obj_set_signal_cb(scroller, my_scrl_signal_cb);
+
+    table = lv_table_create(win, NULL);
+
+    lv_obj_align(table, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+    lv_table_set_style(table, LV_TABLE_STYLE_BG, &plain_color_tight);
+    lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &value_cell);
+    lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &title_cell);
+    lv_table_set_style(table, LV_TABLE_STYLE_CELL3, &name_cell);
+    lv_table_set_style(table, LV_TABLE_STYLE_CELL4, &selected_cell);
+
+    lv_table_set_row_cnt(table, 1); // just the headings for now
+    lv_table_set_col_cnt(table, COLUMN_COUNT);
+
+    for (int i = 0; i < COLUMN_COUNT; i++) {
+        ESP_LOGD(TAG, "setting column attributes");
+        lv_table_set_cell_type(table, 0, i, 3);
+        lv_table_set_cell_align(table, 0, i, LV_LABEL_ALIGN_CENTER);
+        lv_table_set_cell_value(table, 0, i, headings[i]);
+        lv_table_set_col_width(table, i, 79);
+    }
+
+    chord_index = 0;
+    select_chord();
+}
+
+static void process_chords()
+{
+    if (ysw_music_get_chord_count(music)) {
+        display_chords();
+    } else {
+        // TODO: start chord editor
     }
 }
 
@@ -516,13 +511,11 @@ void app_main()
     eli_ili9341_xpt2046_initialize(&new_config);
 
     initialize_spiffs();
-    initialize_styles();
+    ysw_lv_styles_initialize();
 
     music = ysw_music_parse(MUSIC_DEFINITIONS);
 
-    if (ysw_music_get_chord_count(music)) {
-        edit_chord(ysw_music_get_chord(music, 0));
-    }
+    process_chords();
 
     // play_next();
 
