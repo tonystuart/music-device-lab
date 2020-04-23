@@ -34,7 +34,7 @@ typedef enum {
 } ysw_role_t;
 
 typedef struct {
-    uint32_t time;
+    uint32_t start;
     uint32_t duration;
     int8_t degree;
     uint8_t velocity;
@@ -57,7 +57,7 @@ static inline ysw_chord_note_t *ysw_chord_get_chord_note(ysw_chord_t *chord, uin
 }
 
 void ysw_chord_note_free(ysw_chord_note_t *ysw_chord_note);
-ysw_chord_note_t *ysw_chord_note_create(int8_t degree, uint8_t velocity, uint32_t time, uint32_t duration);
+ysw_chord_note_t *ysw_chord_note_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration);
 void ysw_chord_set_duration(ysw_chord_t *chord, uint32_t duration);
 uint32_t ysw_chord_add_note(ysw_chord_t *chord, ysw_chord_note_t *chord_note);
 void ysw_chord_free(ysw_chord_t *chord);

@@ -35,7 +35,7 @@ uint32_t ysw_chord_add_note(ysw_chord_t *chord, ysw_chord_note_t *chord_note)
 {
     assert(chord);
     assert(chord_note);
-    chord->duration = max(chord->duration, chord_note->time + chord_note->duration);
+    chord->duration = max(chord->duration, chord_note->start + chord_note->duration);
     uint32_t index = ysw_array_push(chord->chord_notes, chord_note);
     return index;
 }
@@ -46,11 +46,11 @@ void ysw_chord_set_duration(ysw_chord_t *chord, uint32_t duration)
     chord->duration = duration;
 }
 
-ysw_chord_note_t *ysw_chord_note_create(int8_t degree, uint8_t velocity, uint32_t time, uint32_t duration)
+ysw_chord_note_t *ysw_chord_note_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration)
 {
-    ESP_LOGD(TAG, "chord_note_create degree=%u, velocity=%u, time=%u, duration=%u", degree, velocity, time, duration);
+    ESP_LOGD(TAG, "chord_note_create degree=%u, velocity=%u, start=%u, duration=%u", degree, velocity, start, duration);
     ysw_chord_note_t *ysw_chord_note = ysw_heap_allocate(sizeof(ysw_chord_note_t));
-    ysw_chord_note->time = time;
+    ysw_chord_note->start = start;
     ysw_chord_note->duration = duration;
     ysw_chord_note->degree = degree;
     ysw_chord_note->velocity = velocity;
@@ -60,7 +60,7 @@ ysw_chord_note_t *ysw_chord_note_create(int8_t degree, uint8_t velocity, uint32_
 void ysw_chord_note_free(ysw_chord_note_t *ysw_chord_note)
 {
     assert(ysw_chord_note);
-    ESP_LOGD(TAG, "free chord_note=%p, time=%u, degree=%u, chord_note=%u, velocity=%u", ysw_chord_note, ysw_chord_note->time, ysw_chord_note->degree, ysw_chord_note->degree, ysw_chord_note->velocity);
+    ESP_LOGD(TAG, "free chord_note=%p, start=%u, degree=%u, chord_note=%u, velocity=%u", ysw_chord_note, ysw_chord_note->start, ysw_chord_note->degree, ysw_chord_note->degree, ysw_chord_note->velocity);
     ysw_heap_free(ysw_chord_note);
 }
 

@@ -12,6 +12,7 @@
 #include "esp_log.h"
 #include "ysw_task.h"
 #include "ysw_midi.h"
+#include "ysw_ticks.h"
 
 #define TAG "YSW_SEQUENCER"
 
@@ -39,6 +40,14 @@ static active_note_t *next_note_to_end;
 static active_note_t active_notes[MAX_POLYPHONY];
 static uint8_t active_count = 0;
 static uint8_t programs[16];
+
+static uint8_t bpm = YSW_TICKS_DEFAULT_BPM;
+static uint32_t tpb = YSW_TICKS_DEFAULT_TPB;
+
+static inline time_t t2ms(uint32_t ticks)
+{
+    return ysw_ticks_to_millis_by_tpb(ticks, bpm, tpb);
+}
 
 static void change(uint8_t channel, uint8_t program)
 {
@@ -108,7 +117,7 @@ static void play_note(note_t *note)
         active_notes[active_count].channel = note->channel;
         active_notes[active_count].midi_note = active_note;
         // Limit duration to avoid issues with VS1053b sustained polyphony
-        active_notes[active_count].end_time = note->time + min(note->duration, 1000);
+        active_notes[active_count].end_time = t2ms(note->start) + min(t2ms(note->duration), 1000);
         active_count++;
     } else {
         ESP_LOGE(TAG, "Maximum polyphony exceeded, active_count=%d", active_count);
@@ -117,7 +126,7 @@ static void play_note(note_t *note)
 
 static inline void adjust_playback_start_millis()
 {
-    uint32_t old_elapsed_millis = notes[next_note].time;
+    uint32_t old_elapsed_millis = t2ms(notes[next_note].start);
     uint32_t new_elapsed_millis = (100 * old_elapsed_millis) / playback_speed;
     start_millis = get_millis() - new_elapsed_millis;
 }
@@ -216,7 +225,7 @@ static void run_sequencer(void* parameters)
             release_notes(time_based_visitor, playback_millis);
             if (next_note < note_count) {
                 note_t *note = &notes[next_note];
-                uint32_t note_start_time = note->time;
+                uint32_t note_start_time = t2ms(note->start);
                 if (note_start_time <= playback_millis) {
                     note_t *note = &notes[next_note];
                     play_note(note);

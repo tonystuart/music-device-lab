@@ -131,7 +131,7 @@ static void on_state_change(ysw_sequencer_state_t new_state)
 static void play_progression(ysw_progression_t *s)
 {
     ysw_progression_set_percent_tempo(s, 100);
-    note_t *notes = ysw_progression_get_notes(s);
+    note_t *notes = ysw_progression_get_notes(s, 100);
     assert(notes);
 
     synthesizer_queue = ysw_ble_synthesizer_create_task();
@@ -259,7 +259,7 @@ static void open_value_editor(lv_obj_t * btn, lv_event_t event)
 
 
     create_field(win, "Degree:", ysw_itoa(chord_note->degree, buf, MDBUF_SZ));
-    create_field(win, "Start:", ysw_itoa(chord_note->time, buf, MDBUF_SZ));
+    create_field(win, "Start:", ysw_itoa(chord_note->start, buf, MDBUF_SZ));
     create_field(win, "Duration:", ysw_itoa(chord_note->duration, buf, MDBUF_SZ));
     create_field(win, "Volume:", ysw_itoa(chord_note->velocity, buf, MDBUF_SZ));
 
@@ -386,7 +386,7 @@ static void select_chord()
         int n = i + 1;
         ysw_chord_note_t *chord_note = ysw_chord_get_chord_note(chord, i);
         lv_table_set_cell_value(table, n, 0, ysw_itoa(chord_note->degree, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 1, ysw_itoa(chord_note->time, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 1, ysw_itoa(chord_note->start, buffer, sizeof(buffer)));
         lv_table_set_cell_value(table, n, 2, ysw_itoa(chord_note->duration, buffer, sizeof(buffer)));
         lv_table_set_cell_value(table, n, 3, ysw_itoa(chord_note->velocity, buffer, sizeof(buffer)));
         for (int j = 0; j < COLUMN_COUNT; j++) {

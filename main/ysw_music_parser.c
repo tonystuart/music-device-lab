@@ -109,9 +109,9 @@ static void parse_chord(this_t *this)
         if (type == CHORD_NOTE) {
             int8_t degree = atoi(this->tokens[1]);
             uint8_t velocity = atoi(this->tokens[2]);
-            uint32_t time = atoi(this->tokens[3]);
+            uint32_t start = atoi(this->tokens[3]);
             uint32_t duration = atoi(this->tokens[4]);
-            ysw_chord_note_t *note = ysw_chord_note_create(degree, velocity, time, duration);
+            ysw_chord_note_t *note = ysw_chord_note_create(degree, velocity, start, duration);
             ysw_chord_add_note(chord, note);
         } else {
             push_back_tokens(this);

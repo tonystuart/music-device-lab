@@ -65,7 +65,7 @@ static inline uint32_t ysw_slot_get_duration(ysw_slot_t *slot)
     return slot->chord->duration;
 }
 
-note_t *ysw_progression_get_notes(ysw_progression_t *progression);
+note_t *ysw_progression_get_notes(ysw_progression_t *progression, uint8_t bpm);
 uint32_t ysw_progression_get_note_count(ysw_progression_t *progression);
 void ysw_progression_set_percent_tempo(ysw_progression_t *progression, uint8_t percent_tempo);
 void ysw_progression_set_instrument(ysw_progression_t *progression, uint8_t instrument);

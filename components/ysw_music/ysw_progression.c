@@ -13,6 +13,7 @@
 
 #include "assert.h"
 #include "ysw_heap.h"
+#include "ysw_ticks.h"
 
 #define TAG "YSW_PROGRESSION"
 
@@ -151,7 +152,7 @@ uint32_t ysw_progression_get_note_count(ysw_progression_t *progression)
     return note_count;
 }
 
-note_t *ysw_progression_get_notes(ysw_progression_t *progression)
+note_t *ysw_progression_get_notes(ysw_progression_t *progression, uint8_t bpm)
 {
     assert(progression);
     int chord_time = 0;
@@ -165,13 +166,13 @@ note_t *ysw_progression_get_notes(ysw_progression_t *progression)
         int chord_note_count = ysw_slot_get_chord_note_count(slot);
         for (int j = 0; j < chord_note_count; j++) {
             ysw_chord_note_t *chord_note = ysw_slot_get_chord_note(slot, j);
-            note_p->time = chord_time + chord_note->time;
+            note_p->start = chord_time + chord_note->start;
             note_p->duration = chord_note->duration;
             note_p->channel = 0;
             note_p->midi_note = to_note(progression->tonic, chord_root, chord_note->degree);
             note_p->velocity = chord_note->velocity;
             note_p->instrument = progression->instrument;
-            ESP_LOGD(TAG, "time=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->time, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
+            ESP_LOGD(TAG, "start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
             note_p++;
         }
         chord_time += ysw_slot_get_duration(slot);

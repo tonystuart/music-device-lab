@@ -62,7 +62,7 @@ typedef struct PACKED part {
 } part_t;
 
 typedef struct PACKED note {
-    uint32_t time;
+    uint32_t start;
     uint16_t duration;
     uint8_t channel;
     uint8_t midi_note;
@@ -71,7 +71,7 @@ typedef struct PACKED note {
 } note_t;
 
 typedef struct PACKED lyric {
-    uint32_t time;
+    uint32_t start;
     uint32_t lyric_offset;
 } lyric_t;
 
