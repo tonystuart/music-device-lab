@@ -37,9 +37,14 @@
 typedef struct {
     int16_t row;
     int16_t column;
+    int16_t old_note_index;
+    bool is_cell_edit;
 } selection_t;
 
-static selection_t selection = { .row = -1 };
+static selection_t selection = {
+    .row = -1,
+    .old_note_index = -1
+};
 
 static lv_obj_t *kb;
 static lv_obj_t *table;
@@ -231,13 +236,16 @@ static void open_value_editor(lv_obj_t * btn, lv_event_t event)
         return;
     }
 
+    char buf[MDBUF_SZ];
+    snprintf(buf, MDBUF_SZ, "Note (%d of %d)", to_count(note_index), note_count);
+
     ysw_chord_note_t *chord_note = ysw_chord_get_chord_note(chord, note_index);
 
     lv_obj_t *win = lv_win_create(lv_scr_act(), NULL);
     lv_obj_align(win, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_win_set_style(win, LV_WIN_STYLE_BG, &lv_style_pretty);
     lv_win_set_style(win, LV_WIN_STYLE_CONTENT, &win_style_content);
-    lv_win_set_title(win, "Chord Note (1 of 8)");
+    lv_win_set_title(win, buf);
     lv_win_set_layout(win, LV_LAYOUT_OFF);
 
     lv_obj_t *close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
@@ -249,7 +257,6 @@ static void open_value_editor(lv_obj_t * btn, lv_event_t event)
     //lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
     //lv_obj_t *scrl = lv_page_get_scrl(ext->page);
 
-    char buf[MDBUF_SZ];
 
     create_field(win, "Degree:", ysw_itoa(chord_note->degree, buf, MDBUF_SZ));
     create_field(win, "Start:", ysw_itoa(chord_note->time, buf, MDBUF_SZ));
@@ -319,12 +326,12 @@ static lv_obj_t *add_footer_button(lv_obj_t *footer, const void *img_src, lv_eve
 
 static void clear_selected_note_highlight()
 {
-    if (selection.row != -1) {
+    if (selection.old_note_index != -1) {
         for (int i = 0; i < COLUMN_COUNT; i++) {
-            lv_table_set_cell_type(table, selection.row + 1, i, 1); // +1 for heading
+            lv_table_set_cell_type(table, selection.old_note_index + 1, i, 1); // +1 for heading
         }
     }
-    selection.row = -1;
+    selection.old_note_index = -1;
     lv_obj_refresh_style(table);
 }
 
@@ -353,7 +360,7 @@ static void select_note()
     }
     lv_obj_refresh_style(table);
 
-    selection.row = note_index;
+    selection.old_note_index = note_index;
 }
 
 static void select_chord()
@@ -407,8 +414,22 @@ static lv_res_t my_scrl_signal_cb(lv_obj_t *scrl, lv_signal_t sign, void *param)
 
         // TODO: use a metdata structure to hold info about the cells
         if (row) {
+            if (selection.is_cell_edit) {
+                lv_table_set_cell_type(table, selection.row, selection.column, 1);
+                lv_obj_refresh_style(table);
+                selection.is_cell_edit = false;
+                selection.row = -1;
+            }
             note_index = row - 1; // -1 for headings
             select_note();
+            if (selection.row == row && selection.column == column) {
+                lv_table_set_cell_type(table, selection.row, selection.column, 2);
+                lv_obj_refresh_style(table);
+                selection.is_cell_edit = true;
+            } else {
+                selection.row = row;
+                selection.column = column;
+            }
         }
     }
     return old_signal_cb(scrl, sign, param);
@@ -464,11 +485,12 @@ static void display_chords()
     lv_obj_align(footer, win, LV_ALIGN_OUT_BOTTOM_RIGHT, 5, 5);
 
     add_footer_button(footer, LV_SYMBOL_SETTINGS, NULL);
-    add_footer_button(footer, LV_SYMBOL_EDIT, open_value_editor);
     add_footer_button(footer, LV_SYMBOL_PLUS, NULL);
     add_footer_button(footer, LV_SYMBOL_MINUS, NULL);
     add_footer_button(footer, LV_SYMBOL_UP, NULL);
     add_footer_button(footer, LV_SYMBOL_DOWN, NULL);
+    add_footer_button(footer, LV_SYMBOL_LEFT, NULL);
+    add_footer_button(footer, LV_SYMBOL_RIGHT, NULL);
 
     footer_label = lv_label_create(footer, NULL);
     lv_label_set_text(footer_label, "Chord Note");
@@ -499,7 +521,7 @@ static void display_chords()
 
     lv_table_set_style(table, LV_TABLE_STYLE_BG, &plain_color_tight);
     lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &value_cell);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &title_cell);
+    lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &cell_editor_style);
     lv_table_set_style(table, LV_TABLE_STYLE_CELL3, &name_cell);
     lv_table_set_style(table, LV_TABLE_STYLE_CELL4, &selected_cell);
 

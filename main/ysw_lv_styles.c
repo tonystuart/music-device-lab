@@ -12,15 +12,16 @@
 
 #define TAG "YSW_LV_STYLES"
 
+// Generic Styles are named for what they are rather than what they do
 lv_style_t plain_color_tight;
 
-// TODO: Rename styles to indicate what they are rather than what they're for
+// Specific Styles are named for what they do rather than what they are
+lv_style_t cell_editor_style;
 
 lv_style_t value_cell;
 lv_style_t win_style_content;
 lv_style_t page_bg_style;
 lv_style_t page_scrl_style;
-lv_style_t title_cell;
 lv_style_t name_cell;
 lv_style_t selected_cell;
 
@@ -75,12 +76,12 @@ void ysw_lv_styles_initialize()
     value_cell.body.border.width = 1;
     value_cell.body.border.color = LV_COLOR_BLACK;
 
-    lv_style_copy(&title_cell, &lv_style_plain);
-    title_cell.body.border.width = 1;
-    title_cell.body.border.color = LV_COLOR_BLACK;
-    title_cell.body.main_color = LV_COLOR_RED;
-    title_cell.body.grad_color = LV_COLOR_RED;
-    title_cell.text.color = LV_COLOR_BLACK;
+    lv_style_copy(&cell_editor_style, &lv_style_plain);
+    cell_editor_style.body.border.width = 1;
+    cell_editor_style.body.border.color = LV_COLOR_BLACK;
+    cell_editor_style.body.main_color = LV_COLOR_RED;
+    cell_editor_style.body.grad_color = LV_COLOR_RED;
+    cell_editor_style.text.color = LV_COLOR_BLACK;
 
     lv_style_copy(&name_cell, &lv_style_plain);
     name_cell.body.border.width = 1;
