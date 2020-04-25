@@ -26,17 +26,15 @@ static char *key_labels[] =
 {
     "7th",
     NULL,
-    "6th",
-    NULL,
     "5th",
     NULL,
-    "4th",
     "3rd",
-    NULL,
-    "2nd",
     NULL,
     "1st",
 };
+
+#define ROW_COUNT (sizeof(key_labels) / sizeof(char*))
+#define COLUMN_COUNT 4
 
 static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mode)
 {
@@ -57,13 +55,13 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
 
     ESP_LOGD(TAG, "draw_main h=%d, w=%d, x1=%d, y1=%d", h, w, x1, y1);
 
-    for (lv_coord_t i = 0; i < 12; i++) {
+    for (lv_coord_t i = 0; i < ROW_COUNT; i++) {
 
         lv_area_t row_area = {
             .x1 = x1,
-            .y1 = y1 + ((i * h) / 12),
+            .y1 = y1 + ((i * h) / ROW_COUNT),
             .x2 = x1 + w,
-            .y2 = y1 + (((i + 1) * h) / 12)
+            .y2 = y1 + (((i + 1) * h) / ROW_COUNT)
         };
 
         lv_area_t row_mask;
@@ -107,6 +105,18 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
                 }
             }
         }
+    }
+
+    for (int i = 0; i < COLUMN_COUNT; i++) {
+        lv_point_t point1 = {
+            .x = x1 + ((i * w) / COLUMN_COUNT),
+            .y = y1
+        };
+        lv_point_t point2 = {
+            .x = x1 + ((i * w) / COLUMN_COUNT),
+            .y = y1 + h
+        };
+        lv_draw_line(&point1, &point2, mask, ext->style_wk, ext->style_wk->body.border.opa);
     }
 }
 
