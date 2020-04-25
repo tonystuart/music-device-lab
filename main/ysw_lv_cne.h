@@ -13,11 +13,11 @@
 
 typedef struct
 {
-    ysw_array_t *chord_notes;
+    ysw_chord_t *chord;
     const lv_style_t *style_bg;
     const lv_style_t *style_bk;
     const lv_style_t *style_wk;
 } ysw_lv_cne_ext_t;
 
 lv_obj_t *ysw_lv_cne_create(lv_obj_t *par);
-void ysw_lv_cne_set_chord_notes(lv_obj_t *cne, ysw_array_t *chord_notes);
+void ysw_lv_cne_set_chord(lv_obj_t *cne, ysw_chord_t *chord);

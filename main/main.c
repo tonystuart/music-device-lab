@@ -519,7 +519,7 @@ static void display_chords()
     lv_obj_align(cne, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
     ysw_chord_t *chord = ysw_music_get_chord(music, 0);
-    ysw_lv_cne_set_chord_notes(cne, chord->chord_notes);
+    ysw_lv_cne_set_chord(cne, chord);
 #if 0
     lv_obj_t *scroller = lv_page_get_scrl(page);
     old_signal_cb = lv_obj_get_signal_cb(scroller);

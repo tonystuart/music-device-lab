@@ -10,6 +10,8 @@
 #include "stdio.h"
 #include "esp_log.h"
 #include "lvgl.h"
+#include "ysw_chord.h"
+#include "ysw_ticks.h"
 #include "ysw_lv_cne.h"
 #include "ysw_lv_styles.h"
 
@@ -43,25 +45,25 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
 
     ysw_lv_cne_ext_t *ext = lv_obj_get_ext_attr(cne);
 
-    if (!ext->chord_notes) {
+    if (!ext->chord) {
         return;
     }
 
     lv_coord_t h = lv_obj_get_height(cne);
     lv_coord_t w = lv_obj_get_width(cne);
 
-    lv_coord_t x1 = cne->coords.x1;
-    lv_coord_t y1 = cne->coords.y1;
+    lv_coord_t x = cne->coords.x1;
+    lv_coord_t y = cne->coords.y1;
 
-    ESP_LOGD(TAG, "draw_main h=%d, w=%d, x1=%d, y1=%d", h, w, x1, y1);
+    ESP_LOGD(TAG, "draw_main h=%d, w=%d, x=%d, y=%d", h, w, x, y);
 
     for (lv_coord_t i = 0; i < ROW_COUNT; i++) {
 
         lv_area_t row_area = {
-            .x1 = x1,
-            .y1 = y1 + ((i * h) / ROW_COUNT),
-            .x2 = x1 + w,
-            .y2 = y1 + (((i + 1) * h) / ROW_COUNT)
+            .x1 = x,
+            .y1 = y + ((i * h) / ROW_COUNT),
+            .x2 = x + w,
+            .y2 = y + (((i + 1) * h) / ROW_COUNT)
         };
 
         lv_area_t row_mask;
@@ -109,15 +111,46 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
 
     for (int i = 0; i < COLUMN_COUNT; i++) {
         lv_point_t point1 = {
-            .x = x1 + ((i * w) / COLUMN_COUNT),
-            .y = y1
+            .x = x + ((i * w) / COLUMN_COUNT),
+            .y = y
         };
         lv_point_t point2 = {
-            .x = x1 + ((i * w) / COLUMN_COUNT),
-            .y = y1 + h
+            .x = x + ((i * w) / COLUMN_COUNT),
+            .y = y + h
         };
         lv_draw_line(&point1, &point2, mask, ext->style_wk, ext->style_wk->body.border.opa);
     }
+
+    uint32_t note_count = ysw_chord_get_note_count(ext->chord);
+
+    for (int i = 0; i < note_count; i++) {
+
+        ysw_chord_note_t *note = ysw_chord_get_chord_note(ext->chord, i);
+
+        lv_coord_t x1 = x + (note->start * w) / (4 * YSW_TICKS_DEFAULT_TPB);
+        lv_coord_t x2 = x + ((note->start + note->duration) * w) / (4 * YSW_TICKS_DEFAULT_TPB);
+
+        uint8_t degree = note->degree % 7; // other octaves
+
+        lv_coord_t y1 = y + (((7 - degree) * h) / ROW_COUNT);
+        lv_coord_t y2 = y + ((((7 - degree) + 1) * h) / ROW_COUNT);
+
+        ESP_LOGD(TAG, "i=%d, degree=%d, x1=%d, y1=%d, x2=%d, y2=%d", i, degree, x1, y1, x2, y2);
+
+        lv_area_t note_area = {
+            .x1 = x1,
+            .y1 = y1,
+            .x2 = x2,
+            .y2 = y2
+        };
+
+        lv_area_t note_mask;
+
+        if (lv_area_intersect(&note_mask, mask, &note_area)) {
+            lv_draw_rect(&note_area, &note_mask, &lv_style_pretty, 128);
+        }
+    }
+
 }
 
 static bool design_cb(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mode)
@@ -171,7 +204,7 @@ lv_obj_t *ysw_lv_cne_create(lv_obj_t *par)
         return NULL;
     }
 
-    ext->chord_notes = NULL;
+    ext->chord = NULL;
     ext->style_bg = &lv_style_plain;
     ext->style_bk = &black_key_style;
     ext->style_wk = &white_key_style;
@@ -187,14 +220,14 @@ lv_obj_t *ysw_lv_cne_create(lv_obj_t *par)
     return cne;
 }
 
-void ysw_lv_cne_set_chord_notes(lv_obj_t *cne, ysw_array_t *chord_notes)
+void ysw_lv_cne_set_chord(lv_obj_t *cne, ysw_chord_t *chord)
 {
     LV_ASSERT_OBJ(cne, LV_OBJX_NAME);
     ysw_lv_cne_ext_t *ext = lv_obj_get_ext_attr(cne);
-    if (ext->chord_notes == chord_notes) {
+    if (ext->chord == chord) {
         return;
     }
-    ext->chord_notes = chord_notes;
+    ext->chord = chord;
     lv_obj_invalidate(cne);
 }
 
