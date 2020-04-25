@@ -16,6 +16,8 @@
 lv_style_t plain_color_tight;
 
 // Specific Styles are named for what they do rather than what they are
+lv_style_t white_key_style;
+lv_style_t black_key_style;
 lv_style_t cell_editor_style;
 
 lv_style_t value_cell;
@@ -25,11 +27,39 @@ lv_style_t page_scrl_style;
 lv_style_t name_cell;
 lv_style_t selected_cell;
 
+void log_style_metrics(lv_style_t *style, char *tag)
+{
+    ESP_LOGD(TAG, "sizeof(lv_style_t)=%d", sizeof(lv_style_t));
+    ESP_LOGD(tag, "radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", style->body.radius, style->body.border.width, style->body.border.part, style->body.padding.top, style->body.padding.bottom, style->body.padding.left, style->body.padding.right, style->body.padding.inner);
+}
+
 void ysw_lv_styles_initialize()
 {
-    ESP_LOGD(TAG, "sizeof(style)=%d", sizeof(lv_style_pretty_color));
+    lv_style_copy(&black_key_style, &lv_style_plain);
+    black_key_style.text.font = &lv_font_roboto_12;
+    black_key_style.body.main_color = LV_COLOR_SILVER;
+    black_key_style.body.grad_color = LV_COLOR_SILVER;
+    black_key_style.body.border.color = LV_COLOR_RED;
+    black_key_style.body.border.width = 0;
+    black_key_style.text.color = LV_COLOR_WHITE;
+    black_key_style.text.opa = LV_OPA_COVER;
+    black_key_style.line.color = LV_COLOR_BLUE;
+    black_key_style.line.width = 1;
+    black_key_style.line.opa = LV_OPA_COVER;
+
+    lv_style_copy(&white_key_style, &lv_style_plain);
+    white_key_style.text.font = &lv_font_roboto_12;
+    white_key_style.body.main_color = LV_COLOR_WHITE;
+    white_key_style.body.grad_color = LV_COLOR_WHITE;
+    white_key_style.body.border.color = LV_COLOR_RED;
+    white_key_style.body.border.width = 0;
+    white_key_style.text.color = LV_COLOR_BLACK;
+    white_key_style.text.opa =  LV_OPA_COVER;
+    white_key_style.line.color = LV_COLOR_BLUE;
+    white_key_style.line.width = 1;
+    white_key_style.line.opa = LV_OPA_COVER;
+
     lv_style_copy(&page_bg_style, &lv_style_pretty_color);
-    ESP_LOGD(TAG, "page_bg_style radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", page_bg_style.body.radius, page_bg_style.body.border.width, page_bg_style.body.border.part, page_bg_style.body.padding.top, page_bg_style.body.padding.bottom, page_bg_style.body.padding.left, page_bg_style.body.padding.right, page_bg_style.body.padding.inner);
     page_bg_style.body.radius = 0;
     page_bg_style.body.border.width = 0;
     page_bg_style.body.border.part = LV_BORDER_NONE;
@@ -40,7 +70,6 @@ void ysw_lv_styles_initialize()
     page_bg_style.body.padding.inner = 0;
 
     lv_style_copy(&page_scrl_style, &lv_style_pretty_color);
-    ESP_LOGD(TAG, "page_scrl_style radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", page_scrl_style.body.radius, page_scrl_style.body.border.width, page_scrl_style.body.border.part, page_scrl_style.body.padding.top, page_scrl_style.body.padding.bottom, page_scrl_style.body.padding.left, page_scrl_style.body.padding.right, page_scrl_style.body.padding.inner);
     page_scrl_style.body.radius = 0;
     page_scrl_style.body.border.width = 0;
     page_scrl_style.body.border.part = LV_BORDER_NONE;
@@ -51,7 +80,6 @@ void ysw_lv_styles_initialize()
     page_scrl_style.body.padding.inner = 0;
 
     lv_style_copy(&plain_color_tight, &lv_style_plain_color);
-    ESP_LOGD(TAG, "lv_style_plain_color radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", plain_color_tight.body.radius, plain_color_tight.body.border.width, plain_color_tight.body.border.part, plain_color_tight.body.padding.top, plain_color_tight.body.padding.bottom, plain_color_tight.body.padding.left, plain_color_tight.body.padding.right, plain_color_tight.body.padding.inner);
     plain_color_tight.body.radius = 0;
     plain_color_tight.body.border.width = 0;
     plain_color_tight.body.border.part = LV_BORDER_NONE;
@@ -62,7 +90,6 @@ void ysw_lv_styles_initialize()
     plain_color_tight.body.padding.inner = 0;
 
     lv_style_copy(&win_style_content, &lv_style_transp);
-    ESP_LOGD(TAG, "win_style_content radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", win_style_content.body.radius, win_style_content.body.border.width, win_style_content.body.border.part, win_style_content.body.padding.top, win_style_content.body.padding.bottom, win_style_content.body.padding.left, win_style_content.body.padding.right, win_style_content.body.padding.inner);
     win_style_content.body.radius = 0;
     win_style_content.body.border.width = 0;
     win_style_content.body.border.part = LV_BORDER_NONE;

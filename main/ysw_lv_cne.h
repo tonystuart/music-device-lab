@@ -1,0 +1,23 @@
+// Copyright 2020 Anthony F. Stuart - All rights reserved.
+//
+// This program and the accompanying materials are made available
+// under the terms of the GNU General Public License. For other license
+// options please contact the copyright owner.
+//
+// This program is made available on an "as is" basis, without
+// warranties or conditions of any kind, either express or implied.
+
+#pragma once
+
+#include "ysw_array.h"
+
+typedef struct
+{
+    ysw_array_t *chord_notes;
+    const lv_style_t *style_bg;
+    const lv_style_t *style_bk;
+    const lv_style_t *style_wk;
+} ysw_lv_cne_ext_t;
+
+lv_obj_t *ysw_lv_cne_create(lv_obj_t *par);
+void ysw_lv_cne_set_chord_notes(lv_obj_t *cne, ysw_array_t *chord_notes);

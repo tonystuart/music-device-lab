@@ -11,7 +11,10 @@
 
 #include "lvgl/lvgl.h"
 
+
 extern lv_style_t plain_color_tight;
+extern lv_style_t white_key_style;
+extern lv_style_t black_key_style;
 extern lv_style_t cell_editor_style;
 
 extern lv_style_t value_cell;

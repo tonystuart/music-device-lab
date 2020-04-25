@@ -22,6 +22,7 @@
 #include "ysw_music.h"
 #include "ysw_music_parser.h"
 #include "ysw_lv_styles.h"
+#include "ysw_lv_cne.h"
 
 #define TAG "MAIN"
 
@@ -510,6 +511,16 @@ static void display_chords()
 
     lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &page_scrl_style);
 
+    lv_obj_t *cne = ysw_lv_cne_create(win);
+    lv_coord_t w = lv_page_get_fit_width(page);
+    lv_coord_t h = lv_page_get_fit_height(page);
+    ESP_LOGD(TAG, "display_chords w=%d, h=%d", w, h);
+    lv_obj_set_size(cne, w, h);
+    lv_obj_align(cne, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+    ysw_chord_t *chord = ysw_music_get_chord(music, 0);
+    ysw_lv_cne_set_chord_notes(cne, chord->chord_notes);
+#if 0
     lv_obj_t *scroller = lv_page_get_scrl(page);
     old_signal_cb = lv_obj_get_signal_cb(scroller);
     lv_obj_set_signal_cb(scroller, my_scrl_signal_cb);
@@ -537,6 +548,7 @@ static void display_chords()
 
     chord_index = 0;
     select_chord();
+#endif
 }
 
 static void process_chords()
