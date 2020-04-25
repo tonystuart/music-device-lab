@@ -127,10 +127,9 @@ static void parse_progression(this_t *this)
     uint32_t index = atoi(this->tokens[1]);
     char *name = this->tokens[2];
     uint8_t tonic = atoi(this->tokens[3]);
-    uint8_t instrument = atoi(this->tokens[3]);
-    uint8_t bpm = atoi(this->tokens[5]);
+    uint8_t instrument = atoi(this->tokens[4]);
 
-    ESP_LOGD(TAG, "parse_progression index=%d, name=%s, tonic=%d, instrument=%d, bpm=%d, record_count=%d", index, name, tonic, instrument, bpm, this->record_count);
+    ESP_LOGD(TAG, "parse_progression index=%d, name=%s, tonic=%d, instrument=%d, record_count=%d", index, name, tonic, instrument, this->record_count);
 
     uint32_t count = ysw_array_get_count(this->music->progressions);
     if (index != count) {
@@ -138,7 +137,7 @@ static void parse_progression(this_t *this)
         return;
     }
 
-    ysw_progression_t *progression = ysw_progression_create(name, tonic, instrument, bpm);
+    ysw_progression_t *progression = ysw_progression_create(name, tonic, instrument);
     ysw_array_push(this->music->progressions, progression);
 
     bool done = false;
@@ -209,7 +208,7 @@ ysw_music_t *ysw_music_parse_file(FILE *file)
         record_type_t type = atoi(this->tokens[0]);
         if (type == CHORD && this->token_count == 4) {
             parse_chord(this);
-        } else if (type == PROGRESSION && this->token_count == 6) {
+        } else if (type == PROGRESSION && this->token_count == 5) {
             parse_progression(this);
         } else {
             ESP_LOGW(TAG, "invalid record type=%d, token_count=%d", type, this->token_count);

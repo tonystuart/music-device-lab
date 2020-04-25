@@ -64,14 +64,13 @@ static inline int8_t to_note(int8_t tonic_index, int8_t root_number, int8_t degr
     return note;
 }
 
-ysw_progression_t *ysw_progression_create(char *name, uint8_t tonic, uint8_t instrument, uint8_t bpm)
+ysw_progression_t *ysw_progression_create(char *name, uint8_t tonic, uint8_t instrument)
 {
     ESP_LOGD(TAG, "ysw_progression_create name=%s", name);
     ysw_progression_t *progression = ysw_heap_allocate(sizeof(ysw_progression_t));
     progression->name = ysw_heap_strdup(name);
     progression->slots = ysw_array_create(8);
     progression->instrument = instrument;
-    progression->percent_tempo = 100;
     progression->tonic = tonic;
     return progression;
 }
@@ -116,19 +115,12 @@ void ysw_progression_set_instrument(ysw_progression_t *progression, uint8_t inst
     progression->instrument = instrument;
 }
 
-void ysw_progression_set_percent_tempo(ysw_progression_t *progression, uint8_t percent_tempo)
-{
-    assert(progression);
-    progression->percent_tempo = percent_tempo;
-}
-
 void ysw_progression_dump(ysw_progression_t *progression, char *tag)
 {
     ESP_LOGD(tag, "ysw_progression_dump progression=%p", progression);
     ESP_LOGD(tag, "name=%s", progression->name);
     ESP_LOGD(tag, "tonic=%d", progression->tonic);
     ESP_LOGD(tag, "instrument=%d", progression->instrument);
-    ESP_LOGD(tag, "percent_tempo=%d", progression->percent_tempo);
     uint32_t chord_count = ysw_array_get_count(progression->slots);
     ESP_LOGD(tag, "chord_count=%d", chord_count);
     for (uint32_t i = 0; i < chord_count; i++) {
@@ -152,7 +144,7 @@ uint32_t ysw_progression_get_note_count(ysw_progression_t *progression)
     return note_count;
 }
 
-note_t *ysw_progression_get_notes(ysw_progression_t *progression, uint8_t bpm)
+note_t *ysw_progression_get_notes(ysw_progression_t *progression)
 {
     assert(progression);
     int chord_time = 0;

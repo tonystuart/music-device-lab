@@ -130,8 +130,7 @@ static void on_state_change(ysw_sequencer_state_t new_state)
 
 static void play_progression(ysw_progression_t *s)
 {
-    ysw_progression_set_percent_tempo(s, 100);
-    note_t *notes = ysw_progression_get_notes(s, 100);
+    note_t *notes = ysw_progression_get_notes(s);
     assert(notes);
 
     synthesizer_queue = ysw_ble_synthesizer_create_task();
