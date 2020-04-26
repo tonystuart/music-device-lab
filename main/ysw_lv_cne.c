@@ -38,6 +38,54 @@ static char *key_labels[] =
 #define ROW_COUNT YSW_MIDI_UNPO
 #define COLUMN_COUNT 4
 
+static void get_note_info(lv_obj_t *cne, ysw_chord_note_t *note, lv_area_t *ret_area, uint8_t *ret_degree, int8_t *ret_octave)
+{
+    uint8_t degree;
+    int8_t octave;
+
+    ysw_degree_normalize(note->degree, &degree, &octave);
+
+    lv_coord_t h = lv_obj_get_height(cne);
+    lv_coord_t w = lv_obj_get_width(cne);
+
+    lv_coord_t x = cne->coords.x1;
+    lv_coord_t y = cne->coords.y1;
+
+    lv_coord_t delta_y;
+    if (note->accidental == YSW_ACCIDENTAL_FLAT) {
+        delta_y = -(h / ROW_COUNT) / 2;
+    } else if (note->accidental == YSW_ACCIDENTAL_SHARP) {
+        delta_y = +(h / ROW_COUNT) / 2;
+    } else {
+        delta_y = 0;
+    }
+
+    lv_coord_t x1 = x + (note->start * w) / (4 * YSW_TICKS_DEFAULT_TPB);
+    lv_coord_t x2 = x + ((note->start + note->duration) * w) / (4 * YSW_TICKS_DEFAULT_TPB);
+
+    lv_coord_t y1 = y + (((YSW_MIDI_UNPO - degree) * h) / ROW_COUNT) + delta_y;
+    lv_coord_t y2 = y + ((((YSW_MIDI_UNPO - degree) + 1) * h) / ROW_COUNT) + delta_y;
+
+    lv_area_t area = {
+        .x1 = x1,
+        .y1 = y1 + 4,
+        .x2 = x2,
+        .y2 = y2 - 4
+    };
+
+    if (ret_area) {
+        *ret_area = area;
+    }
+
+    if (ret_degree) {
+        *ret_degree = degree;
+    }
+
+    if (ret_octave) {
+        *ret_octave = octave;
+    }
+}
+
 static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mode)
 {
     ESP_LOGD(TAG, "draw_main mask.x1=%d, y1=%d, x2=%d, y2=%d", mask->x1, mask->y1, mask->x2, mask->y2);
@@ -55,8 +103,6 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
     lv_coord_t x = cne->coords.x1;
     lv_coord_t y = cne->coords.y1;
 
-    lv_coord_t row_h = h / ROW_COUNT; // this is an approximate, due to rounding
-
     ESP_LOGD(TAG, "draw_main h=%d, w=%d, x=%d, y=%d", h, w, x, y);
 
     for (lv_coord_t i = 0; i < ROW_COUNT; i++) {
@@ -70,7 +116,6 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
 
         lv_area_t row_mask;
         if (lv_area_intersect(&row_mask, mask, &row_area)) {
-
 
             if (i & 0x01) {
                 lv_draw_rect(&row_area, &row_mask, ext->style_oi, ext->style_oi->body.opa);
@@ -134,33 +179,9 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
 
         ysw_chord_note_t *note = ysw_chord_get_chord_note(ext->chord, i);
 
-        lv_coord_t x1 = x + (note->start * w) / (4 * YSW_TICKS_DEFAULT_TPB);
-        lv_coord_t x2 = x + ((note->start + note->duration) * w) / (4 * YSW_TICKS_DEFAULT_TPB);
-
-        uint8_t remainder = 0;
         int8_t octave = 0;
-        ysw_degree_normalize(note->degree, &remainder, &octave);
-        uint8_t degree = remainder + 1;
-        ESP_LOGD(TAG, "draw_main note->degree=%d, degree=%d, remainder=%d, octave=%d", note->degree, degree, remainder, octave);
-
-        lv_coord_t delta_y;
-        if (note->accidental == YSW_ACCIDENTAL_FLAT) {
-            delta_y = -row_h / 2;
-        } else if (note->accidental == YSW_ACCIDENTAL_SHARP) {
-            delta_y = +row_h / 2;
-        } else {
-            delta_y = 0;
-        }
-
-        lv_coord_t y1 = y + (((7 - degree) * h) / ROW_COUNT) + delta_y;
-        lv_coord_t y2 = y + ((((7 - degree) + 1) * h) / ROW_COUNT) + delta_y;
-
-        lv_area_t note_area = {
-            .x1 = x1,
-            .y1 = y1 + 4,
-            .x2 = x2,
-            .y2 = y2 - 4
-        };
+        lv_area_t note_area = {};
+        get_note_info(cne, note, &note_area, NULL, &octave);
 
         lv_area_t note_mask;
 
@@ -212,18 +233,81 @@ static bool design_cb(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
     return result;
 }
 
+static void on_pressed(lv_obj_t *cne, void *param)
+{
+    lv_indev_t *indev_act = (lv_indev_t*)param;
+    lv_indev_proc_t *proc = &indev_act->proc;
+    lv_coord_t x = proc->types.pointer.act_point.x;
+    lv_coord_t y = proc->types.pointer.act_point.y;
+    ESP_LOGD(TAG, "on_pressed x=%d, y=%d", x, y);
+
+    ysw_lv_cne_ext_t *ext = lv_obj_get_ext_attr(cne);
+    uint32_t note_count = ysw_chord_get_note_count(ext->chord);
+
+    for (int i = 0; i < note_count; i++) {
+
+        lv_area_t note_area;
+        ysw_chord_note_t *note = ysw_chord_get_chord_note(ext->chord, i);
+        get_note_info(cne, note, &note_area, NULL, NULL);
+
+        ESP_LOGD(TAG, "note_area x1=%d, y1=%d, x2=%d, y2=%d", note_area.x1, note_area.y1, note_area.x2, note_area.y2);
+
+        if ((note_area.x1 <= x && x <= note_area.x2) && (note_area.y1 <= y && y <= note_area.y2)) {
+            ESP_LOGD(TAG, "Found it!");
+        }
+    }
+}
+
 static lv_res_t signal_cb(lv_obj_t *cne, lv_signal_t signal, void *param)
 {
+    ESP_LOGD(TAG, "signal_cb");
     lv_res_t res = super_signal_cb(cne, signal, param);
     if (res == LV_RES_OK) {
         switch (signal) {
             case LV_SIGNAL_GET_TYPE:
                 res = lv_obj_handle_get_type_signal(param, LV_OBJX_NAME);
                 break;
+            case LV_SIGNAL_CLEANUP:
+                // free anything we allocated
+                break;
+            case LV_SIGNAL_PRESSED:
+                on_pressed(cne, param);
+                break;
         }
     }
     return res;
 }
+
+#if 0
+static void event_cb(lv_obj_t *obj, lv_event_t event)
+{
+    switch(event) {
+        case LV_EVENT_PRESSED:
+            ESP_LOGD(TAG, "Pressed\n");
+            break;
+
+        case LV_EVENT_SHORT_CLICKED:
+            ESP_LOGD(TAG, "Short clicked\n");
+            break;
+
+        case LV_EVENT_CLICKED:
+            ESP_LOGD(TAG, "Clicked\n");
+            break;
+
+        case LV_EVENT_LONG_PRESSED:
+            ESP_LOGD(TAG, "Long press\n");
+            break;
+
+        case LV_EVENT_LONG_PRESSED_REPEAT:
+            ESP_LOGD(TAG, "Long press repeat\n");
+            break;
+
+        case LV_EVENT_RELEASED:
+            ESP_LOGD(TAG, "Released\n");
+            break;
+    }
+}
+#endif
 
 lv_obj_t *ysw_lv_cne_create(lv_obj_t *par)
 {
@@ -256,7 +340,12 @@ lv_obj_t *ysw_lv_cne_create(lv_obj_t *par)
     lv_obj_set_signal_cb(cne, signal_cb);
     lv_obj_set_design_cb(cne, design_cb);
 
-    lv_obj_set_click(cne, false);
+#if 0
+    lv_obj_set_event_cb(cne, event_cb);
+#endif
+
+    lv_obj_set_click(cne, true);
+
     lv_obj_set_size(cne, LV_DPI * 2, LV_DPI / 3);
 
     lv_obj_set_style(cne, &lv_style_plain);

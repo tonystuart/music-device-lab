@@ -19,5 +19,5 @@ typedef enum {
 } ysw_accidental_t;
 
 int8_t ysw_degree_to_note(uint8_t scale_tonic, uint8_t root_number, int8_t degree_number, ysw_accidental_t accidental);
-void ysw_degree_normalize(int8_t degree_number, uint8_t *remainder, int8_t *octave);
+void ysw_degree_normalize(int8_t degree_number, uint8_t *normalized_degree_number, int8_t *octave);
 void ysw_degree_to_name(char *buffer, size_t buffer_size, int8_t degree_number, ysw_accidental_t accidental);

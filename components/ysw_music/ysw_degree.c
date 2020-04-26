@@ -49,17 +49,25 @@ static char *get_accidental_name(ysw_accidental_t accidental)
     return accidental_name;
 }
 
-void ysw_degree_normalize(int8_t degree_number, uint8_t *remainder, int8_t *octave)
+void ysw_degree_normalize(int8_t degree_number, uint8_t *normalized_degree_number, int8_t *octave)
 {
     if (degree_number < 1) {
-        *octave = (degree_number / YSW_MIDI_UNPO) - 1;
+        if (octave) {
+            *octave = (degree_number / YSW_MIDI_UNPO) - 1;
+        }
         degree_number = YSW_MIDI_UNPO + (degree_number % YSW_MIDI_UNPO);
         uint8_t degree_index = degree_number - 1;
-        *remainder = degree_index % YSW_MIDI_UNPO;
+        if (normalized_degree_number) {
+            *normalized_degree_number = (degree_index % YSW_MIDI_UNPO) + 1;
+        }
     } else {
         uint8_t degree_index = degree_number - 1;
-        *octave = degree_index / YSW_MIDI_UNPO;
-        *remainder = degree_index % YSW_MIDI_UNPO;
+        if (octave) {
+            *octave = degree_index / YSW_MIDI_UNPO;
+        }
+        if (normalized_degree_number) {
+            *normalized_degree_number = (degree_index % YSW_MIDI_UNPO) + 1;
+        }
     }
 }
 
@@ -87,12 +95,13 @@ int8_t ysw_degree_to_note(uint8_t scale_tonic, uint8_t root_number, int8_t degre
     int8_t root_octave = root_offset / 7;
     int8_t root_index = root_offset % 7;
 
-    uint8_t degree_remainder = 0;
     int8_t degree_octave = 0;
-    ysw_degree_normalize(degree_number, &degree_remainder, &degree_octave);
+    uint8_t normalized_degree_number = 0;
+    ysw_degree_normalize(degree_number, &normalized_degree_number, &degree_octave);
+    uint8_t normalized_degree_index = normalized_degree_number - 1;
 
     int8_t root_interval = intervals[0][root_index];
-    int8_t degree_interval = intervals[root_index][degree_remainder];
+    int8_t degree_interval = intervals[root_index][normalized_degree_index];
 
     int8_t note = scale_tonic +
         ((12 * root_octave) + root_interval) +
@@ -107,11 +116,10 @@ void ysw_degree_to_name(char *buffer, size_t buffer_size, int8_t degree_number, 
 {
     assert(accidental >= YSW_ACCIDENTAL_FLAT && accidental <= YSW_ACCIDENTAL_SHARP);
 
-    uint8_t remainder; // in range 0 to 6
+    uint8_t normalized_degree_number; // in range 1 to 7
     int8_t octave; // in range -n to +n
 
-    ysw_degree_normalize(degree_number, &remainder, &octave);
-    uint8_t normalized_degree_number = remainder + 1;
+    ysw_degree_normalize(degree_number, &normalized_degree_number, &octave);
 
     char *suffix = get_suffix(normalized_degree_number);
     char *label = get_accidental_name(accidental);

@@ -516,7 +516,6 @@ static void display_chords()
     lv_obj_t *cne = ysw_lv_cne_create(win);
     lv_coord_t w = lv_page_get_fit_width(page);
     lv_coord_t h = lv_page_get_fit_height(page);
-    ESP_LOGD(TAG, "display_chords w=%d, h=%d", w, h);
     lv_obj_set_size(cne, w, h);
     lv_obj_align(cne, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
