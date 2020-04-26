@@ -15,33 +15,33 @@
 typedef struct {
     ysw_degree_t degree;
     ysw_chord_t *chord;
-} ysw_slot_t;
+} ysw_step_t;
 
 typedef struct {
     char *name;
-    ysw_array_t *slots;
+    ysw_array_t *steps;
     uint8_t tonic;
     uint8_t instrument;
 } ysw_progression_t;
 
-static inline ysw_slot_t *ysw_progression_get_slot(ysw_progression_t *progression, uint32_t index)
+static inline ysw_step_t *ysw_progression_get_step(ysw_progression_t *progression, uint32_t index)
 {
-    return ysw_array_get(progression->slots, index);
+    return ysw_array_get(progression->steps, index);
 }
 
 static inline ysw_chord_t *ysw_progression_get_chord(ysw_progression_t *progression, uint32_t index)
 {
-    return ysw_progression_get_slot(progression, index)->chord;
+    return ysw_progression_get_step(progression, index)->chord;
 }
 
 static inline ysw_degree_t ysw_progression_get_degree(ysw_progression_t *progression, uint32_t index)
 {
-    return ysw_progression_get_slot(progression, index)->degree;
+    return ysw_progression_get_step(progression, index)->degree;
 }
 
 static inline uint32_t ysw_progression_get_chord_count(ysw_progression_t *progression)
 {
-    return ysw_array_get_count(progression->slots);
+    return ysw_array_get_count(progression->steps);
 }
 
 static inline uint32_t ysw_progression_get_chord_note_count(ysw_progression_t *progression, uint32_t index)
@@ -49,19 +49,19 @@ static inline uint32_t ysw_progression_get_chord_note_count(ysw_progression_t *p
     return ysw_chord_get_note_count(ysw_progression_get_chord(progression, index));
 }
 
-static inline ysw_chord_note_t *ysw_slot_get_chord_note(ysw_slot_t *slot, uint32_t index)
+static inline ysw_chord_note_t *ysw_step_get_chord_note(ysw_step_t *step, uint32_t index)
 {
-    return ysw_array_get(slot->chord->chord_notes, index);
+    return ysw_array_get(step->chord->chord_notes, index);
 }
 
-static inline uint32_t ysw_slot_get_chord_note_count(ysw_slot_t *slot)
+static inline uint32_t ysw_step_get_chord_note_count(ysw_step_t *step)
 {
-    return ysw_array_get_count(slot->chord->chord_notes);
+    return ysw_array_get_count(step->chord->chord_notes);
 }
 
-static inline uint32_t ysw_slot_get_duration(ysw_slot_t *slot)
+static inline uint32_t ysw_step_get_duration(ysw_step_t *step)
 {
-    return slot->chord->duration;
+    return step->chord->duration;
 }
 
 note_t *ysw_progression_get_notes(ysw_progression_t *progression);

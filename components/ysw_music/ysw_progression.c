@@ -23,7 +23,7 @@ ysw_progression_t *ysw_progression_create(char *name, uint8_t tonic, uint8_t ins
     ESP_LOGD(TAG, "ysw_progression_create name=%s", name);
     ysw_progression_t *progression = ysw_heap_allocate(sizeof(ysw_progression_t));
     progression->name = ysw_heap_strdup(name);
-    progression->slots = ysw_array_create(8);
+    progression->steps = ysw_array_create(8);
     progression->instrument = instrument;
     progression->tonic = tonic;
     return progression;
@@ -33,12 +33,12 @@ void ysw_progression_free(ysw_progression_t *progression)
 {
     assert(progression);
     ESP_LOGD(TAG, "ysw_progression_free name=%s", progression->name);
-    int chord_count = ysw_array_get_count(progression->slots);
+    int chord_count = ysw_array_get_count(progression->steps);
     for (int i = 0; i < chord_count; i++) {
-        ysw_slot_t *slot = ysw_array_get(progression->slots, i);
-        ysw_heap_free(slot);
+        ysw_step_t *step = ysw_array_get(progression->steps, i);
+        ysw_heap_free(step);
     }
-    ysw_array_free(progression->slots);
+    ysw_array_free(progression->steps);
     ysw_heap_free(progression->name);
     ysw_heap_free(progression);
 }
@@ -48,10 +48,10 @@ int ysw_progression_add_chord(ysw_progression_t *progression, uint8_t degree, ys
     assert(progression);
     assert(degree < YSW_MIDI_MAX);
     assert(chord);
-    ysw_slot_t *slot = ysw_heap_allocate(sizeof(ysw_slot_t));
-    slot->degree = degree;
-    slot->chord = chord;
-    int index = ysw_array_push(progression->slots, slot);
+    ysw_step_t *step = ysw_heap_allocate(sizeof(ysw_step_t));
+    step->degree = degree;
+    step->chord = chord;
+    int index = ysw_array_push(progression->steps, step);
     return index;
 }
 
@@ -75,12 +75,12 @@ void ysw_progression_dump(ysw_progression_t *progression, char *tag)
     ESP_LOGD(tag, "name=%s", progression->name);
     ESP_LOGD(tag, "tonic=%d", progression->tonic);
     ESP_LOGD(tag, "instrument=%d", progression->instrument);
-    uint32_t chord_count = ysw_array_get_count(progression->slots);
+    uint32_t chord_count = ysw_array_get_count(progression->steps);
     ESP_LOGD(tag, "chord_count=%d", chord_count);
     for (uint32_t i = 0; i < chord_count; i++) {
-        ysw_slot_t *slot = ysw_array_get(progression->slots, i);
-        ESP_LOGD(tag, "chord index=%d, degree=%d", i, slot->degree);
-        ysw_chord_dump(slot->chord, tag);
+        ysw_step_t *step = ysw_array_get(progression->steps, i);
+        ESP_LOGD(tag, "chord index=%d, degree=%d", i, step->degree);
+        ysw_chord_dump(step->chord, tag);
     }
 }
 
@@ -107,11 +107,11 @@ note_t *ysw_progression_get_notes(ysw_progression_t *progression)
     note_t *notes = ysw_heap_allocate(sizeof(note_t) * note_count);
     note_t *note_p = notes;
     for (int i = 0; i < chord_count; i++) {
-        ysw_slot_t *slot = ysw_progression_get_slot(progression, i);
-        uint8_t chord_root = slot->degree;
-        int chord_note_count = ysw_slot_get_chord_note_count(slot);
+        ysw_step_t *step = ysw_progression_get_step(progression, i);
+        uint8_t chord_root = step->degree;
+        int chord_note_count = ysw_step_get_chord_note_count(step);
         for (int j = 0; j < chord_note_count; j++) {
-            ysw_chord_note_t *chord_note = ysw_slot_get_chord_note(slot, j);
+            ysw_chord_note_t *chord_note = ysw_step_get_chord_note(step, j);
             note_p->start = chord_time + chord_note->start;
             note_p->duration = chord_note->duration;
             note_p->channel = 0;
@@ -121,7 +121,7 @@ note_t *ysw_progression_get_notes(ysw_progression_t *progression)
             ESP_LOGD(TAG, "start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
             note_p++;
         }
-        chord_time += ysw_slot_get_duration(slot);
+        chord_time += ysw_step_get_duration(step);
     }
     return notes;
 }
