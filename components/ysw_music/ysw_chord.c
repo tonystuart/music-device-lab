@@ -46,7 +46,7 @@ void ysw_chord_set_duration(ysw_chord_t *chord, uint32_t duration)
     chord->duration = duration;
 }
 
-ysw_chord_note_t *ysw_chord_note_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration)
+ysw_chord_note_t *ysw_chord_note_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration, ysw_accidental_t accidental)
 {
     ESP_LOGD(TAG, "chord_note_create degree=%u, velocity=%u, start=%u, duration=%u", degree, velocity, start, duration);
     ysw_chord_note_t *ysw_chord_note = ysw_heap_allocate(sizeof(ysw_chord_note_t));
@@ -54,6 +54,7 @@ ysw_chord_note_t *ysw_chord_note_create(int8_t degree, uint8_t velocity, uint32_
     ysw_chord_note->duration = duration;
     ysw_chord_note->degree = degree;
     ysw_chord_note->velocity = velocity;
+    ysw_chord_note->accidental = accidental;
     return ysw_chord_note;
 }
 

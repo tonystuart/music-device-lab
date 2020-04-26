@@ -16,8 +16,9 @@
 lv_style_t plain_color_tight;
 
 // Specific Styles are named for what they do rather than what they are
-lv_style_t white_key_style;
-lv_style_t black_key_style;
+lv_style_t even_interval_style;
+lv_style_t odd_interval_style;
+lv_style_t chord_note_style;
 lv_style_t cell_editor_style;
 
 lv_style_t value_cell;
@@ -35,29 +36,40 @@ void log_style_metrics(lv_style_t *style, char *tag)
 
 void ysw_lv_styles_initialize()
 {
-    lv_style_copy(&black_key_style, &lv_style_plain);
-    black_key_style.text.font = &lv_font_roboto_12;
-    black_key_style.body.main_color = LV_COLOR_SILVER;
-    black_key_style.body.grad_color = LV_COLOR_SILVER;
-    black_key_style.body.border.color = LV_COLOR_RED;
-    black_key_style.body.border.width = 0;
-    black_key_style.text.color = LV_COLOR_WHITE;
-    black_key_style.text.opa = LV_OPA_COVER;
-    black_key_style.line.color = LV_COLOR_BLUE;
-    black_key_style.line.width = 1;
-    black_key_style.line.opa = LV_OPA_COVER;
+    lv_style_copy(&odd_interval_style, &lv_style_plain);
+    odd_interval_style.text.font = &lv_font_roboto_12;
+    odd_interval_style.body.main_color = LV_COLOR_SILVER;
+    odd_interval_style.body.grad_color = LV_COLOR_SILVER;
+    odd_interval_style.body.border.color = LV_COLOR_RED;
+    odd_interval_style.body.border.width = 0;
+    odd_interval_style.text.color = LV_COLOR_WHITE;
+    odd_interval_style.text.opa = LV_OPA_COVER;
+    odd_interval_style.line.color = LV_COLOR_BLUE;
+    odd_interval_style.line.width = 1;
+    odd_interval_style.line.opa = LV_OPA_COVER;
 
-    lv_style_copy(&white_key_style, &lv_style_plain);
-    white_key_style.text.font = &lv_font_roboto_12;
-    white_key_style.body.main_color = LV_COLOR_WHITE;
-    white_key_style.body.grad_color = LV_COLOR_WHITE;
-    white_key_style.body.border.color = LV_COLOR_RED;
-    white_key_style.body.border.width = 0;
-    white_key_style.text.color = LV_COLOR_BLACK;
-    white_key_style.text.opa =  LV_OPA_COVER;
-    white_key_style.line.color = LV_COLOR_BLUE;
-    white_key_style.line.width = 1;
-    white_key_style.line.opa = LV_OPA_COVER;
+    lv_style_copy(&even_interval_style, &lv_style_plain);
+    even_interval_style.text.font = &lv_font_roboto_12;
+    even_interval_style.body.main_color = LV_COLOR_WHITE;
+    even_interval_style.body.grad_color = LV_COLOR_WHITE;
+    even_interval_style.body.border.color = LV_COLOR_RED;
+    even_interval_style.body.border.width = 0;
+    even_interval_style.text.color = LV_COLOR_BLACK;
+    even_interval_style.text.opa =  LV_OPA_COVER;
+    even_interval_style.line.color = LV_COLOR_BLUE;
+    even_interval_style.line.width = 1;
+    even_interval_style.line.opa = LV_OPA_COVER;
+
+    lv_style_copy(&chord_note_style, &lv_style_pretty);
+    chord_note_style.text.font = &lv_font_roboto_12;
+    chord_note_style.body.main_color = LV_COLOR_RED;
+    chord_note_style.body.grad_color = LV_COLOR_RED;
+
+
+
+
+
+
 
     lv_style_copy(&page_bg_style, &lv_style_pretty_color);
     page_bg_style.body.radius = 0;

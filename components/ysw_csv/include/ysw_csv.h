@@ -9,4 +9,4 @@
 
 #pragma once
 
-int parse_csv(char *buffer, char *tokens[], int max_tokens);
+int ysw_csv_parse(char *buffer, char *tokens[], int max_tokens);

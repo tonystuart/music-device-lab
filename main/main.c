@@ -485,15 +485,17 @@ static void display_chords()
     lv_obj_align(footer, win, LV_ALIGN_OUT_BOTTOM_RIGHT, 5, 5);
 
     add_footer_button(footer, LV_SYMBOL_SETTINGS, NULL);
-    add_footer_button(footer, LV_SYMBOL_PLUS, NULL);
-    add_footer_button(footer, LV_SYMBOL_MINUS, NULL);
+    add_footer_button(footer, LV_SYMBOL_VOLUME_MID, NULL);
+    add_footer_button(footer, LV_SYMBOL_VOLUME_MAX, NULL);
     add_footer_button(footer, LV_SYMBOL_UP, NULL);
     add_footer_button(footer, LV_SYMBOL_DOWN, NULL);
+    add_footer_button(footer, LV_SYMBOL_PLUS, NULL);
+    add_footer_button(footer, LV_SYMBOL_MINUS, NULL);
     add_footer_button(footer, LV_SYMBOL_LEFT, NULL);
     add_footer_button(footer, LV_SYMBOL_RIGHT, NULL);
 
     footer_label = lv_label_create(footer, NULL);
-    lv_label_set_text(footer_label, "Chord Note");
+    lv_label_set_text(footer_label, "1/12");
     lv_obj_align(footer_label, footer, LV_ALIGN_IN_TOP_RIGHT, -20, 0);
 
     add_header_button(win, LV_SYMBOL_CLOSE, lv_win_close_event_cb);

@@ -15,8 +15,9 @@ typedef struct
 {
     ysw_chord_t *chord;
     const lv_style_t *style_bg;
-    const lv_style_t *style_bk;
-    const lv_style_t *style_wk;
+    const lv_style_t *style_oi;
+    const lv_style_t *style_ei;
+    const lv_style_t *style_cn;
 } ysw_lv_cne_ext_t;
 
 lv_obj_t *ysw_lv_cne_create(lv_obj_t *par);

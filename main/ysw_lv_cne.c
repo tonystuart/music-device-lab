@@ -35,7 +35,7 @@ static char *key_labels[] =
     "1st",
 };
 
-#define ROW_COUNT (sizeof(key_labels) / sizeof(char*))
+#define ROW_COUNT YSW_MIDI_UNPO
 #define COLUMN_COUNT 4
 
 static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mode)
@@ -55,6 +55,8 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
     lv_coord_t x = cne->coords.x1;
     lv_coord_t y = cne->coords.y1;
 
+    lv_coord_t row_h = h / ROW_COUNT; // this is an approximate, due to rounding
+
     ESP_LOGD(TAG, "draw_main h=%d, w=%d, x=%d, y=%d", h, w, x, y);
 
     for (lv_coord_t i = 0; i < ROW_COUNT; i++) {
@@ -68,7 +70,13 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
 
         lv_area_t row_mask;
         if (lv_area_intersect(&row_mask, mask, &row_area)) {
-            if (key_labels[i]) {
+
+
+            if (i & 0x01) {
+                lv_draw_rect(&row_area, &row_mask, ext->style_oi, ext->style_oi->body.opa);
+            } else {
+                lv_draw_rect(&row_area, &row_mask, ext->style_ei, ext->style_oi->body.opa);
+
                 lv_area_t label_mask;
                 lv_area_t label_area = {
                     .x1 = row_area.x1,
@@ -79,8 +87,8 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
                 if (lv_area_intersect(&label_mask, mask, &label_area)) {
                     lv_draw_label(&label_area,
                             &label_mask,
-                            ext->style_wk,
-                            ext->style_wk->text.opa,
+                            ext->style_ei,
+                            ext->style_ei->text.opa,
                             key_labels[i],
                             LV_TXT_FLAG_EXPAND,
                             NULL,
@@ -88,9 +96,8 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
                             NULL,
                             LV_BIDI_DIR_LTR);
                 }
-            } else {
-                lv_draw_rect(&row_area, &row_mask, ext->style_bk, ext->style_bk->body.opa);
             }
+
             if (i) {
                 lv_point_t point1 = {
                     .x = row_area.x1,
@@ -100,10 +107,10 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
                     .x = row_area.x1 + w,
                     .y = row_area.y1
                 };
-                if (key_labels[i]) {
-                    lv_draw_line(&point1, &point2, mask, ext->style_wk, ext->style_wk->body.border.opa);
+                if (i & 0x01) {
+                    lv_draw_line(&point1, &point2, mask, ext->style_oi, ext->style_oi->body.border.opa);
                 } else {
-                    lv_draw_line(&point1, &point2, mask, ext->style_bk, ext->style_bk->body.border.opa);
+                    lv_draw_line(&point1, &point2, mask, ext->style_ei, ext->style_ei->body.border.opa);
                 }
             }
         }
@@ -118,7 +125,7 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
             .x = x + ((i * w) / COLUMN_COUNT),
             .y = y + h
         };
-        lv_draw_line(&point1, &point2, mask, ext->style_wk, ext->style_wk->body.border.opa);
+        lv_draw_line(&point1, &point2, mask, ext->style_ei, ext->style_ei->body.border.opa);
     }
 
     uint32_t note_count = ysw_chord_get_note_count(ext->chord);
@@ -130,24 +137,57 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
         lv_coord_t x1 = x + (note->start * w) / (4 * YSW_TICKS_DEFAULT_TPB);
         lv_coord_t x2 = x + ((note->start + note->duration) * w) / (4 * YSW_TICKS_DEFAULT_TPB);
 
-        uint8_t degree = note->degree % 7; // other octaves
+        uint8_t remainder = 0;
+        uint8_t octave = 0;
+        ysw_degree_normalize(note->degree, &remainder, &octave);
+        uint8_t degree = remainder + 1;
 
-        lv_coord_t y1 = y + (((7 - degree) * h) / ROW_COUNT);
-        lv_coord_t y2 = y + ((((7 - degree) + 1) * h) / ROW_COUNT);
+        lv_coord_t delta_y;
+        if (note->accidental == YSW_ACCIDENTAL_FLAT) {
+            delta_y = -row_h / 2;
+        } else if (note->accidental == YSW_ACCIDENTAL_SHARP) {
+            delta_y = +row_h / 2;
+        } else {
+            delta_y = 0;
+        }
 
-        ESP_LOGD(TAG, "i=%d, degree=%d, x1=%d, y1=%d, x2=%d, y2=%d", i, degree, x1, y1, x2, y2);
+        lv_coord_t y1 = y + (((7 - degree) * h) / ROW_COUNT) + delta_y;
+        lv_coord_t y2 = y + ((((7 - degree) + 1) * h) / ROW_COUNT) + delta_y;
+
+        ESP_LOGD(TAG, "i=%d, remainder=%d, x1=%d, y1=%d, x2=%d, y2=%d", i, remainder, x1, y1, x2, y2);
 
         lv_area_t note_area = {
             .x1 = x1,
-            .y1 = y1,
+            .y1 = y1 + 4,
             .x2 = x2,
-            .y2 = y2
+            .y2 = y2 - 4
         };
 
         lv_area_t note_mask;
 
         if (lv_area_intersect(&note_mask, mask, &note_area)) {
-            lv_draw_rect(&note_area, &note_mask, &lv_style_pretty, 128);
+
+            lv_draw_rect(&note_area, &note_mask, ext->style_cn, 128);
+
+            char buffer[32];
+            snprintf(buffer, sizeof(buffer), "%d", note->velocity);
+
+            // vertically center the text
+            lv_point_t offset = {
+                .x = 0,
+                .y = ((note_area.y2 - note_area.y1) - ext->style_cn->text.font->line_height) / 2
+            };
+
+            lv_draw_label(&note_area,
+                    &note_mask,
+                    ext->style_cn,
+                    ext->style_cn->text.opa,
+                    buffer,
+                    LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
+                    &offset,
+                    NULL,
+                    NULL,
+                    LV_BIDI_DIR_LTR);
         }
     }
 
@@ -206,8 +246,9 @@ lv_obj_t *ysw_lv_cne_create(lv_obj_t *par)
 
     ext->chord = NULL;
     ext->style_bg = &lv_style_plain;
-    ext->style_bk = &black_key_style;
-    ext->style_wk = &white_key_style;
+    ext->style_oi = &odd_interval_style;
+    ext->style_ei = &even_interval_style;
+    ext->style_cn = &chord_note_style;
 
     lv_obj_set_signal_cb(cne, signal_cb);
     lv_obj_set_design_cb(cne, design_cb);

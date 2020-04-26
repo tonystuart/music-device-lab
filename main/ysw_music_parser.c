@@ -67,8 +67,9 @@ static int get_tokens(this_t *this)
 
     bool done = false;
 
+    // Read until we find a non-empty line or end of file
     while (!done && fgets(this->buffer, RECORD_SIZE, this->file)) {
-        this->token_count = parse_csv(this->buffer, this->tokens, TOKENS_SIZE);
+        this->token_count = ysw_csv_parse(this->buffer, this->tokens, TOKENS_SIZE);
         this->record_count++;
         if (this->token_count > 0) {
             done = true;
@@ -106,12 +107,13 @@ static void parse_chord(this_t *this)
 
     while (!done && get_tokens(this)) {
         record_type_t type = atoi(this->tokens[0]);
-        if (type == CHORD_NOTE) {
+        if (type == CHORD_NOTE && this->token_count == 6) {
             int8_t degree = atoi(this->tokens[1]);
             uint8_t velocity = atoi(this->tokens[2]);
             uint32_t start = atoi(this->tokens[3]);
             uint32_t duration = atoi(this->tokens[4]);
-            ysw_chord_note_t *note = ysw_chord_note_create(degree, velocity, start, duration);
+            int8_t accidental = atoi(this->tokens[5]);
+            ysw_chord_note_t *note = ysw_chord_note_create(degree, velocity, start, duration, accidental);
             ysw_chord_add_note(chord, note);
         } else {
             push_back_tokens(this);
@@ -144,7 +146,7 @@ static void parse_progression(this_t *this)
 
     while (!done && get_tokens(this)) {
         record_type_t type = atoi(this->tokens[0]);
-        if (type == PROGRESSION_CHORD) {
+        if (type == PROGRESSION_CHORD && this->token_count == 3) {
             uint8_t degree = atoi(this->tokens[1]);
             uint32_t chord_index = atoi(this->tokens[2]);
             uint32_t chord_count = ysw_array_get_count(this->music->chords);

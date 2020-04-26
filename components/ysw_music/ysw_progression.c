@@ -14,55 +14,9 @@
 #include "assert.h"
 #include "ysw_heap.h"
 #include "ysw_ticks.h"
+#include "ysw_degree.h"
 
 #define TAG "YSW_PROGRESSION"
-
-static inline int8_t to_note(int8_t tonic_index, int8_t root_number, int8_t degree_number)
-{
-    static uint8_t intervals[7][7] = {
-        /* C */ { 0, 2, 4, 5, 7, 9, 11 },
-        /* D */ { 0, 2, 3, 5, 7, 9, 10 },
-        /* E */ { 0, 1, 3, 5, 7, 8, 10 },
-        /* F */ { 0, 2, 4, 6, 7, 9, 11 },
-        /* G */ { 0, 2, 4, 5, 7, 9, 10 },
-        /* A */ { 0, 2, 3, 5, 7, 8, 10 },
-        /* B */ { 0, 1, 3, 5, 6, 8, 10 },
-    };
-
-    int8_t root_semitones;
-    if (root_number < 0) {
-        root_semitones = -1;
-        root_number = -root_number;
-    } else {
-        root_semitones = 0;
-    }
-
-    int8_t degree_semitones;
-    if (degree_number < 0) {
-        degree_semitones = -1;
-        degree_number = -degree_number;
-    } else {
-        degree_semitones = 0;
-    }
-
-    int8_t root_offset = root_number - 1;
-    int8_t root_octave = root_offset / 7;
-    int8_t root_index = root_offset % 7;
-    int8_t root_interval = intervals[0][root_index];
-
-    int8_t degree_offset = degree_number - 1;
-    int8_t degree_octave = degree_offset / 7;
-    int8_t degree_index = degree_offset % 7;
-    int8_t degree_interval = intervals[root_index][degree_index];
-
-    int8_t note = tonic_index +
-        ((12 * root_octave) + root_interval + root_semitones) +
-        ((12 * degree_octave) + degree_interval + degree_semitones);
-
-    ESP_LOGD(TAG, "tonic_index=%d, root_number=%d, degree_number=%d, root_interval=%d, degree_interval=%d, note=%d", tonic_index, root_number, degree_number, root_interval, degree_interval, note);
-
-    return note;
-}
 
 ysw_progression_t *ysw_progression_create(char *name, uint8_t tonic, uint8_t instrument)
 {
@@ -161,7 +115,7 @@ note_t *ysw_progression_get_notes(ysw_progression_t *progression)
             note_p->start = chord_time + chord_note->start;
             note_p->duration = chord_note->duration;
             note_p->channel = 0;
-            note_p->midi_note = to_note(progression->tonic, chord_root, chord_note->degree);
+            note_p->midi_note = ysw_degree_to_note(progression->tonic, chord_root, chord_note->degree, chord_note->accidental);
             note_p->velocity = chord_note->velocity;
             note_p->instrument = progression->instrument;
             ESP_LOGD(TAG, "start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
