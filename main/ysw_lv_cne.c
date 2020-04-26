@@ -138,9 +138,10 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
         lv_coord_t x2 = x + ((note->start + note->duration) * w) / (4 * YSW_TICKS_DEFAULT_TPB);
 
         uint8_t remainder = 0;
-        uint8_t octave = 0;
+        int8_t octave = 0;
         ysw_degree_normalize(note->degree, &remainder, &octave);
         uint8_t degree = remainder + 1;
+        ESP_LOGD(TAG, "draw_main note->degree=%d, degree=%d, remainder=%d, octave=%d", note->degree, degree, remainder, octave);
 
         lv_coord_t delta_y;
         if (note->accidental == YSW_ACCIDENTAL_FLAT) {
@@ -153,8 +154,6 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
 
         lv_coord_t y1 = y + (((7 - degree) * h) / ROW_COUNT) + delta_y;
         lv_coord_t y2 = y + ((((7 - degree) + 1) * h) / ROW_COUNT) + delta_y;
-
-        ESP_LOGD(TAG, "i=%d, remainder=%d, x1=%d, y1=%d, x2=%d, y2=%d", i, remainder, x1, y1, x2, y2);
 
         lv_area_t note_area = {
             .x1 = x1,
@@ -170,7 +169,11 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
             lv_draw_rect(&note_area, &note_mask, ext->style_cn, 128);
 
             char buffer[32];
-            snprintf(buffer, sizeof(buffer), "%d", note->velocity);
+            if (octave) {
+                snprintf(buffer, sizeof(buffer), "%d/%+d", note->velocity, octave);
+            } else {
+                snprintf(buffer, sizeof(buffer), "%d", note->velocity);
+            }
 
             // vertically center the text
             lv_point_t offset = {

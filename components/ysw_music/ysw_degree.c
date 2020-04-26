@@ -49,17 +49,17 @@ static char *get_accidental_name(ysw_accidental_t accidental)
     return accidental_name;
 }
 
-void ysw_degree_normalize(int8_t degree_number, uint8_t *remainder, uint8_t *octave)
+void ysw_degree_normalize(int8_t degree_number, uint8_t *remainder, int8_t *octave)
 {
     if (degree_number < 1) {
-        uint8_t degree_index = -degree_number; // already zero based
-        *remainder = YSW_MIDI_UNPO - (degree_index % YSW_MIDI_UNPO); // invert, so 0 becomes 7th
-        *octave = -(degree_index / YSW_MIDI_UNPO);
-        ESP_LOGD(TAG, "ysw_degree_normalize degree_number=%d, remainder=%d, octave=%d", degree_number, *remainder, *octave);
-    } else {
+        *octave = (degree_number / YSW_MIDI_UNPO) - 1;
+        degree_number = YSW_MIDI_UNPO + (degree_number % YSW_MIDI_UNPO);
         uint8_t degree_index = degree_number - 1;
         *remainder = degree_index % YSW_MIDI_UNPO;
+    } else {
+        uint8_t degree_index = degree_number - 1;
         *octave = degree_index / YSW_MIDI_UNPO;
+        *remainder = degree_index % YSW_MIDI_UNPO;
     }
 }
 
@@ -88,7 +88,7 @@ int8_t ysw_degree_to_note(uint8_t scale_tonic, uint8_t root_number, int8_t degre
     int8_t root_index = root_offset % 7;
 
     uint8_t degree_remainder = 0;
-    uint8_t degree_octave = 0;
+    int8_t degree_octave = 0;
     ysw_degree_normalize(degree_number, &degree_remainder, &degree_octave);
 
     int8_t root_interval = intervals[0][root_index];
@@ -108,7 +108,7 @@ void ysw_degree_to_name(char *buffer, size_t buffer_size, int8_t degree_number, 
     assert(accidental >= YSW_ACCIDENTAL_FLAT && accidental <= YSW_ACCIDENTAL_SHARP);
 
     uint8_t remainder; // in range 0 to 6
-    uint8_t octave; // in range -n to +n
+    int8_t octave; // in range -n to +n
 
     ysw_degree_normalize(degree_number, &remainder, &octave);
     uint8_t normalized_degree_number = remainder + 1;
