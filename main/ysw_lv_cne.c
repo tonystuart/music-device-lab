@@ -251,6 +251,8 @@ static bool design_cb(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
     return result;
 }
 
+#define SELECTION_BORDER 5
+
 static void on_pressed(lv_obj_t *cne, void *param)
 {
     lv_indev_t *indev_act = (lv_indev_t*)param;
@@ -268,8 +270,9 @@ static void on_pressed(lv_obj_t *cne, void *param)
         ysw_chord_note_t *note = ysw_chord_get_chord_note(ext->chord, i);
         get_note_info(cne, note, &note_area, NULL, NULL);
 
-        if ((note_area.x1 <= x && x <= note_area.x2) && (note_area.y1 <= y && y <= note_area.y2)) {
-            ysw_lv_cne_select(cne, note, true);
+        if (((note_area.x1 - SELECTION_BORDER) <= x && x <= (note_area.x2 + SELECTION_BORDER)) &&
+                ((note_area.y1 - SELECTION_BORDER) <= y && y <= (note_area.y2 + SELECTION_BORDER))) {
+            ysw_lv_cne_select(cne, note, !ysw_lv_cne_is_selected(cne, note));
             selection_count++;
         }
     }
