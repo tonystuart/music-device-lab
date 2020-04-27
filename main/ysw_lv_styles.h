@@ -16,6 +16,7 @@ extern lv_style_t plain_color_tight;
 extern lv_style_t even_interval_style;
 extern lv_style_t odd_interval_style;
 extern lv_style_t chord_note_style;
+extern lv_style_t selected_note_style;
 
 extern lv_style_t cell_editor_style;
 

@@ -40,6 +40,7 @@ typedef struct {
     int8_t degree;
     uint8_t velocity;
     ysw_accidental_t accidental;
+    void* user_data;
 } ysw_chord_note_t;
 
 typedef struct {

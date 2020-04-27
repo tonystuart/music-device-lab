@@ -19,6 +19,8 @@ lv_style_t plain_color_tight;
 lv_style_t even_interval_style;
 lv_style_t odd_interval_style;
 lv_style_t chord_note_style;
+lv_style_t selected_note_style;
+
 lv_style_t cell_editor_style;
 
 lv_style_t value_cell;
@@ -64,6 +66,11 @@ void ysw_lv_styles_initialize()
     chord_note_style.text.font = &lv_font_roboto_12;
     chord_note_style.body.main_color = LV_COLOR_RED;
     chord_note_style.body.grad_color = LV_COLOR_RED;
+
+    lv_style_copy(&selected_note_style, &lv_style_pretty);
+    selected_note_style.text.font = &lv_font_roboto_12;
+    selected_note_style.body.main_color = LV_COLOR_YELLOW;
+    selected_note_style.body.grad_color = LV_COLOR_YELLOW;
 
 
 

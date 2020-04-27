@@ -55,6 +55,7 @@ ysw_chord_note_t *ysw_chord_note_create(int8_t degree, uint8_t velocity, uint32_
     ysw_chord_note->degree = degree;
     ysw_chord_note->velocity = velocity;
     ysw_chord_note->accidental = accidental;
+    ysw_chord_note->user_data = NULL;
     return ysw_chord_note;
 }
 

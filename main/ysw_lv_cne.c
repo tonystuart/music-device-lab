@@ -187,7 +187,12 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
 
         if (lv_area_intersect(&note_mask, mask, &note_area)) {
 
-            lv_draw_rect(&note_area, &note_mask, ext->style_cn, 128);
+            ESP_LOGD(TAG, "note->degree=%d, user_data=%p", note->degree, note->user_data);
+            if (ysw_lv_cne_is_selected(cne, note)) {
+                lv_draw_rect(&note_area, &note_mask, ext->style_sn, 128);
+            } else {
+                lv_draw_rect(&note_area, &note_mask, ext->style_cn, 128);
+            }
 
             char buffer[32];
             if (octave) {
@@ -202,16 +207,29 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
                 .y = ((note_area.y2 - note_area.y1) - ext->style_cn->text.font->line_height) / 2
             };
 
-            lv_draw_label(&note_area,
-                    &note_mask,
-                    ext->style_cn,
-                    ext->style_cn->text.opa,
-                    buffer,
-                    LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
-                    &offset,
-                    NULL,
-                    NULL,
-                    LV_BIDI_DIR_LTR);
+            if (ysw_lv_cne_is_selected(cne, note)) {
+                lv_draw_label(&note_area,
+                        &note_mask,
+                        ext->style_sn,
+                        ext->style_sn->text.opa,
+                        buffer,
+                        LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
+                        &offset,
+                        NULL,
+                        NULL,
+                        LV_BIDI_DIR_LTR);
+            } else {
+                lv_draw_label(&note_area,
+                        &note_mask,
+                        ext->style_cn,
+                        ext->style_cn->text.opa,
+                        buffer,
+                        LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
+                        &offset,
+                        NULL,
+                        NULL,
+                        LV_BIDI_DIR_LTR);
+            }
         }
     }
 
@@ -243,17 +261,23 @@ static void on_pressed(lv_obj_t *cne, void *param)
 
     ysw_lv_cne_ext_t *ext = lv_obj_get_ext_attr(cne);
     uint32_t note_count = ysw_chord_get_note_count(ext->chord);
+    uint32_t selection_count = 0;
 
     for (int i = 0; i < note_count; i++) {
-
         lv_area_t note_area;
         ysw_chord_note_t *note = ysw_chord_get_chord_note(ext->chord, i);
         get_note_info(cne, note, &note_area, NULL, NULL);
 
-        ESP_LOGD(TAG, "note_area x1=%d, y1=%d, x2=%d, y2=%d", note_area.x1, note_area.y1, note_area.x2, note_area.y2);
-
         if ((note_area.x1 <= x && x <= note_area.x2) && (note_area.y1 <= y && y <= note_area.y2)) {
-            ESP_LOGD(TAG, "Found it!");
+            ysw_lv_cne_select(cne, note, true);
+            selection_count++;
+        }
+    }
+
+    if (!selection_count) {
+        for (int i = 0; i < note_count; i++) {
+            ysw_chord_note_t *note = ysw_chord_get_chord_note(ext->chord, i);
+            ysw_lv_cne_select(cne, note, false);
         }
     }
 }
@@ -336,6 +360,7 @@ lv_obj_t *ysw_lv_cne_create(lv_obj_t *par)
     ext->style_oi = &odd_interval_style;
     ext->style_ei = &even_interval_style;
     ext->style_cn = &chord_note_style;
+    ext->style_sn = &selected_note_style;
 
     lv_obj_set_signal_cb(cne, signal_cb);
     lv_obj_set_design_cb(cne, design_cb);
@@ -362,5 +387,20 @@ void ysw_lv_cne_set_chord(lv_obj_t *cne, ysw_chord_t *chord)
     }
     ext->chord = chord;
     lv_obj_invalidate(cne);
+}
+
+void ysw_lv_cne_select(lv_obj_t *cne, ysw_chord_note_t *chord_note, bool is_selected)
+{
+    if (is_selected) {
+        chord_note->user_data = (void*)((uint32_t)chord_note->user_data | 0x01);
+    } else {
+        chord_note->user_data = (void*)((uint32_t)chord_note->user_data & ~0x01);
+    }
+    lv_obj_invalidate(cne);
+}
+
+bool ysw_lv_cne_is_selected(lv_obj_t *cne, ysw_chord_note_t *chord_note)
+{
+    return (uint32_t)chord_note->user_data & 0x01;
 }
 
