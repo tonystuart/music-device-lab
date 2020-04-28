@@ -463,6 +463,22 @@ void select_prev_cs(lv_obj_t * btn, lv_event_t event)
     }
 }
 
+static void cse_event_cb(lv_obj_t *ysw_lv_cse, ysw_lv_cse_event_t event, ysw_lv_cse_event_cb_data_t *data)
+{
+    ESP_LOGD(TAG, "cse_event_cb event=%d", event);
+    switch (event) {
+        case YSW_LV_CSE_SELECT:
+            break;
+
+        case YSW_LV_CSE_DESELECT:
+            break;
+
+        case YSW_LV_CSE_DOUBLE_CLICK:
+            ESP_LOGD(TAG, "cse_event_cb double_click x=%d, y=%d, degree=%d", data->double_click.point.x, data->double_click.point.y, data->double_click.degree_number);
+            break;
+    }
+}
+
 static void display_css()
 {
     lv_coord_t display_w = lv_disp_get_hor_res(NULL);
@@ -521,6 +537,8 @@ static void display_css()
 
     ysw_cs_t *cs = ysw_music_get_cs(music, 0);
     ysw_lv_cse_set_cs(cse, cs);
+    ysw_lv_cse_set_event_cb(cse, cse_event_cb);
+
 #if 0
     lv_obj_t *scroller = lv_page_get_scrl(page);
     old_signal_cb = lv_obj_get_signal_cb(scroller);

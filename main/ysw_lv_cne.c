@@ -262,6 +262,26 @@ static bool in_bounds(lv_area_t *area, lv_coord_t x, lv_coord_t y)
         ((area->y1 - SELECTION_BORDER) <= y && y <= (area->y2 + SELECTION_BORDER));
 }
 
+static bool in_bounds_double_click(lv_point_t *last_click, lv_coord_t x, lv_coord_t y)
+{
+    return ((last_click->x - SELECTION_BORDER) <= x && x <= (last_click->x + SELECTION_BORDER)) &&
+        ((last_click->y - SELECTION_BORDER) <= y && y <= (last_click->y + SELECTION_BORDER));
+}
+
+static void fire_double_click(lv_obj_t *cse, lv_coord_t x, lv_coord_t y)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (ext->event_cb) {
+        lv_coord_t h = lv_obj_get_height(cse);
+        ysw_lv_cse_event_cb_data_t data = {
+            .double_click.point.x = x,
+            .double_click.point.y = y,
+            .double_click.degree_number = (YSW_MIDI_UNPO - (y / (h / ROW_COUNT))) + 1
+        };
+        ext->event_cb(cse, YSW_LV_CSE_DOUBLE_CLICK, &data);
+    }
+}
+
 static void on_pressed(lv_obj_t *cse, void *param)
 {
     lv_indev_t *indev_act = (lv_indev_t*)param;
@@ -287,10 +307,16 @@ static void on_pressed(lv_obj_t *cse, void *param)
     }
 
     if (!hit_count) {
-        for (int i = 0; i < note_count; i++) {
-            ysw_csn_t *note = ysw_cs_get_csn(ext->cs, i);
-            ysw_lv_cse_select(cse, note, false);
+        if (in_bounds_double_click(&ext->last_click, x, y)) {
+            fire_double_click(cse, x, y);
+        } else {
+            for (int i = 0; i < note_count; i++) {
+                ysw_csn_t *note = ysw_cs_get_csn(ext->cs, i);
+                ysw_lv_cse_select(cse, note, false);
+            }
         }
+        ext->last_click.x = x;
+        ext->last_click.y = y;
     }
 }
 
@@ -368,11 +394,14 @@ lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
     }
 
     ext->cs = NULL;
+    ext->last_click.x = 0;
+    ext->last_click.y = 0;
     ext->style_bg = &lv_style_plain;
     ext->style_oi = &odd_interval_style;
     ext->style_ei = &even_interval_style;
     ext->style_cn = &csn_style;
     ext->style_sn = &selected_note_style;
+    ext->event_cb = NULL;
 
     lv_obj_set_signal_cb(cse, signal_cb);
     lv_obj_set_design_cb(cse, design_cb);
@@ -416,3 +445,9 @@ bool ysw_lv_cse_is_selected(lv_obj_t *cse, ysw_csn_t *csn)
     return csn->state & YSW_CSN_SELECTED;
 }
 
+void ysw_lv_cse_set_event_cb(lv_obj_t *cse, ysw_lv_cse_event_cb_t event_cb)
+{
+    LV_ASSERT_OBJ(cse, LV_OBJX_NAME);
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    ext->event_cb = event_cb;
+}
