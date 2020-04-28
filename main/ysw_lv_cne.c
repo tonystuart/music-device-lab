@@ -92,7 +92,6 @@ static void get_note_info(
 
 static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mode)
 {
-    ESP_LOGD(TAG, "draw_main mask.x1=%d, y1=%d, x2=%d, y2=%d", mask->x1, mask->y1, mask->x2, mask->y2);
     super_design_cb(cse, mask, mode);
 
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
@@ -106,8 +105,6 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
 
     lv_coord_t x = cse->coords.x1;
     lv_coord_t y = cse->coords.y1;
-
-    ESP_LOGD(TAG, "draw_main h=%d, w=%d, x=%d, y=%d", h, w, x, y);
 
     for (lv_coord_t i = 0; i < ROW_COUNT; i++) {
 
@@ -268,6 +265,29 @@ static bool in_bounds_double_click(lv_point_t *last_click, lv_coord_t x, lv_coor
         ((last_click->y - SELECTION_BORDER) <= y && y <= (last_click->y + SELECTION_BORDER));
 }
 
+static void fire_select(lv_obj_t *cse, ysw_csn_t *csn, uint8_t index)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (ext->event_cb) {
+        ysw_lv_cse_event_cb_data_t data = {
+            .select.csn = csn,
+            .select.index = index
+        };
+        ext->event_cb(cse, YSW_LV_CSE_SELECT, &data);
+    }
+}
+
+static void fire_deselect(lv_obj_t *cse, ysw_csn_t *csn)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (ext->event_cb) {
+        ysw_lv_cse_event_cb_data_t data = {
+            .deselect.csn = csn,
+        };
+        ext->event_cb(cse, YSW_LV_CSE_DESELECT, &data);
+    }
+}
+
 static void fire_double_click(lv_obj_t *cse, lv_coord_t x, lv_coord_t y)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
@@ -294,7 +314,7 @@ static void on_pressed(lv_obj_t *cse, void *param)
     uint32_t note_count = ysw_cs_get_note_count(ext->cs);
     uint32_t hit_count = 0;
 
-    for (int i = 0; i < note_count; i++) {
+    for (uint8_t i = 0; i < note_count; i++) {
         lv_area_t note_area;
         ysw_csn_t *note = ysw_cs_get_csn(ext->cs, i);
         get_note_info(cse, note, &note_area, NULL, NULL);
@@ -302,6 +322,7 @@ static void on_pressed(lv_obj_t *cse, void *param)
         if (in_bounds(&note_area, x, y)) {
             bool selected = !ysw_lv_cse_is_selected(cse, note);
             ysw_lv_cse_select(cse, note, selected);
+            fire_select(cse, note, i);
             hit_count++;
         }
     }
@@ -312,7 +333,10 @@ static void on_pressed(lv_obj_t *cse, void *param)
         } else {
             for (int i = 0; i < note_count; i++) {
                 ysw_csn_t *note = ysw_cs_get_csn(ext->cs, i);
-                ysw_lv_cse_select(cse, note, false);
+                if (ysw_lv_cse_is_selected(cse, note)) {
+                    ysw_lv_cse_select(cse, note, false);
+                    fire_deselect(cse, note);
+                }
             }
         }
         ext->last_click.x = x;

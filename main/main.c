@@ -365,7 +365,6 @@ static void select_note()
 
 static void select_cs()
 {
-    // TODO: Preserve (as close as possible) selection across css
     clear_selected_note_highlight();
 
     uint32_t cs_count = ysw_music_get_cs_count(music);
@@ -468,9 +467,11 @@ static void cse_event_cb(lv_obj_t *ysw_lv_cse, ysw_lv_cse_event_t event, ysw_lv_
     ESP_LOGD(TAG, "cse_event_cb event=%d", event);
     switch (event) {
         case YSW_LV_CSE_SELECT:
+            ESP_LOGD(TAG, "cse_event_cb select degree=%d, index=%d", data->select.csn->degree, data->select.index);
             break;
 
         case YSW_LV_CSE_DESELECT:
+            ESP_LOGD(TAG, "cse_event_cb deselect degree=%d", data->select.csn->degree);
             break;
 
         case YSW_LV_CSE_DOUBLE_CLICK:
@@ -479,7 +480,7 @@ static void cse_event_cb(lv_obj_t *ysw_lv_cse, ysw_lv_cse_event_t event, ysw_lv_
     }
 }
 
-static void display_css()
+static void display_cse()
 {
     lv_coord_t display_w = lv_disp_get_hor_res(NULL);
     lv_coord_t display_h = lv_disp_get_ver_res(NULL);
@@ -570,15 +571,6 @@ static void display_css()
 #endif
 }
 
-static void process_css()
-{
-    if (ysw_music_get_cs_count(music)) {
-        display_css();
-    } else {
-        // TODO: start cs editor
-    }
-}
-
 void mbox_callback(struct _lv_obj_t * obj, lv_event_t event)
 {
 }
@@ -617,7 +609,7 @@ void app_main()
     music = ysw_music_parse(MUSIC_DEFINITIONS);
 
     if (music) {
-        process_css();
+        display_cse();
     } else {
         lv_obj_t * mbox1 = lv_mbox_create(lv_scr_act(), NULL);
         lv_mbox_set_text(mbox1, "The music partition is empty");
