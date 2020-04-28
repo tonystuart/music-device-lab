@@ -44,7 +44,7 @@ static char *key_labels[] =
 #define ROW_COUNT YSW_MIDI_UNPO
 #define COLUMN_COUNT 4
 
-static void get_note_info(
+static void get_csn_info(
         lv_obj_t *cse,
         ysw_csn_t *csn,
         lv_area_t *ret_area,
@@ -178,38 +178,38 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
 
     for (int i = 0; i < note_count; i++) {
 
-        ysw_csn_t *note = ysw_cs_get_csn(ext->cs, i);
+        ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
 
         int8_t octave = 0;
-        lv_area_t note_area = {};
-        get_note_info(cse, note, &note_area, NULL, &octave);
+        lv_area_t csn_area = {};
+        get_csn_info(cse, csn, &csn_area, NULL, &octave);
 
-        lv_area_t note_mask;
+        lv_area_t csn_mask;
 
-        if (lv_area_intersect(&note_mask, mask, &note_area)) {
+        if (lv_area_intersect(&csn_mask, mask, &csn_area)) {
 
-            if (ysw_lv_cse_is_selected(cse, note)) {
-                lv_draw_rect(&note_area, &note_mask, ext->style_sn, 128);
+            if (ysw_lv_cse_is_selected(cse, csn)) {
+                lv_draw_rect(&csn_area, &csn_mask, ext->style_sn, 128);
             } else {
-                lv_draw_rect(&note_area, &note_mask, ext->style_cn, 128);
+                lv_draw_rect(&csn_area, &csn_mask, ext->style_cn, 128);
             }
 
             char buffer[32];
             if (octave) {
-                snprintf(buffer, sizeof(buffer), "%d/%+d", note->velocity, octave);
+                snprintf(buffer, sizeof(buffer), "%d/%+d", csn->velocity, octave);
             } else {
-                snprintf(buffer, sizeof(buffer), "%d", note->velocity);
+                snprintf(buffer, sizeof(buffer), "%d", csn->velocity);
             }
 
             // vertically center the text
             lv_point_t offset = {
                 .x = 0,
-                .y = ((note_area.y2 - note_area.y1) - ext->style_cn->text.font->line_height) / 2
+                .y = ((csn_area.y2 - csn_area.y1) - ext->style_cn->text.font->line_height) / 2
             };
 
-            if (ysw_lv_cse_is_selected(cse, note)) {
-                lv_draw_label(&note_area,
-                        &note_mask,
+            if (ysw_lv_cse_is_selected(cse, csn)) {
+                lv_draw_label(&csn_area,
+                        &csn_mask,
                         ext->style_sn,
                         ext->style_sn->text.opa,
                         buffer,
@@ -219,8 +219,8 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                         NULL,
                         LV_BIDI_DIR_LTR);
             } else {
-                lv_draw_label(&note_area,
-                        &note_mask,
+                lv_draw_label(&csn_area,
+                        &csn_mask,
                         ext->style_cn,
                         ext->style_cn->text.opa,
                         buffer,
@@ -311,18 +311,18 @@ static void on_pressed(lv_obj_t *cse, void *param)
     ESP_LOGD(TAG, "on_pressed x=%d, y=%d", x, y);
 
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    uint32_t note_count = ysw_cs_get_note_count(ext->cs);
+    uint32_t csn_count = ysw_cs_get_note_count(ext->cs);
     uint32_t hit_count = 0;
 
-    for (uint8_t i = 0; i < note_count; i++) {
-        lv_area_t note_area;
-        ysw_csn_t *note = ysw_cs_get_csn(ext->cs, i);
-        get_note_info(cse, note, &note_area, NULL, NULL);
+    for (uint8_t i = 0; i < csn_count; i++) {
+        lv_area_t csn_area;
+        ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
+        get_csn_info(cse, csn, &csn_area, NULL, NULL);
 
-        if (in_bounds(&note_area, x, y)) {
-            bool selected = !ysw_lv_cse_is_selected(cse, note);
-            ysw_lv_cse_select(cse, note, selected);
-            fire_select(cse, note, i);
+        if (in_bounds(&csn_area, x, y)) {
+            bool selected = !ysw_lv_cse_is_selected(cse, csn);
+            ysw_lv_cse_select(cse, csn, selected);
+            fire_select(cse, csn, i);
             hit_count++;
         }
     }
@@ -331,11 +331,11 @@ static void on_pressed(lv_obj_t *cse, void *param)
         if (in_bounds_double_click(&ext->last_click, x, y)) {
             fire_double_click(cse, x, y);
         } else {
-            for (int i = 0; i < note_count; i++) {
-                ysw_csn_t *note = ysw_cs_get_csn(ext->cs, i);
-                if (ysw_lv_cse_is_selected(cse, note)) {
-                    ysw_lv_cse_select(cse, note, false);
-                    fire_deselect(cse, note);
+            for (int i = 0; i < csn_count; i++) {
+                ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
+                if (ysw_lv_cse_is_selected(cse, csn)) {
+                    ysw_lv_cse_select(cse, csn, false);
+                    fire_deselect(cse, csn);
                 }
             }
         }
@@ -424,7 +424,7 @@ lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
     ext->style_oi = &odd_interval_style;
     ext->style_ei = &even_interval_style;
     ext->style_cn = &csn_style;
-    ext->style_sn = &selected_note_style;
+    ext->style_sn = &selected_csn_style;
     ext->event_cb = NULL;
 
     lv_obj_set_signal_cb(cse, signal_cb);

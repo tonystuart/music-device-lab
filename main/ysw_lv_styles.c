@@ -19,7 +19,7 @@ lv_style_t plain_color_tight;
 lv_style_t even_interval_style;
 lv_style_t odd_interval_style;
 lv_style_t csn_style;
-lv_style_t selected_note_style;
+lv_style_t selected_csn_style;
 
 lv_style_t cell_editor_style;
 
@@ -67,10 +67,10 @@ void ysw_lv_styles_initialize()
     csn_style.body.main_color = LV_COLOR_RED;
     csn_style.body.grad_color = LV_COLOR_RED;
 
-    lv_style_copy(&selected_note_style, &lv_style_pretty);
-    selected_note_style.text.font = &lv_font_roboto_12;
-    selected_note_style.body.main_color = LV_COLOR_YELLOW;
-    selected_note_style.body.grad_color = LV_COLOR_YELLOW;
+    lv_style_copy(&selected_csn_style, &lv_style_pretty);
+    selected_csn_style.text.font = &lv_font_roboto_12;
+    selected_csn_style.body.main_color = LV_COLOR_YELLOW;
+    selected_csn_style.body.grad_color = LV_COLOR_YELLOW;
 
 
 
