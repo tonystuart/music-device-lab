@@ -7,6 +7,8 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
+// Chord Style Editor (CSE)
+
 #include "stdio.h"
 #include "esp_log.h"
 #include "lvgl.h"
@@ -15,9 +17,13 @@
 #include "ysw_lv_cne.h"
 #include "ysw_lv_styles.h"
 
-#define TAG "YSW_LV_CNE"
+#define TAG "YSW_LV_CSE"
 
-#define LV_OBJX_NAME "ysw_lv_cne"
+#define LV_OBJX_NAME "ysw_lv_cse"
+
+// Chord Style Note state fields
+
+#define YSW_CSN_SELECTED 0b00000001
 
 static lv_design_cb_t super_design_cb;
 static lv_signal_cb_t super_signal_cb;
@@ -38,30 +44,28 @@ static char *key_labels[] =
 #define ROW_COUNT YSW_MIDI_UNPO
 #define COLUMN_COUNT 4
 
-static void get_note_info(lv_obj_t *cne, ysw_chord_note_t *note, lv_area_t *ret_area, uint8_t *ret_degree, int8_t *ret_octave)
+static void get_note_info(
+        lv_obj_t *cse,
+        ysw_csn_t *csn,
+        lv_area_t *ret_area,
+        uint8_t *ret_degree,
+        int8_t *ret_octave)
 {
     uint8_t degree;
     int8_t octave;
 
-    ysw_degree_normalize(note->degree, &degree, &octave);
+    ysw_degree_normalize(csn->degree, &degree, &octave);
 
-    lv_coord_t h = lv_obj_get_height(cne);
-    lv_coord_t w = lv_obj_get_width(cne);
+    lv_coord_t h = lv_obj_get_height(cse);
+    lv_coord_t w = lv_obj_get_width(cse);
 
-    lv_coord_t x = cne->coords.x1;
-    lv_coord_t y = cne->coords.y1;
+    lv_coord_t x = cse->coords.x1;
+    lv_coord_t y = cse->coords.y1;
 
-    lv_coord_t delta_y;
-    if (note->accidental == YSW_ACCIDENTAL_FLAT) {
-        delta_y = -(h / ROW_COUNT) / 2;
-    } else if (note->accidental == YSW_ACCIDENTAL_SHARP) {
-        delta_y = +(h / ROW_COUNT) / 2;
-    } else {
-        delta_y = 0;
-    }
+    lv_coord_t delta_y = -ysw_csn_get_accidental(csn) * ((h / ROW_COUNT) / 2);
 
-    lv_coord_t x1 = x + (note->start * w) / (4 * YSW_TICKS_DEFAULT_TPB);
-    lv_coord_t x2 = x + ((note->start + note->duration) * w) / (4 * YSW_TICKS_DEFAULT_TPB);
+    lv_coord_t x1 = x + (csn->start * w) / (4 * YSW_TICKS_DEFAULT_TPB);
+    lv_coord_t x2 = x + ((csn->start + csn->duration) * w) / (4 * YSW_TICKS_DEFAULT_TPB);
 
     lv_coord_t y1 = y + (((YSW_MIDI_UNPO - degree) * h) / ROW_COUNT) + delta_y;
     lv_coord_t y2 = y + ((((YSW_MIDI_UNPO - degree) + 1) * h) / ROW_COUNT) + delta_y;
@@ -86,22 +90,22 @@ static void get_note_info(lv_obj_t *cne, ysw_chord_note_t *note, lv_area_t *ret_
     }
 }
 
-static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mode)
+static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mode)
 {
     ESP_LOGD(TAG, "draw_main mask.x1=%d, y1=%d, x2=%d, y2=%d", mask->x1, mask->y1, mask->x2, mask->y2);
-    super_design_cb(cne, mask, mode);
+    super_design_cb(cse, mask, mode);
 
-    ysw_lv_cne_ext_t *ext = lv_obj_get_ext_attr(cne);
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
 
-    if (!ext->chord) {
+    if (!ext->cs) {
         return;
     }
 
-    lv_coord_t h = lv_obj_get_height(cne);
-    lv_coord_t w = lv_obj_get_width(cne);
+    lv_coord_t h = lv_obj_get_height(cse);
+    lv_coord_t w = lv_obj_get_width(cse);
 
-    lv_coord_t x = cne->coords.x1;
-    lv_coord_t y = cne->coords.y1;
+    lv_coord_t x = cse->coords.x1;
+    lv_coord_t y = cse->coords.y1;
 
     ESP_LOGD(TAG, "draw_main h=%d, w=%d, x=%d, y=%d", h, w, x, y);
 
@@ -173,22 +177,21 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
         lv_draw_line(&point1, &point2, mask, ext->style_ei, ext->style_ei->body.border.opa);
     }
 
-    uint32_t note_count = ysw_chord_get_note_count(ext->chord);
+    uint32_t note_count = ysw_cs_get_note_count(ext->cs);
 
     for (int i = 0; i < note_count; i++) {
 
-        ysw_chord_note_t *note = ysw_chord_get_chord_note(ext->chord, i);
+        ysw_csn_t *note = ysw_cs_get_csn(ext->cs, i);
 
         int8_t octave = 0;
         lv_area_t note_area = {};
-        get_note_info(cne, note, &note_area, NULL, &octave);
+        get_note_info(cse, note, &note_area, NULL, &octave);
 
         lv_area_t note_mask;
 
         if (lv_area_intersect(&note_mask, mask, &note_area)) {
 
-            ESP_LOGD(TAG, "note->degree=%d, user_data=%p", note->degree, note->user_data);
-            if (ysw_lv_cne_is_selected(cne, note)) {
+            if (ysw_lv_cse_is_selected(cse, note)) {
                 lv_draw_rect(&note_area, &note_mask, ext->style_sn, 128);
             } else {
                 lv_draw_rect(&note_area, &note_mask, ext->style_cn, 128);
@@ -207,7 +210,7 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
                 .y = ((note_area.y2 - note_area.y1) - ext->style_cn->text.font->line_height) / 2
             };
 
-            if (ysw_lv_cne_is_selected(cne, note)) {
+            if (ysw_lv_cse_is_selected(cse, note)) {
                 lv_draw_label(&note_area,
                         &note_mask,
                         ext->style_sn,
@@ -235,15 +238,15 @@ static void draw_main(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
 
 }
 
-static bool design_cb(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mode)
+static bool design_cb(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mode)
 {
     bool result = true;
     switch (mode) {
         case LV_DESIGN_COVER_CHK:
-            result = super_design_cb(cne, mask, mode);
+            result = super_design_cb(cse, mask, mode);
             break;
         case LV_DESIGN_DRAW_MAIN:
-            draw_main(cne, mask, mode);
+            draw_main(cse, mask, mode);
             break;
         case LV_DESIGN_DRAW_POST:
             break;
@@ -253,7 +256,13 @@ static bool design_cb(lv_obj_t *cne, const lv_area_t *mask, lv_design_mode_t mod
 
 #define SELECTION_BORDER 5
 
-static void on_pressed(lv_obj_t *cne, void *param)
+static bool in_bounds(lv_area_t *area, lv_coord_t x, lv_coord_t y)
+{
+    return ((area->x1 - SELECTION_BORDER) <= x && x <= (area->x2 + SELECTION_BORDER)) &&
+        ((area->y1 - SELECTION_BORDER) <= y && y <= (area->y2 + SELECTION_BORDER));
+}
+
+static void on_pressed(lv_obj_t *cse, void *param)
 {
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
@@ -261,34 +270,34 @@ static void on_pressed(lv_obj_t *cne, void *param)
     lv_coord_t y = proc->types.pointer.act_point.y;
     ESP_LOGD(TAG, "on_pressed x=%d, y=%d", x, y);
 
-    ysw_lv_cne_ext_t *ext = lv_obj_get_ext_attr(cne);
-    uint32_t note_count = ysw_chord_get_note_count(ext->chord);
-    uint32_t selection_count = 0;
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    uint32_t note_count = ysw_cs_get_note_count(ext->cs);
+    uint32_t hit_count = 0;
 
     for (int i = 0; i < note_count; i++) {
         lv_area_t note_area;
-        ysw_chord_note_t *note = ysw_chord_get_chord_note(ext->chord, i);
-        get_note_info(cne, note, &note_area, NULL, NULL);
+        ysw_csn_t *note = ysw_cs_get_csn(ext->cs, i);
+        get_note_info(cse, note, &note_area, NULL, NULL);
 
-        if (((note_area.x1 - SELECTION_BORDER) <= x && x <= (note_area.x2 + SELECTION_BORDER)) &&
-                ((note_area.y1 - SELECTION_BORDER) <= y && y <= (note_area.y2 + SELECTION_BORDER))) {
-            ysw_lv_cne_select(cne, note, !ysw_lv_cne_is_selected(cne, note));
-            selection_count++;
+        if (in_bounds(&note_area, x, y)) {
+            bool selected = !ysw_lv_cse_is_selected(cse, note);
+            ysw_lv_cse_select(cse, note, selected);
+            hit_count++;
         }
     }
 
-    if (!selection_count) {
+    if (!hit_count) {
         for (int i = 0; i < note_count; i++) {
-            ysw_chord_note_t *note = ysw_chord_get_chord_note(ext->chord, i);
-            ysw_lv_cne_select(cne, note, false);
+            ysw_csn_t *note = ysw_cs_get_csn(ext->cs, i);
+            ysw_lv_cse_select(cse, note, false);
         }
     }
 }
 
-static lv_res_t signal_cb(lv_obj_t *cne, lv_signal_t signal, void *param)
+static lv_res_t signal_cb(lv_obj_t *cse, lv_signal_t signal, void *param)
 {
     ESP_LOGD(TAG, "signal_cb");
-    lv_res_t res = super_signal_cb(cne, signal, param);
+    lv_res_t res = super_signal_cb(cse, signal, param);
     if (res == LV_RES_OK) {
         switch (signal) {
             case LV_SIGNAL_GET_TYPE:
@@ -298,7 +307,7 @@ static lv_res_t signal_cb(lv_obj_t *cne, lv_signal_t signal, void *param)
                 // free anything we allocated
                 break;
             case LV_SIGNAL_PRESSED:
-                on_pressed(cne, param);
+                on_pressed(cse, param);
                 break;
         }
     }
@@ -336,74 +345,74 @@ static void event_cb(lv_obj_t *obj, lv_event_t event)
 }
 #endif
 
-lv_obj_t *ysw_lv_cne_create(lv_obj_t *par)
+lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
 {
-    lv_obj_t *cne = lv_obj_create(par, NULL);
-    LV_ASSERT_MEM(cne);
-    if (cne == NULL) {
+    lv_obj_t *cse = lv_obj_create(par, NULL);
+    LV_ASSERT_MEM(cse);
+    if (cse == NULL) {
         return NULL;
     }
 
     if (super_signal_cb == NULL) {
-        super_signal_cb = lv_obj_get_signal_cb(cne);
+        super_signal_cb = lv_obj_get_signal_cb(cse);
     }
 
     if (super_design_cb == NULL) {
-        super_design_cb = lv_obj_get_design_cb(cne);
+        super_design_cb = lv_obj_get_design_cb(cse);
     }
 
-    ysw_lv_cne_ext_t *ext = lv_obj_allocate_ext_attr(cne, sizeof(ysw_lv_cne_ext_t));
+    ysw_lv_cse_ext_t *ext = lv_obj_allocate_ext_attr(cse, sizeof(ysw_lv_cse_ext_t));
     LV_ASSERT_MEM(ext);
     if (ext == NULL) {
         return NULL;
     }
 
-    ext->chord = NULL;
+    ext->cs = NULL;
     ext->style_bg = &lv_style_plain;
     ext->style_oi = &odd_interval_style;
     ext->style_ei = &even_interval_style;
-    ext->style_cn = &chord_note_style;
+    ext->style_cn = &csn_style;
     ext->style_sn = &selected_note_style;
 
-    lv_obj_set_signal_cb(cne, signal_cb);
-    lv_obj_set_design_cb(cne, design_cb);
+    lv_obj_set_signal_cb(cse, signal_cb);
+    lv_obj_set_design_cb(cse, design_cb);
 
 #if 0
-    lv_obj_set_event_cb(cne, event_cb);
+    lv_obj_set_event_cb(cse, event_cb);
 #endif
 
-    lv_obj_set_click(cne, true);
+    lv_obj_set_click(cse, true);
 
-    lv_obj_set_size(cne, LV_DPI * 2, LV_DPI / 3);
+    lv_obj_set_size(cse, LV_DPI * 2, LV_DPI / 3);
 
-    lv_obj_set_style(cne, &lv_style_plain);
+    lv_obj_set_style(cse, &lv_style_plain);
 
-    return cne;
+    return cse;
 }
 
-void ysw_lv_cne_set_chord(lv_obj_t *cne, ysw_chord_t *chord)
+void ysw_lv_cse_set_cs(lv_obj_t *cse, ysw_cs_t *cs)
 {
-    LV_ASSERT_OBJ(cne, LV_OBJX_NAME);
-    ysw_lv_cne_ext_t *ext = lv_obj_get_ext_attr(cne);
-    if (ext->chord == chord) {
+    LV_ASSERT_OBJ(cse, LV_OBJX_NAME);
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (ext->cs == cs) {
         return;
     }
-    ext->chord = chord;
-    lv_obj_invalidate(cne);
+    ext->cs = cs;
+    lv_obj_invalidate(cse);
 }
 
-void ysw_lv_cne_select(lv_obj_t *cne, ysw_chord_note_t *chord_note, bool is_selected)
+void ysw_lv_cse_select(lv_obj_t *cse, ysw_csn_t *csn, bool selected)
 {
-    if (is_selected) {
-        chord_note->user_data = (void*)((uint32_t)chord_note->user_data | 0x01);
+    if (selected) {
+        csn->state |= YSW_CSN_SELECTED;
     } else {
-        chord_note->user_data = (void*)((uint32_t)chord_note->user_data & ~0x01);
+        csn->state &= ~YSW_CSN_SELECTED;
     }
-    lv_obj_invalidate(cne);
+    lv_obj_invalidate(cse);
 }
 
-bool ysw_lv_cne_is_selected(lv_obj_t *cne, ysw_chord_note_t *chord_note)
+bool ysw_lv_cse_is_selected(lv_obj_t *cse, ysw_csn_t *csn)
 {
-    return (uint32_t)chord_note->user_data & 0x01;
+    return csn->state & YSW_CSN_SELECTED;
 }
 

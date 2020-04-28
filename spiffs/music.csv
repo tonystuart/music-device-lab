@@ -1,4 +1,4 @@
-#record_type (chord),index,name,chord_duration
+#record_type (chord_style),index,name,chord_duration
 1,0,Let it be strum,500
 
 #type (chord_note),degree,velocity,time,duration,accidental
@@ -6,16 +6,16 @@
 2,3,80,10,180,0
 2,5,80,20,180,0
 2,1,100,200,80,0
-2,3,80,210,80,-1
+2,3,80,210,80,1
 2,5,80,220,80,0
 2,1,100,300,30,0
-2,3,80,310,30,+1
+2,3,80,310,30,2
 2,5,80,320,30,0
 2,5,100,350,30,0
 2,3,80,360,30,0
 2,1,80,370,30,0
 
-#type (chord),index,name,chord_duration
+#type (chord_style),index,name,chord_duration
 1,1,Twelve bar blues main,400
 
 #type (chord_note),index,degree,velocity,time,duration,accidental
@@ -23,12 +23,12 @@
 2,3,80,50,46,0
 2,5,80,100,46,0
 2,6,80,150,46,0
-2,7,100,200,46,-1
+2,7,100,200,46,1
 2,6,80,250,46,0
 2,5,80,300,46,0
 2,3,80,350,46,0
 
-#type (chord),index,name,chord_duration
+#type (chord_style),index,name,chord_duration
 1,2,Twelve bar blues alt,2000
 
 #type (chord_note),index,degree,velocity,time,duration,accidental
@@ -44,7 +44,7 @@
 #type (progression),index,name,tonic,instrument
 3,0,Let it be progression,48,25
 
-#type (progression_chord),degree,chord
+#type (progression_chord_style),degree,chord
 4,1,0
 4,5,0
 4,6,0
@@ -75,7 +75,7 @@
 #type (progression),index,name,tonic,instrument
 3,1,Twelve bar blues progression,32,36
 
-#type (progression chord),index,degree,chord
+#type (progression_chord_style),index,degree,chord
 4,1,1
 4,1,1
 4,1,1

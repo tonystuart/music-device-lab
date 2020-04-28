@@ -18,7 +18,7 @@ lv_style_t plain_color_tight;
 // Specific Styles are named for what they do rather than what they are
 lv_style_t even_interval_style;
 lv_style_t odd_interval_style;
-lv_style_t chord_note_style;
+lv_style_t csn_style;
 lv_style_t selected_note_style;
 
 lv_style_t cell_editor_style;
@@ -62,10 +62,10 @@ void ysw_lv_styles_initialize()
     even_interval_style.line.width = 1;
     even_interval_style.line.opa = LV_OPA_COVER;
 
-    lv_style_copy(&chord_note_style, &lv_style_pretty);
-    chord_note_style.text.font = &lv_font_roboto_12;
-    chord_note_style.body.main_color = LV_COLOR_RED;
-    chord_note_style.body.grad_color = LV_COLOR_RED;
+    lv_style_copy(&csn_style, &lv_style_pretty);
+    csn_style.text.font = &lv_font_roboto_12;
+    csn_style.body.main_color = LV_COLOR_RED;
+    csn_style.body.grad_color = LV_COLOR_RED;
 
     lv_style_copy(&selected_note_style, &lv_style_pretty);
     selected_note_style.text.font = &lv_font_roboto_12;

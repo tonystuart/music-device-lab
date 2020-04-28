@@ -13,15 +13,15 @@
 
 typedef struct
 {
-    ysw_chord_t *chord;
-    const lv_style_t *style_bg;
-    const lv_style_t *style_oi;
-    const lv_style_t *style_ei;
-    const lv_style_t *style_cn;
-    const lv_style_t *style_sn;
-} ysw_lv_cne_ext_t;
+    ysw_cs_t *cs;
+    const lv_style_t *style_bg; // background
+    const lv_style_t *style_oi; // odd interval
+    const lv_style_t *style_ei; // even interval
+    const lv_style_t *style_cn; // chord note
+    const lv_style_t *style_sn; // selected note
+} ysw_lv_cse_ext_t;
 
-lv_obj_t *ysw_lv_cne_create(lv_obj_t *par);
-void ysw_lv_cne_set_chord(lv_obj_t *cne, ysw_chord_t *chord);
-void ysw_lv_cne_select(lv_obj_t *cne, ysw_chord_note_t *chord_note, bool is_selected);
-bool ysw_lv_cne_is_selected(lv_obj_t *cne, ysw_chord_note_t *chord_note);
+lv_obj_t *ysw_lv_cse_create(lv_obj_t *par);
+void ysw_lv_cse_set_cs(lv_obj_t *cse, ysw_cs_t *cs);
+void ysw_lv_cse_select(lv_obj_t *cse, ysw_csn_t *csn, bool is_selected);
+bool ysw_lv_cse_is_selected(lv_obj_t *cse, ysw_csn_t *csn);

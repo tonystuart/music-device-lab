@@ -59,7 +59,7 @@ static uint32_t progression_index;
 
 static void play_progression(ysw_progression_t *s);
 
-static uint32_t chord_index;
+static uint32_t cs_index;
 static uint32_t note_index;
 static lv_obj_t *footer_label;
 static lv_obj_t *win;
@@ -224,14 +224,14 @@ static void open_value_editor(lv_obj_t * btn, lv_event_t event)
         return;
     }
 
-    uint32_t chord_count = ysw_music_get_chord_count(music);
-    if (chord_index >= chord_count) {
+    uint32_t cs_count = ysw_music_get_cs_count(music);
+    if (cs_index >= cs_count) {
         return;
     }
 
-    ysw_chord_t *chord = ysw_music_get_chord(music, chord_index);
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
 
-    uint32_t note_count = ysw_chord_get_note_count(chord);
+    uint32_t note_count = ysw_cs_get_note_count(cs);
     if (note_index >= note_count) {
         return;
     }
@@ -239,7 +239,7 @@ static void open_value_editor(lv_obj_t * btn, lv_event_t event)
     char buf[MDBUF_SZ];
     snprintf(buf, MDBUF_SZ, "Note (%d of %d)", to_count(note_index), note_count);
 
-    ysw_chord_note_t *chord_note = ysw_chord_get_chord_note(chord, note_index);
+    ysw_csn_t *csn = ysw_cs_get_csn(cs, note_index);
 
     lv_obj_t *win = lv_win_create(lv_scr_act(), NULL);
     lv_obj_align(win, NULL, LV_ALIGN_CENTER, 0, 0);
@@ -258,10 +258,10 @@ static void open_value_editor(lv_obj_t * btn, lv_event_t event)
     //lv_obj_t *scrl = lv_page_get_scrl(ext->page);
 
 
-    create_field(win, "Degree:", ysw_itoa(chord_note->degree, buf, MDBUF_SZ));
-    create_field(win, "Start:", ysw_itoa(chord_note->start, buf, MDBUF_SZ));
-    create_field(win, "Duration:", ysw_itoa(chord_note->duration, buf, MDBUF_SZ));
-    create_field(win, "Volume:", ysw_itoa(chord_note->velocity, buf, MDBUF_SZ));
+    create_field(win, "Degree:", ysw_itoa(csn->degree, buf, MDBUF_SZ));
+    create_field(win, "Start:", ysw_itoa(csn->start, buf, MDBUF_SZ));
+    create_field(win, "Duration:", ysw_itoa(csn->duration, buf, MDBUF_SZ));
+    create_field(win, "Volume:", ysw_itoa(csn->velocity, buf, MDBUF_SZ));
 
     lv_win_set_layout(win, LV_LAYOUT_PRETTY);
 }
@@ -337,14 +337,14 @@ static void clear_selected_note_highlight()
 
 static void select_note()
 {
-    uint32_t chord_count = ysw_music_get_chord_count(music);
-    if (chord_index >= chord_count) {
+    uint32_t cs_count = ysw_music_get_cs_count(music);
+    if (cs_index >= cs_count) {
         return;
     }
 
-    ysw_chord_t *chord = ysw_music_get_chord(music, chord_index);
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
 
-    uint32_t note_count = ysw_chord_get_note_count(chord);
+    uint32_t note_count = ysw_cs_get_note_count(cs);
     if (note_index >= note_count) {
         return;
     }
@@ -363,32 +363,32 @@ static void select_note()
     selection.old_note_index = note_index;
 }
 
-static void select_chord()
+static void select_cs()
 {
-    // TODO: Preserve (as close as possible) selection across chords
+    // TODO: Preserve (as close as possible) selection across css
     clear_selected_note_highlight();
 
-    uint32_t chord_count = ysw_music_get_chord_count(music);
-    if (chord_index >= chord_count) {
+    uint32_t cs_count = ysw_music_get_cs_count(music);
+    if (cs_index >= cs_count) {
         return;
     }
 
-    ysw_chord_t *chord = ysw_music_get_chord(music, chord_index);
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
 
-    lv_win_set_title(win, chord->name);
+    lv_win_set_title(win, cs->name);
 
-    uint32_t note_count = ysw_chord_get_note_count(chord);
+    uint32_t note_count = ysw_cs_get_note_count(cs);
     lv_table_set_row_cnt(table, note_count + 1); // +1 for the headings
 
     for (uint32_t i = 0; i < note_count; i++) {
         ESP_LOGD(TAG, "setting note attributes, i=%d", i);
         char buffer[16];
         int n = i + 1;
-        ysw_chord_note_t *chord_note = ysw_chord_get_chord_note(chord, i);
-        lv_table_set_cell_value(table, n, 0, ysw_itoa(chord_note->degree, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 1, ysw_itoa(chord_note->start, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 2, ysw_itoa(chord_note->duration, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 3, ysw_itoa(chord_note->velocity, buffer, sizeof(buffer)));
+        ysw_csn_t *csn = ysw_cs_get_csn(cs, i);
+        lv_table_set_cell_value(table, n, 0, ysw_itoa(csn->degree, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 1, ysw_itoa(csn->start, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 2, ysw_itoa(csn->duration, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 3, ysw_itoa(csn->velocity, buffer, sizeof(buffer)));
         for (int j = 0; j < COLUMN_COUNT; j++) {
             lv_table_set_cell_align(table, n, j, LV_LABEL_ALIGN_CENTER);
         }
@@ -435,35 +435,35 @@ static lv_res_t my_scrl_signal_cb(lv_obj_t *scrl, lv_signal_t sign, void *param)
     return old_signal_cb(scrl, sign, param);
 }
 
-void select_next_chord(lv_obj_t * btn, lv_event_t event)
+void select_next_cs(lv_obj_t * btn, lv_event_t event)
 {
     if(event == LV_EVENT_RELEASED) {
-        ESP_LOGD(TAG, "next old chord_index=%d", chord_index);
-        uint32_t chord_count = ysw_music_get_chord_count(music);
-        if (++chord_index >= chord_count) {
-            ESP_LOGD(TAG, "wrapping chord_index=%d", chord_index);
-            chord_index = 0;
+        ESP_LOGD(TAG, "next old cs_index=%d", cs_index);
+        uint32_t cs_count = ysw_music_get_cs_count(music);
+        if (++cs_index >= cs_count) {
+            ESP_LOGD(TAG, "wrapping cs_index=%d", cs_index);
+            cs_index = 0;
         }
-        ESP_LOGD(TAG, "new chord_index=%d", chord_index);
-        select_chord(chord_index);
+        ESP_LOGD(TAG, "new cs_index=%d", cs_index);
+        select_cs(cs_index);
     }
 }
 
-void select_prev_chord(lv_obj_t * btn, lv_event_t event)
+void select_prev_cs(lv_obj_t * btn, lv_event_t event)
 {
     if(event == LV_EVENT_RELEASED) {
-        ESP_LOGD(TAG, "prev old chord_index=%d", chord_index);
-        uint32_t chord_count = ysw_music_get_chord_count(music);
-        if (--chord_index >= chord_count) {
-            ESP_LOGD(TAG, "wrapping chord_index=%d", chord_index);
-            chord_index = chord_count - 1;
+        ESP_LOGD(TAG, "prev old cs_index=%d", cs_index);
+        uint32_t cs_count = ysw_music_get_cs_count(music);
+        if (--cs_index >= cs_count) {
+            ESP_LOGD(TAG, "wrapping cs_index=%d", cs_index);
+            cs_index = cs_count - 1;
         }
-        select_chord(chord_index);
-        ESP_LOGD(TAG, "new chord_index=%d", chord_index);
+        select_cs(cs_index);
+        ESP_LOGD(TAG, "new cs_index=%d", cs_index);
     }
 }
 
-static void display_chords()
+static void display_css()
 {
     lv_coord_t display_w = lv_disp_get_hor_res(NULL);
     lv_coord_t display_h = lv_disp_get_ver_res(NULL);
@@ -499,11 +499,11 @@ static void display_chords()
     lv_obj_align(footer_label, footer, LV_ALIGN_IN_TOP_RIGHT, -20, 0);
 
     add_header_button(win, LV_SYMBOL_CLOSE, lv_win_close_event_cb);
-    add_header_button(win, LV_SYMBOL_NEXT, select_next_chord);
+    add_header_button(win, LV_SYMBOL_NEXT, select_next_cs);
     add_header_button(win, LV_SYMBOL_LOOP, NULL);
     add_header_button(win, LV_SYMBOL_PAUSE, NULL);
     add_header_button(win, LV_SYMBOL_PLAY, NULL);
-    add_header_button(win, LV_SYMBOL_PREV, select_prev_chord);
+    add_header_button(win, LV_SYMBOL_PREV, select_prev_cs);
 
     lv_obj_t *page = lv_win_get_content(win);
 
@@ -513,14 +513,14 @@ static void display_chords()
 
     lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &page_scrl_style);
 
-    lv_obj_t *cne = ysw_lv_cne_create(win);
+    lv_obj_t *cse = ysw_lv_cse_create(win);
     lv_coord_t w = lv_page_get_fit_width(page);
     lv_coord_t h = lv_page_get_fit_height(page);
-    lv_obj_set_size(cne, w, h);
-    lv_obj_align(cne, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_obj_set_size(cse, w, h);
+    lv_obj_align(cse, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-    ysw_chord_t *chord = ysw_music_get_chord(music, 0);
-    ysw_lv_cne_set_chord(cne, chord);
+    ysw_cs_t *cs = ysw_music_get_cs(music, 0);
+    ysw_lv_cse_set_cs(cse, cs);
 #if 0
     lv_obj_t *scroller = lv_page_get_scrl(page);
     old_signal_cb = lv_obj_get_signal_cb(scroller);
@@ -547,17 +547,17 @@ static void display_chords()
         lv_table_set_col_width(table, i, 79);
     }
 
-    chord_index = 0;
-    select_chord();
+    cs_index = 0;
+    select_cs();
 #endif
 }
 
-static void process_chords()
+static void process_css()
 {
-    if (ysw_music_get_chord_count(music)) {
-        display_chords();
+    if (ysw_music_get_cs_count(music)) {
+        display_css();
     } else {
-        // TODO: start chord editor
+        // TODO: start cs editor
     }
 }
 
@@ -599,7 +599,7 @@ void app_main()
     music = ysw_music_parse(MUSIC_DEFINITIONS);
 
     if (music) {
-        process_chords();
+        process_css();
     } else {
         lv_obj_t * mbox1 = lv_mbox_create(lv_scr_act(), NULL);
         lv_mbox_set_text(mbox1, "The music partition is empty");
