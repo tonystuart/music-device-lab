@@ -31,7 +31,7 @@ void ysw_cs_free(ysw_cs_t *cs)
     ysw_heap_free(cs);
 }
 
-uint32_t ysw_cs_add_note(ysw_cs_t *cs, ysw_csn_t *csn)
+uint32_t ysw_cs_add_csn(ysw_cs_t *cs, ysw_csn_t *csn)
 {
     assert(cs);
     assert(csn);
@@ -71,8 +71,8 @@ void ysw_cs_dump(ysw_cs_t *cs, char *tag)
     ESP_LOGD(tag, "ysw_cs_dump cs=%p", cs);
     ESP_LOGD(tag, "name=%s", cs->name);
     ESP_LOGD(tag, "duration=%d", cs->duration);
-    uint32_t note_count = ysw_cs_get_note_count(cs);
-    ESP_LOGD(tag, "note_count=%d", note_count);
+    uint32_t csn_count = ysw_cs_get_csn_count(cs);
+    ESP_LOGD(tag, "csn_count=%d", csn_count);
 }
 
 uint8_t ysw_csn_to_midi_note(uint8_t scale_tonic, uint8_t root_number, ysw_csn_t *csn)

@@ -58,7 +58,7 @@ typedef struct {
     uint32_t duration;
 } ysw_cs_t;
 
-static inline uint32_t ysw_cs_get_note_count(ysw_cs_t *cs)
+static inline uint32_t ysw_cs_get_csn_count(ysw_cs_t *cs)
 {
     return ysw_array_get_count(cs->csns);
 }
@@ -97,7 +97,7 @@ static inline ysw_accidental_t ysw_csn_get_accidental(ysw_csn_t *csn)
 void ysw_csn_free(ysw_csn_t *ysw_csn);
 ysw_csn_t *ysw_csn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags);
 void ysw_cs_set_duration(ysw_cs_t *cs, uint32_t duration);
-uint32_t ysw_cs_add_note(ysw_cs_t *cs, ysw_csn_t *csn);
+uint32_t ysw_cs_add_csn(ysw_cs_t *cs, ysw_csn_t *csn);
 void ysw_cs_free(ysw_cs_t *cs);
 ysw_cs_t *ysw_cs_create();
 void ysw_cs_dump(ysw_cs_t *cs, char *tag);

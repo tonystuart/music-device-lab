@@ -23,46 +23,23 @@
 #include "ysw_music_parser.h"
 #include "ysw_lv_styles.h"
 #include "ysw_lv_cne.h"
+#include "ysw_csef.h"
 
 #define TAG "MAIN"
 
 #define SPIFFS_PARTITION "/spiffs"
 #define MUSIC_DEFINITIONS "/spiffs/music.csv"
 
-#define BUTTON_SIZE 20
-
-// Example of getting component objects
-// lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
-// lv_obj_t *scrl = lv_page_get_scrl(ext->page);
-
-typedef struct {
-    int16_t row;
-    int16_t column;
-    int16_t old_note_index;
-    bool is_cell_edit;
-} selection_t;
-
-static selection_t selection = {
-    .row = -1,
-    .old_note_index = -1
-};
-
-static lv_obj_t *kb;
-static lv_obj_t *table;
-static lv_signal_cb_t old_signal_cb;
 
 static QueueHandle_t synthesizer_queue;
 static QueueHandle_t sequencer_queue;
 
+static ysw_csef_t *csef;
 static ysw_music_t *music;
+static uint32_t cs_index;
 static uint32_t progression_index;
 
 static void play_progression(ysw_progression_t *s);
-
-static uint32_t cs_index;
-static uint32_t note_index;
-static lv_obj_t *footer_label;
-static lv_obj_t *win;
 
 static void initialize_spiffs()
 {
@@ -166,417 +143,61 @@ static void play_progression(ysw_progression_t *s)
     ysw_message_send(sequencer_queue, &message);
 }
 
-static void keyboard_event_cb(lv_obj_t *keyboard, lv_event_t event)
-{
-    lv_kb_def_event_cb(kb, event);
-
-    if(event == LV_EVENT_APPLY || event == LV_EVENT_CANCEL) {
-        lv_obj_t *ta = lv_kb_get_ta(kb);
-        if (ta) {
-            lv_ta_set_cursor_type(ta, LV_CURSOR_LINE|LV_CURSOR_HIDDEN);
-        }
-
-        lv_obj_del(kb);
-        kb = NULL;
-    }
-}
-
-static void text_area_event_handler(lv_obj_t *ta, lv_event_t event)
-{
-    if(event == LV_EVENT_CLICKED) {
-        lv_obj_t *container = lv_obj_get_parent(ta);
-        lv_obj_t *page = lv_obj_get_parent(container);
-        lv_cont_set_layout(container, LV_LAYOUT_OFF);
-        if (kb == NULL) {
-            kb = lv_kb_create(page, NULL);
-            lv_obj_set_width(kb, 290);
-            lv_obj_set_event_cb(kb, keyboard_event_cb);
-            lv_kb_set_cursor_manage(kb, true);
-        }
-        lv_kb_set_ta(kb, ta);
-        lv_ll_move_before(&container->child_ll, kb, ta);
-        lv_cont_set_layout(container, LV_LAYOUT_PRETTY);
-    }
-}
-
-static void create_field(lv_obj_t *parent, char *name, char *value)
-{
-    lv_obj_t *name_label = lv_label_create(parent, NULL);
-    lv_label_set_long_mode(name_label, LV_LABEL_LONG_BREAK);
-    lv_label_set_text(name_label, name);
-    lv_label_set_align(name_label, LV_LABEL_ALIGN_RIGHT);
-    lv_obj_set_width(name_label, 75);
-
-    lv_obj_t *value_ta = lv_ta_create(parent, NULL);
-    lv_obj_set_width(value_ta, 200);
-    lv_obj_set_protect(value_ta, LV_PROTECT_FOLLOW);
-    lv_ta_set_style(value_ta, LV_TA_STYLE_BG, &value_cell);
-    lv_ta_set_one_line(value_ta, true);
-    lv_ta_set_cursor_type(value_ta, LV_CURSOR_LINE|LV_CURSOR_HIDDEN);
-    lv_ta_set_text(value_ta, value);
-
-    lv_obj_set_event_cb(value_ta, text_area_event_handler);
-}
-
-static void open_value_editor(lv_obj_t * btn, lv_event_t event)
-{
-    if(event != LV_EVENT_RELEASED) {
-        return;
-    }
-
-    uint32_t cs_count = ysw_music_get_cs_count(music);
-    if (cs_index >= cs_count) {
-        return;
-    }
-
-    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-
-    uint32_t note_count = ysw_cs_get_note_count(cs);
-    if (note_index >= note_count) {
-        return;
-    }
-
-    char buf[MDBUF_SZ];
-    snprintf(buf, MDBUF_SZ, "Note (%d of %d)", to_count(note_index), note_count);
-
-    ysw_csn_t *csn = ysw_cs_get_csn(cs, note_index);
-
-    lv_obj_t *win = lv_win_create(lv_scr_act(), NULL);
-    lv_obj_align(win, NULL, LV_ALIGN_CENTER, 0, 0);
-    lv_win_set_style(win, LV_WIN_STYLE_BG, &lv_style_pretty);
-    lv_win_set_style(win, LV_WIN_STYLE_CONTENT, &win_style_content);
-    lv_win_set_title(win, buf);
-    lv_win_set_layout(win, LV_LAYOUT_OFF);
-
-    lv_obj_t *close_btn = lv_win_add_btn(win, LV_SYMBOL_CLOSE);
-    lv_obj_set_event_cb(close_btn, lv_win_close_event_cb);
-
-    lv_win_add_btn(win, LV_SYMBOL_SETTINGS);
-    lv_win_set_btn_size(win, 20);
-
-    //lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
-    //lv_obj_t *scrl = lv_page_get_scrl(ext->page);
-
-
-    create_field(win, "Degree:", ysw_itoa(csn->degree, buf, MDBUF_SZ));
-    create_field(win, "Start:", ysw_itoa(csn->start, buf, MDBUF_SZ));
-    create_field(win, "Duration:", ysw_itoa(csn->duration, buf, MDBUF_SZ));
-    create_field(win, "Volume:", ysw_itoa(csn->velocity, buf, MDBUF_SZ));
-
-    lv_win_set_layout(win, LV_LAYOUT_PRETTY);
-}
-
-static char *headings[] = {
-    "Degree", "Start", "Duration", "Volume"
-};
-
-#define COLUMN_COUNT (sizeof(headings) / sizeof(char*))
-
-static lv_obj_t *add_header_button(lv_obj_t *win, const void *img_src, lv_event_cb_t event_cb)
-{
-    lv_obj_t *btn = lv_win_add_btn(win, img_src);
-    if (event_cb) {
-        lv_obj_set_event_cb(btn, event_cb);
-    }
-    return btn;
-}
-
-static void log_type(lv_obj_t *obj, char *tag)
-{
-    lv_obj_type_t types;
-    lv_obj_get_type(obj, &types);
-
-    uint8_t i;
-    for(i = 0; i < LV_MAX_ANCESTOR_NUM; i++) {
-        if (types.type[i]) {
-            ESP_LOGD(tag, "types.type[%d]=%s", i, types.type[i]);
-        }
-    }
-}
-
-static lv_obj_t *add_footer_button(lv_obj_t *footer, const void *img_src, lv_event_cb_t event_cb)
-{
-    lv_obj_t *editor = lv_obj_get_parent(footer);
-    lv_obj_t *win = lv_obj_get_child_back(editor, NULL);
-    lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
-    lv_obj_t *previous = lv_ll_get_head(&footer->child_ll); // get prev before adding new
-
-    lv_obj_t *btn = lv_btn_create(footer, NULL);
-
-    lv_btn_set_style(btn, LV_BTN_STYLE_REL, ext->style_btn_rel);
-    lv_btn_set_style(btn, LV_BTN_STYLE_PR, ext->style_btn_pr);
-    lv_obj_set_size(btn, ext->btn_size, ext->btn_size);
-
-    lv_obj_t *img = lv_img_create(btn, NULL);
-    lv_obj_set_click(img, false);
-    lv_img_set_src(img, img_src);
-
-    if (!previous) {
-        lv_obj_align(btn, footer, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    } else {
-        lv_obj_align(btn, previous, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
-    }
-
-    if (event_cb) {
-        lv_obj_set_event_cb(btn, event_cb);
-    }
-
-    return btn;
-}
-
-static void clear_selected_note_highlight()
-{
-    if (selection.old_note_index != -1) {
-        for (int i = 0; i < COLUMN_COUNT; i++) {
-            lv_table_set_cell_type(table, selection.old_note_index + 1, i, 1); // +1 for heading
-        }
-    }
-    selection.old_note_index = -1;
-    lv_obj_refresh_style(table);
-}
-
-static void select_note()
-{
-    uint32_t cs_count = ysw_music_get_cs_count(music);
-    if (cs_index >= cs_count) {
-        return;
-    }
-
-    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-
-    uint32_t note_count = ysw_cs_get_note_count(cs);
-    if (note_index >= note_count) {
-        return;
-    }
-
-    char buf[MDBUF_SZ];
-    snprintf(buf, MDBUF_SZ, "Note %d of %d", to_count(note_index), note_count);
-    lv_label_set_text(footer_label, buf);
-    lv_obj_realign(footer_label);
-
-    clear_selected_note_highlight();
-    for (int i = 0; i < COLUMN_COUNT; i++) {
-        lv_table_set_cell_type(table, note_index + 1, i, 4); // +1 for heading
-    }
-    lv_obj_refresh_style(table);
-
-    selection.old_note_index = note_index;
-}
-
-static void select_cs()
-{
-    clear_selected_note_highlight();
-
-    uint32_t cs_count = ysw_music_get_cs_count(music);
-    if (cs_index >= cs_count) {
-        return;
-    }
-
-    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-
-    lv_win_set_title(win, cs->name);
-
-    uint32_t note_count = ysw_cs_get_note_count(cs);
-    lv_table_set_row_cnt(table, note_count + 1); // +1 for the headings
-
-    for (uint32_t i = 0; i < note_count; i++) {
-        ESP_LOGD(TAG, "setting note attributes, i=%d", i);
-        char buffer[16];
-        int n = i + 1;
-        ysw_csn_t *csn = ysw_cs_get_csn(cs, i);
-        lv_table_set_cell_value(table, n, 0, ysw_itoa(csn->degree, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 1, ysw_itoa(csn->start, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 2, ysw_itoa(csn->duration, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 3, ysw_itoa(csn->velocity, buffer, sizeof(buffer)));
-        for (int j = 0; j < COLUMN_COUNT; j++) {
-            lv_table_set_cell_align(table, n, j, LV_LABEL_ALIGN_CENTER);
-        }
-    }
-
-    if (note_count) {
-        note_index = 0;
-        select_note();
-    }
-}
-
-static lv_res_t my_scrl_signal_cb(lv_obj_t *scrl, lv_signal_t sign, void *param)
-{
-    //ESP_LOGD(TAG, "my_scrl_signal_cb sign=%d", sign);
-    if (sign == LV_SIGNAL_PRESSED) {
-        lv_indev_t *indev_act = (lv_indev_t*)param;
-        lv_indev_proc_t *proc = &indev_act->proc;
-        lv_area_t scrl_coords;
-        lv_obj_get_coords(scrl, &scrl_coords);
-        uint16_t row = (proc->types.pointer.act_point.y + -scrl_coords.y1) / 30;
-        uint16_t column = proc->types.pointer.act_point.x / 79;
-        ESP_LOGD(TAG, "act_point x=%d, y=%d, scrl_coords x1=%d, y1=%d, x2=%d, y2=%d, row+1=%d, column+1=%d", proc->types.pointer.act_point.x, proc->types.pointer.act_point.y, scrl_coords.x1, scrl_coords.y1, scrl_coords.x2, scrl_coords.y2, row+1, column+1);
-
-        // TODO: use a metdata structure to hold info about the cells
-        if (row) {
-            if (selection.is_cell_edit) {
-                lv_table_set_cell_type(table, selection.row, selection.column, 1);
-                lv_obj_refresh_style(table);
-                selection.is_cell_edit = false;
-                selection.row = -1;
-            }
-            note_index = row - 1; // -1 for headings
-            select_note();
-            if (selection.row == row && selection.column == column) {
-                lv_table_set_cell_type(table, selection.row, selection.column, 2);
-                lv_obj_refresh_style(table);
-                selection.is_cell_edit = true;
-            } else {
-                selection.row = row;
-                selection.column = column;
-            }
-        }
-    }
-    return old_signal_cb(scrl, sign, param);
-}
-
 void select_next_cs(lv_obj_t * btn, lv_event_t event)
 {
     if(event == LV_EVENT_RELEASED) {
-        ESP_LOGD(TAG, "next old cs_index=%d", cs_index);
         uint32_t cs_count = ysw_music_get_cs_count(music);
         if (++cs_index >= cs_count) {
-            ESP_LOGD(TAG, "wrapping cs_index=%d", cs_index);
             cs_index = 0;
         }
-        ESP_LOGD(TAG, "new cs_index=%d", cs_index);
-        select_cs(cs_index);
+        ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+        ysw_csef_set_cs(csef, cs);
     }
 }
 
 void select_prev_cs(lv_obj_t * btn, lv_event_t event)
 {
     if(event == LV_EVENT_RELEASED) {
-        ESP_LOGD(TAG, "prev old cs_index=%d", cs_index);
         uint32_t cs_count = ysw_music_get_cs_count(music);
         if (--cs_index >= cs_count) {
-            ESP_LOGD(TAG, "wrapping cs_index=%d", cs_index);
             cs_index = cs_count - 1;
         }
-        select_cs(cs_index);
-        ESP_LOGD(TAG, "new cs_index=%d", cs_index);
+        ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+        ysw_csef_set_cs(csef, cs);
     }
+}
+
+static void display_csn_index(uint8_t csn_index)
+{
+    char footer_text[MDBUF_SZ];
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    uint32_t csn_count = ysw_cs_get_csn_count(cs);
+    snprintf(footer_text, MDBUF_SZ, "%d of %d", to_count(csn_index), csn_count);
+    ysw_csef_set_footer_text(csef, footer_text);
 }
 
 static void cse_event_cb(lv_obj_t *ysw_lv_cse, ysw_lv_cse_event_t event, ysw_lv_cse_event_cb_data_t *data)
 {
-    ESP_LOGD(TAG, "cse_event_cb event=%d", event);
     switch (event) {
         case YSW_LV_CSE_SELECT:
-            ESP_LOGD(TAG, "cse_event_cb select degree=%d, index=%d", data->select.csn->degree, data->select.index);
+            display_csn_index(data->select.index);
             break;
 
         case YSW_LV_CSE_DESELECT:
-            ESP_LOGD(TAG, "cse_event_cb deselect degree=%d", data->select.csn->degree);
+            ysw_csef_set_footer_text(csef, "");
             break;
 
         case YSW_LV_CSE_DOUBLE_CLICK:
-            ESP_LOGD(TAG, "cse_event_cb double_click x=%d, y=%d, degree=%d", data->double_click.point.x, data->double_click.point.y, data->double_click.degree_number);
+            ESP_LOGD(TAG, "cse_event_cb double_click.start=%d", data->double_click.start);
+            ESP_LOGD(TAG, "cse_event_cb double_click.degree=%d", data->double_click.degree);
             break;
     }
-}
-
-static void display_cse()
-{
-    lv_coord_t display_w = lv_disp_get_hor_res(NULL);
-    lv_coord_t display_h = lv_disp_get_ver_res(NULL);
-    lv_coord_t footer_h = BUTTON_SIZE + 5 + 5;
-
-    lv_obj_t *editor = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_set_style(editor, &plain_color_tight);
-    lv_obj_set_size(editor, display_w, display_h);
-
-    win = lv_win_create(editor, NULL);
-    lv_win_set_style(win, LV_WIN_STYLE_BG, &lv_style_pretty);
-    lv_win_set_style(win, LV_WIN_STYLE_CONTENT, &win_style_content);
-    lv_win_set_title(win, "Chord Name");
-    lv_win_set_btn_size(win, BUTTON_SIZE);
-    lv_obj_set_height(win, display_h - footer_h);
-
-    lv_obj_t *footer = lv_obj_create(editor, NULL);
-    lv_obj_set_size(footer, display_w, footer_h);
-    lv_obj_align(footer, win, LV_ALIGN_OUT_BOTTOM_RIGHT, 5, 5);
-
-    add_footer_button(footer, LV_SYMBOL_SETTINGS, NULL);
-    add_footer_button(footer, LV_SYMBOL_VOLUME_MID, NULL);
-    add_footer_button(footer, LV_SYMBOL_VOLUME_MAX, NULL);
-    add_footer_button(footer, LV_SYMBOL_UP, NULL);
-    add_footer_button(footer, LV_SYMBOL_DOWN, NULL);
-    add_footer_button(footer, LV_SYMBOL_PLUS, NULL);
-    add_footer_button(footer, LV_SYMBOL_MINUS, NULL);
-    add_footer_button(footer, LV_SYMBOL_LEFT, NULL);
-    add_footer_button(footer, LV_SYMBOL_RIGHT, NULL);
-
-    footer_label = lv_label_create(footer, NULL);
-    lv_label_set_text(footer_label, "1/12");
-    lv_obj_align(footer_label, footer, LV_ALIGN_IN_TOP_RIGHT, -20, 0);
-
-    add_header_button(win, LV_SYMBOL_CLOSE, lv_win_close_event_cb);
-    add_header_button(win, LV_SYMBOL_NEXT, select_next_cs);
-    add_header_button(win, LV_SYMBOL_LOOP, NULL);
-    add_header_button(win, LV_SYMBOL_PAUSE, NULL);
-    add_header_button(win, LV_SYMBOL_PLAY, NULL);
-    add_header_button(win, LV_SYMBOL_PREV, select_prev_cs);
-
-    lv_obj_t *page = lv_win_get_content(win);
-
-    // Trying to get rid of one pixel to left of table. It's not these:
-    //lv_page_set_style(page, LV_PAGE_STYLE_BG, &page_bg_style);
-    //lv_win_set_style(win, LV_WIN_STYLE_BG, &page_bg_style);
-
-    lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &page_scrl_style);
-
-    lv_obj_t *cse = ysw_lv_cse_create(win);
-    lv_coord_t w = lv_page_get_fit_width(page);
-    lv_coord_t h = lv_page_get_fit_height(page);
-    lv_obj_set_size(cse, w, h);
-    lv_obj_align(cse, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-
-    ysw_cs_t *cs = ysw_music_get_cs(music, 0);
-    ysw_lv_cse_set_cs(cse, cs);
-    ysw_lv_cse_set_event_cb(cse, cse_event_cb);
-
-#if 0
-    lv_obj_t *scroller = lv_page_get_scrl(page);
-    old_signal_cb = lv_obj_get_signal_cb(scroller);
-    lv_obj_set_signal_cb(scroller, my_scrl_signal_cb);
-
-    table = lv_table_create(win, NULL);
-
-    lv_obj_align(table, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-
-    lv_table_set_style(table, LV_TABLE_STYLE_BG, &plain_color_tight);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL1, &value_cell);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL2, &cell_editor_style);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL3, &name_cell);
-    lv_table_set_style(table, LV_TABLE_STYLE_CELL4, &selected_cell);
-
-    lv_table_set_row_cnt(table, 1); // just the headings for now
-    lv_table_set_col_cnt(table, COLUMN_COUNT);
-
-    for (int i = 0; i < COLUMN_COUNT; i++) {
-        ESP_LOGD(TAG, "setting column attributes");
-        lv_table_set_cell_type(table, 0, i, 3);
-        lv_table_set_cell_align(table, 0, i, LV_LABEL_ALIGN_CENTER);
-        lv_table_set_cell_value(table, 0, i, headings[i]);
-        lv_table_set_col_width(table, i, 79);
-    }
-
-    cs_index = 0;
-    select_cs();
-#endif
-}
-
-void mbox_callback(struct _lv_obj_t * obj, lv_event_t event)
-{
 }
 
 void app_main()
 {
+    esp_log_level_set("spi_master", ESP_LOG_INFO);
+
     esp_log_level_set("BLEServer", ESP_LOG_INFO);
     esp_log_level_set("BLEDevice", ESP_LOG_INFO);
     esp_log_level_set("BLECharacteristic", ESP_LOG_INFO);
@@ -609,12 +230,18 @@ void app_main()
     music = ysw_music_parse(MUSIC_DEFINITIONS);
 
     if (music) {
-        display_cse();
+        ysw_csef_config_t config = {
+            .next_cb = select_next_cs,
+            .prev_cb = select_prev_cs,
+            .cse_event_cb = cse_event_cb,
+        };
+        csef = ysw_csef_create(&config);
+        ysw_cs_t *cs = ysw_music_get_cs(music, 0);
+        ysw_csef_set_cs(csef, cs);
     } else {
         lv_obj_t * mbox1 = lv_mbox_create(lv_scr_act(), NULL);
         lv_mbox_set_text(mbox1, "The music partition is empty");
         lv_obj_set_width(mbox1, 200);
-        lv_obj_set_event_cb(mbox1, mbox_callback);
         lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0);
     }
 

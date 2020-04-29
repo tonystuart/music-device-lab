@@ -46,7 +46,7 @@ static inline uint32_t ysw_progression_get_cs_count(ysw_progression_t *progressi
 
 static inline uint32_t ysw_progression_get_csn_count(ysw_progression_t *progression, uint32_t index)
 {
-    return ysw_cs_get_note_count(ysw_progression_get_cs(progression, index));
+    return ysw_cs_get_csn_count(ysw_progression_get_cs(progression, index));
 }
 
 static inline ysw_csn_t *ysw_step_get_csn(ysw_step_t *step, uint32_t index)

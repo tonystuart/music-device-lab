@@ -9,12 +9,13 @@
 
 // Chord Style Editor (CSE)
 
+#include "ysw_lv_cne.h"
+
 #include "stdio.h"
 #include "esp_log.h"
 #include "lvgl.h"
 #include "ysw_chord.h"
 #include "ysw_ticks.h"
-#include "ysw_lv_cne.h"
 #include "ysw_lv_styles.h"
 
 #define TAG "YSW_LV_CSE"
@@ -174,9 +175,9 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         lv_draw_line(&point1, &point2, mask, ext->style_ei, ext->style_ei->body.border.opa);
     }
 
-    uint32_t note_count = ysw_cs_get_note_count(ext->cs);
+    uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
 
-    for (int i = 0; i < note_count; i++) {
+    for (int i = 0; i < csn_count; i++) {
 
         ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
 
@@ -292,12 +293,32 @@ static void fire_double_click(lv_obj_t *cse, lv_coord_t x, lv_coord_t y)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->event_cb) {
+        lv_coord_t w = lv_obj_get_width(cse);
         lv_coord_t h = lv_obj_get_height(cse);
+
+        lv_coord_t x_offset = x - cse->coords.x1;
+        lv_coord_t y_offset = y - cse->coords.y1;
+
+        double pixels_per_tick = (double)w / (COLUMN_COUNT * YSW_TICKS_DEFAULT_TPB);
+        double pixels_per_degree = (double)h / ROW_COUNT;
+
+        lv_coord_t tick_index = x_offset / pixels_per_tick;
+        lv_coord_t row_index = y_offset / pixels_per_degree;
+
+        //ESP_LOGD(TAG, "fire_double_click w=%d", w);
+        //ESP_LOGD(TAG, "fire_double_click h=%d", h);
+        //ESP_LOGD(TAG, "fire_double_click x_offset=%d", x_offset);
+        //ESP_LOGD(TAG, "fire_double_click y_offset=%d", y_offset);
+        //ESP_LOGD(TAG, "fire_double_click pixels_per_tick=%g", pixels_per_tick);
+        //ESP_LOGD(TAG, "fire_double_click pixels_per_degree=%g", pixels_per_degree);
+        //ESP_LOGD(TAG, "fire_double_click tick_index=%d", tick_index);
+        //ESP_LOGD(TAG, "fire_double_click row_index=%d", row_index);
+
         ysw_lv_cse_event_cb_data_t data = {
-            .double_click.point.x = x,
-            .double_click.point.y = y,
-            .double_click.degree_number = (YSW_MIDI_UNPO - (y / (h / ROW_COUNT))) + 1
+            .double_click.start = tick_index,
+            .double_click.degree = YSW_MIDI_UNPO - row_index,
         };
+
         ext->event_cb(cse, YSW_LV_CSE_DOUBLE_CLICK, &data);
     }
 }
@@ -308,10 +329,9 @@ static void on_pressed(lv_obj_t *cse, void *param)
     lv_indev_proc_t *proc = &indev_act->proc;
     lv_coord_t x = proc->types.pointer.act_point.x;
     lv_coord_t y = proc->types.pointer.act_point.y;
-    ESP_LOGD(TAG, "on_pressed x=%d, y=%d", x, y);
 
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    uint32_t csn_count = ysw_cs_get_note_count(ext->cs);
+    uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
     uint32_t hit_count = 0;
 
     for (uint8_t i = 0; i < csn_count; i++) {
@@ -322,7 +342,11 @@ static void on_pressed(lv_obj_t *cse, void *param)
         if (in_bounds(&csn_area, x, y)) {
             bool selected = !ysw_lv_cse_is_selected(cse, csn);
             ysw_lv_cse_select(cse, csn, selected);
-            fire_select(cse, csn, i);
+            if (selected) {
+                fire_select(cse, csn, i);
+            } else {
+                fire_deselect(cse, csn);
+            }
             hit_count++;
         }
     }
@@ -346,7 +370,6 @@ static void on_pressed(lv_obj_t *cse, void *param)
 
 static lv_res_t signal_cb(lv_obj_t *cse, lv_signal_t signal, void *param)
 {
-    ESP_LOGD(TAG, "signal_cb");
     lv_res_t res = super_signal_cb(cse, signal, param);
     if (res == LV_RES_OK) {
         switch (signal) {

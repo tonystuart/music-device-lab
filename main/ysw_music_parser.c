@@ -114,7 +114,7 @@ static void parse_cs(this_t *this)
             uint32_t duration = atoi(this->tokens[4]);
             int8_t flags = atoi(this->tokens[5]);
             ysw_csn_t *note = ysw_csn_create(degree, velocity, start, duration, flags);
-            ysw_cs_add_note(cs, note);
+            ysw_cs_add_csn(cs, note);
         } else {
             push_back_tokens(this);
             done = true;

@@ -9,7 +9,9 @@
 
 #pragma once
 
+#include "lvgl.h"
 #include "ysw_array.h"
+#include "ysw_chord.h"
 
 typedef enum {
     YSW_LV_CSE_SELECT,
@@ -27,8 +29,8 @@ typedef struct {
 } ysw_lv_cse_deselect_t;
 
 typedef struct {
-    lv_point_t point;
-    int8_t degree_number;
+    uint32_t start;
+    int8_t degree;
 } ysw_lv_cse_double_click_t;
 
 typedef struct {
