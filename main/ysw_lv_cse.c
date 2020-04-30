@@ -22,10 +22,6 @@
 
 #define LV_OBJX_NAME "ysw_lv_cse"
 
-// Chord Style Note state fields
-
-#define YSW_CSN_SELECTED 0b00000001
-
 static lv_design_cb_t super_design_cb;
 static lv_signal_cb_t super_signal_cb;
 
@@ -189,10 +185,10 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
 
         if (lv_area_intersect(&csn_mask, mask, &csn_area)) {
 
-            if (ysw_lv_cse_is_selected(cse, csn)) {
-                lv_draw_rect(&csn_area, &csn_mask, ext->style_sn, 128);
+            if (ysw_csn_is_selected(csn)) {
+                lv_draw_rect(&csn_area, &csn_mask, ext->style_sn, ext->style_sn->body.opa);
             } else {
-                lv_draw_rect(&csn_area, &csn_mask, ext->style_cn, 128);
+                lv_draw_rect(&csn_area, &csn_mask, ext->style_cn, ext->style_cn->body.opa);
             }
 
             char buffer[32];
@@ -208,7 +204,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                 .y = ((csn_area.y2 - csn_area.y1) - ext->style_cn->text.font->line_height) / 2
             };
 
-            if (ysw_lv_cse_is_selected(cse, csn)) {
+            if (ysw_csn_is_selected(csn)) {
                 lv_draw_label(&csn_area,
                         &csn_mask,
                         ext->style_sn,
@@ -266,13 +262,12 @@ static bool in_bounds_double_click(lv_point_t *last_click, lv_coord_t x, lv_coor
         ((last_click->y - SELECTION_BORDER) <= y && y <= (last_click->y + SELECTION_BORDER));
 }
 
-static void fire_select(lv_obj_t *cse, ysw_csn_t *csn, uint8_t index)
+static void fire_select(lv_obj_t *cse, ysw_csn_t *csn)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->event_cb) {
         ysw_lv_cse_event_cb_data_t data = {
             .select.csn = csn,
-            .select.index = index
         };
         ext->event_cb(cse, YSW_LV_CSE_SELECT, &data);
     }
@@ -323,42 +318,51 @@ static void fire_double_click(lv_obj_t *cse, lv_coord_t x, lv_coord_t y)
     }
 }
 
+static ysw_csn_t *find_first_csn(lv_obj_t *cse, ysw_cs_t *cs, lv_coord_t x, lv_coord_t y)
+{
+    uint32_t csn_count = ysw_cs_get_csn_count(cs);
+
+    for (uint8_t i = 0; i < csn_count; i++) {
+        lv_area_t csn_area;
+        ysw_csn_t *csn = ysw_cs_get_csn(cs, i);
+        get_csn_info(cse, csn, &csn_area, NULL, NULL);
+
+        if (in_bounds(&csn_area, x, y)) {
+            return csn;
+        }
+    }
+
+    return NULL;
+}
+
 static void on_pressed(lv_obj_t *cse, void *param)
 {
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
     lv_coord_t x = proc->types.pointer.act_point.x;
     lv_coord_t y = proc->types.pointer.act_point.y;
 
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
-    uint32_t hit_count = 0;
-
-    for (uint8_t i = 0; i < csn_count; i++) {
-        lv_area_t csn_area;
-        ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
-        get_csn_info(cse, csn, &csn_area, NULL, NULL);
-
-        if (in_bounds(&csn_area, x, y)) {
-            bool selected = !ysw_lv_cse_is_selected(cse, csn);
-            ysw_lv_cse_select(cse, csn, selected);
-            if (selected) {
-                fire_select(cse, csn, i);
-            } else {
-                fire_deselect(cse, csn);
-            }
-            hit_count++;
+    ysw_csn_t *csn = find_first_csn(cse, ext->cs, x, y);
+    if (csn) {
+        bool selected = !ysw_csn_is_selected(csn);
+        ysw_csn_select(csn, selected);
+        if (selected) {
+            fire_select(cse, csn);
+        } else {
+            fire_deselect(cse, csn);
         }
     }
-
-    if (!hit_count) {
+    else {
         if (in_bounds_double_click(&ext->last_click, x, y)) {
             fire_double_click(cse, x, y);
         } else {
+            uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
             for (int i = 0; i < csn_count; i++) {
                 ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
-                if (ysw_lv_cse_is_selected(cse, csn)) {
-                    ysw_lv_cse_select(cse, csn, false);
+                if (ysw_csn_is_selected(csn)) {
+                    ysw_csn_select(csn, false);
                     fire_deselect(cse, csn);
                 }
             }
@@ -366,6 +370,7 @@ static void on_pressed(lv_obj_t *cse, void *param)
         ext->last_click.x = x;
         ext->last_click.y = y;
     }
+    lv_obj_invalidate(cse);
 }
 
 static lv_res_t signal_cb(lv_obj_t *cse, lv_signal_t signal, void *param)
@@ -475,21 +480,6 @@ void ysw_lv_cse_set_cs(lv_obj_t *cse, ysw_cs_t *cs)
     }
     ext->cs = cs;
     lv_obj_invalidate(cse);
-}
-
-void ysw_lv_cse_select(lv_obj_t *cse, ysw_csn_t *csn, bool selected)
-{
-    if (selected) {
-        csn->state |= YSW_CSN_SELECTED;
-    } else {
-        csn->state &= ~YSW_CSN_SELECTED;
-    }
-    lv_obj_invalidate(cse);
-}
-
-bool ysw_lv_cse_is_selected(lv_obj_t *cse, ysw_csn_t *csn)
-{
-    return csn->state & YSW_CSN_SELECTED;
 }
 
 void ysw_lv_cse_set_event_cb(lv_obj_t *cse, ysw_lv_cse_event_cb_t event_cb)

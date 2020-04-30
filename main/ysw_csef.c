@@ -156,7 +156,3 @@ void ysw_csef_redraw(ysw_csef_t *csef)
     lv_obj_invalidate(csef->cse);
 }
 
-bool ysw_csef_is_selected(ysw_csef_t *csef, ysw_csn_t *csn)
-{
-    return ysw_lv_cse_is_selected(csef->cse, csn);
-}

@@ -153,24 +153,10 @@ static void play_progression(ysw_progression_t *s)
 
 static void copy_to_csn_clipboard(ysw_csn_t *csn)
 {
-    ESP_LOGD(TAG, "adding to clipboard");
-    ysw_csn_t *new_csn = ysw_csn_create(csn->degree, csn->velocity, csn->start, csn->duration, csn->flags);
-    ysw_array_push(csn_clipboard, &new_csn);
-}
-
-static void paste_from_csn_clipboard(ysw_csn_t *csn)
-{
-    ESP_LOGD(TAG, "pasting from clipboard=%p", csn_clipboard);
-    if (csn_clipboard) {
-        ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-        uint32_t csn_count = ysw_array_get_count(csn_clipboard);
-        ESP_LOGD(TAG, "csn_count=%d", csn_count);
-        for (uint32_t i = 0; i < csn_count; i++) {
-            ysw_csn_t *csn = ysw_array_get(csn_clipboard, i);
-            ysw_cs_add_csn(cs, csn);
-        }
-        ysw_csef_redraw(csef);
-    }
+    ysw_csn_t *new_csn = ysw_csn_copy(csn);
+    ysw_csn_select(csn, false);
+    ysw_csn_select(new_csn, true);
+    ysw_array_push(csn_clipboard, new_csn);
 }
 
 static void decrease_volume(ysw_csn_t *csn)
@@ -258,7 +244,7 @@ static void visit_notes(note_visitor_t visitor, lv_event_t event)
         uint32_t csn_count = ysw_cs_get_csn_count(cs);
         for (uint32_t i = 0; i < csn_count; i++) {
             ysw_csn_t *csn = ysw_cs_get_csn(cs, i);
-            if (ysw_csef_is_selected(csef, csn)) {
+            if (ysw_csn_is_selected(csn)) {
                 visitor(csn);
             }
         }
@@ -298,14 +284,12 @@ static void on_loop(lv_obj_t * btn, lv_event_t event)
             lv_btn_set_toggle(btn, true);
         }
         if (lv_btn_get_state(btn) == LV_BTN_STATE_TGL_PR) {
-            ESP_LOGD(TAG, "on_loop setting loop false");
             ysw_sequencer_message_t message = {
                 .type = YSW_SEQUENCER_SET_LOOP,
                 .set_loop.loop = false,
             };
             ysw_message_send(sequencer_queue, &message);
         } else {
-            ESP_LOGD(TAG, "on_loop setting loop true");
             ysw_sequencer_message_t message = {
                 .type = YSW_SEQUENCER_SET_LOOP,
                 .set_loop.loop = true,
@@ -341,10 +325,8 @@ static void on_save(lv_obj_t * btn, lv_event_t event)
 
 static void on_copy(lv_obj_t * btn, lv_event_t event)
 {
-    ESP_LOGD(TAG, "csn_clipboard=%p, event=%d", csn_clipboard, event);
     if (event == LV_EVENT_PRESSED) {
         if (csn_clipboard) {
-            ESP_LOGD(TAG, "clearing previous clipboard");
             uint32_t old_csn_count = ysw_array_get_count(csn_clipboard);
             for (int i = 0; i < old_csn_count; i++) {
                 ysw_csn_t *old_csn = ysw_array_get(csn_clipboard, i);
@@ -352,7 +334,6 @@ static void on_copy(lv_obj_t * btn, lv_event_t event)
             }
             ysw_array_truncate(csn_clipboard, 0);
         } else {
-            ESP_LOGD(TAG, "creating clipboard");
             csn_clipboard = ysw_array_create(10);
         }
         visit_notes(copy_to_csn_clipboard, event);
@@ -361,7 +342,19 @@ static void on_copy(lv_obj_t * btn, lv_event_t event)
 
 static void on_paste(lv_obj_t * btn, lv_event_t event)
 {
-    visit_notes(paste_from_csn_clipboard, event);
+    if (event == LV_EVENT_PRESSED) {
+        if (csn_clipboard) {
+            ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+            uint32_t csn_count = ysw_array_get_count(csn_clipboard);
+            for (uint32_t i = 0; i < csn_count; i++) {
+                ysw_csn_t *csn = ysw_array_get(csn_clipboard, i);
+                ysw_csn_t *new_csn = ysw_csn_copy(csn);
+                new_csn->state = csn->state;
+                ysw_cs_add_csn(cs, new_csn);
+            }
+            ysw_csef_redraw(csef);
+        }
+    }
 }
 
 static void on_volume_mid(lv_obj_t * btn, lv_event_t event)
@@ -413,7 +406,7 @@ static void on_trash(lv_obj_t * btn, lv_event_t event)
         uint32_t csn_count = ysw_cs_get_csn_count(cs);
         for (uint32_t source = 0; source < csn_count; source++) {
             ysw_csn_t *csn = ysw_array_get(cs->csns, source);
-            if (ysw_csef_is_selected(csef, csn)) {
+            if (ysw_csn_is_selected(csn)) {
                 ysw_csn_free(csn);
                 changes++;
             } else {

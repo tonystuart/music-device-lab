@@ -45,4 +45,3 @@ void ysw_csef_set_cs(ysw_csef_t *csef, ysw_cs_t *cs);
 void ysw_csef_set_header_text(ysw_csef_t *csef, char *header_text);
 void ysw_csef_set_footer_text(ysw_csef_t *csef, char *footer_text);
 void ysw_csef_redraw(ysw_csef_t *csef);
-bool ysw_csef_is_selected(ysw_csef_t *csef, ysw_csn_t *csn);

@@ -21,7 +21,6 @@ typedef enum {
 
 typedef struct {
     ysw_csn_t *csn;
-    uint8_t index;
 } ysw_lv_cse_select_t;
 
 typedef struct {

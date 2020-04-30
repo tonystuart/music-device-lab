@@ -39,6 +39,10 @@ typedef enum {
 #define YSW_CSN_FLAT    0b01
 #define YSW_CSN_SHARP   0b10
 
+// Chord Style Note state fields
+
+#define YSW_CSN_SELECTED 0b00000001
+
 // Chord Style Note (a note in a chord style)
 
 typedef struct {
@@ -109,8 +113,23 @@ static inline ysw_accidental_t ysw_csn_get_accidental(ysw_csn_t *csn)
     return YSW_ACCIDENTAL_SHARP;
 }
 
+static inline void ysw_csn_select(ysw_csn_t *csn, bool selected)
+{
+    if (selected) {
+        csn->state |= YSW_CSN_SELECTED;
+    } else {
+        csn->state &= ~YSW_CSN_SELECTED;
+    }
+}
+
+static inline bool ysw_csn_is_selected(ysw_csn_t *csn)
+{
+    return csn->state & YSW_CSN_SELECTED;
+}
+
 void ysw_csn_free(ysw_csn_t *ysw_csn);
 ysw_csn_t *ysw_csn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags);
+ysw_csn_t *ysw_csn_copy(ysw_csn_t *csn);
 void ysw_cs_set_duration(ysw_cs_t *cs, uint32_t duration);
 uint32_t ysw_cs_add_csn(ysw_cs_t *cs, ysw_csn_t *csn);
 void ysw_cs_free(ysw_cs_t *cs);
