@@ -48,7 +48,6 @@ void ysw_cs_set_duration(ysw_cs_t *cs, uint32_t duration)
 
 ysw_csn_t *ysw_csn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags)
 {
-    ESP_LOGD(TAG, "csn_create degree=%u, velocity=%u, start=%u, duration=%u", degree, velocity, start, duration);
     ysw_csn_t *ysw_csn = ysw_heap_allocate(sizeof(ysw_csn_t));
     ysw_csn->start = start;
     ysw_csn->duration = duration;
@@ -56,13 +55,14 @@ ysw_csn_t *ysw_csn_create(int8_t degree, uint8_t velocity, uint32_t start, uint3
     ysw_csn->velocity = velocity;
     ysw_csn->flags = flags;
     ysw_csn->state = 0;
+    ESP_LOGD(TAG, "create csn=%p, degree=%u, velocity=%u, start=%u, duration=%u", ysw_csn, ysw_csn->degree, ysw_csn->velocity, ysw_csn->start, ysw_csn->duration);
     return ysw_csn;
 }
 
 void ysw_csn_free(ysw_csn_t *ysw_csn)
 {
     assert(ysw_csn);
-    ESP_LOGD(TAG, "free csn=%p, start=%u, degree=%u, csn=%u, velocity=%u", ysw_csn, ysw_csn->start, ysw_csn->degree, ysw_csn->degree, ysw_csn->velocity);
+    ESP_LOGD(TAG, "free csn=%p, degree=%u, velocity=%u, start=%u, duration=%u", ysw_csn, ysw_csn->degree, ysw_csn->velocity, ysw_csn->start, ysw_csn->duration);
     ysw_heap_free(ysw_csn);
 }
 

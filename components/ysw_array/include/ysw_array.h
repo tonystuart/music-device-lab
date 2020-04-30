@@ -22,6 +22,7 @@ typedef void (*ysw_on_array_clear_t)(void *p);
 ysw_array_t *ysw_array_create(size_t initial_size);
 int ysw_array_push(ysw_array_t *array, void *data);
 void *ysw_array_pop(ysw_array_t *array);
+void ysw_array_truncate(ysw_array_t *array, size_t new_count);
 void ysw_array_resize(ysw_array_t *array, size_t new_size);
 void ysw_array_pack(ysw_array_t *array);
 int ysw_array_get_count(ysw_array_t *array);

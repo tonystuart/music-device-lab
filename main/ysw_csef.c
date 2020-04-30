@@ -21,7 +21,7 @@
 #include "ysw_chord.h"
 #include "ysw_music.h"
 #include "ysw_lv_styles.h"
-#include "ysw_lv_cne.h"
+#include "ysw_lv_cse.h"
 
 #define TAG "YSW_LV_CNEF"
 
@@ -56,7 +56,7 @@ static lv_obj_t *add_footer_button(lv_obj_t *footer, const void *img_src, lv_eve
     if (!previous) {
         lv_obj_align(btn, footer, LV_ALIGN_IN_TOP_LEFT, 0, 0);
     } else {
-        lv_obj_align(btn, previous, LV_ALIGN_OUT_RIGHT_MID, 5, 0);
+        lv_obj_align(btn, previous, LV_ALIGN_OUT_RIGHT_MID, 4, 0);
     }
 
     if (event_cb) {
@@ -89,15 +89,19 @@ ysw_csef_t *ysw_csef_create(ysw_csef_config_t *config)
     lv_obj_set_size(footer, display_w, footer_h);
     lv_obj_align(footer, csef->win, LV_ALIGN_OUT_BOTTOM_RIGHT, 5, 5);
 
-    add_footer_button(footer, LV_SYMBOL_SETTINGS, NULL);
-    add_footer_button(footer, LV_SYMBOL_VOLUME_MID, NULL);
-    add_footer_button(footer, LV_SYMBOL_VOLUME_MAX, NULL);
-    add_footer_button(footer, LV_SYMBOL_UP, NULL);
-    add_footer_button(footer, LV_SYMBOL_DOWN, NULL);
-    add_footer_button(footer, LV_SYMBOL_PLUS, NULL);
-    add_footer_button(footer, LV_SYMBOL_MINUS, NULL);
-    add_footer_button(footer, LV_SYMBOL_LEFT, NULL);
-    add_footer_button(footer, LV_SYMBOL_RIGHT, NULL);
+    add_footer_button(footer, LV_SYMBOL_SETTINGS, config->settings_cb);
+    add_footer_button(footer, LV_SYMBOL_SAVE, config->save_cb);
+    add_footer_button(footer, LV_SYMBOL_COPY, config->copy_cb);
+    add_footer_button(footer, LV_SYMBOL_PASTE, config->paste_cb);
+    add_footer_button(footer, LV_SYMBOL_VOLUME_MID, config->volume_mid_cb);
+    add_footer_button(footer, LV_SYMBOL_VOLUME_MAX, config->volume_max_cb);
+    add_footer_button(footer, LV_SYMBOL_UP, config->up_cb);
+    add_footer_button(footer, LV_SYMBOL_DOWN, config->down_cb);
+    add_footer_button(footer, LV_SYMBOL_PLUS, config->plus_cb);
+    add_footer_button(footer, LV_SYMBOL_MINUS, config->minus_cb);
+    add_footer_button(footer, LV_SYMBOL_LEFT, config->left_cb);
+    add_footer_button(footer, LV_SYMBOL_RIGHT, config->right_cb);
+    add_footer_button(footer, LV_SYMBOL_TRASH, config->trash_cb);
 
     csef->footer_label = lv_label_create(footer, NULL);
     lv_label_set_text(csef->footer_label, "");
@@ -105,9 +109,9 @@ ysw_csef_t *ysw_csef_create(ysw_csef_config_t *config)
 
     add_header_button(csef->win, LV_SYMBOL_CLOSE, lv_win_close_event_cb);
     add_header_button(csef->win, LV_SYMBOL_NEXT, config->next_cb);
-    add_header_button(csef->win, LV_SYMBOL_LOOP, NULL);
-    add_header_button(csef->win, LV_SYMBOL_PAUSE, NULL);
-    add_header_button(csef->win, LV_SYMBOL_PLAY, NULL);
+    add_header_button(csef->win, LV_SYMBOL_LOOP, config->loop_cb);
+    add_header_button(csef->win, LV_SYMBOL_PAUSE, config->pause_cb);
+    add_header_button(csef->win, LV_SYMBOL_PLAY, config->play_cb);
     add_header_button(csef->win, LV_SYMBOL_PREV, config->prev_cb);
 
     lv_obj_t *page = lv_win_get_content(csef->win);
@@ -147,3 +151,12 @@ void ysw_csef_set_footer_text(ysw_csef_t *csef, char *footer_text)
     lv_obj_realign(csef->footer_label);
 }
 
+void ysw_csef_redraw(ysw_csef_t *csef)
+{
+    lv_obj_invalidate(csef->cse);
+}
+
+bool ysw_csef_is_selected(ysw_csef_t *csef, ysw_csn_t *csn)
+{
+    return ysw_lv_cse_is_selected(csef->cse, csn);
+}

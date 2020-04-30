@@ -9,7 +9,7 @@
 
 // Chord Style Editor (CSE)
 
-#include "ysw_lv_cne.h"
+#include "ysw_lv_cse.h"
 
 #include "stdio.h"
 #include "esp_log.h"

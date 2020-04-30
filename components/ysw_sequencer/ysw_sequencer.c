@@ -29,9 +29,9 @@ typedef bool (*visitor_t)(active_note_t *active_note, int32_t context);
 static ysw_sequencer_config_t config;
 static QueueHandle_t input_queue;
 
+static bool loop;
 static note_t *notes;
 static uint8_t playback_speed = YSW_SEQUENCER_SPEED_DEFAULT;
-static int16_t loop_count;
 static uint32_t note_count;
 static uint32_t next_note;
 static uint32_t start_millis;
@@ -167,19 +167,17 @@ static void set_tempo(uint8_t percent)
     }
 }
 
+static void set_loop(bool new_value)
+{
+    loop = new_value;
+}
+
 static void play_song()
 {
     ESP_LOGD(TAG, "play_song next_note=%d, note_count=%d", next_note, note_count);
     if (note_count) {
         adjust_playback_start_millis();
     }
-}
-
-static void process_play(ysw_sequencer_play_t *message)
-{
-    ESP_LOGD(TAG, "process_play loop_count=%d", message->loop_count);
-    loop_count = message->loop_count;
-    play_song();
 }
 
 static void pause_song()
@@ -201,13 +199,16 @@ static void process_message(ysw_sequencer_message_t *message)
             initialize(&message->initialize);
             break;
         case YSW_SEQUENCER_PLAY:
-            process_play(&message->play);
+            play_song();
             break;
         case YSW_SEQUENCER_PAUSE:
             pause_song();
             break;
         case YSW_SEQUENCER_SET_TEMPO:
             set_tempo(message->set_tempo.percent);
+            break;
+        case YSW_SEQUENCER_SET_LOOP:
+            set_loop(message->set_loop.loop);
             break;
         default:
             break;
@@ -246,11 +247,7 @@ static void run_sequencer(void* parameters)
                     ESP_LOGD(TAG, "waiting for final notes to end");
                     uint32_t delay_millis = next_note_to_end->end_time - playback_millis;
                     ticks_to_wait = to_ticks(delay_millis);
-                } else if (loop_count) {
-                    if (loop_count != YSW_SEQUENCER_LOOP_REPEATEDLY) {
-                        loop_count--;
-                    }
-                    ESP_LOGD(TAG, "loop_count=%d", loop_count);
+                } else if (loop) {
                     if (config.on_state_change) {
                         config.on_state_change(YSW_SEQUENCER_STATE_LOOP_COMPLETE);
                     }

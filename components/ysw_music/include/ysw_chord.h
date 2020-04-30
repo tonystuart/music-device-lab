@@ -35,9 +35,9 @@ typedef enum {
 } ysw_role_t;
 
 #define YSW_CSN_ACCIDENTAL 0b11
-#define YSW_CSN_IS_NATURAL 0b00
-#define YSW_CSN_IS_FLAT    0b01
-#define YSW_CSN_IS_SHARP   0b10
+#define YSW_CSN_NATURAL 0b00
+#define YSW_CSN_FLAT    0b01
+#define YSW_CSN_SHARP   0b10
 
 // Chord Style Note (a note in a chord style)
 
@@ -70,17 +70,32 @@ static inline ysw_csn_t *ysw_cs_get_csn(ysw_cs_t *cs, uint32_t index)
 
 static inline bool ysw_csn_is_natural(ysw_csn_t *csn)
 {
-    return (csn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_IS_NATURAL;
+    return (csn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_NATURAL;
 }
 
 static inline bool ysw_csn_is_flat(ysw_csn_t *csn)
 {
-    return (csn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_IS_FLAT;
+    return (csn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_FLAT;
 }
 
 static inline bool ysw_csn_is_sharp(ysw_csn_t *csn)
 {
-    return (csn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_IS_SHARP;
+    return (csn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_SHARP;
+}
+
+static inline void ysw_csn_set_natural(ysw_csn_t *csn)
+{
+    csn->flags &= ~YSW_CSN_ACCIDENTAL;
+}
+
+static inline void ysw_csn_set_flat(ysw_csn_t *csn)
+{
+    csn->flags = (csn->flags & ~YSW_CSN_ACCIDENTAL) | YSW_CSN_FLAT;
+}
+
+static inline void ysw_csn_set_sharp(ysw_csn_t *csn)
+{
+    csn->flags = (csn->flags & ~YSW_CSN_ACCIDENTAL) | YSW_CSN_SHARP;
 }
 
 static inline ysw_accidental_t ysw_csn_get_accidental(ysw_csn_t *csn)

@@ -52,6 +52,13 @@ void *ysw_array_pop(ysw_array_t *array)
     return array->data[index];
 }
 
+void ysw_array_truncate(ysw_array_t *array, size_t new_count)
+{
+    assert(array);
+    assert(new_count <= array->count);
+    array->count = new_count;
+}
+
 void ysw_array_resize(ysw_array_t *array, size_t new_size)
 {
     assert(array);
@@ -60,7 +67,7 @@ void ysw_array_resize(ysw_array_t *array, size_t new_size)
     if (new_size < array->count) {
         array->count = new_size;
     }
-    array->data = ysw_heap_reallocate(array->data, array->size);
+    array->data = ysw_heap_reallocate(array->data, sizeof(void*) * array->size);
 }
 
 void ysw_array_pack(ysw_array_t *array)
@@ -68,7 +75,7 @@ void ysw_array_pack(ysw_array_t *array)
     assert(array);
     ESP_LOGD(TAG, "pack array=%p", array);
     array->size = array->count;
-    array->data = ysw_heap_reallocate(array->data, array->size);
+    array->data = ysw_heap_reallocate(array->data, sizeof(void*) * array->size);
 }
 
 int ysw_array_get_count(ysw_array_t *array)

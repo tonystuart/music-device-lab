@@ -14,7 +14,6 @@
 #include "ysw_song.h"
 
 #define YSW_SEQUENCER_SPEED_DEFAULT 100
-#define YSW_SEQUENCER_LOOP_REPEATEDLY (-1)
 
 typedef enum {
     YSW_SEQUENCER_STATE_LOOP_COMPLETE,
@@ -36,6 +35,7 @@ typedef struct {
 typedef enum {
     YSW_SEQUENCER_INITIALIZE,
     YSW_SEQUENCER_SET_TEMPO,
+    YSW_SEQUENCER_SET_LOOP,
     YSW_SEQUENCER_PLAY,
     YSW_SEQUENCER_PAUSE,
 } ysw_sequencer_message_type_t;
@@ -50,7 +50,10 @@ typedef struct {
 } ysw_sequencer_set_tempo_t;
 
 typedef struct {
-    int16_t loop_count;
+    bool loop;
+} ysw_sequencer_set_loop_t;
+
+typedef struct {
 } ysw_sequencer_play_t;
 
 typedef struct {
@@ -58,6 +61,7 @@ typedef struct {
     union {
         ysw_sequencer_initialize_t initialize;
         ysw_sequencer_set_tempo_t set_tempo;
+        ysw_sequencer_set_loop_t set_loop;
         ysw_sequencer_play_t play;
     };
 } ysw_sequencer_message_t;
