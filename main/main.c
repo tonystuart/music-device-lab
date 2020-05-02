@@ -23,7 +23,7 @@
 #include "ysw_music_parser.h"
 #include "ysw_lv_styles.h"
 #include "ysw_lv_cse.h"
-#include "ysw_csef.h"
+#include "ysw_csf.h"
 #include "ysw_sdb.h"
 
 #define TAG "MAIN"
@@ -34,7 +34,7 @@
 static QueueHandle_t synthesizer_queue;
 static QueueHandle_t sequencer_queue;
 
-static ysw_csef_t *csef;
+static ysw_csf_t *csf;
 static ysw_music_t *music;
 
 static uint32_t cs_index;
@@ -249,7 +249,7 @@ static void visit_notes(note_visitor_t visitor, lv_event_t event)
                 visitor(csn);
             }
         }
-        ysw_csef_redraw(csef);
+        ysw_csf_redraw(csf);
     }
 }
 
@@ -261,7 +261,7 @@ static void on_next(lv_obj_t * btn, lv_event_t event)
             cs_index = 0;
         }
         ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-        ysw_csef_set_cs(csef, cs);
+        ysw_csf_set_cs(csf, cs);
     }
 }
 
@@ -308,7 +308,7 @@ static void on_prev(lv_obj_t * btn, lv_event_t event)
             cs_index = cs_count - 1;
         }
         ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-        ysw_csef_set_cs(csef, cs);
+        ysw_csf_set_cs(csf, cs);
     }
 }
 
@@ -405,7 +405,7 @@ static void on_paste(lv_obj_t * btn, lv_event_t event)
                 new_csn->state = csn->state;
                 ysw_cs_add_csn(cs, new_csn);
             }
-            ysw_csef_redraw(csef);
+            ysw_csf_redraw(csf);
         }
     }
 }
@@ -469,7 +469,7 @@ static void on_trash(lv_obj_t * btn, lv_event_t event)
         }
         if (changes) {
             ysw_array_truncate(cs->csns, target);
-            ysw_csef_redraw(csef);
+            ysw_csf_redraw(csf);
         }
     }
 }
@@ -482,12 +482,12 @@ static void cse_event_cb(lv_obj_t *ysw_lv_cse, ysw_lv_cse_event_t event, ysw_lv_
         ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
         ysw_csn_t *csn = ysw_csn_create(data->double_click.degree, 80, data->double_click.start, 80, 0);
         ysw_cs_add_csn(cs, csn);
-        ysw_csef_redraw(csef);
+        ysw_csf_redraw(csf);
     }
 }
 
 #if 0
-static bool csef_event_cb(lv_obj_t *ysw_csef, ysw_csef_event_t event, ysw_csef_event_cb_data_t *data)
+static bool csf_event_cb(lv_obj_t *ysw_csf, ysw_csf_event_t event, ysw_csf_event_cb_data_t *data)
 {
 }
 #endif
@@ -531,7 +531,7 @@ void app_main()
     music = ysw_music_parse(MUSIC_DEFINITIONS);
 
     if (music) {
-        ysw_csef_config_t config = {
+        ysw_csf_config_t config = {
             .next_cb = on_next,
             .play_cb = on_play,
             .pause_cb = on_pause,
@@ -553,9 +553,9 @@ void app_main()
             .trash_cb = on_trash,
             .cse_event_cb = cse_event_cb,
         };
-        csef = ysw_csef_create(&config);
+        csf = ysw_csf_create(&config);
         ysw_cs_t *cs = ysw_music_get_cs(music, 0);
-        ysw_csef_set_cs(csef, cs);
+        ysw_csf_set_cs(csf, cs);
     } else {
         lv_obj_t * mbox1 = lv_mbox_create(lv_scr_act(), NULL);
         lv_mbox_set_text(mbox1, "The music partition is empty");
