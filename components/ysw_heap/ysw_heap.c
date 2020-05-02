@@ -13,7 +13,7 @@
 
 #define TAG "YSW_HEAP"
 
-void *ysw_heap_allocate(size_t size)
+void *ysw_heap_allocate_uninitialized(size_t size)
 {
     ESP_LOGD(TAG, "ysw_heap_allocate size=%d", size);
     void *p = malloc(size);
@@ -21,6 +21,13 @@ void *ysw_heap_allocate(size_t size)
         ESP_LOGE(TAG, "malloc failed, size=%d", size);
         abort();
     }
+    return p;
+}
+
+void *ysw_heap_allocate(size_t size)
+{
+    void *p = ysw_heap_allocate_uninitialized(size);
+    memset(p, 0, size);
     return p;
 }
 

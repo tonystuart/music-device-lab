@@ -24,6 +24,7 @@
 #include "ysw_lv_styles.h"
 #include "ysw_lv_cse.h"
 #include "ysw_csef.h"
+#include "ysw_sdb.h"
 
 #define TAG "MAIN"
 
@@ -315,8 +316,60 @@ static void on_close(lv_obj_t * btn, lv_event_t event)
 {
 }
 
+static char *root_options =
+"C2 Major\n"
+"A2 minor\n"
+"C3 Major\n"
+"A4 minor\n"
+"C4 Major\n"
+"A5 minor\n"
+"C5 Major\n"
+"A6 minor\n"
+"C6 Major\n";
+
+static uint8_t root_midi_notes[] = {
+    36, // 0
+    44, // 1
+    48, // 2
+    56, // 3
+    60, // 4
+    68, // 5
+    72, // 6
+    80, // 7
+    84, // 8
+    92, // 9
+};
+
+#define FIELD_COUNT (sizeof(fields) / sizeof(ysw_sdb_field_t))
+
 static void on_settings(lv_obj_t * btn, lv_event_t event)
 {
+    if (event == LV_EVENT_RELEASED) {
+        ysw_sdb_field_t fields[] = {
+            { .type = YSW_SDB_STRING,
+                .name = "Name",
+                .value.string.original = "My Name",
+            },
+            {
+                .type = YSW_SDB_STRING,
+                .name = "Rank",
+                .value.string.original = "My Rank",
+            },
+            {
+                .type = YSW_SDB_STRING,
+                .name = "Serial Number",
+                .value.string.original = "My Serial Number",
+            },
+            {
+                .type = YSW_SDB_CHOICE,
+                .name = "Root",
+                .value.choice.original = 4,
+                .value.choice.options = root_options,
+            }
+        };
+        ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+        ysw_sdb_t *sdb = ysw_sdb_create(cs, fields, FIELD_COUNT);
+    }
 }
 
 static void on_save(lv_obj_t * btn, lv_event_t event)

@@ -12,6 +12,7 @@
 #include "string.h"
 
 void *ysw_heap_allocate(size_t size);
+void *ysw_heap_allocate_uninitialized(size_t size);
 void *ysw_heap_reallocate(void *old_p, size_t size);
 char *ysw_heap_strdup(char *source);
 void ysw_heap_free(void *p);
