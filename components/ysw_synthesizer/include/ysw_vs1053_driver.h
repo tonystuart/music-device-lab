@@ -10,6 +10,7 @@
 #pragma once
 
 #include "stdint.h"
+#include "driver/spi_master.h"
 
 typedef struct {
     uint8_t dreq_gpio;
@@ -19,6 +20,7 @@ typedef struct {
     uint8_t sck_gpio;
     uint8_t xcs_gpio;
     uint8_t xdcs_gpio;
+    spi_host_device_t spi_host;
 } ysw_vs1053_synthesizer_config_t;
 
 void ysw_vs1053_synthesizer_initialize(ysw_vs1053_synthesizer_config_t *vs1053_config);

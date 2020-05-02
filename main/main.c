@@ -7,6 +7,14 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
+#define MODEL 2
+
+#if MODEL == 1
+#include "ysw_ble_synthesizer.h"
+#elif MODEL == 2
+#include "ysw_vs1053_synthesizer.h"
+#endif
+
 #include "esp_log.h"
 #include "esp_spiffs.h"
 
@@ -15,7 +23,6 @@
 #include "eli_ili9341_xpt2046.h"
 
 #include "ysw_synthesizer.h"
-#include "ysw_ble_synthesizer.h"
 #include "ysw_sequencer.h"
 #include "ysw_message.h"
 #include "ysw_csn.h"
@@ -114,10 +121,29 @@ static void on_state_change(ysw_sequencer_state_t new_state)
     }
 }
 
+static void initialize_synthesizer()
+{
+#if MODEL == 1
+    ESP_LOGD(TAG, "main: configuring BLE synthesizer");
+    synthesizer_queue = ysw_ble_synthesizer_create_task();
+#elif MODEL == 2
+    ESP_LOGD(TAG, "main: configuring VS1053 synthesizer");
+    ysw_vs1053_synthesizer_config_t config = {
+        .dreq_gpio = -1,
+        .xrst_gpio = 0,
+        .miso_gpio = 15,
+        .mosi_gpio = 17,
+        .sck_gpio = 2,
+        .xcs_gpio = 16,
+        .xdcs_gpio = 4,
+        .spi_host = VSPI_HOST,
+    };
+    synthesizer_queue = ysw_vs1053_synthesizer_create_task(&config);
+#endif
+}
+
 static void initialize_sequencer()
 {
-    synthesizer_queue = ysw_ble_synthesizer_create_task();
-
     ysw_sequencer_config_t config = {
         .on_note_on = on_note_on,
         .on_note_off = on_note_off,
@@ -480,12 +506,6 @@ static void cse_event_cb(lv_obj_t *ysw_lv_cse, ysw_lv_cse_event_t event, ysw_lv_
     }
 }
 
-#if 0
-static bool csf_event_cb(lv_obj_t *ysw_csf, ysw_csf_event_t event, ysw_csf_event_cb_data_t *data)
-{
-}
-#endif
-
 void app_main()
 {
     esp_log_level_set("spi_master", ESP_LOG_INFO);
@@ -497,6 +517,8 @@ void app_main()
     esp_log_level_set("YSW_HEAP", ESP_LOG_INFO);
     esp_log_level_set("YSW_ARRAY", ESP_LOG_INFO);
 
+#if MODEL == 1
+    ESP_LOGD(TAG, "main: configuring model 1");
     eli_ili9341_xpt2046_config_t new_config = {
         .mosi = 21,
         .clk = 22,
@@ -512,13 +534,32 @@ void app_main()
         .x_max = 3919,
         .y_max = 3883,
         .spi_host = HSPI_HOST,
-    };
-
+    }
     eli_ili9341_xpt2046_initialize(&new_config);
+#elif MODEL == 2
+    ESP_LOGD(TAG, "main: configuring model 2");
+    eli_ili9341_xpt2046_config_t new_config = {
+        .mosi = 21,
+        .clk = 19,
+        .ili9341_cs = 23,
+        .xpt2046_cs = 5,
+        .dc = 22,
+        .rst = -1,
+        .bckl = -1,
+        .miso = 18,
+        .irq = 13,
+        .x_min = 346,
+        .y_min = 235,
+        .x_max = 3919,
+        .y_max = 3883,
+        .spi_host = HSPI_HOST,
+    };
+    eli_ili9341_xpt2046_initialize(&new_config);
+#endif
 
     initialize_spiffs();
-
-    //initialize_sequencer();
+    initialize_synthesizer();
+    initialize_sequencer();
 
     ysw_lv_styles_initialize();
 

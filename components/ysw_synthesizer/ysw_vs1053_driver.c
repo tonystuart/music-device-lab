@@ -240,7 +240,7 @@ void ysw_vs1053_synthesizer_initialize(ysw_vs1053_synthesizer_config_t *vs1053_c
         .quadhd_io_num = -1,
         .max_transfer_sz = 32*8,
     };
-    $(spi_bus_initialize(HSPI_HOST, &buscfg, 0));
+    $(spi_bus_initialize(vs1053_config->spi_host, &buscfg, 0));
 
     spi_device_interface_config_t control_cfg = {
         .clock_speed_hz = 1*1000*1000,
@@ -248,7 +248,7 @@ void ysw_vs1053_synthesizer_initialize(ysw_vs1053_synthesizer_config_t *vs1053_c
         .spics_io_num = vs1053_config->xcs_gpio,
         .queue_size = 16,
     };
-    $(spi_bus_add_device(HSPI_HOST, &control_cfg, &control_spi));
+    $(spi_bus_add_device(vs1053_config->spi_host, &control_cfg, &control_spi));
 
     spi_device_interface_config_t data_cfg = {
         .clock_speed_hz = 1*1000*1000,
@@ -256,7 +256,7 @@ void ysw_vs1053_synthesizer_initialize(ysw_vs1053_synthesizer_config_t *vs1053_c
         .spics_io_num = vs1053_config->xdcs_gpio,
         .queue_size = 16,
     };
-    $(spi_bus_add_device(HSPI_HOST, &data_cfg, &data_spi));
+    $(spi_bus_add_device(vs1053_config->spi_host, &data_cfg, &data_spi));
 
     gpio_set_level(vs1053_config->xrst_gpio, HIGH);
 
