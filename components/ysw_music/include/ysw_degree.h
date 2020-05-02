@@ -12,6 +12,8 @@
 #include "stdint.h"
 #include "stddef.h"
 
+extern const uint8_t ysw_degree_intervals[7][7];
+
 typedef enum {
     YSW_ACCIDENTAL_FLAT = -1,
     YSW_ACCIDENTAL_NATURAL,

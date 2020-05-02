@@ -67,4 +67,6 @@ const char *ysw_cs_get_name(ysw_cs_t *cs);
 
 uint8_t ysw_cs_get_instrument(ysw_cs_t *cs);
 
+note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count);
+
 void ysw_cs_dump(ysw_cs_t *cs, char *tag);

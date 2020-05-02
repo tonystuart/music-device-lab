@@ -10,6 +10,7 @@
 #include "ysw_sequencer.h"
 
 #include "esp_log.h"
+#include "ysw_heap.h"
 #include "ysw_task.h"
 #include "ysw_midi.h"
 #include "ysw_ticks.h"
@@ -149,6 +150,9 @@ static void initialize(ysw_sequencer_initialize_t *message)
     ESP_LOGD(TAG, "initialize notes=%p, note_count=%d", message->notes, message->note_count);
     if (start_millis) {
         release_notes(all_note_visitor, 0);
+    }
+    if (notes) {
+        ysw_heap_free(notes);
     }
     notes = message->notes;
     note_count = message->note_count;

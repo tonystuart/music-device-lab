@@ -69,6 +69,7 @@ static void run_vs_synth(void* parameters)
     for (;;) {
         ysw_synthesizer_message_t message;
         BaseType_t is_message = xQueueReceive(input_queue, &message, portMAX_DELAY);
+        ESP_LOGD(TAG, "run_vs_synth received message");
         if (is_message) {
             process_message(&message);
         }

@@ -1,15 +1,15 @@
 #record_type (chord_style),index,name,chord_duration,instrument,octave,mode,transposition
 1,0,Let it be strum,400,24,4,0,0
 
-#type (chord_note),degree,velocity,time,duration,accidental
+#type (chord_note),degree,velocity,time,duration,flags
 2,1,100,0,180,0
 2,3,80,10,180,0
 2,5,80,20,180,0
 2,1,100,200,80,0
-2,3,80,210,80,1
+2,3,80,210,80,0
 2,5,80,220,80,0
 2,1,100,300,30,0
-2,3,80,310,30,2
+2,3,80,310,30,0
 2,5,80,320,30,0
 2,5,100,350,30,0
 2,3,80,360,30,0
@@ -18,7 +18,7 @@
 #type (chord_style),index,name,chord_duration,instrument,octave,mode,transposition
 1,1,Twelve bar blues main,400,32,3,0,0
 
-#type (chord_note),index,degree,velocity,time,duration,accidental
+#type (chord_note),index,degree,velocity,time,duration,flags
 2,1,100,0,46,0
 2,3,80,50,46,0
 2,5,80,100,46,0
@@ -31,7 +31,7 @@
 #type (chord_style),index,name,chord_duration,instrument,octave,mode,transposition
 1,2,Twelve bar blues alt,400,32,3,0,0
 
-#type (chord_note),index,degree,velocity,time,duration,accidental
+#type (chord_note),index,degree,velocity,time,duration,flags
 2,1,100,0,46,0
 2,3,80,50,46,0
 2,5,80,100,46,0

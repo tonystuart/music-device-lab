@@ -16,6 +16,16 @@
 
 #define TAG "YSW_DEGREE"
 
+const uint8_t ysw_degree_intervals[7][7] = {
+    /* C */ { 0, 2, 4, 5, 7, 9, 11 },
+    /* D */ { 0, 2, 3, 5, 7, 9, 10 },
+    /* E */ { 0, 1, 3, 5, 7, 8, 10 },
+    /* F */ { 0, 2, 4, 6, 7, 9, 11 },
+    /* G */ { 0, 2, 4, 5, 7, 9, 10 },
+    /* A */ { 0, 2, 3, 5, 7, 8, 10 },
+    /* B */ { 0, 1, 3, 5, 6, 8, 10 },
+};
+
 void ysw_degree_normalize(int8_t degree_number, uint8_t *normalized_degree_number, int8_t *octave)
 {
     if (degree_number < 1) {
@@ -48,16 +58,6 @@ void ysw_degree_normalize(int8_t degree_number, uint8_t *normalized_degree_numbe
  */
 uint8_t ysw_degree_to_note(uint8_t scale_tonic, uint8_t root_number, int8_t degree_number, ysw_accidental_t accidental)
 {
-    static uint8_t intervals[7][7] = {
-        /* C */ { 0, 2, 4, 5, 7, 9, 11 },
-        /* D */ { 0, 2, 3, 5, 7, 9, 10 },
-        /* E */ { 0, 1, 3, 5, 7, 8, 10 },
-        /* F */ { 0, 2, 4, 6, 7, 9, 11 },
-        /* G */ { 0, 2, 4, 5, 7, 9, 10 },
-        /* A */ { 0, 2, 3, 5, 7, 8, 10 },
-        /* B */ { 0, 1, 3, 5, 6, 8, 10 },
-    };
-
     int8_t root_offset = root_number - 1;
     int8_t root_octave = root_offset / 7;
     int8_t root_index = root_offset % 7;
@@ -67,14 +67,14 @@ uint8_t ysw_degree_to_note(uint8_t scale_tonic, uint8_t root_number, int8_t degr
     ysw_degree_normalize(degree_number, &normalized_degree_number, &degree_octave);
     uint8_t normalized_degree_index = normalized_degree_number - 1;
 
-    int8_t root_interval = intervals[0][root_index];
-    int8_t degree_interval = intervals[root_index][normalized_degree_index];
+    int8_t root_interval = ysw_degree_intervals[0][root_index];
+    int8_t degree_interval = ysw_degree_intervals[root_index][normalized_degree_index];
 
     uint8_t note = scale_tonic +
         ((12 * root_octave) + root_interval) +
         ((12 * degree_octave) + degree_interval + accidental);
 
-    ESP_LOGD(TAG, "scale_tonic=%d, root_number=%d, degree_number=%d, root_interval=%d, degree_interval=%d, accidental=%d, note=%d", scale_tonic, root_number, degree_number, root_interval, degree_interval, accidental, note);
+    ESP_LOGD(TAG, "ysw_degree_to_note scale_tonic=%d, root_number=%d, degree_number=%d, root_interval=%d, degree_interval=%d, accidental=%d, note=%d", scale_tonic, root_number, degree_number, root_interval, degree_interval, accidental, note);
 
     return note;
 }

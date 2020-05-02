@@ -50,11 +50,8 @@ static ysw_csf_t *csf;
 static ysw_music_t *music;
 
 static uint32_t cs_index;
-static uint32_t progression_index;
 
 static ysw_array_t *csn_clipboard;
-
-static void play_progression(ysw_progression_t *s);
 
 static void initialize_spiffs()
 {
@@ -71,16 +68,6 @@ static void initialize_spiffs()
     size_t amount_used = 0;
     $(esp_spiffs_info(config.partition_label, &total_size, &amount_used));
     ESP_LOGD(TAG, "initialize_spiffs total_size=%d, amount_used=%d", total_size, amount_used);
-}
-
-static void play_next()
-{
-    ESP_LOGI(TAG, "play_next progression_index=%d", progression_index);
-    if (music && progression_index < ysw_array_get_count(music->progressions)) {
-        ysw_progression_t *progression = ysw_array_get(music->progressions, progression_index);
-        play_progression(progression);
-        progression_index++;
-    }
 }
 
 static void on_note_on(uint8_t channel, uint8_t midi_note, uint8_t velocity)
@@ -117,7 +104,6 @@ static void on_program_change(uint8_t channel, uint8_t program)
 static void on_state_change(ysw_sequencer_state_t new_state)
 {
     if (new_state == YSW_SEQUENCER_STATE_PLAYBACK_COMPLETE) {
-        play_next();
     }
 }
 
@@ -154,27 +140,19 @@ static void initialize_sequencer()
     sequencer_queue = ysw_sequencer_create_task(&config);
 }
 
-static void play_progression(ysw_progression_t *s)
+static void play_cs()
 {
-    if (!sequencer_queue) {
-        return;
-    }
-
-    note_t *notes = ysw_progression_get_notes(s);
-    assert(notes);
+    uint32_t note_count = 0;
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    note_t *notes = ysw_cs_get_notes(cs, &note_count);
 
     ysw_sequencer_message_t message = {
         .type = YSW_SEQUENCER_INITIALIZE,
         .initialize.notes = notes,
-        .initialize.note_count = ysw_progression_get_note_count(s),
+        .initialize.note_count = note_count,
     };
 
     ysw_message_send(sequencer_queue, &message);
-
-    for (int i = 20; i > 0; i--) {
-        ESP_LOGW(TAG, "%d - please connect the synthesizer", i);
-        wait_millis(1000);
-    }
 
     message = (ysw_sequencer_message_t){
         .type = YSW_SEQUENCER_PLAY,
@@ -298,6 +276,9 @@ static void on_next(lv_obj_t * btn, lv_event_t event)
 
 static void on_play(lv_obj_t * btn, lv_event_t event)
 {
+    if (event == LV_EVENT_RELEASED) {
+        play_cs();
+    }
 }
 
 static void on_pause(lv_obj_t * btn, lv_event_t event)
