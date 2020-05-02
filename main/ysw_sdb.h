@@ -10,7 +10,8 @@
 #pragma once
 
 #include "lvgl.h"
-#include "ysw_chord.h"
+#include "ysw_csn.h"
+#include "ysw_cs.h"
 
 typedef struct {
     lv_obj_t *win;

@@ -11,7 +11,6 @@
 
 #include "ysw_array.h"
 #include "ysw_song.h"
-#include "ysw_chord.h"
 #include "ysw_degree.h"
 
 typedef enum {
@@ -53,24 +52,6 @@ typedef struct {
     uint8_t flags; // persistent
     uint8_t state; // transient
 } ysw_csn_t;
-
-// Chord Style (chord, strum, arpeggio, etc.)
-
-typedef struct {
-    char *name;
-    ysw_array_t *csns;
-    uint32_t duration;
-} ysw_cs_t;
-
-static inline uint32_t ysw_cs_get_csn_count(ysw_cs_t *cs)
-{
-    return ysw_array_get_count(cs->csns);
-}
-
-static inline ysw_csn_t *ysw_cs_get_csn(ysw_cs_t *cs, uint32_t index)
-{
-    return ysw_array_get(cs->csns, index);
-}
 
 static inline bool ysw_csn_is_natural(ysw_csn_t *csn)
 {
@@ -130,9 +111,4 @@ static inline bool ysw_csn_is_selected(ysw_csn_t *csn)
 void ysw_csn_free(ysw_csn_t *ysw_csn);
 ysw_csn_t *ysw_csn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags);
 ysw_csn_t *ysw_csn_copy(ysw_csn_t *csn);
-void ysw_cs_set_duration(ysw_cs_t *cs, uint32_t duration);
-uint32_t ysw_cs_add_csn(ysw_cs_t *cs, ysw_csn_t *csn);
-void ysw_cs_free(ysw_cs_t *cs);
-ysw_cs_t *ysw_cs_create();
-void ysw_cs_dump(ysw_cs_t *cs, char *tag);
 uint8_t ysw_csn_to_midi_note(uint8_t scale_tonic, uint8_t root_number, ysw_csn_t *csn);

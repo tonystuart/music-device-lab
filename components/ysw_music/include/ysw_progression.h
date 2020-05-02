@@ -10,7 +10,8 @@
 #pragma once
 
 #include "ysw_array.h"
-#include "ysw_chord.h"
+#include "ysw_csn.h"
+#include "ysw_cs.h"
 
 typedef struct {
     ysw_degree_t degree;

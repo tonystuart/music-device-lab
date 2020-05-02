@@ -9,7 +9,8 @@
 
 #include "ysw_sdb.h"
 #include "ysw_heap.h"
-#include "ysw_chord.h"
+#include "ysw_csn.h"
+#include "ysw_cs.h"
 #include "ysw_ticks.h"
 #include "ysw_lv_styles.h"
 
