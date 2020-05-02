@@ -26,3 +26,13 @@
 #define YSW_MIDI_MIDDLE_C 60
 
 bool ysw_midi_is_diatonic(uint8_t midi_note);
+
+static inline uint8_t ysw_midi_get_mode(uint8_t scale_root)
+{
+    return scale_root % YSW_MIDI_USPO;
+}
+
+static inline uint8_t ysw_midi_get_octave(uint8_t midi_note)
+{
+    return midi_note / YSW_MIDI_USPO;
+}

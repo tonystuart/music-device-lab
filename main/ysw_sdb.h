@@ -13,65 +13,15 @@
 #include "ysw_csn.h"
 #include "ysw_cs.h"
 
+typedef void (*ysw_sdb_string_cb_t)(const char *new_value);
+typedef void (*ysw_sdb_choice_cb_t)(uint8_t new_value);
+
 typedef struct {
     lv_obj_t *win;
-    lv_obj_t *kb;
+    lv_obj_t *kb; // shared across ta's
 } ysw_sdb_t;
 
-typedef enum {
-    YSW_SDB_STRING,
-    YSW_SDB_NUMBER,
-    YSW_SDB_CHOICE,
-} ysw_sdb_type_t;
-
-typedef struct {
-    char *original;
-} ysw_sdb_string_t;
-
-typedef struct {
-    ysw_sdb_t *sdb;
-    char *current;
-    uint8_t index;
-} ysw_sdb_string_data_t;
-
-typedef struct {
-    int original;
-} ysw_sdb_number_t;
-
-typedef struct {
-    uint8_t index;
-} ysw_sdb_number_data_t;
-
-typedef struct {
-    int original;
-    char *options;
-} ysw_sdb_choice_t;
-
-typedef struct {
-    ysw_sdb_t *sdb;
-    int current;
-    uint8_t index;
-} ysw_sdb_choice_data_t;
-
-typedef struct {
-    union {
-        ysw_sdb_string_t string;
-        ysw_sdb_number_t number;
-        ysw_sdb_choice_t choice;
-    };
-} ysw_sdb_value_t;
-
-typedef struct {
-    char *name;
-    ysw_sdb_type_t type;
-    ysw_sdb_value_t value;
-} ysw_sdb_field_t;
-
-typedef struct {
-    ysw_sdb_field_t *fields;
-    uint8_t field_count;
-} ysw_sdb_config_t;
-
-ysw_sdb_t *ysw_sdb_create(ysw_cs_t *cs, ysw_sdb_field_t fields[], uint8_t field_count);
-
+ysw_sdb_t *ysw_sdb_create();
+void ysw_sdb_add_string(ysw_sdb_t *sdb, ysw_sdb_string_cb_t cb, const char *name, const char *value);
+void ysw_sdb_add_choice(ysw_sdb_t *sdb, ysw_sdb_choice_cb_t cb, const char *name, uint8_t value, const char *options);
 void ysw_sdb_close(ysw_sdb_t *sdb);

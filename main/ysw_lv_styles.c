@@ -66,13 +66,13 @@ void ysw_lv_styles_initialize()
     csn_style.text.font = &lv_font_roboto_12;
     csn_style.body.main_color = LV_COLOR_RED;
     csn_style.body.grad_color = LV_COLOR_RED;
-    csn_style.body.opa = 100;
+    csn_style.body.opa = LV_OPA_50;
 
     lv_style_copy(&selected_csn_style, &lv_style_pretty);
     selected_csn_style.text.font = &lv_font_roboto_12;
     selected_csn_style.body.main_color = LV_COLOR_YELLOW;
     selected_csn_style.body.grad_color = LV_COLOR_YELLOW;
-    selected_csn_style.body.opa = 200;
+    selected_csn_style.body.opa = LV_OPA_80;
 
 
 

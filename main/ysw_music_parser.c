@@ -90,8 +90,12 @@ static void parse_cs(this_t *this)
     uint32_t index = atoi(this->tokens[1]);
     char *name = this->tokens[2];
     uint32_t duration = atoi(this->tokens[3]);
+    uint8_t instrument = atoi(this->tokens[4]);
+    uint8_t octave = atoi(this->tokens[5]);
+    uint8_t mode = atoi(this->tokens[6]);
+    uint8_t transposition = atoi(this->tokens[7]);
 
-    ESP_LOGD(TAG, "parse_cs index=%d, name=%s, duration=%d, record_count=%d", index, name, duration, this->record_count);
+    ESP_LOGD(TAG, "parse_cs index=%d, name=%s, duration=%d, instrument=%d, octave=%d, mode=%d, transposition=%d, record_count=%d", index, name, duration, instrument, octave, mode, transposition, this->record_count);
 
     uint32_t count = ysw_array_get_count(this->music->css);
     if (index != count) {
@@ -99,7 +103,7 @@ static void parse_cs(this_t *this)
         return;
     }
 
-    ysw_cs_t *cs = ysw_cs_create(name, duration);
+    ysw_cs_t *cs = ysw_cs_create(name, duration, instrument, octave, mode, transposition);
     ESP_LOGD(TAG, "pushing index=%d, cs=%p, name=%s", count, cs, cs->name);
     ysw_array_push(this->music->css, cs);
 
@@ -208,7 +212,7 @@ ysw_music_t *ysw_music_parse_file(FILE *file)
 
     while (get_tokens(this)) {
         record_type_t type = atoi(this->tokens[0]);
-        if (type == CHORD_STYLE && this->token_count == 4) {
+        if (type == CHORD_STYLE && this->token_count == 8) {
             parse_cs(this);
         } else if (type == PROGRESSION && this->token_count == 5) {
             parse_progression(this);

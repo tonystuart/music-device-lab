@@ -58,9 +58,10 @@ static inline bool match(char *left, char *right)
     return left && right ? strcmp(left, right) == 0 : 0;
 }
 
-uint32_t to_millis(uint32_t ticks);
-uint32_t to_ticks(uint32_t millis);
 uint32_t get_millis();
 void wait_millis(int millis);
-char *ysw_itoa(int input_value, char *buffer, int buffer_size);
+uint32_t to_millis(uint32_t ticks);
+uint32_t to_ticks(uint32_t millis);
 
+char *ysw_itoa(int input_value, char *buffer, int buffer_size);
+void ysw_copy(char *destination, const char* source, size_t size);

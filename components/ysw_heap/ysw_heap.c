@@ -8,7 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_heap.h"
-
+#include "ysw_common.h"
 #include "esp_log.h"
 
 #define TAG "YSW_HEAP"
@@ -50,6 +50,14 @@ char *ysw_heap_strdup(char *source)
         abort();
     }
     return target;
+}
+
+char *ysw_heap_string_reallocate(char *old_string, const char *new_string)
+{
+    int length = strlen(new_string) + RFT;
+    void *p = ysw_heap_reallocate(old_string, length);
+    strcpy(p, new_string);
+    return p;
 }
 
 void ysw_heap_free(void *p)

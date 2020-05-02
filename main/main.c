@@ -26,6 +26,10 @@
 #include "ysw_lv_cse.h"
 #include "ysw_csf.h"
 #include "ysw_sdb.h"
+#include "ysw_instruments.h"
+#include "ysw_octaves.h"
+#include "ysw_modes.h"
+#include "ysw_transpositions.h"
 
 #define TAG "MAIN"
 
@@ -317,59 +321,48 @@ static void on_close(lv_obj_t * btn, lv_event_t event)
 {
 }
 
-static char *root_options =
-"C2 Major\n"
-"A2 minor\n"
-"C3 Major\n"
-"A4 minor\n"
-"C4 Major\n"
-"A5 minor\n"
-"C5 Major\n"
-"A6 minor\n"
-"C6 Major\n";
+static void on_name_change(const char *new_name)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    ysw_cs_set_name(cs, new_name);
+    ysw_csf_set_header_text(csf, new_name);
+}
 
-static uint8_t root_midi_notes[] = {
-    36, // 0
-    44, // 1
-    48, // 2
-    56, // 3
-    60, // 4
-    68, // 5
-    72, // 6
-    80, // 7
-    84, // 8
-    92, // 9
-};
+static void on_instrument_change(uint8_t new_instrument)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    ysw_cs_set_instrument(cs, new_instrument);
+}
 
-#define FIELD_COUNT (sizeof(fields) / sizeof(ysw_sdb_field_t))
+static void on_octave_change(uint8_t new_octave)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    cs->octave = new_octave;
+}
+
+static void on_mode_change(ysw_mode_t new_mode)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    cs->mode = new_mode;
+}
+
+static void on_transposition_change(uint8_t new_transposition_index)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    cs->transposition = ysw_transposition_from_index(new_transposition_index);
+}
 
 static void on_settings(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_RELEASED) {
-        ysw_sdb_field_t fields[] = {
-            { .type = YSW_SDB_STRING,
-                .name = "Name",
-                .value.string.original = "My Name",
-            },
-            {
-                .type = YSW_SDB_STRING,
-                .name = "Rank",
-                .value.string.original = "My Rank",
-            },
-            {
-                .type = YSW_SDB_STRING,
-                .name = "Serial Number",
-                .value.string.original = "My Serial Number",
-            },
-            {
-                .type = YSW_SDB_CHOICE,
-                .name = "Root",
-                .value.choice.original = 4,
-                .value.choice.options = root_options,
-            }
-        };
         ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-        ysw_sdb_t *sdb = ysw_sdb_create(cs, fields, FIELD_COUNT);
+        uint8_t index = ysw_transposition_to_index(cs->transposition);
+        ysw_sdb_t *sdb = ysw_sdb_create();
+        ysw_sdb_add_string(sdb, on_name_change, "Name", cs->name);
+        ysw_sdb_add_choice(sdb, on_instrument_change, "Instrument", cs->instrument, ysw_instruments);
+        ysw_sdb_add_choice(sdb, on_octave_change, "Octave", cs->octave, ysw_octaves);
+        ysw_sdb_add_choice(sdb, on_mode_change, "Mode", cs->mode, ysw_modes);
+        ysw_sdb_add_choice(sdb, on_transposition_change, "Transposition", index, ysw_transposition);
     }
 }
 

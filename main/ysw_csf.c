@@ -104,10 +104,6 @@ ysw_csf_t *ysw_csf_create(ysw_csf_config_t *config)
     add_footer_button(footer, LV_SYMBOL_RIGHT, config->right_cb);
     add_footer_button(footer, LV_SYMBOL_TRASH, config->trash_cb);
 
-    csf->footer_label = lv_label_create(footer, NULL);
-    lv_label_set_text(csf->footer_label, "");
-    lv_obj_align(csf->footer_label, footer, LV_ALIGN_IN_TOP_RIGHT, -20, 0);
-
     add_header_button(csf->win, LV_SYMBOL_CLOSE, lv_win_close_event_cb);
     add_header_button(csf->win, LV_SYMBOL_NEXT, config->next_cb);
     add_header_button(csf->win, LV_SYMBOL_LOOP, config->loop_cb);
@@ -141,15 +137,9 @@ void ysw_csf_set_cs(ysw_csf_t *csf, ysw_cs_t *cs)
     ysw_csf_set_header_text(csf, cs->name);
 }
 
-void ysw_csf_set_header_text(ysw_csf_t *csf, char *header_text)
+void ysw_csf_set_header_text(ysw_csf_t *csf, const char *header_text)
 {
     lv_win_set_title(csf->win, header_text);
-}
-
-void ysw_csf_set_footer_text(ysw_csf_t *csf, char *footer_text)
-{
-    lv_label_set_text(csf->footer_label, footer_text);
-    lv_obj_realign(csf->footer_label);
 }
 
 void ysw_csf_redraw(ysw_csf_t *csf)

@@ -38,3 +38,9 @@ char *ysw_itoa(int input_value, char *buffer, int buffer_size)
     return snprintf(buffer, buffer_size, "%d", input_value) < buffer_size ? buffer : "";
 }
 
+void ysw_copy(char *destination, const char* source, size_t size)
+{
+    strncpy(destination, source, size);
+    destination[size - RFT] = EOS;
+}
+
