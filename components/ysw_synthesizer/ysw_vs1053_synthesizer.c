@@ -60,7 +60,6 @@ static void process_message(ysw_synthesizer_message_t *message)
 
 static void run_vs_synth(void* parameters)
 {
-    ESP_LOGD(TAG, "run_vs_synth core=%d", xPortGetCoreID());
     if (portTICK_PERIOD_MS != 1) {
         ESP_LOGE(TAG, "FreeRTOS tick rate is not 1000 Hz");
         abort();

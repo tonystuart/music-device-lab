@@ -16,6 +16,8 @@
 #include "esp_log.h"
 #include "ysw_task.h"
 
+#define YSW_TASK_DEFAULT_PRIORITY (tskIDLE_PRIORITY + 1)
+
 // FreeRTOS stack sizes are in 32 bit words
 
 #define YSW_TASK_TINY_STACK 1024

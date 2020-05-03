@@ -110,10 +110,10 @@ static void on_state_change(ysw_sequencer_state_t new_state)
 static void initialize_synthesizer()
 {
 #if MODEL == 1
-    ESP_LOGD(TAG, "main: configuring BLE synthesizer");
+    ESP_LOGD(TAG, "initialize_synthesizer: configuring BLE synthesizer");
     synthesizer_queue = ysw_ble_synthesizer_create_task();
 #elif MODEL == 2
-    ESP_LOGD(TAG, "main: configuring VS1053 synthesizer");
+    ESP_LOGD(TAG, "initialize_synthesizer: configuring VS1053 synthesizer");
     ysw_vs1053_synthesizer_config_t config = {
         .dreq_gpio = -1,
         .xrst_gpio = 0,

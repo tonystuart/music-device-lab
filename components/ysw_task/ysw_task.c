@@ -44,6 +44,7 @@ void ysw_task_create_standard(char *name, TaskFunction_t function, QueueHandle_t
         .queue_size = YSW_TASK_MEDIUM_QUEUE,
         .item_size = item_size,
         .stack_size = YSW_TASK_MEDIUM_STACK,
+        .priority = YSW_TASK_DEFAULT_PRIORITY,
     };
     ysw_task_create(&config);
 }
