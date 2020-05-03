@@ -40,7 +40,7 @@ void ysw_csn_free(ysw_csn_t *csn)
     ysw_heap_free(csn);
 }
 
-uint8_t ysw_csn_to_midi_note(uint8_t scale_tonic, uint8_t root_number, ysw_csn_t *csn)
+uint8_t ysw_csn_to_midi_note(ysw_csn_t *csn, uint8_t scale_tonic, uint8_t root_number)
 {
     ysw_accidental_t accidental = ysw_csn_get_accidental(csn);
     uint8_t midi_note = ysw_degree_to_note(scale_tonic, root_number, csn->degree, accidental);

@@ -115,7 +115,7 @@ note_t *ysw_progression_get_notes(ysw_progression_t *progression)
             note_p->start = cs_time + csn->start;
             note_p->duration = csn->duration;
             note_p->channel = 0;
-            note_p->midi_note = ysw_csn_to_midi_note(progression->tonic, cs_root, csn);
+            note_p->midi_note = ysw_csn_to_midi_note(csn, progression->tonic, cs_root);
             note_p->velocity = csn->velocity;
             note_p->instrument = progression->instrument;
             ESP_LOGD(TAG, "start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);

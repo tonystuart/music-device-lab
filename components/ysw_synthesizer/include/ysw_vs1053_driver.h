@@ -13,7 +13,7 @@
 #include "driver/spi_master.h"
 
 typedef struct {
-    uint8_t dreq_gpio;
+    int8_t dreq_gpio;
     uint8_t xrst_gpio;
     uint8_t miso_gpio;
     uint8_t mosi_gpio;

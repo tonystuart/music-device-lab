@@ -111,4 +111,4 @@ static inline bool ysw_csn_is_selected(ysw_csn_t *csn)
 void ysw_csn_free(ysw_csn_t *ysw_csn);
 ysw_csn_t *ysw_csn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags);
 ysw_csn_t *ysw_csn_copy(ysw_csn_t *csn);
-uint8_t ysw_csn_to_midi_note(uint8_t scale_tonic, uint8_t root_number, ysw_csn_t *csn);
+uint8_t ysw_csn_to_midi_note(ysw_csn_t *csn, uint8_t scale_tonic, uint8_t root_number);

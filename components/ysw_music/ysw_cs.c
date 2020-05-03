@@ -81,12 +81,14 @@ note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
     note_t *note_p = notes;
     uint8_t tonic = cs->octave * 12;
     uint8_t root = ysw_degree_intervals[0][cs->mode % 7];
+    // TODO: Revisit whether root should be 1-based, factor out a 0-based function
+    root++;
     for (int j = 0; j < csn_count; j++) {
         ysw_csn_t *csn = ysw_cs_get_csn(cs, j);
         note_p->start = csn->start;
         note_p->duration = csn->duration;
         note_p->channel = 0;
-        note_p->midi_note = ysw_csn_to_midi_note(tonic, root, csn) + cs->transposition;
+        note_p->midi_note = ysw_csn_to_midi_note(csn, tonic, root) + cs->transposition;
         note_p->velocity = csn->velocity;
         note_p->instrument = cs->instrument;
         ESP_LOGD(TAG, "ysw_cs_get_notes start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
