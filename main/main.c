@@ -70,6 +70,20 @@ static void initialize_spiffs()
     ESP_LOGD(TAG, "initialize_spiffs total_size=%d, amount_used=%d", total_size, amount_used);
 }
 
+static void send_sequencer_message(ysw_sequencer_message_t *message)
+{
+    if (sequencer_queue) {
+        ysw_message_send(sequencer_queue, message);
+    }
+}
+
+static void send_synthesizer_message(ysw_synthesizer_message_t *message)
+{
+    if (synthesizer_queue) {
+        ysw_message_send(synthesizer_queue, message);
+    }
+}
+
 static void on_note_on(uint8_t channel, uint8_t midi_note, uint8_t velocity)
 {
     ysw_synthesizer_message_t message = {
@@ -78,7 +92,7 @@ static void on_note_on(uint8_t channel, uint8_t midi_note, uint8_t velocity)
         .note_on.midi_note = midi_note,
         .note_on.velocity = velocity,
     };
-    ysw_message_send(synthesizer_queue, &message);
+    send_synthesizer_message(&message);
 }
 
 static void on_note_off(uint8_t channel, uint8_t midi_note)
@@ -88,7 +102,7 @@ static void on_note_off(uint8_t channel, uint8_t midi_note)
         .note_off.channel = channel,
         .note_off.midi_note = midi_note,
     };
-    ysw_message_send(synthesizer_queue, &message);
+    send_synthesizer_message(&message);
 }
 
 static void on_program_change(uint8_t channel, uint8_t program)
@@ -98,7 +112,7 @@ static void on_program_change(uint8_t channel, uint8_t program)
         .program_change.channel = channel,
         .program_change.program = program,
     };
-    ysw_message_send(synthesizer_queue, &message);
+    send_synthesizer_message(&message);
 }
 
 static void on_state_change(ysw_sequencer_state_t new_state)
@@ -140,25 +154,28 @@ static void initialize_sequencer()
     sequencer_queue = ysw_sequencer_create_task(&config);
 }
 
-static void play_cs()
+static void stage()
 {
     uint32_t note_count = 0;
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
     note_t *notes = ysw_cs_get_notes(cs, &note_count);
 
     ysw_sequencer_message_t message = {
-        .type = YSW_SEQUENCER_INITIALIZE,
-        .initialize.notes = notes,
-        .initialize.note_count = note_count,
+        .type = YSW_SEQUENCER_STAGE,
+        .stage.notes = notes,
+        .stage.note_count = note_count,
     };
 
-    ysw_message_send(sequencer_queue, &message);
+    send_sequencer_message(&message);
+}
 
-    message = (ysw_sequencer_message_t){
-        .type = YSW_SEQUENCER_PLAY,
+static void pause()
+{
+    ysw_sequencer_message_t message = {
+        .type = YSW_SEQUENCER_PAUSE,
     };
 
-    ysw_message_send(sequencer_queue, &message);
+    send_sequencer_message(&message);
 }
 
 static void copy_to_csn_clipboard(ysw_csn_t *csn)
@@ -245,20 +262,30 @@ static void increase_start(ysw_csn_t *csn)
     }
 }
 
+static void refresh()
+{
+    ysw_csf_redraw(csf);
+    stage();
+}
+
 typedef void (*note_visitor_t)(ysw_csn_t *csn);
 
 static void visit_notes(note_visitor_t visitor, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED || event == LV_EVENT_LONG_PRESSED_REPEAT) {
+        uint32_t visitor_count = 0;
         ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
         uint32_t csn_count = ysw_cs_get_csn_count(cs);
         for (uint32_t i = 0; i < csn_count; i++) {
             ysw_csn_t *csn = ysw_cs_get_csn(cs, i);
             if (ysw_csn_is_selected(csn)) {
                 visitor(csn);
+                visitor_count++;
             }
         }
-        ysw_csf_redraw(csf);
+        if (visitor_count) {
+            refresh();
+        }
     }
 }
 
@@ -277,20 +304,19 @@ static void on_next(lv_obj_t * btn, lv_event_t event)
 static void on_play(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_RELEASED) {
-        play_cs();
+        stage();
     }
 }
 
 static void on_pause(lv_obj_t * btn, lv_event_t event)
 {
+    if (event == LV_EVENT_RELEASED) {
+        pause();
+    }
 }
 
 static void on_loop(lv_obj_t * btn, lv_event_t event)
 {
-    if (!sequencer_queue) {
-        return;
-    }
-
     if (event == LV_EVENT_PRESSED) {
         if (!lv_btn_get_toggle(btn)) {
             // first press
@@ -298,16 +324,16 @@ static void on_loop(lv_obj_t * btn, lv_event_t event)
         }
         if (lv_btn_get_state(btn) == LV_BTN_STATE_TGL_PR) {
             ysw_sequencer_message_t message = {
-                .type = YSW_SEQUENCER_SET_LOOP,
-                .set_loop.loop = false,
+                .type = YSW_SEQUENCER_LOOP,
+                .loop.loop = false,
             };
-            ysw_message_send(sequencer_queue, &message);
+            send_sequencer_message(&message);
         } else {
             ysw_sequencer_message_t message = {
-                .type = YSW_SEQUENCER_SET_LOOP,
-                .set_loop.loop = true,
+                .type = YSW_SEQUENCER_LOOP,
+                .loop.loop = true,
             };
-            ysw_message_send(sequencer_queue, &message);
+            send_sequencer_message(&message);
         }
     }
 }
@@ -339,24 +365,28 @@ static void on_instrument_change(uint8_t new_instrument)
 {
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
     ysw_cs_set_instrument(cs, new_instrument);
+    stage();
 }
 
 static void on_octave_change(uint8_t new_octave)
 {
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
     cs->octave = new_octave;
+    stage();
 }
 
 static void on_mode_change(ysw_mode_t new_mode)
 {
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
     cs->mode = new_mode;
+    stage();
 }
 
 static void on_transposition_change(uint8_t new_transposition_index)
 {
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
     cs->transposition = ysw_transposition_from_index(new_transposition_index);
+    stage();
 }
 
 static void on_settings(lv_obj_t * btn, lv_event_t event)
@@ -406,7 +436,9 @@ static void on_paste(lv_obj_t * btn, lv_event_t event)
                 new_csn->state = csn->state;
                 ysw_cs_add_csn(cs, new_csn);
             }
-            ysw_csf_redraw(csf);
+            if (csn_count) {
+                refresh();
+            }
         }
     }
 }
@@ -470,7 +502,7 @@ static void on_trash(lv_obj_t * btn, lv_event_t event)
         }
         if (changes) {
             ysw_array_truncate(cs->csns, target);
-            ysw_csf_redraw(csf);
+            refresh();
         }
     }
 }
@@ -483,7 +515,7 @@ static void cse_event_cb(lv_obj_t *ysw_lv_cse, ysw_lv_cse_event_t event, ysw_lv_
         ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
         ysw_csn_t *csn = ysw_csn_create(data->double_click.degree, 80, data->double_click.start, 80, 0);
         ysw_cs_add_csn(cs, csn);
-        ysw_csf_redraw(csf);
+        refresh();
     }
 }
 

@@ -33,36 +33,40 @@ typedef struct {
 } ysw_sequencer_config_t;
 
 typedef enum {
-    YSW_SEQUENCER_INITIALIZE,
-    YSW_SEQUENCER_SET_TEMPO,
-    YSW_SEQUENCER_SET_LOOP,
     YSW_SEQUENCER_PLAY,
     YSW_SEQUENCER_PAUSE,
+    YSW_SEQUENCER_RESUME,
+    YSW_SEQUENCER_TEMPO,
+    YSW_SEQUENCER_LOOP,
+    YSW_SEQUENCER_STAGE,
+    YSW_SEQUENCER_SPEED,
 } ysw_sequencer_message_type_t;
 
 typedef struct {
     note_t *notes; // must remain accessible for duration of playback
     uint32_t note_count;
-} ysw_sequencer_initialize_t;
+} ysw_sequencer_notes_t;
 
 typedef struct {
-    uint8_t percent;
-} ysw_sequencer_set_tempo_t;
+    uint8_t bpm;
+} ysw_sequencer_tempo_t;
 
 typedef struct {
     bool loop;
-} ysw_sequencer_set_loop_t;
+} ysw_sequencer_loop_t;
 
 typedef struct {
-} ysw_sequencer_play_t;
+    uint8_t percent;
+} ysw_sequencer_speed_t;
 
 typedef struct {
     ysw_sequencer_message_type_t type;
     union {
-        ysw_sequencer_initialize_t initialize;
-        ysw_sequencer_set_tempo_t set_tempo;
-        ysw_sequencer_set_loop_t set_loop;
-        ysw_sequencer_play_t play;
+        ysw_sequencer_notes_t play;
+        ysw_sequencer_tempo_t tempo;
+        ysw_sequencer_loop_t loop;
+        ysw_sequencer_notes_t stage;
+        ysw_sequencer_speed_t speed;
     };
 } ysw_sequencer_message_t;
 
