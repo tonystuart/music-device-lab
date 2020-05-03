@@ -284,8 +284,10 @@ static void visit_notes(note_visitor_t visitor, lv_event_t event)
             }
         }
         if (visitor_count) {
-            refresh();
+            ysw_csf_redraw(csf);
         }
+    } else if (event == LV_EVENT_RELEASED) {
+        stage();
     }
 }
 
