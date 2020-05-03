@@ -55,6 +55,8 @@ void ysw_cs_free(ysw_cs_t *cs);
 
 uint32_t ysw_cs_add_csn(ysw_cs_t *cs, ysw_csn_t *csn);
 
+void ysw_cs_sort_csns(ysw_cs_t *cs);
+
 void ysw_cs_set_duration(ysw_cs_t *cs, uint32_t duration);
 
 void ysw_cs_set_name(ysw_cs_t *cs, const char *name);

@@ -74,18 +74,18 @@ uint8_t ysw_degree_to_note(uint8_t scale_tonic, uint8_t root_number, int8_t degr
         ((12 * root_octave) + root_interval) +
         ((12 * degree_octave) + degree_interval + accidental);
 
-    ESP_LOGD(TAG, "ysw_degree_to_note scale_tonic=%d", scale_tonic);
-    ESP_LOGD(TAG, "ysw_degree_to_note root_number=%d", root_number);
-    ESP_LOGD(TAG, "ysw_degree_to_note degree_number=%d", degree_number);
-    ESP_LOGD(TAG, "ysw_degree_to_note accidental=%d", accidental);
-    ESP_LOGD(TAG, "ysw_degree_to_note root_octave=%d", root_octave);
-    ESP_LOGD(TAG, "ysw_degree_to_note normalized_degree_number=%d", normalized_degree_number);
-    ESP_LOGD(TAG, "ysw_degree_to_note degree_octave=%d", degree_octave);
-    ESP_LOGD(TAG, "ysw_degree_to_note root_index=%d", root_index);
-    ESP_LOGD(TAG, "ysw_degree_to_note normalized_degree_index=%d", normalized_degree_index);
-    ESP_LOGD(TAG, "ysw_degree_to_note root_interval=%d", root_interval);
-    ESP_LOGD(TAG, "ysw_degree_to_note degree_interval=%d", degree_interval);
-    ESP_LOGD(TAG, "ysw_degree_to_note note=%d", note);
+    //ESP_LOGD(TAG, "ysw_degree_to_note scale_tonic=%d", scale_tonic);
+    //ESP_LOGD(TAG, "ysw_degree_to_note root_number=%d", root_number);
+    //ESP_LOGD(TAG, "ysw_degree_to_note degree_number=%d", degree_number);
+    //ESP_LOGD(TAG, "ysw_degree_to_note accidental=%d", accidental);
+    //ESP_LOGD(TAG, "ysw_degree_to_note root_octave=%d", root_octave);
+    //ESP_LOGD(TAG, "ysw_degree_to_note normalized_degree_number=%d", normalized_degree_number);
+    //ESP_LOGD(TAG, "ysw_degree_to_note degree_octave=%d", degree_octave);
+    //ESP_LOGD(TAG, "ysw_degree_to_note root_index=%d", root_index);
+    //ESP_LOGD(TAG, "ysw_degree_to_note normalized_degree_index=%d", normalized_degree_index);
+    //ESP_LOGD(TAG, "ysw_degree_to_note root_interval=%d", root_interval);
+    //ESP_LOGD(TAG, "ysw_degree_to_note degree_interval=%d", degree_interval);
+    //ESP_LOGD(TAG, "ysw_degree_to_note note=%d", note);
 
     return note;
 }

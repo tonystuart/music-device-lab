@@ -116,6 +116,11 @@ int ysw_array_get_free_space(ysw_array_t *array)
     return array->size - array->count;
 }
 
+void ysw_array_sort(ysw_array_t *array,  int (*comparator)(const void *, const void *))
+{
+    qsort(array->data, array->count, sizeof(void *), comparator);
+}
+
 void ysw_array_free_node(void *p)
 {
     if (p) {

@@ -158,6 +158,7 @@ static void stage()
 {
     uint32_t note_count = 0;
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    ysw_cs_sort_csns(cs);
     note_t *notes = ysw_cs_get_notes(cs, &note_count);
 
     ysw_sequencer_message_t message = {
@@ -396,7 +397,7 @@ static void on_settings(lv_obj_t * btn, lv_event_t event)
     if (event == LV_EVENT_RELEASED) {
         ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
         uint8_t index = ysw_transposition_to_index(cs->transposition);
-        ysw_sdb_t *sdb = ysw_sdb_create();
+        ysw_sdb_t *sdb = ysw_sdb_create("Chord Style Settings");
         ysw_sdb_add_string(sdb, on_name_change, "Name", cs->name);
         ysw_sdb_add_choice(sdb, on_instrument_change, "Instrument", cs->instrument, ysw_instruments);
         ysw_sdb_add_choice(sdb, on_octave_change, "Octave", cs->octave, ysw_octaves);

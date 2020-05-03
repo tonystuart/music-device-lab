@@ -26,13 +26,13 @@ static QueueHandle_t input_queue;
 
 static inline void on_note_on(ysw_synthesizer_note_on_t *m)
 {
-    ESP_LOGD(TAG, "on_note_on channel=%d, note=%d, velocity=%d", m->channel, m->midi_note, m->velocity);
+    //ESP_LOGD(TAG, "on_note_on channel=%d, note=%d, velocity=%d", m->channel, m->midi_note, m->velocity);
     ysw_vs1053_synthesizer_set_note_on(m->channel, m->midi_note, m->velocity);
 }
 
 static inline void on_note_off(ysw_synthesizer_note_off_t *m)
 {
-    ESP_LOGD(TAG, "on_note_off channel=%d, note=%d", m->channel, m->midi_note);
+    //ESP_LOGD(TAG, "on_note_off channel=%d, note=%d", m->channel, m->midi_note);
     ysw_vs1053_synthesizer_set_note_off(m->channel, m->midi_note);
 }
 

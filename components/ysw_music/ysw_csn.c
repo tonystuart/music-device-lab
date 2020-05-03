@@ -24,7 +24,7 @@ ysw_csn_t *ysw_csn_create(int8_t degree, uint8_t velocity, uint32_t start, uint3
     csn->velocity = velocity;
     csn->flags = flags;
     csn->state = 0;
-    ESP_LOGD(TAG, "create csn=%p, degree=%u, velocity=%u, start=%u, duration=%u, flags=%#x", csn, csn->degree, csn->velocity, csn->start, csn->duration, csn->flags);
+    //ESP_LOGD(TAG, "create csn=%p, degree=%u, velocity=%u, start=%u, duration=%u, flags=%#x", csn, csn->degree, csn->velocity, csn->start, csn->duration, csn->flags);
     return csn;
 }
 
@@ -36,7 +36,7 @@ ysw_csn_t *ysw_csn_copy(ysw_csn_t *csn)
 void ysw_csn_free(ysw_csn_t *csn)
 {
     assert(csn);
-    ESP_LOGD(TAG, "free csn=%p, degree=%u, velocity=%u, start=%u, duration=%u, flags=%#x", csn, csn->degree, csn->velocity, csn->start, csn->duration, csn->flags);
+    //ESP_LOGD(TAG, "free csn=%p, degree=%u, velocity=%u, start=%u, duration=%u, flags=%#x", csn, csn->degree, csn->velocity, csn->start, csn->duration, csn->flags);
     ysw_heap_free(csn);
 }
 
@@ -46,3 +46,24 @@ uint8_t ysw_csn_to_midi_note(ysw_csn_t *csn, uint8_t scale_tonic, uint8_t root_n
     uint8_t midi_note = ysw_degree_to_note(scale_tonic, root_number, csn->degree, accidental);
     return midi_note;
 }
+
+int ysw_csn_compare(const void *left, const void *right)
+{
+    const ysw_csn_t *left_csn = *(ysw_csn_t * const *)left;
+    const ysw_csn_t *right_csn = *(ysw_csn_t * const *)right;
+    uint32_t delta = left_csn->start - right_csn->start;
+    if (!delta) {
+        delta = left_csn->degree - right_csn->degree;
+        if (!delta) {
+            delta = ysw_csn_get_accidental(left_csn) - ysw_csn_get_accidental(right_csn);
+            if (!delta) {
+                delta = left_csn->duration - right_csn->duration;
+                if (!delta) {
+                    delta = left_csn->velocity - right_csn->velocity;
+                }
+            }
+        }
+    }
+    return delta;
+}
+

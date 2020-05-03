@@ -30,6 +30,7 @@ int ysw_array_get_size(ysw_array_t *array);
 void *ysw_array_get(ysw_array_t *array, int index);
 void ysw_array_set(ysw_array_t *array, int index, void *value);
 int ysw_array_get_free_space(ysw_array_t *array);
+void ysw_array_sort(ysw_array_t *array,  int (*comparator)(const void *, const void *));
 void ysw_array_free_node(void *p);
 void ysw_array_clear(ysw_array_t *array, ysw_on_array_clear_t on_clear);
 void ysw_array_free(ysw_array_t *array);

@@ -53,17 +53,17 @@ typedef struct {
     uint8_t state; // transient
 } ysw_csn_t;
 
-static inline bool ysw_csn_is_natural(ysw_csn_t *csn)
+static inline bool ysw_csn_is_natural(const ysw_csn_t *csn)
 {
     return (csn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_NATURAL;
 }
 
-static inline bool ysw_csn_is_flat(ysw_csn_t *csn)
+static inline bool ysw_csn_is_flat(const ysw_csn_t *csn)
 {
     return (csn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_FLAT;
 }
 
-static inline bool ysw_csn_is_sharp(ysw_csn_t *csn)
+static inline bool ysw_csn_is_sharp(const ysw_csn_t *csn)
 {
     return (csn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_SHARP;
 }
@@ -83,7 +83,7 @@ static inline void ysw_csn_set_sharp(ysw_csn_t *csn)
     csn->flags = (csn->flags & ~YSW_CSN_ACCIDENTAL) | YSW_CSN_SHARP;
 }
 
-static inline ysw_accidental_t ysw_csn_get_accidental(ysw_csn_t *csn)
+static inline ysw_accidental_t ysw_csn_get_accidental(const ysw_csn_t *csn)
 {
     if (ysw_csn_is_natural(csn)) {
         return YSW_ACCIDENTAL_NATURAL;
@@ -112,3 +112,4 @@ void ysw_csn_free(ysw_csn_t *ysw_csn);
 ysw_csn_t *ysw_csn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags);
 ysw_csn_t *ysw_csn_copy(ysw_csn_t *csn);
 uint8_t ysw_csn_to_midi_note(ysw_csn_t *csn, uint8_t scale_tonic, uint8_t root_number);
+int ysw_csn_compare(const void *left, const void *right);

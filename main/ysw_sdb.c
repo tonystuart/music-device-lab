@@ -106,7 +106,7 @@ static void create_field_name(ysw_sdb_t *sdb, const char *name)
     lv_obj_set_width(label, 100);
 }
 
-ysw_sdb_t *ysw_sdb_create()
+ysw_sdb_t *ysw_sdb_create(const char *title)
 {
     ysw_sdb_t *sdb = ysw_heap_allocate(sizeof(ysw_sdb_t));
     sdb->win = lv_win_create(lv_scr_act(), NULL);
@@ -115,7 +115,7 @@ ysw_sdb_t *ysw_sdb_create()
     lv_obj_align(sdb->win, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_win_set_style(sdb->win, LV_WIN_STYLE_BG, &lv_style_pretty);
     lv_win_set_style(sdb->win, LV_WIN_STYLE_CONTENT, &win_style_content);
-    lv_win_set_title(sdb->win, "Settings");
+    lv_win_set_title(sdb->win, title);
     lv_win_set_layout(sdb->win, LV_LAYOUT_PRETTY);
 
     lv_obj_t *close_btn = lv_win_add_btn(sdb->win, LV_SYMBOL_CLOSE);

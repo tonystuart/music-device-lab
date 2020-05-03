@@ -42,6 +42,11 @@ uint32_t ysw_cs_add_csn(ysw_cs_t *cs, ysw_csn_t *csn)
     return index;
 }
 
+void ysw_cs_sort_csns(ysw_cs_t *cs)
+{
+    ysw_array_sort(cs->csns, ysw_csn_compare);
+}
+
 void ysw_cs_set_duration(ysw_cs_t *cs, uint32_t duration)
 {
     cs->duration = duration;
@@ -91,7 +96,7 @@ note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
         note_p->midi_note = ysw_csn_to_midi_note(csn, tonic, root) + cs->transposition;
         note_p->velocity = csn->velocity;
         note_p->instrument = cs->instrument;
-        ESP_LOGD(TAG, "ysw_cs_get_notes start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
+        //ESP_LOGD(TAG, "ysw_cs_get_notes start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
         end_time = note_p->start + note_p->duration;
         note_p++;
     }
