@@ -46,6 +46,7 @@ typedef void (*ysw_lv_cse_event_cb_t)(lv_obj_t *ysw_lv_cse, ysw_lv_cse_event_t e
 typedef struct {
     ysw_cs_t *cs;
     lv_point_t last_click;
+    lv_point_t drag_distance;
     const lv_style_t *style_bg; // background
     const lv_style_t *style_oi; // odd interval
     const lv_style_t *style_ei; // even interval

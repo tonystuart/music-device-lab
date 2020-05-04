@@ -231,6 +231,24 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         }
     }
 
+    if (abs(ext->drag_distance.x) > 5 || abs(ext->drag_distance.y) > 5) {
+        for (int i = 0; i < csn_count; i++) {
+            ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
+            if (ysw_csn_is_selected(csn)) {
+                int8_t octave = 0;
+                lv_area_t csn_mask = {};
+                lv_area_t csn_area = {};
+                get_csn_info(cse, csn, &csn_area, NULL, &octave);
+                csn_area.x1 += ext->drag_distance.x;
+                csn_area.y1 += ext->drag_distance.y;
+                csn_area.x2 += ext->drag_distance.x;
+                csn_area.y2 += ext->drag_distance.y;
+                if (lv_area_intersect(&csn_mask, mask, &csn_area)) {
+                    lv_draw_rect(&csn_area, &csn_mask, ext->style_sn, 80);
+                }
+            }
+        }
+    }
 }
 
 static bool design_cb(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mode)
@@ -336,15 +354,14 @@ static ysw_csn_t *find_first_csn(lv_obj_t *cse, ysw_cs_t *cs, lv_coord_t x, lv_c
     return NULL;
 }
 
-static void on_pressed(lv_obj_t *cse, void *param)
+static void on_press(lv_obj_t *cse, void *param)
 {
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
     lv_coord_t x = proc->types.pointer.act_point.x;
     lv_coord_t y = proc->types.pointer.act_point.y;
 
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     ysw_csn_t *csn = find_first_csn(cse, ext->cs, x, y);
     if (csn) {
         bool selected = !ysw_csn_is_selected(csn);
@@ -368,15 +385,49 @@ static void on_pressed(lv_obj_t *cse, void *param)
                 }
             }
         }
-        ext->last_click.x = x;
-        ext->last_click.y = y;
     }
+    ext->last_click.x = x;
+    ext->last_click.y = y;
+    lv_obj_invalidate(cse);
+}
+
+static void on_drag(lv_obj_t *cse, void *param)
+{
+    lv_indev_t *indev_act = (lv_indev_t*)param;
+    lv_indev_proc_t *proc = &indev_act->proc;
+
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+
+    ext->drag_distance.x = proc->types.pointer.act_point.x - ext->last_click.x;
+    ext->drag_distance.y = proc->types.pointer.act_point.y - ext->last_click.y;
+
+    ESP_LOGD(TAG, "on_drag distance x=%d, y=%d", ext->drag_distance.x, ext->drag_distance.y);
+
+    lv_obj_invalidate(cse);
+}
+
+static void on_release(lv_obj_t *cse, void *param)
+{
+    lv_indev_t *indev_act = (lv_indev_t*)param;
+    lv_indev_proc_t *proc = &indev_act->proc;
+
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+
+    ext->drag_distance.x = proc->types.pointer.act_point.x - ext->last_click.x;
+    ext->drag_distance.y = proc->types.pointer.act_point.y - ext->last_click.y;
+
+    ESP_LOGD(TAG, "on_release distance x=%d, y=%d", ext->drag_distance.x, ext->drag_distance.y);
+
+    ext->drag_distance.x = 0;
+    ext->drag_distance.y = 0;
+
     lv_obj_invalidate(cse);
 }
 
 static lv_res_t signal_cb(lv_obj_t *cse, lv_signal_t signal, void *param)
 {
     lv_res_t res = super_signal_cb(cse, signal, param);
+    ESP_LOGD(TAG, "signal_cb signal=%d", signal);
     if (res == LV_RES_OK) {
         switch (signal) {
             case LV_SIGNAL_GET_TYPE:
@@ -384,9 +435,16 @@ static lv_res_t signal_cb(lv_obj_t *cse, lv_signal_t signal, void *param)
                 break;
             case LV_SIGNAL_CLEANUP:
                 // free anything we allocated
+                // note that lv_obj_del frees ext_attr if set
                 break;
             case LV_SIGNAL_PRESSED:
-                on_pressed(cse, param);
+                on_press(cse, param);
+                break;
+            case LV_SIGNAL_PRESSING:
+                on_drag(cse, param);
+                break;
+            case LV_SIGNAL_RELEASED:
+                on_release(cse, param);
                 break;
         }
     }
@@ -449,6 +507,8 @@ lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
     ext->cs = NULL;
     ext->last_click.x = 0;
     ext->last_click.y = 0;
+    ext->drag_distance.x = 0;
+    ext->drag_distance.y = 0;
     ext->style_bg = &lv_style_plain;
     ext->style_oi = &odd_interval_style;
     ext->style_ei = &even_interval_style;
