@@ -267,20 +267,6 @@ static bool design_cb(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
     return result;
 }
 
-#define SELECTION_BORDER 5
-
-static bool in_bounds(lv_area_t *area, lv_coord_t x, lv_coord_t y)
-{
-    return ((area->x1 - SELECTION_BORDER) <= x && x <= (area->x2 + SELECTION_BORDER)) &&
-        ((area->y1 - SELECTION_BORDER) <= y && y <= (area->y2 + SELECTION_BORDER));
-}
-
-static bool in_bounds_double_click(lv_point_t *last_click, lv_coord_t x, lv_coord_t y)
-{
-    return ((last_click->x - SELECTION_BORDER) <= x && x <= (last_click->x + SELECTION_BORDER)) &&
-        ((last_click->y - SELECTION_BORDER) <= y && y <= (last_click->y + SELECTION_BORDER));
-}
-
 static void fire_select(lv_obj_t *cse, ysw_csn_t *csn)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
@@ -303,15 +289,15 @@ static void fire_deselect(lv_obj_t *cse, ysw_csn_t *csn)
     }
 }
 
-static void fire_double_click(lv_obj_t *cse, lv_coord_t x, lv_coord_t y)
+static void fire_double_click(lv_obj_t *cse, lv_point_t *point)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->event_cb) {
         lv_coord_t w = lv_obj_get_width(cse);
         lv_coord_t h = lv_obj_get_height(cse);
 
-        lv_coord_t x_offset = x - cse->coords.x1;
-        lv_coord_t y_offset = y - cse->coords.y1;
+        lv_coord_t x_offset = point->x - cse->coords.x1;
+        lv_coord_t y_offset = point->y - cse->coords.y1;
 
         double pixels_per_tick = (double)w / (COLUMN_COUNT * YSW_TICKS_DEFAULT_TPB);
         double pixels_per_degree = (double)h / ROW_COUNT;
@@ -337,57 +323,35 @@ static void fire_double_click(lv_obj_t *cse, lv_coord_t x, lv_coord_t y)
     }
 }
 
-static ysw_csn_t *find_first_csn(lv_obj_t *cse, ysw_cs_t *cs, lv_coord_t x, lv_coord_t y)
+static void prepare_selection(lv_obj_t *cse, ysw_lv_cse_ext_t *ext, lv_point_t *point)
 {
-    uint32_t csn_count = ysw_cs_get_csn_count(cs);
-
+    ext->selected_csn = NULL;
+    ext->selection_type = YSW_BOUNDS_NONE;
+    uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
     for (uint8_t i = 0; i < csn_count; i++) {
         lv_area_t csn_area;
-        ysw_csn_t *csn = ysw_cs_get_csn(cs, i);
+        ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
         get_csn_info(cse, csn, &csn_area, NULL, NULL);
-
-        if (in_bounds(&csn_area, x, y)) {
-            return csn;
+        ysw_bounds_t bounds_type = ysw_bounds_check(&csn_area, point);
+        if (bounds_type) {
+            ext->selected_csn = csn;
+            ext->selection_type = bounds_type;
+            return;
         }
     }
-
-    return NULL;
 }
 
 static void on_press(lv_obj_t *cse, void *param)
 {
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
-    lv_coord_t x = proc->types.pointer.act_point.x;
-    lv_coord_t y = proc->types.pointer.act_point.y;
-
+    lv_point_t *point = &proc->types.pointer.act_point;
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    ysw_csn_t *csn = find_first_csn(cse, ext->cs, x, y);
-    if (csn) {
-        bool selected = !ysw_csn_is_selected(csn);
-        ysw_csn_select(csn, selected);
-        if (selected) {
-            fire_select(cse, csn);
-        } else {
-            fire_deselect(cse, csn);
-        }
+    prepare_selection(cse, ext, point);
+    if (ext->selection_type == YSW_BOUNDS_NONE && ysw_bounds_check_point(&ext->last_click, point)) {
+        fire_double_click(cse, point);
     }
-    else {
-        if (in_bounds_double_click(&ext->last_click, x, y)) {
-            fire_double_click(cse, x, y);
-        } else {
-            uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
-            for (int i = 0; i < csn_count; i++) {
-                ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
-                if (ysw_csn_is_selected(csn)) {
-                    ysw_csn_select(csn, false);
-                    fire_deselect(cse, csn);
-                }
-            }
-        }
-    }
-    ext->last_click.x = x;
-    ext->last_click.y = y;
+    ext->last_click = *point;
     lv_obj_invalidate(cse);
 }
 
@@ -406,6 +370,37 @@ static void on_drag(lv_obj_t *cse, void *param)
     lv_obj_invalidate(cse);
 }
 
+static void on_drag_end(lv_obj_t *cse)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+}
+
+static void on_click(lv_obj_t *cse)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    ysw_csn_t *csn = ext->selected_csn;
+    if (csn) {
+        // click on csn... toggle selection
+        bool selected = !ysw_csn_is_selected(csn);
+        ysw_csn_select(csn, selected);
+        if (selected) {
+            fire_select(cse, csn);
+        } else {
+            fire_deselect(cse, csn);
+        }
+    } else {
+        // deselect all csns
+        uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
+        for (int i = 0; i < csn_count; i++) {
+            ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
+            if (ysw_csn_is_selected(csn)) {
+                ysw_csn_select(csn, false);
+                fire_deselect(cse, csn);
+            }
+        }
+    }
+}
+
 static void on_release(lv_obj_t *cse, void *param)
 {
     lv_indev_t *indev_act = (lv_indev_t*)param;
@@ -417,6 +412,12 @@ static void on_release(lv_obj_t *cse, void *param)
     ext->drag_distance.y = proc->types.pointer.act_point.y - ext->last_click.y;
 
     ESP_LOGD(TAG, "on_release distance x=%d, y=%d", ext->drag_distance.x, ext->drag_distance.y);
+
+    if (ext->drag_distance.x < 5 && ext->drag_distance.y < 5) {
+        on_click(cse);
+    } else {
+        on_drag_end(cse);
+    }
 
     ext->drag_distance.x = 0;
     ext->drag_distance.y = 0;

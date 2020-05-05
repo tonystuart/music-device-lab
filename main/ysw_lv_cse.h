@@ -13,6 +13,7 @@
 #include "ysw_array.h"
 #include "ysw_csn.h"
 #include "ysw_cs.h"
+#include "ysw_bounds.h"
 
 typedef enum {
     YSW_LV_CSE_SELECT,
@@ -47,6 +48,8 @@ typedef struct {
     ysw_cs_t *cs;
     lv_point_t last_click;
     lv_point_t drag_distance;
+    ysw_csn_t *selected_csn;
+    ysw_bounds_t selection_type;
     const lv_style_t *style_bg; // background
     const lv_style_t *style_oi; // odd interval
     const lv_style_t *style_ei; // even interval
