@@ -408,24 +408,26 @@ static void update_drag(lv_obj_t *cse, lv_point_t *point)
         }
 
         if (!ext->drag_start_cs) {
-            ESP_LOGE(TAG, "capturing initial drag CS set");
+            ESP_LOGE(TAG, "DRAG START -- DID YOU EXPECT THIS?");
             ext->drag_start_cs = ysw_cs_copy(ext->cs);
         }
 
         lv_coord_t w = lv_obj_get_width(cse);
         lv_coord_t h = lv_obj_get_height(cse);
 
-        double pixels_per_tick = (double)w / (get_column_count(ext) * YSW_TICKS_DEFAULT_TPB);
+        double ticks_per_pixel = (double)(get_column_count(ext) * YSW_TICKS_DEFAULT_TPB) / w;
         double pixels_per_half_degree = ((double)h / ROW_COUNT) / 2;
 
-        lv_coord_t delta_ticks = x * pixels_per_tick;
+        lv_coord_t delta_ticks = x * ticks_per_pixel;
         lv_coord_t delta_half_degrees = round(y / pixels_per_half_degree);
+        bool left_drag = delta_ticks < 0;
+        uint32_t ticks = abs(delta_ticks);
 
         ESP_LOGD(TAG, "do_drop w=%d", w);
         ESP_LOGD(TAG, "do_drop h=%d", h);
         ESP_LOGD(TAG, "do_drop drag.x=%d", x);
         ESP_LOGD(TAG, "do_drop drag.y=%d", y);
-        ESP_LOGD(TAG, "do_drop pixels_per_tick=%g", pixels_per_tick);
+        ESP_LOGD(TAG, "do_drop ticks_per_pixel=%g", ticks_per_pixel);
         ESP_LOGD(TAG, "do_drop pixels_per_half_degree=%g", pixels_per_half_degree);
         ESP_LOGD(TAG, "do_drop delta_ticks=%d", delta_ticks);
         ESP_LOGD(TAG, "do_drop delta_half_degrees=%d", delta_half_degrees);
@@ -436,30 +438,45 @@ static void update_drag(lv_obj_t *cse, lv_point_t *point)
             ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
             if (ysw_csn_is_selected(csn)) {
                 ysw_csn_t *drag_start_csn = ysw_cs_get_csn(ext->drag_start_cs, i);
-                switch (ext->selection_type) {
-                    case YSW_BOUNDS_MIDDLE:
-                    case YSW_BOUNDS_NONE:
-                        // duration stays the same
-                        if (delta_ticks < 0) {
-                            csn->start = max(0, drag_start_csn->start + delta_ticks);
+                if (abs(x) > DRAG_MINIMUM) {
+                    int32_t start = drag_start_csn->start;
+                    int32_t duration = drag_start_csn->duration;
+                    if (ext->selection_type == YSW_BOUNDS_LEFT) {
+                        if (left_drag) {
+                            duration = drag_start_csn->duration + ticks;
+                            start = drag_start_csn->start - ticks;
                         } else {
-                            csn->start = min(ysw_cs_get_duration(ext->cs) - drag_start_csn->duration,
-                                    drag_start_csn->start + delta_ticks);
+                            duration = drag_start_csn->duration - ticks;
+                            start = drag_start_csn->start + ticks;
                         }
-                        break;
-                    case YSW_BOUNDS_LEFT:
-                        // duration grows moving left, shrinks moving right
-                        if (delta_ticks < 0) {
-                            csn->start = max(0, drag_start_csn->start + delta_ticks);
-                            csn->duration = drag_start_csn->duration - delta_ticks; // minus a minus...
+                    } else if (ext->selection_type == YSW_BOUNDS_RIGHT) {
+                        if (left_drag) {
+                            duration = drag_start_csn->duration - ticks;
                         } else {
-                            csn->start = min(ysw_cs_get_duration(ext->cs) - drag_start_csn->duration,
-                                    drag_start_csn->start + delta_ticks);
-                            csn->duration = max(10, drag_start_csn->duration - delta_ticks);
+                            duration = drag_start_csn->duration + ticks;
                         }
-                        break;
-                    case YSW_BOUNDS_RIGHT:
-                        break;
+                    } else {
+                        if (left_drag) {
+                            start = drag_start_csn->start - ticks;
+                        } else {
+                            start = drag_start_csn->start + ticks;
+                        }
+                    }
+                    uint32_t total_duration = ysw_cs_get_duration(ext->cs);
+                    if (duration < 10) {
+                        duration = 10;
+                    }
+                    if (duration > total_duration) {
+                        duration = total_duration;
+                    }
+                    if (start < 0) {
+                        start = 0;
+                    }
+                    if (start + duration > total_duration) {
+                        start = total_duration - duration;
+                    }
+                    csn->start = start;
+                    csn->duration = duration;
                 }
             }
         }
