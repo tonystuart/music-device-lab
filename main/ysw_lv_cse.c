@@ -422,6 +422,7 @@ static void update_drag(lv_obj_t *cse, lv_point_t *point)
         lv_coord_t delta_half_degrees = round(y / pixels_per_half_degree);
         bool left_drag = delta_ticks < 0;
         uint32_t ticks = abs(delta_ticks);
+        uint32_t total_duration = ysw_cs_get_duration(ext->cs);
 
         ESP_LOGD(TAG, "do_drop w=%d", w);
         ESP_LOGD(TAG, "do_drop h=%d", h);
@@ -439,47 +440,49 @@ static void update_drag(lv_obj_t *cse, lv_point_t *point)
             if (ysw_csn_is_selected(csn)) {
                 ysw_csn_t *drag_start_csn = ysw_cs_get_csn(ext->drag_start_cs, i);
                 if (abs(x) > DRAG_MINIMUM) {
-                    int32_t start = drag_start_csn->start;
-                    int32_t duration = drag_start_csn->duration;
+                    int32_t old_start = drag_start_csn->start;
+                    int32_t old_duration = drag_start_csn->duration;
+                    int32_t new_start = old_start;
+                    int32_t new_duration = old_duration;
                     if (ext->selection_type == YSW_BOUNDS_LEFT) {
                         if (left_drag) {
-                            duration = drag_start_csn->duration + ticks;
-                            start = drag_start_csn->start - ticks;
+                            new_duration = old_duration + ticks;
+                            new_start = old_start - ticks;
                         } else {
-                            duration = drag_start_csn->duration - ticks;
-                            start = drag_start_csn->start + ticks;
+                            new_duration = old_duration - ticks;
+                            if (new_duration < 10) {
+                                new_duration = 10;
+                            }
+                            new_start = old_start + ticks;
                         }
                     } else if (ext->selection_type == YSW_BOUNDS_RIGHT) {
                         if (left_drag) {
-                            duration = drag_start_csn->duration - ticks;
-                            if (duration < 10) {
-                                duration = 10;
-                                start = drag_start_csn->start - (ticks - drag_start_csn->duration) - duration; }
+                            new_duration = old_duration - ticks;
+                            if (new_duration < 10) {
+                                new_duration = 10;
+                                new_start = old_start - (ticks - old_duration) - new_duration;
+                            }
                         } else {
-                            duration = drag_start_csn->duration + ticks;
+                            new_duration = old_duration + ticks;
                         }
                     } else {
                         if (left_drag) {
-                            start = drag_start_csn->start - ticks;
+                            new_start = old_start - ticks;
                         } else {
-                            start = drag_start_csn->start + ticks;
+                            new_start = old_start + ticks;
                         }
                     }
-                    uint32_t total_duration = ysw_cs_get_duration(ext->cs);
-                    if (duration < 10) {
-                        duration = 10;
+                    if (new_duration > total_duration) {
+                        new_duration = total_duration;
                     }
-                    if (duration > total_duration) {
-                        duration = total_duration;
+                    if (new_start < 0) {
+                        new_start = 0;
                     }
-                    if (start < 0) {
-                        start = 0;
+                    if (new_start + new_duration > total_duration) {
+                        new_start = total_duration - new_duration;
                     }
-                    if (start + duration > total_duration) {
-                        start = total_duration - duration;
-                    }
-                    csn->start = start;
-                    csn->duration = duration;
+                    csn->start = new_start;
+                    csn->duration = new_duration;
                 }
             }
         }
