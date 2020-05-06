@@ -226,11 +226,9 @@ void ysw_vs1053_synthesizer_select_program(uint8_t channel, uint8_t program)
 void ysw_vs1053_synthesizer_initialize(ysw_vs1053_synthesizer_config_t *vs1053_config)
 {
     dreq_gpio = vs1053_config->dreq_gpio;
-    ESP_LOGD(TAG, "ysw_vs1053_synthesizer_initialized dreq_gpio=%d", dreq_gpio);
     if (dreq_gpio != -1) {
         gpio_set_direction(vs1053_config->dreq_gpio, GPIO_MODE_INPUT);
     }
-    ESP_LOGD(TAG, "ysw_vs1053_synthesizer_initialized xrst_gpio=%d", vs1053_config->xrst_gpio);
     gpio_set_direction(vs1053_config->xrst_gpio, GPIO_MODE_OUTPUT);
     gpio_set_level(vs1053_config->xrst_gpio, LOW);
 
@@ -273,10 +271,11 @@ void ysw_vs1053_synthesizer_initialize(ysw_vs1053_synthesizer_config_t *vs1053_c
     uint16_t config1 = read_ram(EP_CONFIG1);
     ESP_LOGD(TAG, "version=%#x, config1=%#x", version, config1);
 
+#if 0
     for (int i = 0; i < 16; i++) {
         uint16_t value = read_register(i);
         ESP_LOGD(TAG, "address=%d, value=%#04x", i, value);
     }
-    ESP_LOGD(TAG, "ysw_vs1053_synthesizer returning");
+#endif
 }
 

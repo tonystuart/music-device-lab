@@ -62,7 +62,7 @@ static inline uint32_t ysw_step_get_csn_count(ysw_step_t *step)
 
 static inline uint32_t ysw_step_get_duration(ysw_step_t *step)
 {
-    return step->cs->duration;
+    return ysw_cs_get_duration(step->cs);
 }
 
 note_t *ysw_progression_get_notes(ysw_progression_t *progression);

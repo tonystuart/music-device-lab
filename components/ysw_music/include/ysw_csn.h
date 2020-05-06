@@ -13,6 +13,12 @@
 #include "ysw_song.h"
 #include "ysw_degree.h"
 
+#define YSW_CSN_MIN_DURATION 10
+#define YSW_CSN_MIN_DEGREE (-21)
+#define YSW_CSN_MAX_DEGREE (+21)
+#define YSW_CSN_MAX_VELOCITY 120
+#define YSW_CSN_TICK_INCREMENT 5
+
 typedef enum {
     I = 1,
     ii,

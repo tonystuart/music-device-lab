@@ -15,29 +15,87 @@
 
 #define TAG "YSW_CS"
 
-ysw_cs_t *ysw_cs_create(char *name, uint32_t duration, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition)
+ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t beats_per_minute, uint8_t beats_per_measure, uint8_t beat_unit)
 {
     ysw_cs_t *cs = ysw_heap_allocate(sizeof(ysw_cs_t));
     cs->name = ysw_heap_strdup(name);
     cs->csns = ysw_array_create(8);
-    cs->duration = duration;
     cs->instrument = instrument;
     cs->octave = octave;
     cs->mode = mode;
     cs->transposition = transposition;
+    cs->beats_per_minute = beats_per_minute;
+    cs->beats_per_measure = beats_per_measure;
+    cs->beat_unit = beat_unit;
     return cs;
+}
+
+ysw_cs_t *ysw_cs_copy(ysw_cs_t *old_cs)
+{
+    uint32_t csn_count = ysw_cs_get_csn_count(old_cs);
+    ysw_cs_t *new_cs = ysw_heap_allocate(sizeof(ysw_cs_t));
+    new_cs->name = ysw_heap_strdup(old_cs->name);
+    new_cs->csns = ysw_array_create(csn_count);
+    new_cs->instrument = old_cs->instrument;
+    new_cs->octave = old_cs->octave;
+    new_cs->mode = old_cs->mode;
+    new_cs->transposition = old_cs->transposition;
+    new_cs->beats_per_minute = old_cs->beats_per_minute;
+    new_cs->beats_per_measure = old_cs->beats_per_measure;
+    new_cs->beat_unit = old_cs->beat_unit;
+    for (int i = 0; i < csn_count; i++) {
+        ysw_csn_t *old_csn = ysw_cs_get_csn(old_cs, i);
+        ysw_csn_t *new_csn = ysw_csn_copy(old_csn);
+        ysw_cs_add_csn(new_cs, new_csn);
+    }
+    return new_cs;
 }
 
 void ysw_cs_free(ysw_cs_t *cs)
 {
+    uint32_t csn_count = ysw_cs_get_csn_count(cs);
+    for (int i = 0; i < csn_count; i++) {
+        ysw_csn_t *csn = ysw_cs_get_csn(cs, i);
+        ysw_csn_free(csn);
+    }
     ysw_array_free(cs->csns);
     ysw_heap_free(cs->name);
     ysw_heap_free(cs);
 }
 
+static inline uint32_t round_tick(uint32_t value)
+{
+    return ((value + YSW_CSN_TICK_INCREMENT - 1) / YSW_CSN_TICK_INCREMENT) * YSW_CSN_TICK_INCREMENT;
+}
+
+void ysw_cs_normalize_csn(ysw_cs_t *cs, ysw_csn_t *csn)
+{
+    uint32_t cs_duration = ysw_cs_get_duration(cs);
+    if (csn->start > cs_duration - YSW_CSN_MIN_DURATION) {
+        csn->start = cs_duration - YSW_CSN_MIN_DURATION;
+    }
+    if (csn->duration < YSW_CSN_MIN_DURATION) {
+        csn->duration = YSW_CSN_MIN_DURATION;
+    }
+    if (csn->start + csn->duration > cs_duration) {
+        csn->duration = cs_duration - csn->start;
+    }
+    if (csn->degree < YSW_CSN_MIN_DEGREE) {
+        csn->degree = YSW_CSN_MIN_DEGREE;
+    } else if (csn->degree > YSW_CSN_MAX_DEGREE) {
+        csn->degree = YSW_CSN_MAX_DEGREE;
+    }
+    if (csn->velocity > YSW_CSN_MAX_VELOCITY) {
+        csn->velocity = YSW_CSN_MAX_VELOCITY;
+    }
+    csn->start = round_tick(csn->start);
+    csn->duration = round_tick(csn->duration);
+    ESP_LOGD(TAG, "normalize_csn start=%d, duration=%d, degree=%d, velocity=%d", csn->start, csn->duration, csn->degree, csn->velocity);
+}
+
 uint32_t ysw_cs_add_csn(ysw_cs_t *cs, ysw_csn_t *csn)
 {
-    cs->duration = max(cs->duration, csn->start + csn->duration);
+    ysw_cs_normalize_csn(cs, csn);
     uint32_t index = ysw_array_push(cs->csns, csn);
     return index;
 }
@@ -45,11 +103,6 @@ uint32_t ysw_cs_add_csn(ysw_cs_t *cs, ysw_csn_t *csn)
 void ysw_cs_sort_csns(ysw_cs_t *cs)
 {
     ysw_array_sort(cs->csns, ysw_csn_compare);
-}
-
-void ysw_cs_set_duration(ysw_cs_t *cs, uint32_t duration)
-{
-    cs->duration = duration;
 }
 
 void ysw_cs_set_name(ysw_cs_t *cs, const char* name)
@@ -60,11 +113,6 @@ void ysw_cs_set_name(ysw_cs_t *cs, const char* name)
 void ysw_cs_set_instrument(ysw_cs_t *cs, uint8_t instrument)
 {
     cs->instrument = instrument;
-}
-
-uint32_t ysw_cs_get_duration(ysw_cs_t *cs)
-{
-    return cs->duration;
 }
 
 const char* ysw_cs_get_name(ysw_cs_t *cs)
@@ -100,7 +148,7 @@ note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
         end_time = note_p->start + note_p->duration;
         note_p++;
     }
-    uint32_t fill_to_measure = cs->duration - end_time;
+    uint32_t fill_to_measure = ysw_cs_get_duration(cs) - end_time;
     note_p->start = end_time;
     note_p->duration = fill_to_measure;
     note_p->channel = 0;
@@ -114,7 +162,7 @@ void ysw_cs_dump(ysw_cs_t *cs, char *tag)
 {
     ESP_LOGD(tag, "ysw_cs_dump cs=%p", cs);
     ESP_LOGD(tag, "name=%s", cs->name);
-    ESP_LOGD(tag, "duration=%d", cs->duration);
+    ESP_LOGD(tag, "duration=%d", ysw_cs_get_duration(cs));
     uint32_t csn_count = ysw_cs_get_csn_count(cs);
     ESP_LOGD(tag, "csn_count=%d", csn_count);
 }

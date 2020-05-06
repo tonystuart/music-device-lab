@@ -11,13 +11,17 @@
 
 #include "ysw_lv_cse.h"
 
-#include "stdio.h"
-#include "esp_log.h"
-#include "lvgl.h"
-#include "ysw_csn.h"
 #include "ysw_cs.h"
-#include "ysw_ticks.h"
+#include "ysw_csn.h"
 #include "ysw_lv_styles.h"
+#include "ysw_ticks.h"
+
+#include "lvgl.h"
+
+#include "esp_log.h"
+
+#include "math.h"
+#include "stdio.h"
 
 #define TAG "YSW_LV_CSE"
 
@@ -40,7 +44,12 @@ static char *key_labels[] =
 };
 
 #define ROW_COUNT YSW_MIDI_UNPO
-#define COLUMN_COUNT 4
+#define DRAG_MINIMUM 5
+
+static inline uint8_t get_column_count(ysw_lv_cse_ext_t *ext)
+{
+    return ext->cs->beats_per_measure;
+}
 
 static void get_csn_info(
         lv_obj_t *cse,
@@ -160,13 +169,13 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         }
     }
 
-    for (int i = 0; i < COLUMN_COUNT; i++) {
+    for (int i = 0; i < get_column_count(ext); i++) {
         lv_point_t point1 = {
-            .x = x + ((i * w) / COLUMN_COUNT),
+            .x = x + ((i * w) / get_column_count(ext)),
             .y = y
         };
         lv_point_t point2 = {
-            .x = x + ((i * w) / COLUMN_COUNT),
+            .x = x + ((i * w) / get_column_count(ext)),
             .y = y + h
         };
         lv_draw_line(&point1, &point2, mask, ext->style_ei, ext->style_ei->body.border.opa);
@@ -187,7 +196,11 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         if (lv_area_intersect(&csn_mask, mask, &csn_area)) {
 
             if (ysw_csn_is_selected(csn)) {
-                lv_draw_rect(&csn_area, &csn_mask, ext->style_sn, ext->style_sn->body.opa);
+                if (ext->dragging) {
+                    lv_draw_rect(&csn_area, &csn_mask, ext->style_sn, ext->style_sn->body.opa);
+                } else {
+                    lv_draw_rect(&csn_area, &csn_mask, ext->style_sn, ext->style_sn->body.opa);
+                }
             } else {
                 lv_draw_rect(&csn_area, &csn_mask, ext->style_cn, ext->style_cn->body.opa);
             }
@@ -206,16 +219,29 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             };
 
             if (ysw_csn_is_selected(csn)) {
-                lv_draw_label(&csn_area,
-                        &csn_mask,
-                        ext->style_sn,
-                        ext->style_sn->text.opa,
-                        buffer,
-                        LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
-                        &offset,
-                        NULL,
-                        NULL,
-                        LV_BIDI_DIR_LTR);
+                if (ext->dragging) {
+                    lv_draw_label(&csn_area,
+                            &csn_mask,
+                            ext->style_sn,
+                            ext->style_sn->text.opa,
+                            buffer,
+                            LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
+                            &offset,
+                            NULL,
+                            NULL,
+                            LV_BIDI_DIR_LTR);
+                } else {
+                    lv_draw_label(&csn_area,
+                            &csn_mask,
+                            ext->style_sn,
+                            ext->style_sn->text.opa,
+                            buffer,
+                            LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
+                            &offset,
+                            NULL,
+                            NULL,
+                            LV_BIDI_DIR_LTR);
+                }
             } else {
                 lv_draw_label(&csn_area,
                         &csn_mask,
@@ -227,25 +253,6 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                         NULL,
                         NULL,
                         LV_BIDI_DIR_LTR);
-            }
-        }
-    }
-
-    if (abs(ext->drag_distance.x) > 5 || abs(ext->drag_distance.y) > 5) {
-        for (int i = 0; i < csn_count; i++) {
-            ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
-            if (ysw_csn_is_selected(csn)) {
-                int8_t octave = 0;
-                lv_area_t csn_mask = {};
-                lv_area_t csn_area = {};
-                get_csn_info(cse, csn, &csn_area, NULL, &octave);
-                csn_area.x1 += ext->drag_distance.x;
-                csn_area.y1 += ext->drag_distance.y;
-                csn_area.x2 += ext->drag_distance.x;
-                csn_area.y2 += ext->drag_distance.y;
-                if (lv_area_intersect(&csn_mask, mask, &csn_area)) {
-                    lv_draw_rect(&csn_area, &csn_mask, ext->style_sn, 80);
-                }
             }
         }
     }
@@ -299,7 +306,7 @@ static void fire_double_click(lv_obj_t *cse, lv_point_t *point)
         lv_coord_t x_offset = point->x - cse->coords.x1;
         lv_coord_t y_offset = point->y - cse->coords.y1;
 
-        double pixels_per_tick = (double)w / (COLUMN_COUNT * YSW_TICKS_DEFAULT_TPB);
+        double pixels_per_tick = (double)w / (get_column_count(ext) * YSW_TICKS_DEFAULT_TPB);
         double pixels_per_degree = (double)h / ROW_COUNT;
 
         lv_coord_t tick_index = x_offset / pixels_per_tick;
@@ -323,8 +330,9 @@ static void fire_double_click(lv_obj_t *cse, lv_point_t *point)
     }
 }
 
-static void prepare_selection(lv_obj_t *cse, ysw_lv_cse_ext_t *ext, lv_point_t *point)
+static void capture_selection(lv_obj_t *cse, ysw_lv_cse_ext_t *ext, lv_point_t *point)
 {
+    ext->dragging = false;
     ext->selected_csn = NULL;
     ext->selection_type = YSW_BOUNDS_NONE;
     uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
@@ -341,47 +349,15 @@ static void prepare_selection(lv_obj_t *cse, ysw_lv_cse_ext_t *ext, lv_point_t *
     }
 }
 
-static void on_press(lv_obj_t *cse, void *param)
-{
-    lv_indev_t *indev_act = (lv_indev_t*)param;
-    lv_indev_proc_t *proc = &indev_act->proc;
-    lv_point_t *point = &proc->types.pointer.act_point;
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    prepare_selection(cse, ext, point);
-    if (ext->selection_type == YSW_BOUNDS_NONE && ysw_bounds_check_point(&ext->last_click, point)) {
-        fire_double_click(cse, point);
-    }
-    ext->last_click = *point;
-    lv_obj_invalidate(cse);
-}
-
-static void on_drag(lv_obj_t *cse, void *param)
-{
-    lv_indev_t *indev_act = (lv_indev_t*)param;
-    lv_indev_proc_t *proc = &indev_act->proc;
-
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-
-    ext->drag_distance.x = proc->types.pointer.act_point.x - ext->last_click.x;
-    ext->drag_distance.y = proc->types.pointer.act_point.y - ext->last_click.y;
-
-    ESP_LOGD(TAG, "on_drag distance x=%d, y=%d", ext->drag_distance.x, ext->drag_distance.y);
-
-    lv_obj_invalidate(cse);
-}
-
-static void on_drag_end(lv_obj_t *cse)
-{
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-}
-
-static void on_click(lv_obj_t *cse)
+static void do_click(lv_obj_t *cse)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     ysw_csn_t *csn = ext->selected_csn;
+    ESP_LOGD(TAG, "do_click csn=%p", csn);
     if (csn) {
         // click on csn... toggle selection
         bool selected = !ysw_csn_is_selected(csn);
+        ESP_LOGD(TAG, "do_click selected=%d", selected);
         ysw_csn_select(csn, selected);
         if (selected) {
             fire_select(cse, csn);
@@ -390,6 +366,7 @@ static void on_click(lv_obj_t *cse)
         }
     } else {
         // deselect all csns
+        ESP_LOGD(TAG, "do_click deselect all");
         uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
         for (int i = 0; i < csn_count; i++) {
             ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
@@ -401,34 +378,137 @@ static void on_click(lv_obj_t *cse)
     }
 }
 
-static void on_release(lv_obj_t *cse, void *param)
+static void on_signal_pressed(lv_obj_t *cse, void *param)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    lv_indev_t *indev_act = (lv_indev_t*)param;
+    lv_indev_proc_t *proc = &indev_act->proc;
+    lv_point_t *point = &proc->types.pointer.act_point;
+    capture_selection(cse, ext, point);
+    if (ext->selection_type == YSW_BOUNDS_NONE && ysw_bounds_check_point(&ext->last_click, point)) {
+        fire_double_click(cse, point);
+    }
+    ext->last_click = *point;
+    lv_obj_invalidate(cse);
+}
+
+static void update_drag(lv_obj_t *cse, lv_point_t *point)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+
+    lv_coord_t x = point->x - ext->last_click.x;
+    lv_coord_t y = point->y - ext->last_click.y;
+
+    ext->dragging = abs(x) > DRAG_MINIMUM || abs(y) > DRAG_MINIMUM;
+
+    if (ext->dragging) {
+
+        if (ext->selected_csn && !ysw_csn_is_selected(ext->selected_csn)) {
+            ysw_csn_select(ext->selected_csn, true);
+        }
+
+        if (!ext->drag_start_cs) {
+            ESP_LOGE(TAG, "capturing initial drag CS set");
+            ext->drag_start_cs = ysw_cs_copy(ext->cs);
+        }
+
+        lv_coord_t w = lv_obj_get_width(cse);
+        lv_coord_t h = lv_obj_get_height(cse);
+
+        double pixels_per_tick = (double)w / (get_column_count(ext) * YSW_TICKS_DEFAULT_TPB);
+        double pixels_per_half_degree = ((double)h / ROW_COUNT) / 2;
+
+        lv_coord_t delta_ticks = x * pixels_per_tick;
+        lv_coord_t delta_half_degrees = round(y / pixels_per_half_degree);
+
+        ESP_LOGD(TAG, "do_drop w=%d", w);
+        ESP_LOGD(TAG, "do_drop h=%d", h);
+        ESP_LOGD(TAG, "do_drop drag.x=%d", x);
+        ESP_LOGD(TAG, "do_drop drag.y=%d", y);
+        ESP_LOGD(TAG, "do_drop pixels_per_tick=%g", pixels_per_tick);
+        ESP_LOGD(TAG, "do_drop pixels_per_half_degree=%g", pixels_per_half_degree);
+        ESP_LOGD(TAG, "do_drop delta_ticks=%d", delta_ticks);
+        ESP_LOGD(TAG, "do_drop delta_half_degrees=%d", delta_half_degrees);
+
+        uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
+
+        for (int i = 0; i < csn_count; i++) {
+            ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
+            if (ysw_csn_is_selected(csn)) {
+                ysw_csn_t *drag_start_csn = ysw_cs_get_csn(ext->drag_start_cs, i);
+                switch (ext->selection_type) {
+                    case YSW_BOUNDS_MIDDLE:
+                    case YSW_BOUNDS_NONE:
+                        // duration stays the same
+                        if (delta_ticks < 0) {
+                            csn->start = max(0, drag_start_csn->start + delta_ticks);
+                        } else {
+                            csn->start = min(ysw_cs_get_duration(ext->cs) - drag_start_csn->duration,
+                                    drag_start_csn->start + delta_ticks);
+                        }
+                        break;
+                    case YSW_BOUNDS_LEFT:
+                        // duration grows moving left, shrinks moving right
+                        if (delta_ticks < 0) {
+                            csn->start = max(0, drag_start_csn->start + delta_ticks);
+                            csn->duration = drag_start_csn->duration - delta_ticks; // minus a minus...
+                        } else {
+                            csn->start = min(ysw_cs_get_duration(ext->cs) - drag_start_csn->duration,
+                                    drag_start_csn->start + delta_ticks);
+                            csn->duration = max(10, drag_start_csn->duration - delta_ticks);
+                        }
+                        break;
+                    case YSW_BOUNDS_RIGHT:
+                        break;
+                }
+            }
+        }
+    }
+}
+
+static void on_signal_pressing(lv_obj_t *cse, void *param)
 {
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
+    update_drag(cse, &proc->types.pointer.act_point);
+    lv_obj_invalidate(cse);
+}
 
+static void on_signal_released(lv_obj_t *cse, void *param)
+{
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-
-    ext->drag_distance.x = proc->types.pointer.act_point.x - ext->last_click.x;
-    ext->drag_distance.y = proc->types.pointer.act_point.y - ext->last_click.y;
-
-    ESP_LOGD(TAG, "on_release distance x=%d, y=%d", ext->drag_distance.x, ext->drag_distance.y);
-
-    if (ext->drag_distance.x < 5 && ext->drag_distance.y < 5) {
-        on_click(cse);
-    } else {
-        on_drag_end(cse);
+    lv_indev_t *indev_act = (lv_indev_t*)param;
+    lv_indev_proc_t *proc = &indev_act->proc;
+    update_drag(cse, &proc->types.pointer.act_point);
+    if (!ext->dragging) {
+        do_click(cse);
     }
 
-    ext->drag_distance.x = 0;
-    ext->drag_distance.y = 0;
+    ext->dragging = false;
+    ext->selected_csn = NULL;
+    ext->selection_type = YSW_BOUNDS_NONE;
+    if (ext->drag_start_cs) {
+        ysw_cs_free(ext->drag_start_cs);
+        ext->drag_start_cs = NULL;
+    }
 
+    lv_obj_invalidate(cse);
+}
+
+static void on_signal_press_lost(lv_obj_t *cse, void *param)
+{
+    ESP_LOGD(TAG, "on_signal_press_lost entered");
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    ext->dragging = false;
+    ext->selected_csn = NULL;
+    ext->selection_type = YSW_BOUNDS_NONE;
     lv_obj_invalidate(cse);
 }
 
 static lv_res_t signal_cb(lv_obj_t *cse, lv_signal_t signal, void *param)
 {
     lv_res_t res = super_signal_cb(cse, signal, param);
-    ESP_LOGD(TAG, "signal_cb signal=%d", signal);
+    //ESP_LOGD(TAG, "signal_cb signal=%d", signal);
     if (res == LV_RES_OK) {
         switch (signal) {
             case LV_SIGNAL_GET_TYPE:
@@ -439,49 +519,21 @@ static lv_res_t signal_cb(lv_obj_t *cse, lv_signal_t signal, void *param)
                 // note that lv_obj_del frees ext_attr if set
                 break;
             case LV_SIGNAL_PRESSED:
-                on_press(cse, param);
+                on_signal_pressed(cse, param);
                 break;
             case LV_SIGNAL_PRESSING:
-                on_drag(cse, param);
+                on_signal_pressing(cse, param);
                 break;
             case LV_SIGNAL_RELEASED:
-                on_release(cse, param);
+                on_signal_released(cse, param);
+                break;
+            case LV_SIGNAL_PRESS_LOST:
+                on_signal_press_lost(cse, param);
                 break;
         }
     }
     return res;
 }
-
-#if 0
-static void event_cb(lv_obj_t *obj, lv_event_t event)
-{
-    switch(event) {
-        case LV_EVENT_PRESSED:
-            ESP_LOGD(TAG, "Pressed\n");
-            break;
-
-        case LV_EVENT_SHORT_CLICKED:
-            ESP_LOGD(TAG, "Short clicked\n");
-            break;
-
-        case LV_EVENT_CLICKED:
-            ESP_LOGD(TAG, "Clicked\n");
-            break;
-
-        case LV_EVENT_LONG_PRESSED:
-            ESP_LOGD(TAG, "Long press\n");
-            break;
-
-        case LV_EVENT_LONG_PRESSED_REPEAT:
-            ESP_LOGD(TAG, "Long press repeat\n");
-            break;
-
-        case LV_EVENT_RELEASED:
-            ESP_LOGD(TAG, "Released\n");
-            break;
-    }
-}
-#endif
 
 lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
 {
@@ -508,8 +560,8 @@ lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
     ext->cs = NULL;
     ext->last_click.x = 0;
     ext->last_click.y = 0;
-    ext->drag_distance.x = 0;
-    ext->drag_distance.y = 0;
+    ext->dragging = false;
+    ext->drag_start_cs = NULL;
     ext->style_bg = &lv_style_plain;
     ext->style_oi = &odd_interval_style;
     ext->style_ei = &even_interval_style;
@@ -519,15 +571,8 @@ lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
 
     lv_obj_set_signal_cb(cse, signal_cb);
     lv_obj_set_design_cb(cse, design_cb);
-
-#if 0
-    lv_obj_set_event_cb(cse, event_cb);
-#endif
-
     lv_obj_set_click(cse, true);
-
     lv_obj_set_size(cse, LV_DPI * 2, LV_DPI / 3);
-
     lv_obj_set_style(cse, &lv_style_plain);
 
     return cse;

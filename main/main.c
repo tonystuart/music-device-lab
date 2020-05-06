@@ -524,6 +524,8 @@ static void cse_event_cb(lv_obj_t *ysw_lv_cse, ysw_lv_cse_event_t event, ysw_lv_
 
 void app_main()
 {
+    ESP_LOGD(TAG, "sizeof(ysw_cs_t)=%d", sizeof(ysw_cs_t));
+
     esp_log_level_set("spi_master", ESP_LOG_INFO);
 
     esp_log_level_set("BLEServer", ESP_LOG_INFO);

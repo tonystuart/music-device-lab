@@ -22,10 +22,10 @@ ysw_bounds_t ysw_bounds_check(lv_area_t *area, lv_point_t *point)
     lv_coord_t bottom = area->y2 + BOUNDS_BORDER;
     ysw_bounds_t bounds_type = YSW_BOUNDS_NONE;
     if (top <= y && y <= bottom) {
-        lv_coord_t left = area->x1 - BOUNDS_BORDER;
+        lv_coord_t left = area->x1 - (2 * BOUNDS_BORDER);
         lv_coord_t middle_1 = area->x1 + BOUNDS_BORDER;
         lv_coord_t middle_2 = area->x2 - BOUNDS_BORDER;
-        lv_coord_t right = area->x2 + BOUNDS_BORDER;
+        lv_coord_t right = area->x2 + (2 * BOUNDS_BORDER);
         if (middle_1 <= x && x <= middle_2) {
             bounds_type = YSW_BOUNDS_MIDDLE;
         } else if (left <= x && x <= middle_1) {

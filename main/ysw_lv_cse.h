@@ -45,11 +45,13 @@ typedef struct {
 typedef void (*ysw_lv_cse_event_cb_t)(lv_obj_t *ysw_lv_cse, ysw_lv_cse_event_t event, ysw_lv_cse_event_cb_data_t *data);
 
 typedef struct {
+    // TODO: Rename / reorder by role (e.g. dragging)
     ysw_cs_t *cs;
     lv_point_t last_click;
-    lv_point_t drag_distance;
     ysw_csn_t *selected_csn;
     ysw_bounds_t selection_type;
+    ysw_cs_t *drag_start_cs;
+    bool dragging;
     const lv_style_t *style_bg; // background
     const lv_style_t *style_oi; // odd interval
     const lv_style_t *style_ei; // even interval
