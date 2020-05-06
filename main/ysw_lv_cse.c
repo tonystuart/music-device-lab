@@ -452,6 +452,9 @@ static void update_drag(lv_obj_t *cse, lv_point_t *point)
                     } else if (ext->selection_type == YSW_BOUNDS_RIGHT) {
                         if (left_drag) {
                             duration = drag_start_csn->duration - ticks;
+                            if (duration < 10) {
+                                duration = 10;
+                                start = drag_start_csn->start - (ticks - drag_start_csn->duration) - duration; }
                         } else {
                             duration = drag_start_csn->duration + ticks;
                         }
