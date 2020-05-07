@@ -18,7 +18,8 @@
 typedef enum {
     YSW_LV_CSE_SELECT,
     YSW_LV_CSE_DESELECT,
-    YSW_LV_CSE_DOUBLE_CLICK
+    YSW_LV_CSE_DOUBLE_CLICK,
+    YSW_LV_CSE_DRAG_END,
 } ysw_lv_cse_event_t;
 
 typedef struct {

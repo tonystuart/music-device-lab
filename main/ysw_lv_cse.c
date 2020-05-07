@@ -44,11 +44,14 @@ static char *key_labels[] =
 };
 
 #define ROW_COUNT YSW_MIDI_UNPO
-#define DRAG_MINIMUM 5
+
+#define MINIMUM_DRAG 5
+
+#define MINIMUM_DURATION 10
 
 static inline uint8_t get_column_count(ysw_lv_cse_ext_t *ext)
 {
-    return ext->cs->beats_per_measure;
+    return ysw_cs_get_beats_per_measure(ext->cs);
 }
 
 static void get_csn_info(
@@ -312,21 +315,20 @@ static void fire_double_click(lv_obj_t *cse, lv_point_t *point)
         lv_coord_t tick_index = x_offset / pixels_per_tick;
         lv_coord_t row_index = y_offset / pixels_per_degree;
 
-        //ESP_LOGD(TAG, "fire_double_click w=%d", w);
-        //ESP_LOGD(TAG, "fire_double_click h=%d", h);
-        //ESP_LOGD(TAG, "fire_double_click x_offset=%d", x_offset);
-        //ESP_LOGD(TAG, "fire_double_click y_offset=%d", y_offset);
-        //ESP_LOGD(TAG, "fire_double_click pixels_per_tick=%g", pixels_per_tick);
-        //ESP_LOGD(TAG, "fire_double_click pixels_per_degree=%g", pixels_per_degree);
-        //ESP_LOGD(TAG, "fire_double_click tick_index=%d", tick_index);
-        //ESP_LOGD(TAG, "fire_double_click row_index=%d", row_index);
-
         ysw_lv_cse_event_cb_data_t data = {
             .double_click.start = tick_index,
             .double_click.degree = YSW_MIDI_UNPO - row_index,
         };
 
         ext->event_cb(cse, YSW_LV_CSE_DOUBLE_CLICK, &data);
+    }
+}
+
+static void fire_drag_end(lv_obj_t *cse)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (ext->event_cb) {
+        ext->event_cb(cse, YSW_LV_CSE_DRAG_END, NULL);
     }
 }
 
@@ -392,6 +394,124 @@ static void on_signal_pressed(lv_obj_t *cse, void *param)
     lv_obj_invalidate(cse);
 }
 
+static void drag_horizontally(lv_obj_t *cse, ysw_csn_t *csn, ysw_csn_t *drag_start_csn, lv_coord_t x)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    uint32_t total_duration = ysw_cs_get_duration(ext->cs);
+
+    lv_coord_t w = lv_obj_get_width(cse);
+    double ticks_per_pixel = (double)total_duration / w;
+    lv_coord_t delta_ticks = x * ticks_per_pixel;
+
+    //ESP_LOGD(TAG, "drag_horizontally w=%d", w);
+    //ESP_LOGD(TAG, "drag_horizontally drag.x=%d", x);
+    //ESP_LOGD(TAG, "drag_horizontally ticks_per_pixel=%g", ticks_per_pixel);
+    //ESP_LOGD(TAG, "drag_horizontally delta_ticks=%d", delta_ticks);
+
+    bool left_drag = delta_ticks < 0;
+    uint32_t ticks = abs(delta_ticks);
+
+    int32_t old_start = drag_start_csn->start;
+    int32_t old_duration = drag_start_csn->duration;
+    int32_t new_start = old_start;
+    int32_t new_duration = old_duration;
+
+    if (ext->selection_type == YSW_BOUNDS_LEFT) {
+        if (left_drag) {
+            new_duration = old_duration + ticks;
+            new_start = old_start - ticks;
+        } else {
+            new_duration = old_duration - ticks;
+            if (new_duration < MINIMUM_DURATION) {
+                new_duration = MINIMUM_DURATION;
+            }
+            new_start = old_start + ticks;
+        }
+    } else if (ext->selection_type == YSW_BOUNDS_RIGHT) {
+        if (left_drag) {
+            new_duration = old_duration - ticks;
+            if (new_duration < MINIMUM_DURATION) {
+                new_duration = MINIMUM_DURATION;
+                new_start = old_start - (ticks - old_duration) - new_duration;
+            }
+        } else {
+            new_duration = old_duration + ticks;
+        }
+    } else {
+        if (left_drag) {
+            new_start = old_start - ticks;
+        } else {
+            new_start = old_start + ticks;
+        }
+    }
+
+    if (new_duration > total_duration) {
+        new_duration = total_duration;
+    }
+    if (new_start < 0) {
+        new_start = 0;
+    }
+    if (new_start + new_duration > total_duration) {
+        new_start = total_duration - new_duration;
+    }
+
+    csn->start = new_start;
+    csn->duration = new_duration;
+}
+
+static void drag_vertically(lv_obj_t *cse, ysw_csn_t *csn, ysw_csn_t *drag_start_csn, lv_coord_t y)
+{
+    lv_coord_t h = lv_obj_get_height(cse);
+    double pixels_per_half_degree = ((double)h / ROW_COUNT) / 2;
+    lv_coord_t delta_half_degrees = round(y / pixels_per_half_degree);
+
+    //ESP_LOGD(TAG, "drag_vertically h=%d", h);
+    //ESP_LOGD(TAG, "drag_vertically drag.y=%d", y);
+    //ESP_LOGD(TAG, "drag_vertically pixels_per_half_degree=%g", pixels_per_half_degree);
+    //ESP_LOGD(TAG, "drag_vertically delta_half_degrees=%d", delta_half_degrees);
+
+    bool top_drag = delta_half_degrees < 0;
+    uint8_t half_degrees = abs(delta_half_degrees);
+    uint8_t degrees = half_degrees / 2;
+    bool is_accidental = half_degrees % 2;
+
+    if (top_drag) {
+        csn->degree = drag_start_csn->degree + degrees;
+        if (is_accidental) {
+            if (ysw_csn_is_flat(drag_start_csn)) {
+                ysw_csn_set_natural(csn);
+            } else if (ysw_csn_is_natural(drag_start_csn)) {
+                ysw_csn_set_sharp(csn);
+            } else {
+                ysw_csn_set_natural(csn);
+                csn->degree++;
+            }
+        } else {
+            ysw_csn_set_natural(csn);
+        }
+        if (csn->degree > YSW_CSN_MAX_DEGREE) {
+            csn->degree = YSW_CSN_MAX_DEGREE;
+        }
+    } else {
+        csn->degree = drag_start_csn->degree - degrees;
+        if (is_accidental) {
+            if (ysw_csn_is_sharp(drag_start_csn)) {
+                ysw_csn_set_natural(csn);
+            } else if (ysw_csn_is_natural(drag_start_csn)) {
+                ysw_csn_set_flat(csn);
+            } else {
+                ysw_csn_set_natural(csn);
+                csn->degree--;
+            }
+        } else {
+            ysw_csn_set_natural(csn);
+        }
+        if (csn->degree < YSW_CSN_MIN_DEGREE) {
+            csn->degree = YSW_CSN_MIN_DEGREE;
+        }
+    }
+}
+
 static void update_drag(lv_obj_t *cse, lv_point_t *point)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
@@ -399,7 +519,10 @@ static void update_drag(lv_obj_t *cse, lv_point_t *point)
     lv_coord_t x = point->x - ext->last_click.x;
     lv_coord_t y = point->y - ext->last_click.y;
 
-    ext->dragging = abs(x) > DRAG_MINIMUM || abs(y) > DRAG_MINIMUM;
+    bool drag_x = abs(x) > MINIMUM_DRAG;
+    bool drag_y = abs(y) > MINIMUM_DRAG;
+
+    ext->dragging = drag_x || drag_y;
 
     if (ext->dragging) {
 
@@ -408,81 +531,21 @@ static void update_drag(lv_obj_t *cse, lv_point_t *point)
         }
 
         if (!ext->drag_start_cs) {
-            ESP_LOGE(TAG, "DRAG START -- DID YOU EXPECT THIS?");
+            ESP_LOGE(TAG, "update_drag starting new drag");
             ext->drag_start_cs = ysw_cs_copy(ext->cs);
         }
-
-        lv_coord_t w = lv_obj_get_width(cse);
-        lv_coord_t h = lv_obj_get_height(cse);
-
-        double ticks_per_pixel = (double)(get_column_count(ext) * YSW_TICKS_DEFAULT_TPB) / w;
-        double pixels_per_half_degree = ((double)h / ROW_COUNT) / 2;
-
-        lv_coord_t delta_ticks = x * ticks_per_pixel;
-        lv_coord_t delta_half_degrees = round(y / pixels_per_half_degree);
-        bool left_drag = delta_ticks < 0;
-        uint32_t ticks = abs(delta_ticks);
-        uint32_t total_duration = ysw_cs_get_duration(ext->cs);
-
-        ESP_LOGD(TAG, "do_drop w=%d", w);
-        ESP_LOGD(TAG, "do_drop h=%d", h);
-        ESP_LOGD(TAG, "do_drop drag.x=%d", x);
-        ESP_LOGD(TAG, "do_drop drag.y=%d", y);
-        ESP_LOGD(TAG, "do_drop ticks_per_pixel=%g", ticks_per_pixel);
-        ESP_LOGD(TAG, "do_drop pixels_per_half_degree=%g", pixels_per_half_degree);
-        ESP_LOGD(TAG, "do_drop delta_ticks=%d", delta_ticks);
-        ESP_LOGD(TAG, "do_drop delta_half_degrees=%d", delta_half_degrees);
 
         uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
 
         for (int i = 0; i < csn_count; i++) {
             ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
+            ysw_csn_t *drag_start_csn = ysw_cs_get_csn(ext->drag_start_cs, i);
             if (ysw_csn_is_selected(csn)) {
-                ysw_csn_t *drag_start_csn = ysw_cs_get_csn(ext->drag_start_cs, i);
-                if (abs(x) > DRAG_MINIMUM) {
-                    int32_t old_start = drag_start_csn->start;
-                    int32_t old_duration = drag_start_csn->duration;
-                    int32_t new_start = old_start;
-                    int32_t new_duration = old_duration;
-                    if (ext->selection_type == YSW_BOUNDS_LEFT) {
-                        if (left_drag) {
-                            new_duration = old_duration + ticks;
-                            new_start = old_start - ticks;
-                        } else {
-                            new_duration = old_duration - ticks;
-                            if (new_duration < 10) {
-                                new_duration = 10;
-                            }
-                            new_start = old_start + ticks;
-                        }
-                    } else if (ext->selection_type == YSW_BOUNDS_RIGHT) {
-                        if (left_drag) {
-                            new_duration = old_duration - ticks;
-                            if (new_duration < 10) {
-                                new_duration = 10;
-                                new_start = old_start - (ticks - old_duration) - new_duration;
-                            }
-                        } else {
-                            new_duration = old_duration + ticks;
-                        }
-                    } else {
-                        if (left_drag) {
-                            new_start = old_start - ticks;
-                        } else {
-                            new_start = old_start + ticks;
-                        }
-                    }
-                    if (new_duration > total_duration) {
-                        new_duration = total_duration;
-                    }
-                    if (new_start < 0) {
-                        new_start = 0;
-                    }
-                    if (new_start + new_duration > total_duration) {
-                        new_start = total_duration - new_duration;
-                    }
-                    csn->start = new_start;
-                    csn->duration = new_duration;
+                if (drag_x) {
+                    drag_horizontally(cse, csn, drag_start_csn, x);
+                }
+                if (drag_y) {
+                    drag_vertically(cse, csn, drag_start_csn, y);
                 }
             }
         }
@@ -503,18 +566,18 @@ static void on_signal_released(lv_obj_t *cse, void *param)
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
     update_drag(cse, &proc->types.pointer.act_point);
-    if (!ext->dragging) {
+    if (ext->dragging) {
+        fire_drag_end(cse);
+        ext->dragging = false;
+        if (ext->drag_start_cs) {
+            ysw_cs_free(ext->drag_start_cs);
+            ext->drag_start_cs = NULL;
+        }
+    } else {
         do_click(cse);
     }
-
-    ext->dragging = false;
     ext->selected_csn = NULL;
     ext->selection_type = YSW_BOUNDS_NONE;
-    if (ext->drag_start_cs) {
-        ysw_cs_free(ext->drag_start_cs);
-        ext->drag_start_cs = NULL;
-    }
-
     lv_obj_invalidate(cse);
 }
 
@@ -522,7 +585,19 @@ static void on_signal_press_lost(lv_obj_t *cse, void *param)
 {
     ESP_LOGD(TAG, "on_signal_press_lost entered");
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    ext->dragging = false;
+    if (ext->dragging) {
+        ext->dragging = false;
+        if (ext->drag_start_cs) {
+            uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
+            for (uint32_t i = 0; i < csn_count; i++) {
+                ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
+                ysw_csn_t *drag_start_csn = ysw_cs_get_csn(ext->drag_start_cs, i);
+                *csn = *drag_start_csn;
+            }
+            ysw_cs_free(ext->drag_start_cs);
+            ext->drag_start_cs = NULL;
+        }
+    }
     ext->selected_csn = NULL;
     ext->selection_type = YSW_BOUNDS_NONE;
     lv_obj_invalidate(cse);

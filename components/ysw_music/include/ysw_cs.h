@@ -14,6 +14,7 @@
 #include "ysw_degree.h"
 #include "ysw_song.h"
 #include "ysw_ticks.h"
+#include "ysw_time.h"
 
 // See Miller (2nd edition), pp 38-42
 // https://en.wikipedia.org/wiki/Mode_(music)
@@ -37,12 +38,11 @@ typedef struct {
     uint8_t octave;
     ysw_mode_t mode;
     int8_t transposition;
-    uint8_t beats_per_minute;
-    uint8_t beats_per_measure;
-    uint8_t beat_unit;
+    uint8_t tempo;
+    ysw_time_t time;
 } ysw_cs_t;
 
-ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t beats_per_minute, uint8_t beats_per_measure, uint8_t beat_unit);
+ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo, ysw_time_t time);
 
 ysw_cs_t *ysw_cs_copy(ysw_cs_t *old_cs);
 
@@ -56,14 +56,19 @@ static inline ysw_csn_t *ysw_cs_get_csn(ysw_cs_t *cs, uint32_t index)
     return ysw_array_get(cs->csns, index);
 }
 
-static inline uint32_t ysw_cs_get_duration(ysw_cs_t *cs)
-{
-    return cs->beats_per_measure * YSW_TICKS_DEFAULT_TPB;
-}
-
 static inline uint32_t ysw_cs_get_beats_per_measure(ysw_cs_t *cs)
 {
-    return cs->beats_per_measure;
+    return ysw_time_to_beats_per_measure(cs->time);
+}
+
+static inline uint32_t ysw_cs_get_beat_unit(ysw_cs_t *cs)
+{
+    return ysw_time_to_beat_unit(cs->time);
+}
+
+static inline uint32_t ysw_cs_get_duration(ysw_cs_t *cs)
+{
+    return ysw_cs_get_beats_per_measure(cs) * YSW_TICKS_DEFAULT_TPB;
 }
 
 void ysw_cs_free(ysw_cs_t *cs);

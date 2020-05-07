@@ -15,7 +15,7 @@
 
 #define TAG "YSW_CS"
 
-ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t beats_per_minute, uint8_t beats_per_measure, uint8_t beat_unit)
+ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo, ysw_time_t time)
 {
     ysw_cs_t *cs = ysw_heap_allocate(sizeof(ysw_cs_t));
     cs->name = ysw_heap_strdup(name);
@@ -24,9 +24,8 @@ ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode
     cs->octave = octave;
     cs->mode = mode;
     cs->transposition = transposition;
-    cs->beats_per_minute = beats_per_minute;
-    cs->beats_per_measure = beats_per_measure;
-    cs->beat_unit = beat_unit;
+    cs->tempo = tempo;
+    cs->time = time;
     return cs;
 }
 
@@ -40,9 +39,8 @@ ysw_cs_t *ysw_cs_copy(ysw_cs_t *old_cs)
     new_cs->octave = old_cs->octave;
     new_cs->mode = old_cs->mode;
     new_cs->transposition = old_cs->transposition;
-    new_cs->beats_per_minute = old_cs->beats_per_minute;
-    new_cs->beats_per_measure = old_cs->beats_per_measure;
-    new_cs->beat_unit = old_cs->beat_unit;
+    new_cs->tempo = old_cs->tempo;
+    new_cs->time = old_cs->time;
     for (int i = 0; i < csn_count; i++) {
         ysw_csn_t *old_csn = ysw_cs_get_csn(old_cs, i);
         ysw_csn_t *new_csn = ysw_csn_copy(old_csn);

@@ -102,8 +102,7 @@ static void parse_cs(this_t *this)
         atoi(this->tokens[5]),
         atoi(this->tokens[6]),
         atoi(this->tokens[7]),
-        atoi(this->tokens[8]),
-        atoi(this->tokens[9]));
+        atoi(this->tokens[8]));
 
     ysw_array_push(this->music->css, cs);
 
@@ -210,7 +209,7 @@ ysw_music_t *ysw_music_parse_file(FILE *file)
 
     while (get_tokens(this)) {
         record_type_t type = atoi(this->tokens[0]);
-        if (type == CHORD_STYLE && this->token_count == 10) {
+        if (type == CHORD_STYLE && this->token_count == 9) {
             parse_cs(this);
         } else if (type == PROGRESSION && this->token_count == 5) {
             parse_progression(this);

@@ -212,9 +212,10 @@ static void loop_next()
     }
 }
 
-static void set_tempo(uint8_t bpm)
+static void set_tempo(uint8_t new_bpm)
 {
-    ESP_LOGW(TAG, "set_tempo bpm=%d not implemented", bpm);
+    ESP_LOGW(TAG, "set_tempo bpm=%d", bpm);
+    bpm = new_bpm;
 }
 
 static void set_loop(bool new_value)

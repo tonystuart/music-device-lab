@@ -23,12 +23,6 @@ typedef struct {
     lv_event_cb_t paste_cb;
     lv_event_cb_t volume_mid_cb;
     lv_event_cb_t volume_max_cb;
-    lv_event_cb_t up_cb;
-    lv_event_cb_t down_cb;
-    lv_event_cb_t plus_cb;
-    lv_event_cb_t minus_cb;
-    lv_event_cb_t left_cb;
-    lv_event_cb_t right_cb;
     lv_event_cb_t trash_cb;
     ysw_lv_cse_event_cb_t cse_event_cb;
 } ysw_csf_config_t;
@@ -43,4 +37,5 @@ ysw_csf_t *ysw_csf_create(ysw_csf_config_t *config);
 void ysw_csf_free(ysw_csf_t *csf);
 void ysw_csf_set_cs(ysw_csf_t *csf, ysw_cs_t *cs);
 void ysw_csf_set_header_text(ysw_csf_t *csf, const char *header_text);
+void ysw_csf_set_footer_text(ysw_csf_t *csf, char *footer_text);
 void ysw_csf_redraw(ysw_csf_t *csf);

@@ -45,6 +45,7 @@ typedef enum {
 typedef struct {
     note_t *notes; // must remain accessible for duration of playback
     uint32_t note_count;
+    uint8_t tempo;
 } ysw_sequencer_notes_t;
 
 typedef struct {

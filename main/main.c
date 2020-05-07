@@ -35,8 +35,10 @@
 #include "ysw_sdb.h"
 #include "ysw_instruments.h"
 #include "ysw_octaves.h"
-#include "ysw_modes.h"
-#include "ysw_transpositions.h"
+#include "ysw_mode.h"
+#include "ysw_tempo.h"
+#include "ysw_time.h"
+#include "ysw_transposition.h"
 
 #define TAG "MAIN"
 
@@ -165,6 +167,7 @@ static void stage()
         .type = YSW_SEQUENCER_STAGE,
         .stage.notes = notes,
         .stage.note_count = note_count,
+        .stage.tempo = cs->tempo,
     };
 
     send_sequencer_message(&message);
@@ -203,70 +206,33 @@ static void increase_volume(ysw_csn_t *csn)
     }
 }
 
-static void decrease_pitch(ysw_csn_t *csn)
-{
-    if (csn->degree > -21) {
-        if (ysw_csn_is_sharp(csn)) {
-            ysw_csn_set_natural(csn);
-        } else if (ysw_csn_is_natural(csn)) {
-            ysw_csn_set_flat(csn);
-        } else if (ysw_csn_is_flat(csn)) {
-            ysw_csn_set_natural(csn);
-            csn->degree--;
-        }
-    }
-}
-
-static void increase_pitch(ysw_csn_t *csn)
-{
-    if (csn->degree < 21) {
-        if (ysw_csn_is_flat(csn)) {
-            ysw_csn_set_natural(csn);
-        } else if (ysw_csn_is_natural(csn)) {
-            ysw_csn_set_sharp(csn);
-        } else if (ysw_csn_is_sharp(csn)) {
-            ysw_csn_set_natural(csn);
-            csn->degree++;
-        }
-    }
-}
-
-static void decrease_duration(ysw_csn_t *csn)
-{
-    int new_duration = ((csn->duration - 1) / 5) * 5;
-    if (new_duration >= 5) {
-        csn->duration = new_duration;
-    }
-}
-
-static void increase_duration(ysw_csn_t *csn)
-{
-    int new_duration = ((csn->duration + 5) / 5) * 5;
-    if (new_duration <= 400) {
-        csn->duration = new_duration;
-    }
-}
-
-static void decrease_start(ysw_csn_t *csn)
-{
-    int new_start = ((csn->start - 1) / 5) * 5;
-    if (new_start >= 0) {
-        csn->start = new_start;
-    }
-}
-
-static void increase_start(ysw_csn_t *csn)
-{
-    int new_start = ((csn->start + 5) / 5) * 5;
-    if (new_start + csn->duration <= 400) {
-        csn->start = new_start;
-    }
-}
-
 static void refresh()
 {
     ysw_csf_redraw(csf);
     stage();
+}
+
+static void update_header()
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    ysw_csf_set_header_text(csf, cs->name);
+}
+
+static void update_footer()
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%d BPM %d/%d", cs->tempo,
+            ysw_cs_get_beats_per_measure(cs), ysw_cs_get_beat_unit(cs));
+    ysw_csf_set_footer_text(csf, buf);
+}
+
+static void update_frame()
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    ysw_csf_set_cs(csf, cs);
+    update_header();
+    update_footer();
 }
 
 typedef void (*note_visitor_t)(ysw_csn_t *csn);
@@ -299,8 +265,7 @@ static void on_next(lv_obj_t * btn, lv_event_t event)
         if (++cs_index >= cs_count) {
             cs_index = 0;
         }
-        ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-        ysw_csf_set_cs(csf, cs);
+        update_frame();
     }
 }
 
@@ -348,8 +313,7 @@ static void on_prev(lv_obj_t * btn, lv_event_t event)
         if (--cs_index >= cs_count) {
             cs_index = cs_count - 1;
         }
-        ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-        ysw_csf_set_cs(csf, cs);
+        update_frame();
     }
 }
 
@@ -361,7 +325,7 @@ static void on_name_change(const char *new_name)
 {
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
     ysw_cs_set_name(cs, new_name);
-    ysw_csf_set_header_text(csf, new_name);
+    update_header();
 }
 
 static void on_instrument_change(uint8_t new_instrument)
@@ -392,17 +356,36 @@ static void on_transposition_change(uint8_t new_transposition_index)
     stage();
 }
 
+static void on_tempo_change(uint8_t new_tempo_index)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    cs->tempo = ysw_tempo_from_index(new_tempo_index);
+    update_footer();
+    stage();
+}
+
+static void on_time_change(ysw_time_t new_time)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    cs->time = new_time;
+    update_footer();
+    stage();
+}
+
 static void on_settings(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_RELEASED) {
         ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-        uint8_t index = ysw_transposition_to_index(cs->transposition);
+        uint8_t trans_index = ysw_transposition_to_index(cs->transposition);
+        uint8_t tempo_index = ysw_tempo_to_index(cs->tempo);
         ysw_sdb_t *sdb = ysw_sdb_create("Chord Style Settings");
         ysw_sdb_add_string(sdb, on_name_change, "Name", cs->name);
         ysw_sdb_add_choice(sdb, on_instrument_change, "Instrument", cs->instrument, ysw_instruments);
         ysw_sdb_add_choice(sdb, on_octave_change, "Octave", cs->octave, ysw_octaves);
         ysw_sdb_add_choice(sdb, on_mode_change, "Mode", cs->mode, ysw_modes);
-        ysw_sdb_add_choice(sdb, on_transposition_change, "Transposition", index, ysw_transposition);
+        ysw_sdb_add_choice(sdb, on_transposition_change, "Transposition", trans_index, ysw_transposition);
+        ysw_sdb_add_choice(sdb, on_tempo_change, "Tempo", tempo_index, ysw_tempo);
+        ysw_sdb_add_choice(sdb, on_time_change, "Time", cs->time, ysw_time);
     }
 }
 
@@ -446,46 +429,6 @@ static void on_paste(lv_obj_t * btn, lv_event_t event)
     }
 }
 
-static void on_volume_mid(lv_obj_t * btn, lv_event_t event)
-{
-    visit_notes(decrease_volume, event);
-}
-
-static void on_volume_max(lv_obj_t * btn, lv_event_t event)
-{
-    visit_notes(increase_volume, event);
-}
-
-static void on_up(lv_obj_t * btn, lv_event_t event)
-{
-    visit_notes(increase_pitch, event);
-}
-
-static void on_down(lv_obj_t * btn, lv_event_t event)
-{
-    visit_notes(decrease_pitch, event);
-}
-
-static void on_plus(lv_obj_t * btn, lv_event_t event)
-{
-    visit_notes(increase_duration, event);
-}
-
-static void on_minus(lv_obj_t * btn, lv_event_t event)
-{
-    visit_notes(decrease_duration, event);
-}
-
-static void on_left(lv_obj_t * btn, lv_event_t event)
-{
-    visit_notes(decrease_start, event);
-}
-
-static void on_right(lv_obj_t * btn, lv_event_t event)
-{
-    visit_notes(increase_start, event);
-}
-
 static void on_trash(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED) {
@@ -510,15 +453,42 @@ static void on_trash(lv_obj_t * btn, lv_event_t event)
     }
 }
 
-static void cse_event_cb(lv_obj_t *ysw_lv_cse, ysw_lv_cse_event_t event, ysw_lv_cse_event_cb_data_t *data)
+static void on_volume_mid(lv_obj_t * btn, lv_event_t event)
 {
-    if (event == YSW_LV_CSE_SELECT) {
-    } else if (event == YSW_LV_CSE_DESELECT) {
-    } else if (event == YSW_LV_CSE_DOUBLE_CLICK) {
-        ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-        ysw_csn_t *csn = ysw_csn_create(data->double_click.degree, 80, data->double_click.start, 80, 0);
-        ysw_cs_add_csn(cs, csn);
-        refresh();
+    visit_notes(decrease_volume, event);
+}
+
+static void on_volume_max(lv_obj_t * btn, lv_event_t event)
+{
+    visit_notes(increase_volume, event);
+}
+
+static void create_csn(lv_obj_t *cse, int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    ysw_csn_t *csn = ysw_csn_create(degree, velocity, start, duration, 0);
+    ysw_cs_add_csn(cs, csn);
+    refresh();
+}
+
+static void cse_event_cb(lv_obj_t *cse, ysw_lv_cse_event_t event, ysw_lv_cse_event_cb_data_t *data)
+{
+    static uint8_t velocity = 80;
+    static uint32_t duration = 80;
+
+    switch (event) {
+        case YSW_LV_CSE_SELECT:
+            velocity = data->select.csn->velocity;
+            duration = data->select.csn->duration;
+            break;
+        case YSW_LV_CSE_DESELECT:
+            break;
+        case YSW_LV_CSE_DOUBLE_CLICK:
+            create_csn(cse, data->double_click.degree, velocity, data->double_click.start, duration);
+            break;
+        case YSW_LV_CSE_DRAG_END:
+            stage();
+            break;
     }
 }
 
@@ -597,18 +567,11 @@ void app_main()
             .paste_cb = on_paste,
             .volume_mid_cb = on_volume_mid,
             .volume_max_cb = on_volume_max,
-            .up_cb = on_up,
-            .down_cb = on_down,
-            .plus_cb = on_plus,
-            .minus_cb = on_minus,
-            .left_cb = on_left,
-            .right_cb = on_right,
             .trash_cb = on_trash,
             .cse_event_cb = cse_event_cb,
         };
         csf = ysw_csf_create(&config);
-        ysw_cs_t *cs = ysw_music_get_cs(music, 0);
-        ysw_csf_set_cs(csf, cs);
+        update_frame();
     } else {
         lv_obj_t * mbox1 = lv_mbox_create(lv_scr_act(), NULL);
         lv_mbox_set_text(mbox1, "The music partition is empty");

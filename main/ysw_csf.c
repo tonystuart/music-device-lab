@@ -94,15 +94,13 @@ ysw_csf_t *ysw_csf_create(ysw_csf_config_t *config)
     add_footer_button(footer, LV_SYMBOL_SAVE, config->save_cb);
     add_footer_button(footer, LV_SYMBOL_COPY, config->copy_cb);
     add_footer_button(footer, LV_SYMBOL_PASTE, config->paste_cb);
+    add_footer_button(footer, LV_SYMBOL_TRASH, config->trash_cb);
     add_footer_button(footer, LV_SYMBOL_VOLUME_MID, config->volume_mid_cb);
     add_footer_button(footer, LV_SYMBOL_VOLUME_MAX, config->volume_max_cb);
-    add_footer_button(footer, LV_SYMBOL_UP, config->up_cb);
-    add_footer_button(footer, LV_SYMBOL_DOWN, config->down_cb);
-    add_footer_button(footer, LV_SYMBOL_PLUS, config->plus_cb);
-    add_footer_button(footer, LV_SYMBOL_MINUS, config->minus_cb);
-    add_footer_button(footer, LV_SYMBOL_LEFT, config->left_cb);
-    add_footer_button(footer, LV_SYMBOL_RIGHT, config->right_cb);
-    add_footer_button(footer, LV_SYMBOL_TRASH, config->trash_cb);
+
+    csf->footer_label = lv_label_create(footer, NULL);
+    lv_label_set_text(csf->footer_label, "");
+    lv_obj_align(csf->footer_label, footer, LV_ALIGN_IN_TOP_RIGHT, -10, 0);
 
     add_header_button(csf->win, LV_SYMBOL_CLOSE, lv_win_close_event_cb);
     add_header_button(csf->win, LV_SYMBOL_NEXT, config->next_cb);
@@ -134,7 +132,6 @@ void ysw_csf_free(ysw_csf_t *csf)
 void ysw_csf_set_cs(ysw_csf_t *csf, ysw_cs_t *cs)
 {
     ysw_lv_cse_set_cs(csf->cse, cs);
-    ysw_csf_set_header_text(csf, cs->name);
 }
 
 void ysw_csf_set_header_text(ysw_csf_t *csf, const char *header_text)
@@ -145,5 +142,11 @@ void ysw_csf_set_header_text(ysw_csf_t *csf, const char *header_text)
 void ysw_csf_redraw(ysw_csf_t *csf)
 {
     lv_obj_invalidate(csf->cse);
+}
+
+void ysw_csf_set_footer_text(ysw_csf_t *csf, char *footer_text)
+{
+    lv_label_set_text(csf->footer_label, footer_text);
+    lv_obj_realign(csf->footer_label);
 }
 
