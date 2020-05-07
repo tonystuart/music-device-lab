@@ -46,7 +46,7 @@ typedef struct {
     note_t *notes; // must remain accessible for duration of playback
     uint32_t note_count;
     uint8_t tempo;
-} ysw_sequencer_notes_t;
+} ysw_sequencer_clip_t;
 
 typedef struct {
     uint8_t bpm;
@@ -63,10 +63,10 @@ typedef struct {
 typedef struct {
     ysw_sequencer_message_type_t type;
     union {
-        ysw_sequencer_notes_t play;
+        ysw_sequencer_clip_t play;
         ysw_sequencer_tempo_t tempo;
         ysw_sequencer_loop_t loop;
-        ysw_sequencer_notes_t stage;
+        ysw_sequencer_clip_t stage;
         ysw_sequencer_speed_t speed;
     };
 } ysw_sequencer_message_t;

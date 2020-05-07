@@ -30,11 +30,8 @@ typedef bool (*visitor_t)(active_note_t *active_note, int32_t context);
 static ysw_sequencer_config_t config;
 static QueueHandle_t input_queue;
 
-static note_t *notes;
-static uint32_t note_count;
-
-static note_t *staged_notes;
-static uint32_t staged_note_count;
+static ysw_sequencer_clip_t active;
+static ysw_sequencer_clip_t staged;
 
 static bool loop;
 static uint32_t next_note;
@@ -46,12 +43,26 @@ static active_note_t active_notes[MAX_POLYPHONY];
 static uint8_t active_count = 0;
 static uint8_t programs[16];
 
-static uint8_t bpm = YSW_TICKS_DEFAULT_BPM;
 static uint32_t tpb = YSW_TICKS_DEFAULT_TPB;
 
 static inline time_t t2ms(uint32_t ticks)
 {
-    return ysw_ticks_to_millis_by_tpb(ticks, bpm, tpb);
+    return ysw_ticks_to_millis_by_tpb(ticks, active.tempo, tpb);
+}
+
+static inline bool clip_playing()
+{
+    return start_millis;
+}
+
+static void free_clip(ysw_sequencer_clip_t *clip)
+{
+    if (clip->notes) {
+        ysw_heap_free(clip->notes);
+        clip->notes = NULL;
+        clip->note_count = 0;
+        clip->tempo = 0;
+    }
 }
 
 static void change(uint8_t channel, uint8_t program)
@@ -131,7 +142,7 @@ static void play_note(note_t *note)
 
 static inline void adjust_playback_start_millis()
 {
-    uint32_t old_elapsed_millis = t2ms(notes[next_note].start);
+    uint32_t old_elapsed_millis = t2ms(active.notes[next_note].start);
     uint32_t new_elapsed_millis = (100 * old_elapsed_millis) / playback_speed;
     start_millis = get_millis() - new_elapsed_millis;
 }
@@ -144,43 +155,44 @@ static uint32_t get_current_playback_millis()
     return playback_millis;
 }
 
-static void play_song(note_t *new_notes, uint32_t new_note_count)
+static void play_clip(ysw_sequencer_clip_t *new_clip)
 {
-    ESP_LOGD(TAG, "play_song notes=%p, note_count=%d", new_notes, new_note_count);
-    if (start_millis) {
+    ESP_LOGD(TAG, "play_clip note_count=%d, tempo=%d", new_clip->note_count, new_clip->tempo);
+    if (clip_playing()) {
         release_notes(all_note_visitor, 0);
     }
-    if (notes) {
-        ysw_heap_free(notes);
+    free_clip(&active);
+    active = *new_clip;
+    if (active.notes == staged.notes) {
+        // playing staged clip: don't free them, just unstage them
+        staged.notes = NULL;
+        staged.note_count = 0;
+        staged.tempo = 0;
+    } else {
+        // playing new clip: clear any staged clip
+        free_clip(&staged);
     }
-    notes = new_notes;
-    note_count = new_note_count;
     next_note = 0;
-    if (note_count) {
+    if (active.note_count) {
         adjust_playback_start_millis();
     }
 }
 
-static void stage_song(note_t *new_notes, uint32_t new_note_count)
+static void stage_clip(ysw_sequencer_clip_t *new_clip)
 {
-    ESP_LOGD(TAG, "stage_song notes=%p, note_count=%d", new_notes, new_note_count);
-    if (staged_notes) {
-        ysw_heap_free(staged_notes);
-        staged_notes = NULL;
-        staged_note_count = 0;
-    }
-    if (!start_millis) {
-        play_song(new_notes, new_note_count);
+    ESP_LOGD(TAG, "stage_clip note_count=%d, tempo=%d", new_clip->note_count, new_clip->tempo);
+    if (clip_playing()) {
+        free_clip(&staged);
+        staged = *new_clip;
     } else {
-        staged_notes = new_notes;
-        staged_note_count = new_note_count;
+        play_clip(new_clip);
     }
 }
 
-static void pause_song()
+static void pause_clip()
 {
-    ESP_LOGD(TAG, "pause_song start_millis=%d, next_note=%d, note_count=%d", start_millis, next_note, note_count);
-    if (start_millis) {
+    ESP_LOGD(TAG, "pause_clip start_millis=%d, next_note=%d, note_count=%d", start_millis, next_note, active.note_count);
+    if (clip_playing()) {
         release_notes(all_note_visitor, 0);
     } else {
         // Hitting PAUSE twice is like STOP -- you restart at beginning
@@ -189,33 +201,28 @@ static void pause_song()
     start_millis = 0;
 }
 
-static void resume_song()
+static void resume_clip()
 {
-    ESP_LOGD(TAG, "resume_song next_note=%d, note_count=%d", next_note, note_count);
-    if (note_count) {
+    ESP_LOGD(TAG, "resume_clip next_note=%d, note_count=%d", next_note, active.note_count);
+    if (active.note_count) {
         adjust_playback_start_millis();
     }
 }
 
 static void loop_next()
 {
-    ESP_LOGD(TAG, "loop_next staged_note_count=%d", staged_note_count);
-    if (staged_notes) {
-        note_t *new_notes = staged_notes;
-        uint32_t new_note_count = staged_note_count;
-        // don't free them, just unstage them
-        staged_notes = NULL;
-        staged_note_count = 0;
-        play_song(new_notes, new_note_count);
+    ESP_LOGD(TAG, "loop_next staged.note_count=%d", staged.note_count);
+    if (staged.notes) {
+        play_clip(&staged);
     } else {
-        resume_song();
+        resume_clip();
     }
 }
 
-static void set_tempo(uint8_t new_bpm)
+static void set_tempo(uint8_t new_tempo)
 {
-    ESP_LOGW(TAG, "set_tempo bpm=%d", bpm);
-    bpm = new_bpm;
+    ESP_LOGW(TAG, "set_tempo tempo=%d", new_tempo);
+    active.tempo = new_tempo;
 }
 
 static void set_loop(bool new_value)
@@ -226,7 +233,7 @@ static void set_loop(bool new_value)
 static void set_playback_speed(uint8_t percent)
 {
     playback_speed = percent;
-    if (start_millis) {
+    if (clip_playing()) {
         adjust_playback_start_millis();
     }
 }
@@ -235,13 +242,13 @@ static void process_message(ysw_sequencer_message_t *message)
 {
     switch (message->type) {
         case YSW_SEQUENCER_PLAY:
-            play_song(message->play.notes, message->play.note_count);
+            play_clip(&message->play);
             break;
         case YSW_SEQUENCER_PAUSE:
-            pause_song();
+            pause_clip();
             break;
         case YSW_SEQUENCER_RESUME:
-            resume_song();
+            resume_clip();
             break;
         case YSW_SEQUENCER_TEMPO:
             set_tempo(message->tempo.bpm);
@@ -250,7 +257,7 @@ static void process_message(ysw_sequencer_message_t *message)
             set_loop(message->loop.loop);
             break;
         case YSW_SEQUENCER_STAGE:
-            stage_song(message->stage.notes, message->stage.note_count);
+            stage_clip(&message->stage);
             break;
         case YSW_SEQUENCER_SPEED:
             set_playback_speed(message->speed.percent);
@@ -266,15 +273,15 @@ static void run_sequencer(void* parameters)
     ESP_LOGD(TAG, "run_sequencer core=%d", xPortGetCoreID());
     for (;;) {
         TickType_t ticks_to_wait = portMAX_DELAY;
-        if (start_millis) {
+        if (clip_playing()) {
             next_note_to_end = NULL;
             uint32_t playback_millis = get_current_playback_millis();
             release_notes(time_based_visitor, playback_millis);
-            if (next_note < note_count) {
-                note_t *note = &notes[next_note];
+            if (next_note < active.note_count) {
+                note_t *note = &active.notes[next_note];
                 uint32_t note_start_time = t2ms(note->start);
                 if (note_start_time <= playback_millis) {
-                    note_t *note = &notes[next_note];
+                    note_t *note = &active.notes[next_note];
                     play_note(note);
                     next_note++;
                     ticks_to_wait = 0;
