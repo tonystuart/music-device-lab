@@ -142,7 +142,16 @@ static void play_note(note_t *note)
 
 static inline void adjust_playback_start_millis()
 {
-    uint32_t old_elapsed_millis = t2ms(active.notes[next_note].start);
+    uint32_t tick;
+    if (next_note == 0) {
+        // beginning of clip: start at zero
+        tick = 0;
+    } else {
+        // middle of clip: start at current note
+        tick = active.notes[next_note].start;
+    }
+
+    uint32_t old_elapsed_millis = t2ms(tick);
     uint32_t new_elapsed_millis = (100 * old_elapsed_millis) / playback_speed;
     start_millis = get_millis() - new_elapsed_millis;
 }
