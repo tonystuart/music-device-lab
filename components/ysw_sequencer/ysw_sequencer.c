@@ -25,8 +25,6 @@ typedef struct {
     time_t end_time;
 } active_note_t;
 
-typedef bool (*visitor_t)(active_note_t *active_note, int32_t context);
-
 static ysw_sequencer_config_t config;
 static QueueHandle_t input_queue;
 
@@ -38,10 +36,9 @@ static uint32_t next_note;
 static uint32_t start_millis;
 static uint8_t playback_speed = YSW_SEQUENCER_SPEED_DEFAULT;
 
-static active_note_t *next_note_to_end;
-static active_note_t active_notes[MAX_POLYPHONY];
 static uint8_t active_count = 0;
-static uint8_t programs[16];
+static active_note_t active_notes[MAX_POLYPHONY];
+static uint8_t programs[YSW_MIDI_MAX_CHANNELS];
 
 static uint32_t tpb = YSW_TICKS_DEFAULT_TPB;
 
@@ -65,76 +62,37 @@ static void free_clip(ysw_sequencer_clip_t *clip)
     }
 }
 
-static void change(uint8_t channel, uint8_t program)
+static void release_all_notes()
 {
-    ESP_LOGD(TAG, "program change channel=%d, old=%d, new=%d", channel, programs[channel], program);
-    if (channel != YSW_MIDI_DRUM_CHANNEL) {
-        config.on_program_change(channel, program);
+    for (uint8_t i = 0; i < active_count; i++) {
+        config.on_note_off(active_notes[i].channel, active_notes[i].midi_note);
     }
+    active_count = 0;
 }
 
-static bool time_based_visitor(active_note_t *active_note, int32_t current_millis)
-{
-    bool is_expired = active_note->end_time < (uint32_t)current_millis;
-    if (!is_expired) {
-        if (next_note_to_end) {
-            if (active_note->end_time < next_note_to_end->end_time) {
-                next_note_to_end = active_note;
-            }
-        } else {
-            next_note_to_end = active_note;
-        }
-    }
-    return is_expired;
-}
-
-static bool channel_based_visitor(active_note_t *active_note, int32_t channel)
-{
-    return active_note->channel == (uint32_t)channel;
-}
-
-static bool all_note_visitor(active_note_t *active_note, int32_t context)
-{
-    return true;
-}
-
-static void release_notes(visitor_t visitor, int32_t context)
-{
-    uint8_t index = 0;
-    while (index < active_count) {
-        active_note_t *active_note = active_notes + index;
-        if ((*visitor)(active_note, context)) {
-            config.on_note_off(active_note->channel, active_note->midi_note);
-            if (index + 1 < active_count) {
-                active_notes[index] = active_notes[active_count-1];
-            }
-            active_count--;
-        } else {
-            index++;
-        }
-    }
-}
-
-static void play_note(note_t *note)
+static void play_note(note_t *note, int next_note_index)
 {
     if (note->instrument != programs[note->channel]) {
-        release_notes(channel_based_visitor, note->channel);
-        change(note->channel, note->instrument);
+        if (note->channel != YSW_MIDI_DRUM_CHANNEL) {
+            config.on_program_change(note->channel, note->instrument);
+        }
         programs[note->channel] = note->instrument;
     }
-    if (active_count < MAX_POLYPHONY) {
-        uint8_t active_note;
-        if (note->channel == YSW_MIDI_DRUM_CHANNEL) {
-            active_note = note->midi_note;
-        } else {
-            active_note = ysw_song_transpose(note->midi_note);
+
+    if (next_note_index != -1) {
+        config.on_note_off(note->channel, note->midi_note);
+    } else {
+        if (active_count < MAX_POLYPHONY) {
+            next_note_index = active_count++;
         }
-        config.on_note_on(note->channel, active_note, note->velocity);
-        active_notes[active_count].channel = note->channel;
-        active_notes[active_count].midi_note = active_note;
+    }
+
+    if (next_note_index != -1) {
+        config.on_note_on(note->channel, note->midi_note, note->velocity);
+        active_notes[next_note_index].channel = note->channel;
+        active_notes[next_note_index].midi_note = note->midi_note;
         // Limit duration to avoid issues with VS1053b sustained polyphony
-        active_notes[active_count].end_time = t2ms(note->start) + min(t2ms(note->duration), 1000);
-        active_count++;
+        active_notes[next_note_index].end_time = t2ms(note->start) + min(t2ms(note->duration), 1000);
     } else {
         ESP_LOGE(TAG, "Maximum polyphony exceeded, active_count=%d", active_count);
     }
@@ -168,7 +126,7 @@ static void play_clip(ysw_sequencer_clip_t *new_clip)
 {
     ESP_LOGD(TAG, "play_clip note_count=%d, tempo=%d", new_clip->note_count, new_clip->tempo);
     if (clip_playing()) {
-        release_notes(all_note_visitor, 0);
+        release_all_notes();
     }
     free_clip(&active);
     active = *new_clip;
@@ -202,7 +160,7 @@ static void pause_clip()
 {
     ESP_LOGD(TAG, "pause_clip start_millis=%d, next_note=%d, note_count=%d", start_millis, next_note, active.note_count);
     if (clip_playing()) {
-        release_notes(all_note_visitor, 0);
+        release_all_notes();
     } else {
         // Hitting PAUSE twice is like STOP -- you restart at beginning
         next_note = 0;
@@ -283,15 +241,58 @@ static void run_sequencer(void* parameters)
     for (;;) {
         TickType_t ticks_to_wait = portMAX_DELAY;
         if (clip_playing()) {
-            next_note_to_end = NULL;
             uint32_t playback_millis = get_current_playback_millis();
-            release_notes(time_based_visitor, playback_millis);
+
+
+            note_t *note;
             if (next_note < active.note_count) {
-                note_t *note = &active.notes[next_note];
+                note = &active.notes[next_note];
+            } else {
+                note = NULL;
+            }
+
+            int next_note_index = -1;
+            active_note_t *next_note_to_end = NULL;
+
+
+            uint8_t index = 0;
+            while (index < active_count) {
+                active_note_t *active_note = &active_notes[index];
+                if (active_note->end_time < playback_millis) {
+                    config.on_note_off(active_note->channel, active_note->midi_note);
+                    if (index + 1 < active_count) {
+                        // replaced expired note with last one in array
+                        active_notes[index] = active_notes[active_count - 1];
+                    }
+                    // free last member of array
+                    active_count--;
+                } else {
+                    if (next_note_to_end) {
+                        if (active_note->end_time < next_note_to_end->end_time) {
+                            next_note_to_end = active_note;
+                        }
+                    } else {
+                        next_note_to_end = active_note;
+                    }
+                    if (note) {
+                        if (note->channel == active_note->channel &&
+                                // TODO: consider if active_note is transposed by play_note
+                                note->midi_note == active_note->midi_note) {
+                            next_note_index = index;
+                        }
+                    }
+                    // only increment if we didn't replace an expired note
+                    index++;
+                }
+            }
+
+
+
+
+            if (note) {
                 uint32_t note_start_time = t2ms(note->start);
                 if (note_start_time <= playback_millis) {
-                    note_t *note = &active.notes[next_note];
-                    play_note(note);
+                    play_note(note, next_note_index);
                     next_note++;
                     ticks_to_wait = 0;
                 } else {
