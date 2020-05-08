@@ -522,11 +522,11 @@ static void update_drag(lv_obj_t *cse, lv_point_t *point)
     bool drag_x = abs(x) > MINIMUM_DRAG;
     bool drag_y = abs(y) > MINIMUM_DRAG;
 
-    ext->dragging = drag_x || drag_y;
+    ext->dragging = ext->selected_csn && (drag_x || drag_y);
 
     if (ext->dragging) {
 
-        if (ext->selected_csn && !ysw_csn_is_selected(ext->selected_csn)) {
+        if (!ysw_csn_is_selected(ext->selected_csn)) {
             ysw_csn_select(ext->selected_csn, true);
         }
 
