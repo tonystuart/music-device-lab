@@ -235,97 +235,100 @@ static void process_message(ysw_sequencer_message_t *message)
     }
 }
 
+static TickType_t process_notes()
+{
+    TickType_t ticks_to_wait = portMAX_DELAY;
+    uint32_t playback_millis = get_current_playback_millis();
+
+    note_t *note;
+    if (next_note < active.note_count) {
+        note = &active.notes[next_note];
+    } else {
+        note = NULL;
+    }
+
+    int next_note_index = -1;
+    active_note_t *next_note_to_end = NULL;
+
+    uint8_t index = 0;
+    while (index < active_count) {
+        active_note_t *active_note = &active_notes[index];
+        if (active_note->end_time < playback_millis) {
+            config.on_note_off(active_note->channel, active_note->midi_note);
+            if (index + 1 < active_count) {
+                // replaced expired note with last one in array
+                active_notes[index] = active_notes[active_count - 1];
+            }
+            // free last member of array
+            active_count--;
+        } else {
+            if (next_note_to_end) {
+                if (active_note->end_time < next_note_to_end->end_time) {
+                    next_note_to_end = active_note;
+                }
+            } else {
+                next_note_to_end = active_note;
+            }
+            if (note) {
+                if (note->channel == active_note->channel &&
+                        // TODO: consider if active_note is transposed by play_note
+                        note->midi_note == active_note->midi_note) {
+                    next_note_index = index;
+                }
+            }
+            // only increment if we didn't replace an expired note
+            index++;
+        }
+    }
+
+    if (note) {
+        uint32_t note_start_time = t2ms(note->start);
+        if (note_start_time <= playback_millis) {
+            play_note(note, next_note_index);
+            next_note++;
+            ticks_to_wait = 0;
+        } else {
+            long time_of_next_event;
+            if (next_note_to_end && (next_note_to_end->end_time < note_start_time)) {
+                time_of_next_event = next_note_to_end->end_time;
+            } else {
+                time_of_next_event = note_start_time;
+            }
+            uint32_t delay_millis = time_of_next_event - playback_millis;
+            ticks_to_wait = to_ticks(delay_millis);
+        }
+    } else {
+        if (next_note_to_end) {
+            ESP_LOGD(TAG, "waiting for final notes to end");
+            uint32_t delay_millis = next_note_to_end->end_time - playback_millis;
+            ticks_to_wait = to_ticks(delay_millis);
+        } else if (loop) {
+            if (config.on_state_change) {
+                config.on_state_change(YSW_SEQUENCER_STATE_LOOP_COMPLETE);
+            }
+            next_note = 0;
+            loop_next();
+            ticks_to_wait = 0;
+        } else {
+            next_note = 0;
+            start_millis = 0;
+            ESP_LOGD(TAG, "playback of notes is complete");
+            if (config.on_state_change) {
+                config.on_state_change(YSW_SEQUENCER_STATE_PLAYBACK_COMPLETE);
+            }
+        }
+    }
+
+    return ticks_to_wait;
+}
+
 static void run_sequencer(void* parameters)
 {
     ESP_LOGD(TAG, "run_sequencer core=%d", xPortGetCoreID());
     for (;;) {
         TickType_t ticks_to_wait = portMAX_DELAY;
         if (clip_playing()) {
-            uint32_t playback_millis = get_current_playback_millis();
-
-
-            note_t *note;
-            if (next_note < active.note_count) {
-                note = &active.notes[next_note];
-            } else {
-                note = NULL;
-            }
-
-            int next_note_index = -1;
-            active_note_t *next_note_to_end = NULL;
-
-
-            uint8_t index = 0;
-            while (index < active_count) {
-                active_note_t *active_note = &active_notes[index];
-                if (active_note->end_time < playback_millis) {
-                    config.on_note_off(active_note->channel, active_note->midi_note);
-                    if (index + 1 < active_count) {
-                        // replaced expired note with last one in array
-                        active_notes[index] = active_notes[active_count - 1];
-                    }
-                    // free last member of array
-                    active_count--;
-                } else {
-                    if (next_note_to_end) {
-                        if (active_note->end_time < next_note_to_end->end_time) {
-                            next_note_to_end = active_note;
-                        }
-                    } else {
-                        next_note_to_end = active_note;
-                    }
-                    if (note) {
-                        if (note->channel == active_note->channel &&
-                                // TODO: consider if active_note is transposed by play_note
-                                note->midi_note == active_note->midi_note) {
-                            next_note_index = index;
-                        }
-                    }
-                    // only increment if we didn't replace an expired note
-                    index++;
-                }
-            }
-
-
-
-
-            if (note) {
-                uint32_t note_start_time = t2ms(note->start);
-                if (note_start_time <= playback_millis) {
-                    play_note(note, next_note_index);
-                    next_note++;
-                    ticks_to_wait = 0;
-                } else {
-                    long time_of_next_event;
-                    if (next_note_to_end && (next_note_to_end->end_time < note_start_time)) {
-                        time_of_next_event = next_note_to_end->end_time;
-                    } else {
-                        time_of_next_event = note_start_time;
-                    }
-                    uint32_t delay_millis = time_of_next_event - playback_millis;
-                    ticks_to_wait = to_ticks(delay_millis);
-                }
-            } else {
-                if (next_note_to_end) {
-                    ESP_LOGD(TAG, "waiting for final notes to end");
-                    uint32_t delay_millis = next_note_to_end->end_time - playback_millis;
-                    ticks_to_wait = to_ticks(delay_millis);
-                } else if (loop) {
-                    if (config.on_state_change) {
-                        config.on_state_change(YSW_SEQUENCER_STATE_LOOP_COMPLETE);
-                    }
-                    next_note = 0;
-                    loop_next();
-                    ticks_to_wait = 0;
-                } else {
-                    next_note = 0;
-                    start_millis = 0;
-                    ESP_LOGD(TAG, "playback of notes is complete");
-                    if (config.on_state_change) {
-                        config.on_state_change(YSW_SEQUENCER_STATE_PLAYBACK_COMPLETE);
-                    }
-                }
-            }
+            ticks_to_wait = process_notes();
         }
         ysw_sequencer_message_t message;
         BaseType_t is_message = xQueueReceive(input_queue, &message, ticks_to_wait);
