@@ -19,6 +19,7 @@ typedef struct {
     lv_event_cb_t close_cb;
     lv_event_cb_t settings_cb;
     lv_event_cb_t save_cb;
+    lv_event_cb_t new_cb;
     lv_event_cb_t copy_cb;
     lv_event_cb_t paste_cb;
     lv_event_cb_t volume_mid_cb;

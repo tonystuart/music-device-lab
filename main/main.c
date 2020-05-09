@@ -36,6 +36,7 @@
 #include "ysw_instruments.h"
 #include "ysw_octaves.h"
 #include "ysw_mode.h"
+#include "ysw_name.h"
 #include "ysw_tempo.h"
 #include "ysw_time.h"
 #include "ysw_transposition.h"
@@ -394,6 +395,32 @@ static void on_save(lv_obj_t * btn, lv_event_t event)
 {
 }
 
+static void create_chord_style(uint32_t new_index)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+
+    char name[64];
+    ysw_name_create(name, sizeof(name));
+    ysw_cs_t *new_cs = ysw_cs_create(name,
+            cs->instrument,
+            cs->octave,
+            cs->mode,
+            cs->transposition,
+            cs->tempo,
+            cs->time);
+
+    ysw_music_insert_cs(music, new_index, new_cs);
+    cs_index = new_index;
+    update_frame();
+}
+
+static void on_new_chord_style(lv_obj_t * btn, lv_event_t event)
+{
+    if (event == LV_EVENT_PRESSED) {
+        create_chord_style(cs_index + 1);
+    }
+}
+
 static void on_copy(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED) {
@@ -564,6 +591,7 @@ void app_main()
             .close_cb = on_close,
             .settings_cb = on_settings,
             .save_cb = on_save,
+            .new_cb = on_new_chord_style,
             .copy_cb = on_copy,
             .paste_cb = on_paste,
             .volume_mid_cb = on_volume_mid,

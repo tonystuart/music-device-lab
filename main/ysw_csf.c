@@ -92,6 +92,7 @@ ysw_csf_t *ysw_csf_create(ysw_csf_config_t *config)
 
     add_footer_button(footer, LV_SYMBOL_SETTINGS, config->settings_cb);
     add_footer_button(footer, LV_SYMBOL_SAVE, config->save_cb);
+    add_footer_button(footer, LV_SYMBOL_AUDIO, config->new_cb);
     add_footer_button(footer, LV_SYMBOL_COPY, config->copy_cb);
     add_footer_button(footer, LV_SYMBOL_PASTE, config->paste_cb);
     add_footer_button(footer, LV_SYMBOL_TRASH, config->trash_cb);
