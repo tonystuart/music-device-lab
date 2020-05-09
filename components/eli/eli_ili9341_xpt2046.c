@@ -321,7 +321,7 @@ static bool xpt2046_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
         x = x >> 3;
         y = y >> 3;
         xpt2046_corr(&x, &y);
-        xpt2046_avg(&x, &y);
+        //xpt2046_avg(&x, &y);
         last_x = x;
         last_y = y;
 

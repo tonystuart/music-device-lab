@@ -483,11 +483,11 @@ static void cse_event_cb(lv_obj_t *cse, ysw_lv_cse_event_t event, ysw_lv_cse_eve
             break;
         case YSW_LV_CSE_DESELECT:
             break;
-        case YSW_LV_CSE_DOUBLE_CLICK:
-            create_csn(cse, data->double_click.degree, velocity, data->double_click.start, duration);
-            break;
         case YSW_LV_CSE_DRAG_END:
             stage();
+            break;
+        case YSW_LV_CSE_CREATE:
+            create_csn(cse, data->create.degree, velocity, data->create.start, duration);
             break;
     }
 }

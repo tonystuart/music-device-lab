@@ -18,8 +18,8 @@
 typedef enum {
     YSW_LV_CSE_SELECT,
     YSW_LV_CSE_DESELECT,
-    YSW_LV_CSE_DOUBLE_CLICK,
     YSW_LV_CSE_DRAG_END,
+    YSW_LV_CSE_CREATE,
 } ysw_lv_cse_event_t;
 
 typedef struct {
@@ -33,13 +33,13 @@ typedef struct {
 typedef struct {
     uint32_t start;
     int8_t degree;
-} ysw_lv_cse_double_click_t;
+} ysw_lv_cse_create_t;
 
 typedef struct {
     union {
         ysw_lv_cse_select_t select;
         ysw_lv_cse_deselect_t deselect;
-        ysw_lv_cse_double_click_t double_click;
+        ysw_lv_cse_create_t create;
     };
 } ysw_lv_cse_event_cb_data_t;
 
@@ -53,6 +53,7 @@ typedef struct {
     ysw_bounds_t selection_type;
     ysw_cs_t *drag_start_cs;
     bool dragging;
+    bool long_press;
     const lv_style_t *style_bg; // background
     const lv_style_t *style_oi; // odd interval
     const lv_style_t *style_ei; // even interval
