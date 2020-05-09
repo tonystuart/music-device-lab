@@ -16,5 +16,4 @@ const char *ysw_octaves =
 "5\n"
 "6\n"
 "7\n"
-"8\n"
-;
+"8";

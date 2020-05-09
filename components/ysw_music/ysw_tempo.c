@@ -11,6 +11,10 @@
 
 // See https://en.wikipedia.org/wiki/Tempo
 
+// Although the note value of a beat should typically be that indicated
+// by the denominator of the time signature, we use beats per quarter note
+// regardless of the denominator of the time signature. 
+
 const char *ysw_tempo =
 "10 BPM\n"
 "20 BPM\n"
@@ -29,8 +33,7 @@ const char *ysw_tempo =
 "150 BPM\n"
 "160 BPM\n"
 "170 BPM\n"
-"180 BPM\n"
-;
+"180 BPM";
 
 uint8_t ysw_tempo_from_index(uint8_t index)
 {

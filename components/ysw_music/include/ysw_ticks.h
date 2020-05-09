@@ -11,16 +11,16 @@
 
 #include "ysw_ticks.h"
 
-#define YSW_TICKS_DEFAULT_TPB 100 // ticks per beat
-#define YSW_TICKS_DEFAULT_BPM 120 // beats per minutes
+#define YSW_TICKS_DEFAULT_TPQN 100 // ticks per quarter note
+#define YSW_TICKS_DEFAULT_BPQN 120 // beats per quarter note
 
-static inline uint32_t ysw_ticks_to_millis(uint32_t ticks, uint8_t bpm)
+static inline uint32_t ysw_ticks_to_millis(uint32_t ticks, uint8_t qnpm)
 {
-    return (ticks * 60000) / (bpm * YSW_TICKS_DEFAULT_TPB);
+    return (ticks * 60000) / (qnpm * YSW_TICKS_DEFAULT_TPQN);
 }
 
-static inline uint32_t ysw_ticks_to_millis_by_tpb(uint32_t ticks, uint8_t bpm, uint32_t tpb)
+static inline uint32_t ysw_ticks_to_millis_by_tpqn(uint32_t ticks, uint8_t qnpm, uint32_t tpqn)
 {
-    return (ticks * 60000) / (bpm * tpb);
+    return (ticks * 60000) / (qnpm * tpqn);
 }
 

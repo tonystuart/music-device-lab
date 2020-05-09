@@ -1,5 +1,5 @@
 #record_type (chord_style),index,name,instrument,octave,mode,transposition,tempo,time
-1,0,Let it be strum,24,4,0,0,60,3
+1,0,Let it be strum,24,4,0,0,120,3
 
 #type (chord_note),degree,velocity,time,duration,flags
 2,1,100,0,180,0

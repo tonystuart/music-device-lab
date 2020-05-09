@@ -40,11 +40,11 @@ static uint8_t active_count = 0;
 static active_note_t active_notes[MAX_POLYPHONY];
 static uint8_t programs[YSW_MIDI_MAX_CHANNELS];
 
-static uint32_t tpb = YSW_TICKS_DEFAULT_TPB;
+static uint32_t tpqn = YSW_TICKS_DEFAULT_TPQN;
 
 static inline time_t t2ms(uint32_t ticks)
 {
-    return ysw_ticks_to_millis_by_tpb(ticks, active.tempo, tpb);
+    return ysw_ticks_to_millis_by_tpqn(ticks, active.tempo, tpqn);
 }
 
 static inline bool clip_playing()
@@ -218,7 +218,7 @@ static void process_message(ysw_sequencer_message_t *message)
             resume_clip();
             break;
         case YSW_SEQUENCER_TEMPO:
-            set_tempo(message->tempo.bpm);
+            set_tempo(message->tempo.qnpm);
             break;
         case YSW_SEQUENCER_LOOP:
             set_loop(message->loop.loop);

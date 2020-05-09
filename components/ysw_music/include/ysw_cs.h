@@ -68,7 +68,7 @@ static inline uint32_t ysw_cs_get_beat_unit(ysw_cs_t *cs)
 
 static inline uint32_t ysw_cs_get_duration(ysw_cs_t *cs)
 {
-    return ysw_cs_get_beats_per_measure(cs) * YSW_TICKS_DEFAULT_TPB;
+    return ysw_time_to_measure_duration(cs->time);
 }
 
 void ysw_cs_free(ysw_cs_t *cs);

@@ -23,3 +23,4 @@ extern const char *ysw_time;
 
 uint8_t ysw_time_to_beats_per_measure(ysw_time_t time);
 uint8_t ysw_time_to_beat_unit(ysw_time_t time);
+uint16_t ysw_time_to_measure_duration(ysw_time_t time);

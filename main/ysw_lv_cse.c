@@ -64,6 +64,9 @@ static void get_csn_info(
     uint8_t degree;
     int8_t octave;
 
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    uint32_t cs_duration = ysw_cs_get_duration(ext->cs);
+
     ysw_degree_normalize(csn->degree, &degree, &octave);
 
     lv_coord_t h = lv_obj_get_height(cse);
@@ -74,8 +77,8 @@ static void get_csn_info(
 
     lv_coord_t delta_y = -ysw_csn_get_accidental(csn) * ((h / ROW_COUNT) / 2);
 
-    lv_coord_t x1 = x + (csn->start * w) / (4 * YSW_TICKS_DEFAULT_TPB);
-    lv_coord_t x2 = x + ((csn->start + csn->duration) * w) / (4 * YSW_TICKS_DEFAULT_TPB);
+    lv_coord_t x1 = x + (csn->start * w) / cs_duration;
+    lv_coord_t x2 = x + ((csn->start + csn->duration) * w) / cs_duration;
 
     lv_coord_t y1 = y + (((YSW_MIDI_UNPO - degree) * h) / ROW_COUNT) + delta_y;
     lv_coord_t y2 = y + ((((YSW_MIDI_UNPO - degree) + 1) * h) / ROW_COUNT) + delta_y;
@@ -309,7 +312,7 @@ static void fire_create(lv_obj_t *cse, lv_point_t *point)
         lv_coord_t x_offset = point->x - cse->coords.x1;
         lv_coord_t y_offset = point->y - cse->coords.y1;
 
-        double pixels_per_tick = (double)w / (get_column_count(ext) * YSW_TICKS_DEFAULT_TPB);
+        double pixels_per_tick = (double)w / ysw_cs_get_duration(ext->cs);
         double pixels_per_degree = (double)h / ROW_COUNT;
 
         lv_coord_t tick_index = x_offset / pixels_per_tick;

@@ -123,12 +123,14 @@ uint8_t ysw_cs_get_instrument(ysw_cs_t *cs)
     return cs->instrument;
 }
 
+// CSNs must be in order produced by ysw_cs_sort_csns prior to call
+
 note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
 {
     int end_time = 0;
+    uint32_t cs_duration = ysw_cs_get_duration(cs);
     int csn_count = ysw_cs_get_csn_count(cs);
-    *note_count = csn_count + 1; // +1 for fill to measure
-    note_t *notes = ysw_heap_allocate(sizeof(note_t) * *note_count);
+    note_t *notes = ysw_heap_allocate(sizeof(note_t) * (csn_count + 1)); // +1 for fill-to-measure
     note_t *note_p = notes;
     uint8_t tonic = cs->octave * 12;
     uint8_t root = ysw_degree_intervals[0][cs->mode % 7];
@@ -136,23 +138,33 @@ note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
     root++;
     for (int j = 0; j < csn_count; j++) {
         ysw_csn_t *csn = ysw_cs_get_csn(cs, j);
-        note_p->start = csn->start;
-        note_p->duration = csn->duration;
-        note_p->channel = 0;
-        note_p->midi_note = ysw_csn_to_midi_note(csn, tonic, root) + cs->transposition;
-        note_p->velocity = csn->velocity;
-        note_p->instrument = cs->instrument;
-        //ESP_LOGD(TAG, "ysw_cs_get_notes start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
-        end_time = note_p->start + note_p->duration;
-        note_p++;
+        if (csn->start < cs_duration) {
+            note_p->start = csn->start;
+            if (csn->start + csn->duration > cs_duration) {
+                note_p->duration = cs_duration - csn->start;
+            } else {
+                note_p->duration = csn->duration;
+            }
+            note_p->channel = 0;
+            note_p->midi_note = ysw_csn_to_midi_note(csn, tonic, root) + cs->transposition;
+            note_p->velocity = csn->velocity;
+            note_p->instrument = cs->instrument;
+            //ESP_LOGD(TAG, "ysw_cs_get_notes start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
+            end_time = note_p->start + note_p->duration;
+            note_p++;
+        }
     }
     uint32_t fill_to_measure = ysw_cs_get_duration(cs) - end_time;
-    note_p->start = end_time;
-    note_p->duration = fill_to_measure;
-    note_p->channel = 0;
-    note_p->midi_note = 0; // TODO: 0-11 are reserved by ysw, 128 to 255 are reserved by application
-    note_p->velocity = 0;
-    note_p->instrument = 0;
+    if (fill_to_measure) {
+        note_p->start = end_time;
+        note_p->duration = fill_to_measure;
+        note_p->channel = 0;
+        note_p->midi_note = 0; // TODO: 0-11 are reserved by ysw, 128 to 255 are reserved by application
+        note_p->velocity = 0;
+        note_p->instrument = 0;
+        note_p++;
+    }
+    *note_count = note_p - notes;
     return notes;
 }
 

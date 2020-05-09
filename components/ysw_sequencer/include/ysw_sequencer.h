@@ -49,7 +49,7 @@ typedef struct {
 } ysw_sequencer_clip_t;
 
 typedef struct {
-    uint8_t bpm;
+    uint8_t qnpm;
 } ysw_sequencer_tempo_t;
 
 typedef struct {

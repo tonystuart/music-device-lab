@@ -16,5 +16,4 @@ const char *ysw_modes =
 "Lydian\n"
 "Mixolydian\n"
 "Aeolian (minor)\n"
-"Locrian\n"
-;
+"Locrian";

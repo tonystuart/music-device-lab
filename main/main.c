@@ -158,9 +158,10 @@ static void initialize_sequencer()
 
 static void stage()
 {
-    uint32_t note_count = 0;
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
     ysw_cs_sort_csns(cs);
+
+    uint32_t note_count = 0;
     note_t *notes = ysw_cs_get_notes(cs, &note_count);
 
     ysw_sequencer_message_t message = {

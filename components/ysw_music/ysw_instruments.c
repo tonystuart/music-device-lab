@@ -135,6 +135,5 @@ const char *ysw_instruments =
 "Telephone Ring\n"
 "Helicopter\n"
 "Applause\n"
-"Gunshot\n"
-;
+"Gunshot";
 

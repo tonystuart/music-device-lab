@@ -32,8 +32,7 @@ const char *ysw_transposition =
 "+8\n"
 "+9\n"
 "+10\n"
-"+11\n"
-;
+"+11";
 
 uint8_t ysw_transposition_from_index(uint8_t index)
 {
