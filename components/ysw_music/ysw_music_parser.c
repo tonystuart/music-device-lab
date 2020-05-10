@@ -88,7 +88,7 @@ static void push_back_tokens(this_t *this)
 static void parse_cs(this_t *this)
 {
     uint32_t index = atoi(this->tokens[1]);
-    uint32_t count = ysw_array_get_count(this->music->css);
+    uint32_t count = ysw_array_get_count(this->music->cs_array);
 
     if (index != count) {
         ESP_LOGW(TAG, "parse_cord expected count=%d, got index=%d", count, index);
@@ -104,7 +104,7 @@ static void parse_cs(this_t *this)
         atoi(this->tokens[7]),
         atoi(this->tokens[8]));
 
-    ysw_array_push(this->music->css, cs);
+    ysw_array_push(this->music->cs_array, cs);
 
     bool done = false;
 
@@ -150,13 +150,13 @@ static void parse_progression(this_t *this)
         if (type == PROGRESSION_CHORD_STYLE && this->token_count == 3) {
             uint8_t degree = atoi(this->tokens[1]);
             uint32_t cs_index = atoi(this->tokens[2]);
-            uint32_t cs_count = ysw_array_get_count(this->music->css);
+            uint32_t cs_count = ysw_array_get_count(this->music->cs_array);
             if (cs_index >= cs_count) {
                 ESP_LOGW(TAG, "parse_progression cs_index=%d, cs_count=%d", cs_index, cs_count);
                 ysw_progression_free(progression);
                 return;
             }
-            ysw_cs_t *cs = ysw_array_get(this->music->css, cs_index);
+            ysw_cs_t *cs = ysw_array_get(this->music->cs_array, cs_index);
             //ESP_LOGD(TAG, "using index=%d, cs=%p, name=%s", cs_index, cs, cs->name);
             ysw_progression_add_cs(progression, degree, cs);
         } else {
@@ -171,19 +171,19 @@ static void parse_progression(this_t *this)
 static ysw_music_t *create_music()
 {
     ysw_music_t *music = ysw_heap_allocate(sizeof(ysw_music_t));
-    music->css = ysw_array_create(64);
+    music->cs_array = ysw_array_create(64);
     music->progressions = ysw_array_create(64);
     return music;
 }
 
 void ysw_music_free(ysw_music_t *music)
 {
-    uint32_t cs_count = ysw_array_get_count(music->css);
+    uint32_t cs_count = ysw_array_get_count(music->cs_array);
     for (uint32_t i = 0; i < cs_count; i++) {
-        ysw_cs_t *cs = ysw_array_get(music->css, i);
+        ysw_cs_t *cs = ysw_array_get(music->cs_array, i);
         ysw_cs_free(cs);
     }
-    ysw_array_free(music->css);
+    ysw_array_free(music->cs_array);
     uint32_t progression_count = ysw_array_get_count(music->progressions);
     for (uint32_t i = 0; i < progression_count; i++) {
         ysw_progression_t *progression = ysw_array_get(music->progressions, i);

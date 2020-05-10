@@ -15,12 +15,12 @@
 
 uint32_t ysw_music_get_cs_count(ysw_music_t *music)
 {
-    return ysw_array_get_count(music->css);
+    return ysw_array_get_count(music->cs_array);
 }
 
 ysw_cs_t *ysw_music_get_cs(ysw_music_t *music, uint32_t index)
 {
-    return ysw_array_get(music->css, index);
+    return ysw_array_get(music->cs_array, index);
 }
 
 uint32_t ysw_music_get_progression_count(ysw_music_t *music)
@@ -35,7 +35,7 @@ ysw_progression_t *ysw_music_get_progression(ysw_music_t *music, uint32_t index)
 
 void ysw_music_insert_cs(ysw_music_t *music, uint32_t index, ysw_cs_t *cs)
 {
-    ysw_array_insert(music->css, index, cs);
+    ysw_array_insert(music->cs_array, index, cs);
 }
 
 void ysw_music_dump(ysw_music_t *music, char *tag)

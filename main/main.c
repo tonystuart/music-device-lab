@@ -160,7 +160,7 @@ static void initialize_sequencer()
 static void stage()
 {
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-    ysw_cs_sort_csns(cs);
+    ysw_cs_sort_csn_array(cs);
 
     uint32_t note_count = 0;
     note_t *notes = ysw_cs_get_notes(cs, &note_count);
@@ -465,17 +465,17 @@ static void on_trash(lv_obj_t * btn, lv_event_t event)
         ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
         uint32_t csn_count = ysw_cs_get_csn_count(cs);
         for (uint32_t source = 0; source < csn_count; source++) {
-            ysw_csn_t *csn = ysw_array_get(cs->csns, source);
+            ysw_csn_t *csn = ysw_array_get(cs->csn_array, source);
             if (ysw_csn_is_selected(csn)) {
                 ysw_csn_free(csn);
                 changes++;
             } else {
-                ysw_array_set(cs->csns, target, csn);
+                ysw_array_set(cs->csn_array, target, csn);
                 target++;
             }
         }
         if (changes) {
-            ysw_array_truncate(cs->csns, target);
+            ysw_array_truncate(cs->csn_array, target);
             refresh();
         }
     }

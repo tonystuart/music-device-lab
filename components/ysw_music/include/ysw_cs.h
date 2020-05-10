@@ -33,7 +33,7 @@ typedef enum PACKED {
 
 typedef struct {
     char *name;
-    ysw_array_t *csns;
+    ysw_array_t *csn_array;
     uint8_t instrument;
     uint8_t octave;
     ysw_mode_t mode;
@@ -48,12 +48,12 @@ ysw_cs_t *ysw_cs_copy(ysw_cs_t *old_cs);
 
 static inline uint32_t ysw_cs_get_csn_count(ysw_cs_t *cs)
 {
-    return ysw_array_get_count(cs->csns);
+    return ysw_array_get_count(cs->csn_array);
 }
 
 static inline ysw_csn_t *ysw_cs_get_csn(ysw_cs_t *cs, uint32_t index)
 {
-    return ysw_array_get(cs->csns, index);
+    return ysw_array_get(cs->csn_array, index);
 }
 
 static inline uint32_t ysw_cs_get_beats_per_measure(ysw_cs_t *cs)
@@ -77,7 +77,7 @@ void ysw_cs_normalize_csn(ysw_cs_t *cs, ysw_csn_t *csn);
 
 uint32_t ysw_cs_add_csn(ysw_cs_t *cs, ysw_csn_t *csn);
 
-void ysw_cs_sort_csns(ysw_cs_t *cs);
+void ysw_cs_sort_csn_array(ysw_cs_t *cs);
 
 void ysw_cs_set_name(ysw_cs_t *cs, const char *name);
 

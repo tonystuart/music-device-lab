@@ -92,7 +92,7 @@ uint32_t ysw_progression_get_note_count(ysw_progression_t *progression)
     for (int i = 0; i < cs_count; i++) {
         ESP_LOGD(TAG, "i=%d, cs_count=%d", i, cs_count);
         ysw_cs_t *cs = ysw_progression_get_cs(progression, i);
-        int csn_count = ysw_array_get_count(cs->csns);
+        int csn_count = ysw_array_get_count(cs->csn_array);
         note_count += csn_count;
     }
     return note_count;

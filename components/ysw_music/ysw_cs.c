@@ -19,7 +19,7 @@ ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode
 {
     ysw_cs_t *cs = ysw_heap_allocate(sizeof(ysw_cs_t));
     cs->name = ysw_heap_strdup(name);
-    cs->csns = ysw_array_create(8);
+    cs->csn_array = ysw_array_create(8);
     cs->instrument = instrument;
     cs->octave = octave;
     cs->mode = mode;
@@ -34,7 +34,7 @@ ysw_cs_t *ysw_cs_copy(ysw_cs_t *old_cs)
     uint32_t csn_count = ysw_cs_get_csn_count(old_cs);
     ysw_cs_t *new_cs = ysw_heap_allocate(sizeof(ysw_cs_t));
     new_cs->name = ysw_heap_strdup(old_cs->name);
-    new_cs->csns = ysw_array_create(csn_count);
+    new_cs->csn_array = ysw_array_create(csn_count);
     new_cs->instrument = old_cs->instrument;
     new_cs->octave = old_cs->octave;
     new_cs->mode = old_cs->mode;
@@ -56,7 +56,7 @@ void ysw_cs_free(ysw_cs_t *cs)
         ysw_csn_t *csn = ysw_cs_get_csn(cs, i);
         ysw_csn_free(csn);
     }
-    ysw_array_free(cs->csns);
+    ysw_array_free(cs->csn_array);
     ysw_heap_free(cs->name);
     ysw_heap_free(cs);
 }
@@ -94,13 +94,13 @@ void ysw_cs_normalize_csn(ysw_cs_t *cs, ysw_csn_t *csn)
 uint32_t ysw_cs_add_csn(ysw_cs_t *cs, ysw_csn_t *csn)
 {
     ysw_cs_normalize_csn(cs, csn);
-    uint32_t index = ysw_array_push(cs->csns, csn);
+    uint32_t index = ysw_array_push(cs->csn_array, csn);
     return index;
 }
 
-void ysw_cs_sort_csns(ysw_cs_t *cs)
+void ysw_cs_sort_csn_array(ysw_cs_t *cs)
 {
-    ysw_array_sort(cs->csns, ysw_csn_compare);
+    ysw_array_sort(cs->csn_array, ysw_csn_compare);
 }
 
 void ysw_cs_set_name(ysw_cs_t *cs, const char* name)
@@ -123,7 +123,7 @@ uint8_t ysw_cs_get_instrument(ysw_cs_t *cs)
     return cs->instrument;
 }
 
-// CSNs must be in order produced by ysw_cs_sort_csns prior to call
+// csn_array must be in order produced by ysw_cs_sort_csn_array prior to call
 
 note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
 {

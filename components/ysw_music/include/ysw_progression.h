@@ -52,12 +52,12 @@ static inline uint32_t ysw_progression_get_csn_count(ysw_progression_t *progress
 
 static inline ysw_csn_t *ysw_step_get_csn(ysw_step_t *step, uint32_t index)
 {
-    return ysw_array_get(step->cs->csns, index);
+    return ysw_array_get(step->cs->csn_array, index);
 }
 
 static inline uint32_t ysw_step_get_csn_count(ysw_step_t *step)
 {
-    return ysw_array_get_count(step->cs->csns);
+    return ysw_array_get_count(step->cs->csn_array);
 }
 
 static inline uint32_t ysw_step_get_duration(ysw_step_t *step)

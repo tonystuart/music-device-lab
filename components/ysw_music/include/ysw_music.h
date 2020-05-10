@@ -16,7 +16,7 @@
 #include "ysw_progression.h"
 
 typedef struct {
-    ysw_array_t *css;
+    ysw_array_t *cs_array;
     ysw_array_t *progressions;
 } ysw_music_t;
 
