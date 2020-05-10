@@ -12,11 +12,15 @@
 #include "stdint.h"
 
 typedef enum PACKED {
-    YSW_TIME_2_2 = 0,
-    YSW_TIME_2_4,
-    YSW_TIME_3_4,
-    YSW_TIME_4_4,
-    YSW_TIME_6_8,
+    /* 0 */ YSW_TIME_1_16 = 0,
+    /* 1 */ YSW_TIME_1_8,
+    /* 2 */ YSW_TIME_1_4,
+    /* 3 */ YSW_TIME_2_2,
+    /* 4 */ YSW_TIME_2_4,
+    /* 5 */ YSW_TIME_3_4,
+    /* 6 */ YSW_TIME_4_4,
+    /* 7 */ YSW_TIME_6_8,
+    /* 8 */ YSW_TIME_8_8,
 } ysw_time_t;
 
 extern const char *ysw_time;

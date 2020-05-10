@@ -184,6 +184,73 @@ static void pause()
     send_sequencer_message(&message);
 }
 
+static void update_header()
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    ysw_csf_set_header_text(csf, cs->name);
+}
+
+static void update_footer()
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%d BPM %d/%d", cs->tempo,
+            ysw_cs_get_beats_per_measure(cs), ysw_cs_get_beat_unit(cs));
+    ysw_csf_set_footer_text(csf, buf);
+}
+
+static void update_frame()
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    ysw_csf_set_cs(csf, cs);
+    update_header();
+    update_footer();
+}
+
+static void refresh()
+{
+    ysw_csf_redraw(csf);
+    stage();
+}
+
+static void create_cs(uint32_t new_index)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+
+    char name[64];
+    ysw_name_create(name, sizeof(name));
+    ysw_cs_t *new_cs = ysw_cs_create(name,
+            cs->instrument,
+            cs->octave,
+            cs->mode,
+            cs->transposition,
+            cs->tempo,
+            cs->time);
+
+    ysw_music_insert_cs(music, new_index, new_cs);
+    cs_index = new_index;
+    update_frame();
+}
+
+static void create_csn(lv_obj_t *cse, int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration)
+{
+    ESP_LOGD(TAG, "create_csn degree=%d, velocity=%d, start=%d, duration=%d", degree, velocity, start, duration);
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
+    uint16_t cs_duration = ysw_time_to_measure_duration(cs->time);
+    if (duration > cs_duration) {
+        duration = cs_duration;
+        ESP_LOGD(TAG, "create_csn setting duration=%d", duration);
+    }
+    if (start + duration > cs_duration) {
+        start = cs_duration - duration;
+        ESP_LOGD(TAG, "create_csn setting start=%d", start);
+    }
+
+    ysw_csn_t *csn = ysw_csn_create(degree, velocity, start, duration, 0);
+    ysw_cs_add_csn(cs, csn);
+    refresh();
+}
+
 static void copy_to_csn_clipboard(ysw_csn_t *csn)
 {
     ysw_csn_t *new_csn = ysw_csn_copy(csn);
@@ -206,35 +273,6 @@ static void increase_volume(ysw_csn_t *csn)
     if (new_velocity <= 120) {
         csn->velocity = new_velocity;
     }
-}
-
-static void refresh()
-{
-    ysw_csf_redraw(csf);
-    stage();
-}
-
-static void update_header()
-{
-    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-    ysw_csf_set_header_text(csf, cs->name);
-}
-
-static void update_footer()
-{
-    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-    char buf[64];
-    snprintf(buf, sizeof(buf), "%d BPM %d/%d", cs->tempo,
-            ysw_cs_get_beats_per_measure(cs), ysw_cs_get_beat_unit(cs));
-    ysw_csf_set_footer_text(csf, buf);
-}
-
-static void update_frame()
-{
-    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-    ysw_csf_set_cs(csf, cs);
-    update_header();
-    update_footer();
 }
 
 typedef void (*note_visitor_t)(ysw_csn_t *csn);
@@ -395,29 +433,10 @@ static void on_save(lv_obj_t * btn, lv_event_t event)
 {
 }
 
-static void create_chord_style(uint32_t new_index)
-{
-    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-
-    char name[64];
-    ysw_name_create(name, sizeof(name));
-    ysw_cs_t *new_cs = ysw_cs_create(name,
-            cs->instrument,
-            cs->octave,
-            cs->mode,
-            cs->transposition,
-            cs->tempo,
-            cs->time);
-
-    ysw_music_insert_cs(music, new_index, new_cs);
-    cs_index = new_index;
-    update_frame();
-}
-
 static void on_new_chord_style(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED) {
-        create_chord_style(cs_index + 1);
+        create_cs(cs_index + 1);
     }
 }
 
@@ -489,14 +508,6 @@ static void on_volume_mid(lv_obj_t * btn, lv_event_t event)
 static void on_volume_max(lv_obj_t * btn, lv_event_t event)
 {
     visit_notes(increase_volume, event);
-}
-
-static void create_csn(lv_obj_t *cse, int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration)
-{
-    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-    ysw_csn_t *csn = ysw_csn_create(degree, velocity, start, duration, 0);
-    ysw_cs_add_csn(cs, csn);
-    refresh();
 }
 
 static void cse_event_cb(lv_obj_t *cse, ysw_lv_cse_event_t event, ysw_lv_cse_event_cb_data_t *data)
