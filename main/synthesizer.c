@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_main_synthesizer.h"
+#include "synthesizer.h"
 
 #if YSW_MAIN_SYNTHESIZER_MODEL == 1
 #include "ysw_ble_synthesizer.h"
@@ -23,20 +23,20 @@
 
 static QueueHandle_t synthesizer_queue;
 
-void ysw_main_synthesizer_send(ysw_synthesizer_message_t *message)
+void synthesizer_send(ysw_synthesizer_message_t *message)
 {
     if (synthesizer_queue) {
         ysw_message_send(synthesizer_queue, message);
     }
 }
 
-void ysw_main_synthesizer_initialize()
+void synthesizer_initialize()
 {
 #if YSW_MAIN_SYNTHESIZER_MODEL == 1
-    ESP_LOGD(TAG, "ysw_main_synthesizer_initialize: configuring BLE synthesizer");
+    ESP_LOGD(TAG, "synthesizer_initialize: configuring BLE synthesizer");
     synthesizer_queue = ysw_ble_synthesizer_create_task();
 #elif YSW_MAIN_SYNTHESIZER_MODEL == 2
-    ESP_LOGD(TAG, "ysw_main_synthesizer_initialize: configuring VS1053 synthesizer");
+    ESP_LOGD(TAG, "synthesizer_initialize: configuring VS1053 synthesizer");
     ysw_vs1053_synthesizer_config_t config = {
         .dreq_gpio = -1,
         .xrst_gpio = 0,

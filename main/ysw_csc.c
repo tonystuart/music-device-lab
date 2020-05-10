@@ -14,7 +14,7 @@
 #include "ysw_csn.h"
 #include "ysw_instruments.h"
 #include "ysw_lv_cse.h"
-#include "ysw_main_sequencer.h"
+#include "sequencer.h"
 #include "ysw_mode.h"
 #include "ysw_music.h"
 #include "ysw_name.h"
@@ -54,7 +54,7 @@ static void stage()
         .stage.tempo = cs->tempo,
     };
 
-    ysw_main_sequencer_send(&message);
+    sequencer_send(&message);
 }
 
 static void pause()
@@ -63,7 +63,7 @@ static void pause()
         .type = YSW_SEQUENCER_PAUSE,
     };
 
-    ysw_main_sequencer_send(&message);
+    sequencer_send(&message);
 }
 
 static void update_header()
@@ -215,13 +215,13 @@ static void on_loop(lv_obj_t * btn, lv_event_t event)
                 .type = YSW_SEQUENCER_LOOP,
                 .loop.loop = false,
             };
-            ysw_main_sequencer_send(&message);
+            sequencer_send(&message);
         } else {
             ysw_sequencer_message_t message = {
                 .type = YSW_SEQUENCER_LOOP,
                 .loop.loop = true,
             };
-            ysw_main_sequencer_send(&message);
+            sequencer_send(&message);
         }
     }
 }
@@ -411,7 +411,7 @@ static void cse_event_cb(lv_obj_t *cse, ysw_lv_cse_event_t event, ysw_lv_cse_eve
     }
 }
 
-void ysw_main_csc_initialize(ysw_music_t *new_music)
+void csc_initialize(ysw_music_t *new_music)
 {
     music = new_music;
 

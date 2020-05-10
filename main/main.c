@@ -8,10 +8,10 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_csc.h" // TODO: main or not?
-#include "ysw_main_display.h"
-#include "ysw_main_sequencer.h"
-#include "ysw_main_spiffs.h"
-#include "ysw_main_synthesizer.h"
+#include "display.h"
+#include "sequencer.h"
+#include "spiffs.h"
+#include "synthesizer.h"
 #include "ysw_music.h"
 #include "ysw_music_parser.h"
 #include "ysw_lv_styles.h"
@@ -35,17 +35,17 @@ void app_main()
     esp_log_level_set("YSW_HEAP", ESP_LOG_INFO);
     esp_log_level_set("YSW_ARRAY", ESP_LOG_INFO);
 
-    ysw_main_display_initialize();
-    ysw_main_spiffs_initialize(SPIFFS_PARTITION);
-    ysw_main_synthesizer_initialize();
-    ysw_main_sequencer_initialize();
+    display_initialize();
+    spiffs_initialize(SPIFFS_PARTITION);
+    synthesizer_initialize();
+    sequencer_initialize();
 
     ysw_lv_styles_initialize();
 
     music = ysw_music_parse(MUSIC_DEFINITIONS);
 
     if (music) {
-        ysw_main_csc_initialize(music);
+        csc_initialize(music);
     } else {
         lv_obj_t * mbox1 = lv_mbox_create(lv_scr_act(), NULL);
         lv_mbox_set_text(mbox1, "The music partition is empty");

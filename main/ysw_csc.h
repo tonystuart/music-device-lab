@@ -11,5 +11,5 @@
 
 #include "ysw_music.h"
 
-void ysw_main_csc_initialize(ysw_music_t *new_music);
+void csc_initialize(ysw_music_t *new_music);
 

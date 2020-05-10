@@ -11,6 +11,6 @@
 
 #include "ysw_sequencer.h"
 
-void ysw_main_sequencer_send(ysw_sequencer_message_t *message);
-void ysw_main_sequencer_initialize();
+void sequencer_send(ysw_sequencer_message_t *message);
+void sequencer_initialize();
 

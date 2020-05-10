@@ -9,5 +9,5 @@
 
 #pragma once
 
-void ysw_main_spiffs_initialize(const char *base_path);
+void spiffs_initialize(const char *base_path);
 

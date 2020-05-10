@@ -11,6 +11,6 @@
 
 #include "ysw_synthesizer.h"
 
-void ysw_main_synthesizer_send(ysw_synthesizer_message_t *message);
-void ysw_main_synthesizer_initialize();
+void synthesizer_send(ysw_synthesizer_message_t *message);
+void synthesizer_initialize();
 

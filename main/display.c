@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_main_display.h"
+#include "display.h"
 
 #include "eli_ili9341_xpt2046.h"
 #include "lvgl/lvgl.h"
@@ -17,7 +17,7 @@
 
 #define TAG "YSW_MAIN_DISPLAY"
 
-void ysw_main_display_initialize()
+void display_initialize()
 {
 #if YSW_MAIN_DISPLAY_MODEL == 1
     ESP_LOGD(TAG, "main: configuring model 1");

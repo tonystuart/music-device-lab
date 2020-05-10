@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_main_spiffs.h"
+#include "spiffs.h"
 
 #include "ysw_common.h"
 
@@ -16,7 +16,7 @@
 
 #define TAG "YSW_MAIN_SPIFFS"
 
-void ysw_main_spiffs_initialize(const char *base_path)
+void spiffs_initialize(const char *base_path)
 {
     esp_vfs_spiffs_conf_t config = {
         .base_path = base_path,
@@ -30,6 +30,6 @@ void ysw_main_spiffs_initialize(const char *base_path)
     size_t total_size = 0;
     size_t amount_used = 0;
     $(esp_spiffs_info(config.partition_label, &total_size, &amount_used));
-    ESP_LOGD(TAG, "ysw_main_spiffs_initialize total_size=%d, amount_used=%d", total_size, amount_used);
+    ESP_LOGD(TAG, "spiffs_initialize total_size=%d, amount_used=%d", total_size, amount_used);
 }
 

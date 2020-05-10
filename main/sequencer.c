@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_main_synthesizer.h"
+#include "synthesizer.h"
 
 #include "ysw_sequencer.h"
 #include "ysw_message.h"
@@ -26,7 +26,7 @@ static void on_note_on(uint8_t channel, uint8_t midi_note, uint8_t velocity)
         .note_on.midi_note = midi_note,
         .note_on.velocity = velocity,
     };
-    ysw_main_synthesizer_send(&message);
+    synthesizer_send(&message);
 }
 
 static void on_note_off(uint8_t channel, uint8_t midi_note)
@@ -36,7 +36,7 @@ static void on_note_off(uint8_t channel, uint8_t midi_note)
         .note_off.channel = channel,
         .note_off.midi_note = midi_note,
     };
-    ysw_main_synthesizer_send(&message);
+    synthesizer_send(&message);
 }
 
 static void on_program_change(uint8_t channel, uint8_t program)
@@ -46,7 +46,7 @@ static void on_program_change(uint8_t channel, uint8_t program)
         .program_change.channel = channel,
         .program_change.program = program,
     };
-    ysw_main_synthesizer_send(&message);
+    synthesizer_send(&message);
 }
 
 static void on_state_change(ysw_sequencer_state_t new_state)
@@ -55,14 +55,14 @@ static void on_state_change(ysw_sequencer_state_t new_state)
     }
 }
 
-void ysw_main_sequencer_send(ysw_sequencer_message_t *message)
+void sequencer_send(ysw_sequencer_message_t *message)
 {
     if (sequencer_queue) {
         ysw_message_send(sequencer_queue, message);
     }
 }
 
-void ysw_main_sequencer_initialize()
+void sequencer_initialize()
 {
     ysw_sequencer_config_t config = {
         .on_note_on = on_note_on,

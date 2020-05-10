@@ -9,5 +9,5 @@
 
 #pragma once
 
-void ysw_main_display_initialize();
+void display_initialize();
 
