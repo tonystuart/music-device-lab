@@ -1,6 +1,9 @@
 
 #pragma once
 
+#include "stdint.h"
+#include "driver/spi_master.h"
+
 typedef struct {
     uint8_t mosi;
     uint8_t miso;
