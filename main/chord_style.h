@@ -11,5 +11,5 @@
 
 #include "ysw_music.h"
 
-void csc_initialize(ysw_music_t *new_music);
+void edit_chord_styles(ysw_music_t *new_music, uint32_t new_cs_index);
 

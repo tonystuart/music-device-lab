@@ -7,15 +7,18 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_csc.h" // TODO: main or not?
+#include "chord_style.h"
 #include "display.h"
 #include "sequencer.h"
 #include "spiffs.h"
 #include "synthesizer.h"
+
 #include "ysw_music.h"
 #include "ysw_music_parser.h"
 #include "ysw_lv_styles.h"
+
 #include "lvgl/lvgl.h"
+
 #include "esp_log.h"
 
 #define TAG "MAIN"
@@ -44,8 +47,8 @@ void app_main()
 
     music = ysw_music_parse(MUSIC_DEFINITIONS);
 
-    if (music) {
-        csc_initialize(music);
+    if (music && ysw_music_get_cs_count(music) > 0) {
+        edit_chord_styles(music, 0);
     } else {
         lv_obj_t * mbox1 = lv_mbox_create(lv_scr_act(), NULL);
         lv_mbox_set_text(mbox1, "The music partition is empty");

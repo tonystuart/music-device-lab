@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_csc.h"
+#include "chord_style.h"
 
 #include "ysw_cs.h"
 #include "ysw_csf.h"
@@ -411,9 +411,10 @@ static void cse_event_cb(lv_obj_t *cse, ysw_lv_cse_event_t event, ysw_lv_cse_eve
     }
 }
 
-void csc_initialize(ysw_music_t *new_music)
+void edit_chord_styles(ysw_music_t *new_music, uint32_t new_cs_index)
 {
     music = new_music;
+    cs_index = new_cs_index;
 
     ysw_csf_config_t config = {
         .next_cb = on_next,
