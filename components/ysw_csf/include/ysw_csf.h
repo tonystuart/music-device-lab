@@ -9,6 +9,7 @@
 
 #include "lvgl/lvgl.h"
 #include "ysw_lv_cse.h"
+#include "ysw_frame.h"
 
 typedef struct {
     lv_event_cb_t next_cb;
@@ -29,14 +30,13 @@ typedef struct {
 } ysw_csf_config_t;
 
 typedef struct {
+    ysw_frame_t *frame;
     lv_obj_t *cse;
-    lv_obj_t *win;
-    lv_obj_t *footer_label;
 } ysw_csf_t;
 
 ysw_csf_t *ysw_csf_create(ysw_csf_config_t *config);
 void ysw_csf_free(ysw_csf_t *csf);
 void ysw_csf_set_cs(ysw_csf_t *csf, ysw_cs_t *cs);
-void ysw_csf_set_header_text(ysw_csf_t *csf, const char *header_text);
-void ysw_csf_set_footer_text(ysw_csf_t *csf, char *footer_text);
 void ysw_csf_redraw(ysw_csf_t *csf);
+void ysw_csf_set_header_text(ysw_csf_t *csf, const char *header_text);
+void ysw_csf_set_footer_text(ysw_csf_t *csf, const char *footer_text);
