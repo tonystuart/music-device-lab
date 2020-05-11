@@ -519,16 +519,20 @@ static void do_drag(lv_obj_t *cse, lv_point_t *point)
         ESP_LOGE(TAG, "do_drag dragged x=%d, y=%d from start x=%d, y=%d", x, y, ext->last_click.x, ext->last_click.y);
 
         uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
-
-        for (int i = 0; i < csn_count; i++) {
-            ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
-            ysw_csn_t *drag_start_csn = ysw_cs_get_csn(ext->drag_start_cs, i);
-            if (ysw_csn_is_selected(csn)) {
-                if (drag_x) {
-                    drag_horizontally(cse, csn, drag_start_csn, x);
-                }
-                if (drag_y) {
-                    drag_vertically(cse, csn, drag_start_csn, y);
+        uint32_t drag_start_csn_count = ysw_cs_get_csn_count(ext->drag_start_cs);
+        if (csn_count != drag_start_csn_count) {
+            ESP_LOGE(TAG, "expected csn_count=%d to equal drag_start_csn_count=%d", csn_count, drag_start_csn_count);
+        } else {
+            for (int i = 0; i < csn_count; i++) {
+                ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
+                ysw_csn_t *drag_start_csn = ysw_cs_get_csn(ext->drag_start_cs, i);
+                if (ysw_csn_is_selected(csn)) {
+                    if (drag_x) {
+                        drag_horizontally(cse, csn, drag_start_csn, x);
+                    }
+                    if (drag_y) {
+                        drag_vertically(cse, csn, drag_start_csn, y);
+                    }
                 }
             }
         }
