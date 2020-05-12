@@ -12,7 +12,7 @@
 #include "ysw_lv_cse.h"
 
 #include "ysw_cs.h"
-#include "ysw_csn.h"
+#include "ysw_cn.h"
 #include "ysw_lv_styles.h"
 #include "ysw_ticks.h"
 
@@ -54,9 +54,9 @@ static inline uint8_t get_column_count(ysw_lv_cse_ext_t *ext)
     return ysw_cs_get_beats_per_measure(ext->cs);
 }
 
-static void get_csn_info(
+static void get_cn_info(
         lv_obj_t *cse,
-        ysw_csn_t *csn,
+        ysw_cn_t *cn,
         lv_area_t *ret_area,
         uint8_t *ret_degree,
         int8_t *ret_octave)
@@ -67,7 +67,7 @@ static void get_csn_info(
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     uint32_t cs_duration = ysw_cs_get_duration(ext->cs);
 
-    ysw_degree_normalize(csn->degree, &degree, &octave);
+    ysw_degree_normalize(cn->degree, &degree, &octave);
 
     lv_coord_t h = lv_obj_get_height(cse);
     lv_coord_t w = lv_obj_get_width(cse);
@@ -75,10 +75,10 @@ static void get_csn_info(
     lv_coord_t x = cse->coords.x1;
     lv_coord_t y = cse->coords.y1;
 
-    lv_coord_t delta_y = -ysw_csn_get_accidental(csn) * ((h / ROW_COUNT) / 2);
+    lv_coord_t delta_y = -ysw_cn_get_accidental(cn) * ((h / ROW_COUNT) / 2);
 
-    lv_coord_t x1 = x + (csn->start * w) / cs_duration;
-    lv_coord_t x2 = x + ((csn->start + csn->duration) * w) / cs_duration;
+    lv_coord_t x1 = x + (cn->start * w) / cs_duration;
+    lv_coord_t x2 = x + ((cn->start + cn->duration) * w) / cs_duration;
 
     lv_coord_t y1 = y + (((YSW_MIDI_UNPO - degree) * h) / ROW_COUNT) + delta_y;
     lv_coord_t y2 = y + ((((YSW_MIDI_UNPO - degree) + 1) * h) / ROW_COUNT) + delta_y;
@@ -187,47 +187,47 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         lv_draw_line(&point1, &point2, mask, ext->style_ei, ext->style_ei->body.border.opa);
     }
 
-    uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
+    uint32_t cn_count = ysw_cs_get_cn_count(ext->cs);
 
-    for (int i = 0; i < csn_count; i++) {
+    for (int i = 0; i < cn_count; i++) {
 
-        ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
+        ysw_cn_t *cn = ysw_cs_get_cn(ext->cs, i);
 
         int8_t octave = 0;
-        lv_area_t csn_area = {};
-        get_csn_info(cse, csn, &csn_area, NULL, &octave);
+        lv_area_t cn_area = {};
+        get_cn_info(cse, cn, &cn_area, NULL, &octave);
 
-        lv_area_t csn_mask;
+        lv_area_t cn_mask;
 
-        if (lv_area_intersect(&csn_mask, mask, &csn_area)) {
+        if (lv_area_intersect(&cn_mask, mask, &cn_area)) {
 
-            if (ysw_csn_is_selected(csn)) {
+            if (ysw_cn_is_selected(cn)) {
                 if (ext->dragging) {
-                    lv_draw_rect(&csn_area, &csn_mask, ext->style_sn, ext->style_sn->body.opa);
+                    lv_draw_rect(&cn_area, &cn_mask, ext->style_sn, ext->style_sn->body.opa);
                 } else {
-                    lv_draw_rect(&csn_area, &csn_mask, ext->style_sn, ext->style_sn->body.opa);
+                    lv_draw_rect(&cn_area, &cn_mask, ext->style_sn, ext->style_sn->body.opa);
                 }
             } else {
-                lv_draw_rect(&csn_area, &csn_mask, ext->style_cn, ext->style_cn->body.opa);
+                lv_draw_rect(&cn_area, &cn_mask, ext->style_cn, ext->style_cn->body.opa);
             }
 
             char buffer[32];
             if (octave) {
-                snprintf(buffer, sizeof(buffer), "%d/%+d", csn->velocity, octave);
+                snprintf(buffer, sizeof(buffer), "%d/%+d", cn->velocity, octave);
             } else {
-                snprintf(buffer, sizeof(buffer), "%d", csn->velocity);
+                snprintf(buffer, sizeof(buffer), "%d", cn->velocity);
             }
 
             // vertically center the text
             lv_point_t offset = {
                 .x = 0,
-                .y = ((csn_area.y2 - csn_area.y1) - ext->style_cn->text.font->line_height) / 2
+                .y = ((cn_area.y2 - cn_area.y1) - ext->style_cn->text.font->line_height) / 2
             };
 
-            if (ysw_csn_is_selected(csn)) {
+            if (ysw_cn_is_selected(cn)) {
                 if (ext->dragging) {
-                    lv_draw_label(&csn_area,
-                            &csn_mask,
+                    lv_draw_label(&cn_area,
+                            &cn_mask,
                             ext->style_sn,
                             ext->style_sn->text.opa,
                             buffer,
@@ -237,8 +237,8 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                             NULL,
                             LV_BIDI_DIR_LTR);
                 } else {
-                    lv_draw_label(&csn_area,
-                            &csn_mask,
+                    lv_draw_label(&cn_area,
+                            &cn_mask,
                             ext->style_sn,
                             ext->style_sn->text.opa,
                             buffer,
@@ -249,8 +249,8 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                             LV_BIDI_DIR_LTR);
                 }
             } else {
-                lv_draw_label(&csn_area,
-                        &csn_mask,
+                lv_draw_label(&cn_area,
+                        &cn_mask,
                         ext->style_cn,
                         ext->style_cn->text.opa,
                         buffer,
@@ -280,23 +280,23 @@ static bool design_cb(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
     return result;
 }
 
-static void fire_select(lv_obj_t *cse, ysw_csn_t *csn)
+static void fire_select(lv_obj_t *cse, ysw_cn_t *cn)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->event_cb) {
         ysw_lv_cse_event_cb_data_t data = {
-            .select.csn = csn,
+            .select.cn = cn,
         };
         ext->event_cb(cse, YSW_LV_CSE_SELECT, &data);
     }
 }
 
-static void fire_deselect(lv_obj_t *cse, ysw_csn_t *csn)
+static void fire_deselect(lv_obj_t *cse, ysw_cn_t *cn)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->event_cb) {
         ysw_lv_cse_event_cb_data_t data = {
-            .deselect.csn = csn,
+            .deselect.cn = cn,
         };
         ext->event_cb(cse, YSW_LV_CSE_DESELECT, &data);
     }
@@ -338,44 +338,44 @@ static void fire_drag_end(lv_obj_t *cse)
 static void capture_selection(lv_obj_t *cse, ysw_lv_cse_ext_t *ext, lv_point_t *point)
 {
     ext->dragging = false;
-    ext->selected_csn = NULL;
+    ext->selected_cn = NULL;
     ext->selection_type = YSW_BOUNDS_NONE;
-    uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
-    for (uint8_t i = 0; i < csn_count; i++) {
-        lv_area_t csn_area;
-        ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
-        get_csn_info(cse, csn, &csn_area, NULL, NULL);
-        ysw_bounds_t bounds_type = ysw_bounds_check(&csn_area, point);
+    uint32_t cn_count = ysw_cs_get_cn_count(ext->cs);
+    for (uint8_t i = 0; i < cn_count; i++) {
+        lv_area_t cn_area;
+        ysw_cn_t *cn = ysw_cs_get_cn(ext->cs, i);
+        get_cn_info(cse, cn, &cn_area, NULL, NULL);
+        ysw_bounds_t bounds_type = ysw_bounds_check(&cn_area, point);
         if (bounds_type) {
-            ext->selected_csn = csn;
+            ext->selected_cn = cn;
             ext->selection_type = bounds_type;
-            if (ysw_csn_is_selected(csn)) {
-                // return on first selected csn, otherwise pick another one
+            if (ysw_cn_is_selected(cn)) {
+                // return on first selected cn, otherwise pick another one
                 return;
             }
         }
     }
 }
 
-static void select_only(lv_obj_t *cse, ysw_csn_t *selected_csn)
+static void select_only(lv_obj_t *cse, ysw_cn_t *selected_cn)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
-    for (int i = 0; i < csn_count; i++) {
-        ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
-        if (selected_csn == csn) {
-            ysw_csn_select(selected_csn, true);
-            fire_select(cse, selected_csn);
+    uint32_t cn_count = ysw_cs_get_cn_count(ext->cs);
+    for (int i = 0; i < cn_count; i++) {
+        ysw_cn_t *cn = ysw_cs_get_cn(ext->cs, i);
+        if (selected_cn == cn) {
+            ysw_cn_select(selected_cn, true);
+            fire_select(cse, selected_cn);
         } else {
-            if (ysw_csn_is_selected(csn)) {
-                ysw_csn_select(csn, false);
-                fire_deselect(cse, csn);
+            if (ysw_cn_is_selected(cn)) {
+                ysw_cn_select(cn, false);
+                fire_deselect(cse, cn);
             }
         }
     }
 }
 
-static void drag_horizontally(lv_obj_t *cse, ysw_csn_t *csn, ysw_csn_t *drag_start_csn, lv_coord_t x)
+static void drag_horizontally(lv_obj_t *cse, ysw_cn_t *cn, ysw_cn_t *drag_start_cn, lv_coord_t x)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     uint32_t total_duration = ysw_cs_get_duration(ext->cs);
@@ -392,8 +392,8 @@ static void drag_horizontally(lv_obj_t *cse, ysw_csn_t *csn, ysw_csn_t *drag_sta
     bool left_drag = delta_ticks < 0;
     uint32_t ticks = abs(delta_ticks);
 
-    int32_t old_start = drag_start_csn->start;
-    int32_t old_duration = drag_start_csn->duration;
+    int32_t old_start = drag_start_cn->start;
+    int32_t old_duration = drag_start_cn->duration;
     int32_t new_start = old_start;
     int32_t new_duration = old_duration;
 
@@ -436,11 +436,11 @@ static void drag_horizontally(lv_obj_t *cse, ysw_csn_t *csn, ysw_csn_t *drag_sta
         new_start = total_duration - new_duration;
     }
 
-    csn->start = new_start;
-    csn->duration = new_duration;
+    cn->start = new_start;
+    cn->duration = new_duration;
 }
 
-static void drag_vertically(lv_obj_t *cse, ysw_csn_t *csn, ysw_csn_t *drag_start_csn, lv_coord_t y)
+static void drag_vertically(lv_obj_t *cse, ysw_cn_t *cn, ysw_cn_t *drag_start_cn, lv_coord_t y)
 {
     lv_coord_t h = lv_obj_get_height(cse);
     double pixels_per_half_degree = ((double)h / ROW_COUNT) / 2;
@@ -457,38 +457,38 @@ static void drag_vertically(lv_obj_t *cse, ysw_csn_t *csn, ysw_csn_t *drag_start
     bool is_accidental = half_degrees % 2;
 
     if (top_drag) {
-        csn->degree = drag_start_csn->degree + degrees;
+        cn->degree = drag_start_cn->degree + degrees;
         if (is_accidental) {
-            if (ysw_csn_is_flat(drag_start_csn)) {
-                ysw_csn_set_natural(csn);
-            } else if (ysw_csn_is_natural(drag_start_csn)) {
-                ysw_csn_set_sharp(csn);
+            if (ysw_cn_is_flat(drag_start_cn)) {
+                ysw_cn_set_natural(cn);
+            } else if (ysw_cn_is_natural(drag_start_cn)) {
+                ysw_cn_set_sharp(cn);
             } else {
-                ysw_csn_set_natural(csn);
-                csn->degree++;
+                ysw_cn_set_natural(cn);
+                cn->degree++;
             }
         } else {
-            ysw_csn_set_natural(csn);
+            ysw_cn_set_natural(cn);
         }
-        if (csn->degree > YSW_CSN_MAX_DEGREE) {
-            csn->degree = YSW_CSN_MAX_DEGREE;
+        if (cn->degree > YSW_CSN_MAX_DEGREE) {
+            cn->degree = YSW_CSN_MAX_DEGREE;
         }
     } else {
-        csn->degree = drag_start_csn->degree - degrees;
+        cn->degree = drag_start_cn->degree - degrees;
         if (is_accidental) {
-            if (ysw_csn_is_sharp(drag_start_csn)) {
-                ysw_csn_set_natural(csn);
-            } else if (ysw_csn_is_natural(drag_start_csn)) {
-                ysw_csn_set_flat(csn);
+            if (ysw_cn_is_sharp(drag_start_cn)) {
+                ysw_cn_set_natural(cn);
+            } else if (ysw_cn_is_natural(drag_start_cn)) {
+                ysw_cn_set_flat(cn);
             } else {
-                ysw_csn_set_natural(csn);
-                csn->degree--;
+                ysw_cn_set_natural(cn);
+                cn->degree--;
             }
         } else {
-            ysw_csn_set_natural(csn);
+            ysw_cn_set_natural(cn);
         }
-        if (csn->degree < YSW_CSN_MIN_DEGREE) {
-            csn->degree = YSW_CSN_MIN_DEGREE;
+        if (cn->degree < YSW_CSN_MIN_DEGREE) {
+            cn->degree = YSW_CSN_MIN_DEGREE;
         }
     }
 }
@@ -503,12 +503,12 @@ static void do_drag(lv_obj_t *cse, lv_point_t *point)
     bool drag_x = abs(x) > MINIMUM_DRAG;
     bool drag_y = abs(y) > MINIMUM_DRAG;
 
-    ext->dragging = ext->selected_csn && (drag_x || drag_y);
+    ext->dragging = ext->selected_cn && (drag_x || drag_y);
 
     if (ext->dragging) {
 
-        if (!ysw_csn_is_selected(ext->selected_csn)) {
-            select_only(cse, ext->selected_csn);
+        if (!ysw_cn_is_selected(ext->selected_cn)) {
+            select_only(cse, ext->selected_cn);
         }
 
         if (!ext->drag_start_cs) {
@@ -518,20 +518,20 @@ static void do_drag(lv_obj_t *cse, lv_point_t *point)
 
         ESP_LOGE(TAG, "do_drag dragged x=%d, y=%d from start x=%d, y=%d", x, y, ext->last_click.x, ext->last_click.y);
 
-        uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
-        uint32_t drag_start_csn_count = ysw_cs_get_csn_count(ext->drag_start_cs);
-        if (csn_count != drag_start_csn_count) {
-            ESP_LOGE(TAG, "expected csn_count=%d to equal drag_start_csn_count=%d", csn_count, drag_start_csn_count);
+        uint32_t cn_count = ysw_cs_get_cn_count(ext->cs);
+        uint32_t drag_start_cn_count = ysw_cs_get_cn_count(ext->drag_start_cs);
+        if (cn_count != drag_start_cn_count) {
+            ESP_LOGE(TAG, "expected cn_count=%d to equal drag_start_cn_count=%d", cn_count, drag_start_cn_count);
         } else {
-            for (int i = 0; i < csn_count; i++) {
-                ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
-                ysw_csn_t *drag_start_csn = ysw_cs_get_csn(ext->drag_start_cs, i);
-                if (ysw_csn_is_selected(csn)) {
+            for (int i = 0; i < cn_count; i++) {
+                ysw_cn_t *cn = ysw_cs_get_cn(ext->cs, i);
+                ysw_cn_t *drag_start_cn = ysw_cs_get_cn(ext->drag_start_cs, i);
+                if (ysw_cn_is_selected(cn)) {
                     if (drag_x) {
-                        drag_horizontally(cse, csn, drag_start_csn, x);
+                        drag_horizontally(cse, cn, drag_start_cn, x);
                     }
                     if (drag_y) {
-                        drag_vertically(cse, csn, drag_start_csn, y);
+                        drag_vertically(cse, cn, drag_start_cn, y);
                     }
                 }
             }
@@ -545,7 +545,7 @@ static void do_click(lv_obj_t *cse)
     if (ext->long_press) {
         ext->long_press = false;
     } else {
-        select_only(cse, ext->selected_csn);
+        select_only(cse, ext->selected_cn);
     }
 }
 
@@ -583,7 +583,7 @@ static void on_signal_released(lv_obj_t *cse, void *param)
     } else {
         do_click(cse);
     }
-    ext->selected_csn = NULL;
+    ext->selected_cn = NULL;
     ext->selection_type = YSW_BOUNDS_NONE;
     lv_obj_invalidate(cse);
 }
@@ -595,17 +595,17 @@ static void on_signal_press_lost(lv_obj_t *cse, void *param)
     if (ext->dragging) {
         ext->dragging = false;
         if (ext->drag_start_cs) {
-            uint32_t csn_count = ysw_cs_get_csn_count(ext->cs);
-            for (uint32_t i = 0; i < csn_count; i++) {
-                ysw_csn_t *csn = ysw_cs_get_csn(ext->cs, i);
-                ysw_csn_t *drag_start_csn = ysw_cs_get_csn(ext->drag_start_cs, i);
-                *csn = *drag_start_csn;
+            uint32_t cn_count = ysw_cs_get_cn_count(ext->cs);
+            for (uint32_t i = 0; i < cn_count; i++) {
+                ysw_cn_t *cn = ysw_cs_get_cn(ext->cs, i);
+                ysw_cn_t *drag_start_cn = ysw_cs_get_cn(ext->drag_start_cs, i);
+                *cn = *drag_start_cn;
             }
             ysw_cs_free(ext->drag_start_cs);
             ext->drag_start_cs = NULL;
         }
     }
-    ext->selected_csn = NULL;
+    ext->selected_cn = NULL;
     ext->selection_type = YSW_BOUNDS_NONE;
     lv_obj_invalidate(cse);
 }
@@ -617,13 +617,13 @@ static void on_signal_long_press(lv_obj_t *cse, void *param) {
     lv_point_t *point = &proc->types.pointer.act_point;
     do_drag(cse, point);
     if (!ext->dragging) {
-        if (ext->selected_csn) {
-            bool selected = !ysw_csn_is_selected(ext->selected_csn);
-            ysw_csn_select(ext->selected_csn, selected);
+        if (ext->selected_cn) {
+            bool selected = !ysw_cn_is_selected(ext->selected_cn);
+            ysw_cn_select(ext->selected_cn, selected);
             if (selected) {
-                fire_select(cse, ext->selected_csn);
+                fire_select(cse, ext->selected_cn);
             } else {
-                fire_deselect(cse, ext->selected_csn);
+                fire_deselect(cse, ext->selected_cn);
             }
         } else {
             fire_create(cse, point);
@@ -696,8 +696,8 @@ lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
     ext->style_bg = &lv_style_plain;
     ext->style_oi = &odd_interval_style;
     ext->style_ei = &even_interval_style;
-    ext->style_cn = &csn_style;
-    ext->style_sn = &selected_csn_style;
+    ext->style_cn = &cn_style;
+    ext->style_sn = &selected_cn_style;
     ext->event_cb = NULL;
 
     lv_obj_set_signal_cb(cse, signal_cb);

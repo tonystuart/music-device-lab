@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_csn.h"
+#include "ysw_cn.h"
 #include "ysw_cs.h"
 
 #include "assert.h"
@@ -19,7 +19,7 @@ ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode
 {
     ysw_cs_t *cs = ysw_heap_allocate(sizeof(ysw_cs_t));
     cs->name = ysw_heap_strdup(name);
-    cs->csn_array = ysw_array_create(8);
+    cs->cn_array = ysw_array_create(8);
     cs->instrument = instrument;
     cs->octave = octave;
     cs->mode = mode;
@@ -31,32 +31,32 @@ ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode
 
 ysw_cs_t *ysw_cs_copy(ysw_cs_t *old_cs)
 {
-    uint32_t csn_count = ysw_cs_get_csn_count(old_cs);
+    uint32_t cn_count = ysw_cs_get_cn_count(old_cs);
     ysw_cs_t *new_cs = ysw_heap_allocate(sizeof(ysw_cs_t));
     new_cs->name = ysw_heap_strdup(old_cs->name);
-    new_cs->csn_array = ysw_array_create(csn_count);
+    new_cs->cn_array = ysw_array_create(cn_count);
     new_cs->instrument = old_cs->instrument;
     new_cs->octave = old_cs->octave;
     new_cs->mode = old_cs->mode;
     new_cs->transposition = old_cs->transposition;
     new_cs->tempo = old_cs->tempo;
     new_cs->time = old_cs->time;
-    for (int i = 0; i < csn_count; i++) {
-        ysw_csn_t *old_csn = ysw_cs_get_csn(old_cs, i);
-        ysw_csn_t *new_csn = ysw_csn_copy(old_csn);
-        ysw_cs_add_csn(new_cs, new_csn);
+    for (int i = 0; i < cn_count; i++) {
+        ysw_cn_t *old_cn = ysw_cs_get_cn(old_cs, i);
+        ysw_cn_t *new_cn = ysw_cn_copy(old_cn);
+        ysw_cs_add_cn(new_cs, new_cn);
     }
     return new_cs;
 }
 
 void ysw_cs_free(ysw_cs_t *cs)
 {
-    uint32_t csn_count = ysw_cs_get_csn_count(cs);
-    for (int i = 0; i < csn_count; i++) {
-        ysw_csn_t *csn = ysw_cs_get_csn(cs, i);
-        ysw_csn_free(csn);
+    uint32_t cn_count = ysw_cs_get_cn_count(cs);
+    for (int i = 0; i < cn_count; i++) {
+        ysw_cn_t *cn = ysw_cs_get_cn(cs, i);
+        ysw_cn_free(cn);
     }
-    ysw_array_free(cs->csn_array);
+    ysw_array_free(cs->cn_array);
     ysw_heap_free(cs->name);
     ysw_heap_free(cs);
 }
@@ -66,41 +66,41 @@ static inline uint32_t round_tick(uint32_t value)
     return ((value + YSW_CSN_TICK_INCREMENT - 1) / YSW_CSN_TICK_INCREMENT) * YSW_CSN_TICK_INCREMENT;
 }
 
-void ysw_cs_normalize_csn(ysw_cs_t *cs, ysw_csn_t *csn)
+void ysw_cs_normalize_cn(ysw_cs_t *cs, ysw_cn_t *cn)
 {
     uint32_t cs_duration = ysw_cs_get_duration(cs);
-    if (csn->start > cs_duration - YSW_CSN_MIN_DURATION) {
-        csn->start = cs_duration - YSW_CSN_MIN_DURATION;
+    if (cn->start > cs_duration - YSW_CSN_MIN_DURATION) {
+        cn->start = cs_duration - YSW_CSN_MIN_DURATION;
     }
-    if (csn->duration < YSW_CSN_MIN_DURATION) {
-        csn->duration = YSW_CSN_MIN_DURATION;
+    if (cn->duration < YSW_CSN_MIN_DURATION) {
+        cn->duration = YSW_CSN_MIN_DURATION;
     }
-    if (csn->start + csn->duration > cs_duration) {
-        csn->duration = cs_duration - csn->start;
+    if (cn->start + cn->duration > cs_duration) {
+        cn->duration = cs_duration - cn->start;
     }
-    if (csn->degree < YSW_CSN_MIN_DEGREE) {
-        csn->degree = YSW_CSN_MIN_DEGREE;
-    } else if (csn->degree > YSW_CSN_MAX_DEGREE) {
-        csn->degree = YSW_CSN_MAX_DEGREE;
+    if (cn->degree < YSW_CSN_MIN_DEGREE) {
+        cn->degree = YSW_CSN_MIN_DEGREE;
+    } else if (cn->degree > YSW_CSN_MAX_DEGREE) {
+        cn->degree = YSW_CSN_MAX_DEGREE;
     }
-    if (csn->velocity > YSW_CSN_MAX_VELOCITY) {
-        csn->velocity = YSW_CSN_MAX_VELOCITY;
+    if (cn->velocity > YSW_CSN_MAX_VELOCITY) {
+        cn->velocity = YSW_CSN_MAX_VELOCITY;
     }
-    csn->start = round_tick(csn->start);
-    csn->duration = round_tick(csn->duration);
-    ESP_LOGD(TAG, "normalize_csn start=%d, duration=%d, degree=%d, velocity=%d", csn->start, csn->duration, csn->degree, csn->velocity);
+    cn->start = round_tick(cn->start);
+    cn->duration = round_tick(cn->duration);
+    ESP_LOGD(TAG, "normalize_cn start=%d, duration=%d, degree=%d, velocity=%d", cn->start, cn->duration, cn->degree, cn->velocity);
 }
 
-uint32_t ysw_cs_add_csn(ysw_cs_t *cs, ysw_csn_t *csn)
+uint32_t ysw_cs_add_cn(ysw_cs_t *cs, ysw_cn_t *cn)
 {
-    ysw_cs_normalize_csn(cs, csn);
-    uint32_t index = ysw_array_push(cs->csn_array, csn);
+    ysw_cs_normalize_cn(cs, cn);
+    uint32_t index = ysw_array_push(cs->cn_array, cn);
     return index;
 }
 
-void ysw_cs_sort_csn_array(ysw_cs_t *cs)
+void ysw_cs_sort_cn_array(ysw_cs_t *cs)
 {
-    ysw_array_sort(cs->csn_array, ysw_csn_compare);
+    ysw_array_sort(cs->cn_array, ysw_cn_compare);
 }
 
 void ysw_cs_set_name(ysw_cs_t *cs, const char* name)
@@ -123,31 +123,31 @@ uint8_t ysw_cs_get_instrument(ysw_cs_t *cs)
     return cs->instrument;
 }
 
-// csn_array must be in order produced by ysw_cs_sort_csn_array prior to call
+// cn_array must be in order produced by ysw_cs_sort_cn_array prior to call
 
 note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
 {
     int end_time = 0;
     uint32_t cs_duration = ysw_cs_get_duration(cs);
-    int csn_count = ysw_cs_get_csn_count(cs);
-    note_t *notes = ysw_heap_allocate(sizeof(note_t) * (csn_count + 1)); // +1 for fill-to-measure
+    int cn_count = ysw_cs_get_cn_count(cs);
+    note_t *notes = ysw_heap_allocate(sizeof(note_t) * (cn_count + 1)); // +1 for fill-to-measure
     note_t *note_p = notes;
     uint8_t tonic = cs->octave * 12;
     uint8_t root = ysw_degree_intervals[0][cs->mode % 7];
     // TODO: Revisit whether root should be 1-based, factor out a 0-based function
     root++;
-    for (int j = 0; j < csn_count; j++) {
-        ysw_csn_t *csn = ysw_cs_get_csn(cs, j);
-        if (csn->start < cs_duration) {
-            note_p->start = csn->start;
-            if (csn->start + csn->duration > cs_duration) {
-                note_p->duration = cs_duration - csn->start;
+    for (int j = 0; j < cn_count; j++) {
+        ysw_cn_t *cn = ysw_cs_get_cn(cs, j);
+        if (cn->start < cs_duration) {
+            note_p->start = cn->start;
+            if (cn->start + cn->duration > cs_duration) {
+                note_p->duration = cs_duration - cn->start;
             } else {
-                note_p->duration = csn->duration;
+                note_p->duration = cn->duration;
             }
             note_p->channel = 0;
-            note_p->midi_note = ysw_csn_to_midi_note(csn, tonic, root) + cs->transposition;
-            note_p->velocity = csn->velocity;
+            note_p->midi_note = ysw_cn_to_midi_note(cn, tonic, root) + cs->transposition;
+            note_p->velocity = cn->velocity;
             note_p->instrument = cs->instrument;
             //ESP_LOGD(TAG, "ysw_cs_get_notes start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
             end_time = note_p->start + note_p->duration;
@@ -173,7 +173,7 @@ void ysw_cs_dump(ysw_cs_t *cs, char *tag)
     ESP_LOGD(tag, "ysw_cs_dump cs=%p", cs);
     ESP_LOGD(tag, "name=%s", cs->name);
     ESP_LOGD(tag, "duration=%d", ysw_cs_get_duration(cs));
-    uint32_t csn_count = ysw_cs_get_csn_count(cs);
-    ESP_LOGD(tag, "csn_count=%d", csn_count);
+    uint32_t cn_count = ysw_cs_get_cn_count(cs);
+    ESP_LOGD(tag, "cn_count=%d", cn_count);
 }
 

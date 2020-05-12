@@ -15,13 +15,13 @@
 typedef struct {
     int16_t row;
     int16_t column;
-    int16_t old_csn_index;
+    int16_t old_cn_index;
     bool is_cell_edit;
 } selection_t;
 
 static selection_t selection = {
     .row = -1,
-    .old_csn_index = -1
+    .old_cn_index = -1
 };
 
 static lv_obj_t *kb;
@@ -30,7 +30,7 @@ static lv_signal_cb_t old_signal_cb;
 
 static lv_obj_t *table;
 static lv_obj_t *footer_label;
-static uint32_t csn_index;
+static uint32_t cn_index;
 
 static void keyboard_event_cb(lv_obj_t *keyboard, lv_event_t event)
 {
@@ -97,15 +97,15 @@ static void open_value_editor(lv_obj_t * btn, lv_event_t event)
 
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
 
-    uint32_t csn_count = ysw_cs_get_csn_count(cs);
-    if (csn_index >= csn_count) {
+    uint32_t cn_count = ysw_cs_get_cn_count(cs);
+    if (cn_index >= cn_count) {
         return;
     }
 
     char buf[MDBUF_SZ];
-    snprintf(buf, MDBUF_SZ, "Note (%d of %d)", to_count(csn_index), csn_count);
+    snprintf(buf, MDBUF_SZ, "Note (%d of %d)", to_count(cn_index), cn_count);
 
-    ysw_csn_t *csn = ysw_cs_get_csn(cs, csn_index);
+    ysw_cn_t *cn = ysw_cs_get_cn(cs, cn_index);
 
     lv_obj_t *win = lv_win_create(lv_scr_act(), NULL);
     lv_obj_align(win, NULL, LV_ALIGN_CENTER, 0, 0);
@@ -124,10 +124,10 @@ static void open_value_editor(lv_obj_t * btn, lv_event_t event)
     //lv_obj_t *scrl = lv_page_get_scrl(ext->page);
 
 
-    create_field(win, "Degree:", ysw_itoa(csn->degree, buf, MDBUF_SZ));
-    create_field(win, "Start:", ysw_itoa(csn->start, buf, MDBUF_SZ));
-    create_field(win, "Duration:", ysw_itoa(csn->duration, buf, MDBUF_SZ));
-    create_field(win, "Volume:", ysw_itoa(csn->velocity, buf, MDBUF_SZ));
+    create_field(win, "Degree:", ysw_itoa(cn->degree, buf, MDBUF_SZ));
+    create_field(win, "Start:", ysw_itoa(cn->start, buf, MDBUF_SZ));
+    create_field(win, "Duration:", ysw_itoa(cn->duration, buf, MDBUF_SZ));
+    create_field(win, "Volume:", ysw_itoa(cn->velocity, buf, MDBUF_SZ));
 
     lv_win_set_layout(win, LV_LAYOUT_PRETTY);
 }
@@ -151,18 +151,18 @@ static void log_type(lv_obj_t *obj, char *tag)
     }
 }
 
-static void clear_selected_csn_highlight()
+static void clear_selected_cn_highlight()
 {
-    if (selection.old_csn_index != -1) {
+    if (selection.old_cn_index != -1) {
         for (int i = 0; i < COLUMN_COUNT; i++) {
-            lv_table_set_cell_type(table, selection.old_csn_index + 1, i, 1); // +1 for heading
+            lv_table_set_cell_type(table, selection.old_cn_index + 1, i, 1); // +1 for heading
         }
     }
-    selection.old_csn_index = -1;
+    selection.old_cn_index = -1;
     lv_obj_refresh_style(table);
 }
 
-static void select_csn()
+static void select_cn()
 {
     uint32_t cs_count = ysw_music_get_cs_count(music);
     if (cs_index >= cs_count) {
@@ -171,28 +171,28 @@ static void select_csn()
 
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
 
-    uint32_t csn_count = ysw_cs_get_csn_count(cs);
-    if (csn_index >= csn_count) {
+    uint32_t cn_count = ysw_cs_get_cn_count(cs);
+    if (cn_index >= cn_count) {
         return;
     }
 
     char buf[MDBUF_SZ];
-    snprintf(buf, MDBUF_SZ, "Note %d of %d", to_count(csn_index), csn_count);
+    snprintf(buf, MDBUF_SZ, "Note %d of %d", to_count(cn_index), cn_count);
     lv_label_set_text(footer_label, buf);
     lv_obj_realign(footer_label);
 
-    clear_selected_csn_highlight();
+    clear_selected_cn_highlight();
     for (int i = 0; i < COLUMN_COUNT; i++) {
-        lv_table_set_cell_type(table, csn_index + 1, i, 4); // +1 for heading
+        lv_table_set_cell_type(table, cn_index + 1, i, 4); // +1 for heading
     }
     lv_obj_refresh_style(table);
 
-    selection.old_csn_index = csn_index;
+    selection.old_cn_index = cn_index;
 }
 
 static void select_cs()
 {
-    clear_selected_csn_highlight();
+    clear_selected_cn_highlight();
 
     uint32_t cs_count = ysw_music_get_cs_count(music);
     if (cs_index >= cs_count) {
@@ -203,25 +203,25 @@ static void select_cs()
 
     lv_win_set_title(win, cs->name);
 
-    uint32_t csn_count = ysw_cs_get_csn_count(cs);
-    lv_table_set_row_cnt(table, csn_count + 1); // +1 for the headings
+    uint32_t cn_count = ysw_cs_get_cn_count(cs);
+    lv_table_set_row_cnt(table, cn_count + 1); // +1 for the headings
 
-    for (uint32_t i = 0; i < csn_count; i++) {
+    for (uint32_t i = 0; i < cn_count; i++) {
         ESP_LOGD(TAG, "setting note attributes, i=%d", i);
         char buffer[16];
         int n = i + 1;
-        ysw_csn_t *csn = ysw_cs_get_csn(cs, i); lv_table_set_cell_value(table, n, 0, ysw_itoa(csn->degree, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 1, ysw_itoa(csn->start, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 2, ysw_itoa(csn->duration, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(table, n, 3, ysw_itoa(csn->velocity, buffer, sizeof(buffer)));
+        ysw_cn_t *cn = ysw_cs_get_cn(cs, i); lv_table_set_cell_value(table, n, 0, ysw_itoa(cn->degree, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 1, ysw_itoa(cn->start, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 2, ysw_itoa(cn->duration, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, n, 3, ysw_itoa(cn->velocity, buffer, sizeof(buffer)));
         for (int j = 0; j < COLUMN_COUNT; j++) {
             lv_table_set_cell_align(table, n, j, LV_LABEL_ALIGN_CENTER);
         }
     }
 
-    if (csn_count) {
-        csn_index = 0;
-        select_csn();
+    if (cn_count) {
+        cn_index = 0;
+        select_cn();
     }
 }
 
@@ -245,8 +245,8 @@ static lv_res_t my_scrl_signal_cb(lv_obj_t *scrl, lv_signal_t sign, void *param)
                 selection.is_cell_edit = false;
                 selection.row = -1;
             }
-            csn_index = row - 1; // -1 for headings
-            select_csn();
+            cn_index = row - 1; // -1 for headings
+            select_cn();
             if (selection.row == row && selection.column == column) {
                 lv_table_set_cell_type(table, selection.row, selection.column, 2);
                 lv_obj_refresh_style(table);
@@ -295,7 +295,7 @@ static void fragment()
 static void select_chord_style()
 {
     char buf[MDBUF_SZ];
-    snprintf(buf, MDBUF_SZ, "Note %d of %d", to_count(csn_index), csn_count);
+    snprintf(buf, MDBUF_SZ, "Note %d of %d", to_count(cn_index), cn_count);
     lv_label_set_text(footer_label, buf);
     lv_obj_realign(footer_label);
 }

@@ -57,65 +57,65 @@ typedef struct {
     uint8_t velocity;
     uint8_t flags; // persistent
     uint8_t state; // transient
-} ysw_csn_t;
+} ysw_cn_t;
 
-static inline bool ysw_csn_is_natural(const ysw_csn_t *csn)
+static inline bool ysw_cn_is_natural(const ysw_cn_t *cn)
 {
-    return (csn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_NATURAL;
+    return (cn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_NATURAL;
 }
 
-static inline bool ysw_csn_is_flat(const ysw_csn_t *csn)
+static inline bool ysw_cn_is_flat(const ysw_cn_t *cn)
 {
-    return (csn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_FLAT;
+    return (cn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_FLAT;
 }
 
-static inline bool ysw_csn_is_sharp(const ysw_csn_t *csn)
+static inline bool ysw_cn_is_sharp(const ysw_cn_t *cn)
 {
-    return (csn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_SHARP;
+    return (cn->flags & YSW_CSN_ACCIDENTAL) == YSW_CSN_SHARP;
 }
 
-static inline void ysw_csn_set_natural(ysw_csn_t *csn)
+static inline void ysw_cn_set_natural(ysw_cn_t *cn)
 {
-    csn->flags &= ~YSW_CSN_ACCIDENTAL;
+    cn->flags &= ~YSW_CSN_ACCIDENTAL;
 }
 
-static inline void ysw_csn_set_flat(ysw_csn_t *csn)
+static inline void ysw_cn_set_flat(ysw_cn_t *cn)
 {
-    csn->flags = (csn->flags & ~YSW_CSN_ACCIDENTAL) | YSW_CSN_FLAT;
+    cn->flags = (cn->flags & ~YSW_CSN_ACCIDENTAL) | YSW_CSN_FLAT;
 }
 
-static inline void ysw_csn_set_sharp(ysw_csn_t *csn)
+static inline void ysw_cn_set_sharp(ysw_cn_t *cn)
 {
-    csn->flags = (csn->flags & ~YSW_CSN_ACCIDENTAL) | YSW_CSN_SHARP;
+    cn->flags = (cn->flags & ~YSW_CSN_ACCIDENTAL) | YSW_CSN_SHARP;
 }
 
-static inline ysw_accidental_t ysw_csn_get_accidental(const ysw_csn_t *csn)
+static inline ysw_accidental_t ysw_cn_get_accidental(const ysw_cn_t *cn)
 {
-    if (ysw_csn_is_natural(csn)) {
+    if (ysw_cn_is_natural(cn)) {
         return YSW_ACCIDENTAL_NATURAL;
     }
-    if (ysw_csn_is_flat(csn)) {
+    if (ysw_cn_is_flat(cn)) {
         return YSW_ACCIDENTAL_FLAT;
     }
     return YSW_ACCIDENTAL_SHARP;
 }
 
-static inline void ysw_csn_select(ysw_csn_t *csn, bool selected)
+static inline void ysw_cn_select(ysw_cn_t *cn, bool selected)
 {
     if (selected) {
-        csn->state |= YSW_CSN_SELECTED;
+        cn->state |= YSW_CSN_SELECTED;
     } else {
-        csn->state &= ~YSW_CSN_SELECTED;
+        cn->state &= ~YSW_CSN_SELECTED;
     }
 }
 
-static inline bool ysw_csn_is_selected(ysw_csn_t *csn)
+static inline bool ysw_cn_is_selected(ysw_cn_t *cn)
 {
-    return csn->state & YSW_CSN_SELECTED;
+    return cn->state & YSW_CSN_SELECTED;
 }
 
-void ysw_csn_free(ysw_csn_t *ysw_csn);
-ysw_csn_t *ysw_csn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags);
-ysw_csn_t *ysw_csn_copy(ysw_csn_t *csn);
-uint8_t ysw_csn_to_midi_note(ysw_csn_t *csn, uint8_t scale_tonic, uint8_t root_number);
-int ysw_csn_compare(const void *left, const void *right);
+void ysw_cn_free(ysw_cn_t *ysw_cn);
+ysw_cn_t *ysw_cn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags);
+ysw_cn_t *ysw_cn_copy(ysw_cn_t *cn);
+uint8_t ysw_cn_to_midi_note(ysw_cn_t *cn, uint8_t scale_tonic, uint8_t root_number);
+int ysw_cn_compare(const void *left, const void *right);

@@ -15,8 +15,8 @@
 extern lv_style_t plain_color_tight;
 extern lv_style_t even_interval_style;
 extern lv_style_t odd_interval_style;
-extern lv_style_t csn_style;
-extern lv_style_t selected_csn_style;
+extern lv_style_t cn_style;
+extern lv_style_t selected_cn_style;
 
 extern lv_style_t cell_editor_style;
 

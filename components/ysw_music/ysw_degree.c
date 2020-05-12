@@ -49,9 +49,9 @@ void ysw_degree_normalize(int8_t degree_number, uint8_t *normalized_degree_numbe
 }
 
 /**
- * Convert a scale tonic, progression degree and chord_note into a midi note
+ * Convert a scale tonic, cp degree and chord_note into a midi note
  * @param scale_tonic midi note of scale tonic (e.g. 60)
- * @param root_number degree number of chord in progression (e.g. I, IV or V)
+ * @param root_number degree number of chord in cp (e.g. I, IV or V)
  * @param degree_number note in styled chord (e.g. 3 for 3rd or 0 for 7th an octave lower)
  * @param accidental flat, natural or sharp
  * @return midi note representing the parameters

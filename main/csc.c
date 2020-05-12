@@ -7,11 +7,11 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "chord_style.h"
+#include "csc.h"
 
 #include "ysw_cs.h"
 #include "ysw_csf.h"
-#include "ysw_csn.h"
+#include "ysw_cn.h"
 #include "ysw_instruments.h"
 #include "ysw_lv_cse.h"
 #include "sequencer.h"
@@ -32,17 +32,17 @@
 
 #define TAG "YSW_CSC"
 
-typedef void (*note_visitor_t)(ysw_csn_t *csn);
+typedef void (*note_visitor_t)(ysw_cn_t *cn);
 
 static ysw_music_t *music;
 static ysw_csf_t *csf;
 static uint32_t cs_index;
-static ysw_array_t *csn_clipboard;
+static ysw_array_t *cn_clipboard;
 
 static void stage()
 {
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-    ysw_cs_sort_csn_array(cs);
+    ysw_cs_sort_cn_array(cs);
 
     uint32_t note_count = 0;
     note_t *notes = ysw_cs_get_notes(cs, &note_count);
@@ -114,46 +114,46 @@ static void create_cs(uint32_t new_index)
     update_frame();
 }
 
-static void create_csn(lv_obj_t *cse, int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration)
+static void create_cn(lv_obj_t *cse, int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration)
 {
-    ESP_LOGD(TAG, "create_csn degree=%d, velocity=%d, start=%d, duration=%d", degree, velocity, start, duration);
+    ESP_LOGD(TAG, "create_cn degree=%d, velocity=%d, start=%d, duration=%d", degree, velocity, start, duration);
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
     uint16_t cs_duration = ysw_time_to_measure_duration(cs->time);
     if (duration > cs_duration) {
         duration = cs_duration;
-        ESP_LOGD(TAG, "create_csn setting duration=%d", duration);
+        ESP_LOGD(TAG, "create_cn setting duration=%d", duration);
     }
     if (start + duration > cs_duration) {
         start = cs_duration - duration;
-        ESP_LOGD(TAG, "create_csn setting start=%d", start);
+        ESP_LOGD(TAG, "create_cn setting start=%d", start);
     }
 
-    ysw_csn_t *csn = ysw_csn_create(degree, velocity, start, duration, 0);
-    ysw_cs_add_csn(cs, csn);
+    ysw_cn_t *cn = ysw_cn_create(degree, velocity, start, duration, 0);
+    ysw_cs_add_cn(cs, cn);
     refresh();
 }
 
-static void copy_to_csn_clipboard(ysw_csn_t *csn)
+static void copy_to_cn_clipboard(ysw_cn_t *cn)
 {
-    ysw_csn_t *new_csn = ysw_csn_copy(csn);
-    ysw_csn_select(csn, false);
-    ysw_csn_select(new_csn, true);
-    ysw_array_push(csn_clipboard, new_csn);
+    ysw_cn_t *new_cn = ysw_cn_copy(cn);
+    ysw_cn_select(cn, false);
+    ysw_cn_select(new_cn, true);
+    ysw_array_push(cn_clipboard, new_cn);
 }
 
-static void decrease_volume(ysw_csn_t *csn)
+static void decrease_volume(ysw_cn_t *cn)
 {
-    int new_velocity = ((csn->velocity - 1) / 10) * 10;
+    int new_velocity = ((cn->velocity - 1) / 10) * 10;
     if (new_velocity >= 0) {
-        csn->velocity = new_velocity;
+        cn->velocity = new_velocity;
     }
 }
 
-static void increase_volume(ysw_csn_t *csn)
+static void increase_volume(ysw_cn_t *cn)
 {
-    int new_velocity = ((csn->velocity + 10) / 10) * 10;
+    int new_velocity = ((cn->velocity + 10) / 10) * 10;
     if (new_velocity <= 120) {
-        csn->velocity = new_velocity;
+        cn->velocity = new_velocity;
     }
 }
 
@@ -162,11 +162,11 @@ static void visit_notes(note_visitor_t visitor, lv_event_t event)
     if (event == LV_EVENT_PRESSED || event == LV_EVENT_LONG_PRESSED_REPEAT) {
         uint32_t visitor_count = 0;
         ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-        uint32_t csn_count = ysw_cs_get_csn_count(cs);
-        for (uint32_t i = 0; i < csn_count; i++) {
-            ysw_csn_t *csn = ysw_cs_get_csn(cs, i);
-            if (ysw_csn_is_selected(csn)) {
-                visitor(csn);
+        uint32_t cn_count = ysw_cs_get_cn_count(cs);
+        for (uint32_t i = 0; i < cn_count; i++) {
+            ysw_cn_t *cn = ysw_cs_get_cn(cs, i);
+            if (ysw_cn_is_selected(cn)) {
+                visitor(cn);
                 visitor_count++;
             }
         }
@@ -323,33 +323,33 @@ static void on_new_chord_style(lv_obj_t * btn, lv_event_t event)
 static void on_copy(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED) {
-        if (csn_clipboard) {
-            uint32_t old_csn_count = ysw_array_get_count(csn_clipboard);
-            for (int i = 0; i < old_csn_count; i++) {
-                ysw_csn_t *old_csn = ysw_array_get(csn_clipboard, i);
-                ysw_csn_free(old_csn);
+        if (cn_clipboard) {
+            uint32_t old_cn_count = ysw_array_get_count(cn_clipboard);
+            for (int i = 0; i < old_cn_count; i++) {
+                ysw_cn_t *old_cn = ysw_array_get(cn_clipboard, i);
+                ysw_cn_free(old_cn);
             }
-            ysw_array_truncate(csn_clipboard, 0);
+            ysw_array_truncate(cn_clipboard, 0);
         } else {
-            csn_clipboard = ysw_array_create(10);
+            cn_clipboard = ysw_array_create(10);
         }
-        visit_notes(copy_to_csn_clipboard, event);
+        visit_notes(copy_to_cn_clipboard, event);
     }
 }
 
 static void on_paste(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED) {
-        if (csn_clipboard) {
+        if (cn_clipboard) {
             ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-            uint32_t csn_count = ysw_array_get_count(csn_clipboard);
-            for (uint32_t i = 0; i < csn_count; i++) {
-                ysw_csn_t *csn = ysw_array_get(csn_clipboard, i);
-                ysw_csn_t *new_csn = ysw_csn_copy(csn);
-                new_csn->state = csn->state;
-                ysw_cs_add_csn(cs, new_csn);
+            uint32_t cn_count = ysw_array_get_count(cn_clipboard);
+            for (uint32_t i = 0; i < cn_count; i++) {
+                ysw_cn_t *cn = ysw_array_get(cn_clipboard, i);
+                ysw_cn_t *new_cn = ysw_cn_copy(cn);
+                new_cn->state = cn->state;
+                ysw_cs_add_cn(cs, new_cn);
             }
-            if (csn_count) {
+            if (cn_count) {
                 refresh();
             }
         }
@@ -362,19 +362,19 @@ static void on_trash(lv_obj_t * btn, lv_event_t event)
         uint32_t target = 0;
         uint32_t changes = 0;
         ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-        uint32_t csn_count = ysw_cs_get_csn_count(cs);
-        for (uint32_t source = 0; source < csn_count; source++) {
-            ysw_csn_t *csn = ysw_array_get(cs->csn_array, source);
-            if (ysw_csn_is_selected(csn)) {
-                ysw_csn_free(csn);
+        uint32_t cn_count = ysw_cs_get_cn_count(cs);
+        for (uint32_t source = 0; source < cn_count; source++) {
+            ysw_cn_t *cn = ysw_array_get(cs->cn_array, source);
+            if (ysw_cn_is_selected(cn)) {
+                ysw_cn_free(cn);
                 changes++;
             } else {
-                ysw_array_set(cs->csn_array, target, csn);
+                ysw_array_set(cs->cn_array, target, cn);
                 target++;
             }
         }
         if (changes) {
-            ysw_array_truncate(cs->csn_array, target);
+            ysw_array_truncate(cs->cn_array, target);
             refresh();
         }
     }
@@ -397,8 +397,8 @@ static void cse_event_cb(lv_obj_t *cse, ysw_lv_cse_event_t event, ysw_lv_cse_eve
 
     switch (event) {
         case YSW_LV_CSE_SELECT:
-            velocity = data->select.csn->velocity;
-            duration = data->select.csn->duration;
+            velocity = data->select.cn->velocity;
+            duration = data->select.cn->duration;
             break;
         case YSW_LV_CSE_DESELECT:
             break;
@@ -406,7 +406,7 @@ static void cse_event_cb(lv_obj_t *cse, ysw_lv_cse_event_t event, ysw_lv_cse_eve
             stage();
             break;
         case YSW_LV_CSE_CREATE:
-            create_csn(cse, data->create.degree, velocity, data->create.start, duration);
+            create_cn(cse, data->create.degree, velocity, data->create.start, duration);
             break;
     }
 }

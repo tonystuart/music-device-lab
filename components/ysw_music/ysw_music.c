@@ -23,14 +23,14 @@ ysw_cs_t *ysw_music_get_cs(ysw_music_t *music, uint32_t index)
     return ysw_array_get(music->cs_array, index);
 }
 
-uint32_t ysw_music_get_progression_count(ysw_music_t *music)
+uint32_t ysw_music_get_cp_count(ysw_music_t *music)
 {
-    return ysw_array_get_count(music->progressions);
+    return ysw_array_get_count(music->cp_array);
 }
 
-ysw_progression_t *ysw_music_get_progression(ysw_music_t *music, uint32_t index)
+ysw_cp_t *ysw_music_get_cp(ysw_music_t *music, uint32_t index)
 {
-    return ysw_array_get(music->progressions, index);
+    return ysw_array_get(music->cp_array, index);
 }
 
 void ysw_music_insert_cs(ysw_music_t *music, uint32_t index, ysw_cs_t *cs)
@@ -47,10 +47,10 @@ void ysw_music_dump(ysw_music_t *music, char *tag)
         ysw_cs_dump(cs, tag);
     }
 
-    uint32_t progression_count = ysw_music_get_progression_count(music);
-    for (uint32_t i = 0; i < progression_count; i++) {
-        ysw_progression_t *progression = ysw_music_get_progression(music, i);
-        ESP_LOGI(tag, "progression[%d]=%s", i, progression->name);
-        ysw_progression_dump(progression, tag);
+    uint32_t cp_count = ysw_music_get_cp_count(music);
+    for (uint32_t i = 0; i < cp_count; i++) {
+        ysw_cp_t *cp = ysw_music_get_cp(music, i);
+        ESP_LOGI(tag, "cp[%d]=%s", i, cp->name);
+        ysw_cp_dump(cp, tag);
     }
 }

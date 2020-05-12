@@ -10,7 +10,7 @@
 #pragma once
 
 #include "lvgl.h"
-#include "ysw_csn.h"
+#include "ysw_cn.h"
 #include "ysw_cs.h"
 
 typedef void (*ysw_sdb_string_cb_t)(const char *new_value);

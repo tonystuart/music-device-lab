@@ -18,8 +18,8 @@ lv_style_t plain_color_tight;
 // Specific Styles are named for what they do rather than what they are
 lv_style_t even_interval_style;
 lv_style_t odd_interval_style;
-lv_style_t csn_style;
-lv_style_t selected_csn_style;
+lv_style_t cn_style;
+lv_style_t selected_cn_style;
 
 lv_style_t cell_editor_style;
 
@@ -62,17 +62,17 @@ void ysw_lv_styles_initialize()
     even_interval_style.line.width = 1;
     even_interval_style.line.opa = LV_OPA_COVER;
 
-    lv_style_copy(&csn_style, &lv_style_pretty);
-    csn_style.text.font = &lv_font_roboto_12;
-    csn_style.body.main_color = LV_COLOR_RED;
-    csn_style.body.grad_color = LV_COLOR_RED;
-    csn_style.body.opa = LV_OPA_50;
+    lv_style_copy(&cn_style, &lv_style_pretty);
+    cn_style.text.font = &lv_font_roboto_12;
+    cn_style.body.main_color = LV_COLOR_RED;
+    cn_style.body.grad_color = LV_COLOR_RED;
+    cn_style.body.opa = LV_OPA_50;
 
-    lv_style_copy(&selected_csn_style, &lv_style_pretty);
-    selected_csn_style.text.font = &lv_font_roboto_12;
-    selected_csn_style.body.main_color = LV_COLOR_YELLOW;
-    selected_csn_style.body.grad_color = LV_COLOR_YELLOW;
-    selected_csn_style.body.opa = LV_OPA_80;
+    lv_style_copy(&selected_cn_style, &lv_style_pretty);
+    selected_cn_style.text.font = &lv_font_roboto_12;
+    selected_cn_style.body.main_color = LV_COLOR_YELLOW;
+    selected_cn_style.body.grad_color = LV_COLOR_YELLOW;
+    selected_cn_style.body.opa = LV_OPA_80;
 
 
 

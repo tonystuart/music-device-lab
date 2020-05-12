@@ -11,7 +11,7 @@
 
 #include "lvgl.h"
 #include "ysw_array.h"
-#include "ysw_csn.h"
+#include "ysw_cn.h"
 #include "ysw_cs.h"
 #include "ysw_bounds.h"
 
@@ -23,11 +23,11 @@ typedef enum {
 } ysw_lv_cse_event_t;
 
 typedef struct {
-    ysw_csn_t *csn;
+    ysw_cn_t *cn;
 } ysw_lv_cse_select_t;
 
 typedef struct {
-    ysw_csn_t *csn;
+    ysw_cn_t *cn;
 } ysw_lv_cse_deselect_t;
 
 typedef struct {
@@ -49,7 +49,7 @@ typedef struct {
     // TODO: Rename / reorder by role (e.g. dragging)
     ysw_cs_t *cs;
     lv_point_t last_click;
-    ysw_csn_t *selected_csn;
+    ysw_cn_t *selected_cn;
     ysw_bounds_t selection_type;
     ysw_cs_t *drag_start_cs;
     bool dragging;
@@ -64,6 +64,6 @@ typedef struct {
 
 lv_obj_t *ysw_lv_cse_create(lv_obj_t *par);
 void ysw_lv_cse_set_cs(lv_obj_t *cse, ysw_cs_t *cs);
-void ysw_lv_cse_select(lv_obj_t *cse, ysw_csn_t *csn, bool is_selected);
-bool ysw_lv_cse_is_selected(lv_obj_t *cse, ysw_csn_t *csn);
+void ysw_lv_cse_select(lv_obj_t *cse, ysw_cn_t *cn, bool is_selected);
+bool ysw_lv_cse_is_selected(lv_obj_t *cse, ysw_cn_t *cn);
 void ysw_lv_cse_set_event_cb(lv_obj_t *cse, ysw_lv_cse_event_cb_t event_cb);

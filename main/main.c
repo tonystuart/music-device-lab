@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "chord_style.h"
+#include "csc.h"
 #include "display.h"
 #include "sequencer.h"
 #include "spiffs.h"

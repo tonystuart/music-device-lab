@@ -10,7 +10,7 @@
 #include "ysw_csf.h"
 
 #include "ysw_cs.h"
-#include "ysw_csn.h"
+#include "ysw_cn.h"
 #include "ysw_heap.h"
 #include "ysw_lv_cse.h"
 
