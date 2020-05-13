@@ -15,6 +15,26 @@
 extern const uint8_t ysw_degree_intervals[7][7];
 
 typedef enum {
+    I = 1,
+    II,
+    III,
+    IV,
+    V,
+    VI,
+    VII,
+} ysw_degree_t;
+
+typedef enum {
+    TONIC = 1,
+    SUPERTONIC,
+    MEDIANT,
+    SUBDOMINANT,
+    DOMINANT,
+    SUBMEDIANT,
+    SUBTONIC,
+} ysw_role_t;
+
+typedef enum {
     YSW_ACCIDENTAL_FLAT = -1,
     YSW_ACCIDENTAL_NATURAL,
     YSW_ACCIDENTAL_SHARP,
@@ -22,3 +42,4 @@ typedef enum {
 
 uint8_t ysw_degree_to_note(uint8_t scale_tonic, uint8_t root_number, int8_t degree_number, ysw_accidental_t accidental);
 void ysw_degree_normalize(int8_t degree_number, uint8_t *normalized_degree_number, int8_t *octave);
+const char* ysw_degree_get_name(uint8_t name_index);

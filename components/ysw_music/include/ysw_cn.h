@@ -19,26 +19,6 @@
 #define YSW_CSN_MAX_VELOCITY 120
 #define YSW_CSN_TICK_INCREMENT 5
 
-typedef enum {
-    I = 1,
-    ii,
-    iii,
-    IV,
-    V,
-    vi,
-    vii
-} ysw_degree_t;
-
-typedef enum {
-    TONIC = 1,
-    SUPERTONIC,
-    MEDIANT,
-    SUBDOMINANT,
-    DOMINANT,
-    SUBMEDIANT,
-    SUBTONIC,
-} ysw_role_t;
-
 #define YSW_CSN_ACCIDENTAL 0b11
 #define YSW_CSN_NATURAL 0b00
 #define YSW_CSN_FLAT    0b01

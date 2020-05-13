@@ -32,12 +32,12 @@
 
 #define TAG "YSW_CSC"
 
-typedef void (*note_visitor_t)(ysw_cn_t *cn);
+typedef void (*cn_visitor_t)(ysw_cn_t *cn);
 
 static ysw_music_t *music;
 static ysw_csf_t *csf;
 static uint32_t cs_index;
-static ysw_array_t *cn_clipboard;
+static ysw_array_t *clipboard;
 
 static void stage()
 {
@@ -133,12 +133,12 @@ static void create_cn(lv_obj_t *cse, int8_t degree, uint8_t velocity, uint32_t s
     refresh();
 }
 
-static void copy_to_cn_clipboard(ysw_cn_t *cn)
+static void copy_to_clipboard(ysw_cn_t *cn)
 {
     ysw_cn_t *new_cn = ysw_cn_copy(cn);
     ysw_cn_select(cn, false);
     ysw_cn_select(new_cn, true);
-    ysw_array_push(cn_clipboard, new_cn);
+    ysw_array_push(clipboard, new_cn);
 }
 
 static void decrease_volume(ysw_cn_t *cn)
@@ -157,7 +157,7 @@ static void increase_volume(ysw_cn_t *cn)
     }
 }
 
-static void visit_notes(note_visitor_t visitor, lv_event_t event)
+static void visit_cn(cn_visitor_t visitor, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED || event == LV_EVENT_LONG_PRESSED_REPEAT) {
         uint32_t visitor_count = 0;
@@ -323,28 +323,28 @@ static void on_new_chord_style(lv_obj_t * btn, lv_event_t event)
 static void on_copy(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED) {
-        if (cn_clipboard) {
-            uint32_t old_cn_count = ysw_array_get_count(cn_clipboard);
+        if (clipboard) {
+            uint32_t old_cn_count = ysw_array_get_count(clipboard);
             for (int i = 0; i < old_cn_count; i++) {
-                ysw_cn_t *old_cn = ysw_array_get(cn_clipboard, i);
+                ysw_cn_t *old_cn = ysw_array_get(clipboard, i);
                 ysw_cn_free(old_cn);
             }
-            ysw_array_truncate(cn_clipboard, 0);
+            ysw_array_truncate(clipboard, 0);
         } else {
-            cn_clipboard = ysw_array_create(10);
+            clipboard = ysw_array_create(10);
         }
-        visit_notes(copy_to_cn_clipboard, event);
+        visit_cn(copy_to_clipboard, event);
     }
 }
 
 static void on_paste(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED) {
-        if (cn_clipboard) {
+        if (clipboard) {
             ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-            uint32_t cn_count = ysw_array_get_count(cn_clipboard);
+            uint32_t cn_count = ysw_array_get_count(clipboard);
             for (uint32_t i = 0; i < cn_count; i++) {
-                ysw_cn_t *cn = ysw_array_get(cn_clipboard, i);
+                ysw_cn_t *cn = ysw_array_get(clipboard, i);
                 ysw_cn_t *new_cn = ysw_cn_copy(cn);
                 new_cn->state = cn->state;
                 ysw_cs_add_cn(cs, new_cn);
@@ -382,12 +382,12 @@ static void on_trash(lv_obj_t * btn, lv_event_t event)
 
 static void on_volume_mid(lv_obj_t * btn, lv_event_t event)
 {
-    visit_notes(decrease_volume, event);
+    visit_cn(decrease_volume, event);
 }
 
 static void on_volume_max(lv_obj_t * btn, lv_event_t event)
 {
-    visit_notes(increase_volume, event);
+    visit_cn(increase_volume, event);
 }
 
 static void cse_event_cb(lv_obj_t *cse, ysw_lv_cse_event_t event, ysw_lv_cse_event_cb_data_t *data)
@@ -411,7 +411,7 @@ static void cse_event_cb(lv_obj_t *cse, ysw_lv_cse_event_t event, ysw_lv_cse_eve
     }
 }
 
-void edit_chord_styles(ysw_music_t *new_music, uint32_t new_cs_index)
+void csc_create(ysw_music_t *new_music, uint32_t new_cs_index)
 {
     music = new_music;
     cs_index = new_cs_index;

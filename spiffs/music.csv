@@ -41,8 +41,8 @@
 2,5,80,300,46,0
 2,3,80,350,46,0
 
-#type (progression),index,name,tonic,instrument
-3,0,Let it be progression,48,25
+#type (progression),index,name,instrument,octave,mode,transposition,tempo,time
+3,0,Let it be progression,24,4,0,0,120,6
 
 #type (progression),degree,chord_style
 4,1,0
@@ -72,8 +72,8 @@
 4,4,0
 4,1,0
 
-#type (progression),index,name,tonic,instrument
-3,1,Twelve bar blues progression,32,36
+#type (progression),index,name,instrument,octave,mode,transposition,tempo,time
+3,1,Twelve bar blues progression,32,3,0,0,80,6
 
 #type (progression),index,degree,chord_style
 4,1,1

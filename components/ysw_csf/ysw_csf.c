@@ -43,7 +43,8 @@ ysw_csf_t *ysw_csf_create(ysw_csf_config_t *config)
     ysw_frame_add_header_button(csf->frame, LV_SYMBOL_PLAY, config->play_cb);
     ysw_frame_add_header_button(csf->frame, LV_SYMBOL_PREV, config->prev_cb);
 
-    csf->cse = ysw_frame_create_content(csf->frame, ysw_lv_cse_create);
+    csf->cse = ysw_lv_cse_create(csf->frame->win);
+    ysw_frame_set_content(csf->frame, csf->cse);
     ysw_lv_cse_set_event_cb(csf->cse, config->cse_event_cb);
 
     return csf;

@@ -25,4 +25,5 @@ ysw_cs_t *ysw_music_get_cs(ysw_music_t *music, uint32_t index);
 uint32_t ysw_music_get_cp_count(ysw_music_t *music);
 ysw_cp_t *ysw_music_get_cp(ysw_music_t *music, uint32_t index);
 void ysw_music_insert_cs(ysw_music_t *music, uint32_t index, ysw_cs_t *cs);
+void ysw_music_insert_cp(ysw_music_t *music, uint32_t index, ysw_cp_t *cp);
 void ysw_music_dump(ysw_music_t *music, char *tag);

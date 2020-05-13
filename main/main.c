@@ -8,6 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "csc.h"
+#include "cpc.h"
 #include "display.h"
 #include "sequencer.h"
 #include "spiffs.h"
@@ -48,7 +49,7 @@ void app_main()
     music = ysw_music_parse(MUSIC_DEFINITIONS);
 
     if (music && ysw_music_get_cs_count(music) > 0) {
-        edit_chord_styles(music, 0);
+        cpc_create(music, 0);
     } else {
         lv_obj_t * mbox1 = lv_mbox_create(lv_scr_act(), NULL);
         lv_mbox_set_text(mbox1, "The music partition is empty");

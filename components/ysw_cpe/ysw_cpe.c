@@ -7,6 +7,97 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
+// Chord Progression Editor (CPE)
+
+#include "ysw_cpe.h"
+
+#include "ysw_cs.h"
+#include "ysw_cn.h"
+#include "ysw_heap.h"
+#include "ysw_lv_styles.h"
+#include "ysw_ticks.h"
+
+#include "lvgl.h"
+
+#include "esp_log.h"
+
+#include "math.h"
+#include "stdio.h"
+
+#define TAG "YSW_CPE"
+
+// See https://en.wikipedia.org/wiki/Chord_letters#Chord_quality
+
+static lv_design_cb_t super_design_cb;
+static lv_signal_cb_t super_signal_cb;
+
+static const char *headings[] = {
+    "Measure", "Degree", "Chord Style"
+};
+
+#define COLUMN_COUNT (sizeof(headings) / sizeof(char*))
+
+ysw_cpe_t *ysw_cpe_create(lv_obj_t *par)
+{
+    ysw_cpe_t *cpe = ysw_heap_allocate(sizeof(ysw_cpe_t));
+
+    //lv_obj_t *scroller = lv_page_get_scrl(page);
+    //old_signal_cb = lv_obj_get_signal_cb(scroller);
+    //lv_obj_set_signal_cb(scroller, my_scrl_signal_cb);
+
+    cpe->table = lv_table_create(par, NULL);
+
+    lv_obj_align(cpe->table, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+
+    lv_table_set_style(cpe->table, LV_TABLE_STYLE_BG, &plain_color_tight);
+    lv_table_set_style(cpe->table, LV_TABLE_STYLE_CELL1, &value_cell);
+    lv_table_set_style(cpe->table, LV_TABLE_STYLE_CELL2, &cell_editor_style);
+    lv_table_set_style(cpe->table, LV_TABLE_STYLE_CELL3, &name_cell);
+    lv_table_set_style(cpe->table, LV_TABLE_STYLE_CELL4, &selected_cell);
+
+    lv_table_set_row_cnt(cpe->table, 1); // just the headings for now
+    lv_table_set_col_cnt(cpe->table, COLUMN_COUNT);
+
+    for (int i = 0; i < COLUMN_COUNT; i++) {
+        ESP_LOGD(TAG, "setting column attributes");
+        lv_table_set_cell_type(cpe->table, 0, i, 3);
+        lv_table_set_cell_align(cpe->table, 0, i, LV_LABEL_ALIGN_CENTER);
+        lv_table_set_cell_value(cpe->table, 0, i, headings[i]);
+        lv_table_set_col_width(cpe->table, i, i == 2 ? 159 : 79);
+    }
+
+    return cpe;
+}
+
+void ysw_cpe_set_cp(ysw_cpe_t *cpe, ysw_cp_t *cp)
+{
+    uint32_t step_count = ysw_cp_get_step_count(cp);
+    lv_table_set_row_cnt(cpe->table, step_count + 1); // +1 for the headings
+
+    double measure = 0;
+    for (uint32_t i = 0; i < step_count; i++) {
+        ESP_LOGD(TAG, "setting step attributes, i=%d", i);
+        char buffer[16];
+        int row = i + 1; // +1 for header
+        ysw_step_t *step = ysw_cp_get_step(cp, i);
+        double beats_per_measure = ysw_cs_get_beats_per_measure(step->cs);
+        double beat_unit = ysw_cs_get_beat_unit(step->cs);
+        measure += beats_per_measure / beat_unit;
+        lv_table_set_cell_value(cpe->table, row, 0, ysw_itoa(measure, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(cpe->table, row, 1, ysw_degree_get_name(step->degree));
+        lv_table_set_cell_value(cpe->table, row, 2, step->cs->name);
+        lv_table_set_cell_crop(cpe->table, row, 2, true);
+        for (int j = 0; j < COLUMN_COUNT; j++) {
+            lv_table_set_cell_align(cpe->table, row, j, LV_LABEL_ALIGN_CENTER);
+        }
+    }
+}
+
+void ysw_cpe_set_event_cb(ysw_cpe_t *cpe, ysw_cpe_event_cb_t event_cb)
+{
+}
+
+
 #if 0
 // Example of getting component objects
 // lv_win_ext_t *ext = lv_obj_get_ext_attr(win);

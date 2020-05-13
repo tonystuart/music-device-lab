@@ -15,15 +15,15 @@
 // See https://en.wikipedia.org/wiki/Time_signature
 
 const char *ysw_time =
-"1/16 (CS)\n" // 0
-"1/8 (CS)\n"  // 1
-"1/4 (CS)\n"  // 2
-"2/2\n"       // 3
-"2/4\n"       // 4
-"3/4\n"       // 5
-"4/4\n"       // 6
-"6/8\n"       // 7
-"8/8 (CS)";   // 8
+"1/16\n" // 0
+"1/8\n"  // 1
+"1/4\n"  // 2
+"2/2\n"  // 3
+"2/4\n"  // 4
+"3/4\n"  // 5
+"4/4\n"  // 6
+"6/8\n"  // 7
+"8/8";   // 8
 
 // Time Signature - Beats per Measure (Numerator)
 

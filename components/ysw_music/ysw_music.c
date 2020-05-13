@@ -38,6 +38,11 @@ void ysw_music_insert_cs(ysw_music_t *music, uint32_t index, ysw_cs_t *cs)
     ysw_array_insert(music->cs_array, index, cs);
 }
 
+void ysw_music_insert_cp(ysw_music_t *music, uint32_t index, ysw_cp_t *cp)
+{
+    ysw_array_insert(music->cp_array, index, cp);
+}
+
 void ysw_music_dump(ysw_music_t *music, char *tag)
 {
     uint32_t cs_count = ysw_music_get_cs_count(music);

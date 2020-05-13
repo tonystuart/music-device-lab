@@ -98,17 +98,14 @@ lv_obj_t *ysw_frame_add_footer_button(ysw_frame_t *frame, const void *img_src, l
     return btn;
 }
 
-lv_obj_t *ysw_frame_create_content(ysw_frame_t *frame, ysw_frame_create_cb_t create_cb)
+void ysw_frame_set_content(ysw_frame_t *frame, lv_obj_t *object)
 {
-    ESP_LOGD(TAG, "ysw_frame_create_content");
-
+    ESP_LOGD(TAG, "ysw_frame_set_content");
     lv_obj_t *page = lv_win_get_content(frame->win);
     lv_coord_t w = lv_page_get_fit_width(page);
     lv_coord_t h = lv_page_get_fit_height(page);
-    lv_obj_t *object = create_cb(frame->win);
     lv_obj_set_size(object, w, h);
     lv_obj_align(object, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    return object;
 }
 
 void ysw_frame_free(ysw_frame_t *frame)

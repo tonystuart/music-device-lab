@@ -8,6 +8,8 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_degree.h"
+
+#include "ysw_common.h"
 #include "ysw_midi.h"
 
 #include "esp_log.h"
@@ -15,6 +17,29 @@
 #include "stdio.h"
 
 #define TAG "YSW_DEGREE"
+
+// See https://en.wikipedia.org/wiki/Roman_numeral_analysis
+
+const char *ysw_degree =
+"I\n"
+"II\n"
+"III\n"
+"IV\n"
+"V\n"
+"VI\n"
+"VIII";
+
+const char *ysw_degree_names[] = {
+    "I",
+    "II",
+    "III",
+    "IV",
+    "V",
+    "VI",
+    "VII",
+};
+
+#define YSW_DEGREE_NAMES_SZ (sizeof(ysw_degree_names) / sizeof(const char *))
 
 const uint8_t ysw_degree_intervals[7][7] = {
     /* C */ { 0, 2, 4, 5, 7, 9, 11 },
@@ -88,5 +113,12 @@ uint8_t ysw_degree_to_note(uint8_t scale_tonic, uint8_t root_number, int8_t degr
     //ESP_LOGD(TAG, "ysw_degree_to_note note=%d", note);
 
     return note;
+}
+
+const char* ysw_degree_get_name(uint8_t degree)
+{
+    uint8_t degree_index = to_index(degree);
+    assert(degree_index < YSW_DEGREE_NAMES_SZ);
+    return ysw_degree_names[degree_index];
 }
 
