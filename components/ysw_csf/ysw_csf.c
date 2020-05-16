@@ -36,7 +36,7 @@ ysw_csf_t *ysw_csf_create(ysw_csf_config_t *config)
     ysw_frame_add_footer_button(csf->frame, LV_SYMBOL_VOLUME_MID, config->volume_mid_cb);
     ysw_frame_add_footer_button(csf->frame, LV_SYMBOL_VOLUME_MAX, config->volume_max_cb);
 
-    ysw_frame_add_header_button(csf->frame, LV_SYMBOL_CLOSE, lv_win_close_event_cb);
+    ysw_frame_add_header_button(csf->frame, LV_SYMBOL_CLOSE, config->close_cb);
     ysw_frame_add_header_button(csf->frame, LV_SYMBOL_NEXT, config->next_cb);
     ysw_frame_add_header_button(csf->frame, LV_SYMBOL_LOOP, config->loop_cb);
     ysw_frame_add_header_button(csf->frame, LV_SYMBOL_PAUSE, config->pause_cb);
@@ -50,9 +50,9 @@ ysw_csf_t *ysw_csf_create(ysw_csf_config_t *config)
     return csf;
 }
 
-void ysw_csf_free(ysw_csf_t *csf)
+void ysw_csf_del(ysw_csf_t *csf)
 {
-    ysw_frame_free(csf->frame);
+    ysw_frame_del(csf->frame);
     ysw_heap_free(csf);
 }
 

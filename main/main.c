@@ -29,6 +29,43 @@
 
 static ysw_music_t *music;
 
+void test_feature(void)
+{
+}
+
+static void event_handler(lv_obj_t *btn, lv_event_t event)
+{
+    if (event == LV_EVENT_CLICKED) {
+        const char *text = lv_list_get_btn_text(btn);
+        if (strcmp(text, "Chords") == 0) {
+            csc_create(music, 0);
+        } else if (strcmp(text, "Progressions") == 0) {
+            cpc_create(music, 0);
+        } else {
+            test_feature();
+        }
+    }
+}
+
+static void create_dashboard(void)
+{
+    lv_obj_t *dashboard = lv_list_create(lv_scr_act(), NULL);
+    lv_obj_set_size(dashboard, 160, 200);
+    lv_obj_align(dashboard, NULL, LV_ALIGN_CENTER, 0, 0);
+
+    /*Add buttons to the list*/
+    lv_obj_t *list_btn;
+
+    list_btn = lv_list_add_btn(dashboard, LV_SYMBOL_AUDIO, "Chords");
+    lv_obj_set_event_cb(list_btn, event_handler);
+
+    list_btn = lv_list_add_btn(dashboard, LV_SYMBOL_BELL, "Progressions");
+    lv_obj_set_event_cb(list_btn, event_handler);
+
+    list_btn = lv_list_add_btn(dashboard, LV_SYMBOL_IMAGE, "Test");
+    lv_obj_set_event_cb(list_btn, event_handler);
+}
+
 void app_main()
 {
     ESP_LOGD(TAG, "sizeof(ysw_cs_t)=%d", sizeof(ysw_cs_t));
@@ -49,9 +86,9 @@ void app_main()
     music = ysw_music_parse(MUSIC_DEFINITIONS);
 
     if (music && ysw_music_get_cs_count(music) > 0) {
-        cpc_create(music, 0);
+        create_dashboard();
     } else {
-        lv_obj_t * mbox1 = lv_mbox_create(lv_scr_act(), NULL);
+        lv_obj_t *mbox1 = lv_mbox_create(lv_scr_act(), NULL);
         lv_mbox_set_text(mbox1, "The music partition is empty");
         lv_obj_set_width(mbox1, 200);
         lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0);

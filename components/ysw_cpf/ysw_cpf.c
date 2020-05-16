@@ -37,7 +37,7 @@ ysw_cpf_t *ysw_cpf_create(ysw_cpf_config_t *config)
     ysw_frame_add_footer_button(cpf->frame, LV_SYMBOL_UP, config->up_cb);
     ysw_frame_add_footer_button(cpf->frame, LV_SYMBOL_DOWN, config->down_cb);
 
-    ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_CLOSE, lv_win_close_event_cb);
+    ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_CLOSE, config->close_cb);
     ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_NEXT, config->next_cb);
     ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_LOOP, config->loop_cb);
     ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_PAUSE, config->pause_cb);
@@ -51,9 +51,9 @@ ysw_cpf_t *ysw_cpf_create(ysw_cpf_config_t *config)
     return cpf;
 }
 
-void ysw_cpf_free(ysw_cpf_t *cpf)
+void ysw_cpf_del(ysw_cpf_t *cpf)
 {
-    ysw_frame_free(cpf->frame);
+    ysw_frame_del(cpf->frame);
     ysw_heap_free(cpf);
 }
 

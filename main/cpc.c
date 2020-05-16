@@ -227,6 +227,9 @@ static void on_prev(lv_obj_t * btn, lv_event_t event)
 
 static void on_close(lv_obj_t * btn, lv_event_t event)
 {
+    if (event == LV_EVENT_RELEASED) {
+        ysw_cpf_del(cpf);
+    }
 }
 
 static void on_name_change(const char *new_name)

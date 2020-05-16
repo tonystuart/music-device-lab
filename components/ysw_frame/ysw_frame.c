@@ -30,18 +30,18 @@ ysw_frame_t *ysw_frame_create()
     lv_coord_t display_h = lv_disp_get_ver_res(NULL);
     lv_coord_t footer_h = BUTTON_SIZE + 5 + 5;
 
-    lv_obj_t *editor = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_set_style(editor, &plain_color_tight);
-    lv_obj_set_size(editor, display_w, display_h);
+    frame->container = lv_obj_create(lv_scr_act(), NULL);
+    lv_obj_set_style(frame->container, &plain_color_tight);
+    lv_obj_set_size(frame->container, display_w, display_h);
 
-    frame->win = lv_win_create(editor, NULL);
+    frame->win = lv_win_create(frame->container, NULL);
     lv_win_set_style(frame->win, LV_WIN_STYLE_BG, &lv_style_pretty);
     lv_win_set_style(frame->win, LV_WIN_STYLE_CONTENT, &win_style_content);
     lv_win_set_title(frame->win, "");
     lv_win_set_btn_size(frame->win, BUTTON_SIZE);
     lv_obj_set_height(frame->win, display_h - footer_h);
 
-    frame->footer = lv_obj_create(editor, NULL);
+    frame->footer = lv_obj_create(frame->container, NULL);
     lv_obj_set_size(frame->footer, display_w, footer_h);
     lv_obj_align(frame->footer, frame->win, LV_ALIGN_OUT_BOTTOM_RIGHT, 5, 5);
 
@@ -70,8 +70,7 @@ lv_obj_t *ysw_frame_add_footer_button(ysw_frame_t *frame, const void *img_src, l
 {
     ESP_LOGD(TAG, "ysw_frame_add_footer_button");
 
-    lv_obj_t *editor = lv_obj_get_parent(frame->footer);
-    lv_obj_t *win = lv_obj_get_child_back(editor, NULL);
+    lv_obj_t *win = lv_obj_get_child_back(frame->container, NULL);
     lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
 
     lv_obj_t *btn = lv_btn_create(frame->footer, NULL);
@@ -108,9 +107,9 @@ void ysw_frame_set_content(ysw_frame_t *frame, lv_obj_t *object)
     lv_obj_align(object, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 }
 
-void ysw_frame_free(ysw_frame_t *frame)
+void ysw_frame_del(ysw_frame_t *frame)
 {
-    lv_obj_del(frame->win);
+    lv_obj_del(frame->container);
     ysw_heap_free(frame);
 }
 

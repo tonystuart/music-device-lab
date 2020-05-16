@@ -35,7 +35,7 @@ typedef struct {
 } ysw_csf_t;
 
 ysw_csf_t *ysw_csf_create(ysw_csf_config_t *config);
-void ysw_csf_free(ysw_csf_t *csf);
+void ysw_csf_del(ysw_csf_t *csf);
 void ysw_csf_set_cs(ysw_csf_t *csf, ysw_cs_t *cs);
 void ysw_csf_redraw(ysw_csf_t *csf);
 void ysw_csf_set_header_text(ysw_csf_t *csf, const char *header_text);
