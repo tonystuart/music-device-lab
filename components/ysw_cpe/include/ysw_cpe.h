@@ -16,7 +16,17 @@
 #include "ysw_bounds.h"
 
 typedef struct {
+    int16_t row;
+    int16_t column;
+    int16_t old_step_index;
+    bool is_cell_edit;
+} selection_t;
+
+typedef struct {
+    ysw_cp_t *cp;
     lv_obj_t *table;
+    lv_obj_t *ddlist;
+    selection_t selection;
 } ysw_cpe_t;
 
 typedef enum {

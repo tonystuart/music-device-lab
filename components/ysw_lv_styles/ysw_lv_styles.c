@@ -22,6 +22,7 @@ lv_style_t cn_style;
 lv_style_t selected_cn_style;
 
 lv_style_t cell_editor_style;
+lv_style_t cell_selection_style;
 
 lv_style_t value_cell;
 lv_style_t win_style_content;
@@ -125,11 +126,13 @@ void ysw_lv_styles_initialize()
     value_cell.body.border.color = LV_COLOR_BLACK;
 
     lv_style_copy(&cell_editor_style, &lv_style_plain);
-    cell_editor_style.body.border.width = 1;
-    cell_editor_style.body.border.color = LV_COLOR_BLACK;
     cell_editor_style.body.main_color = LV_COLOR_RED;
     cell_editor_style.body.grad_color = LV_COLOR_RED;
     cell_editor_style.text.color = LV_COLOR_BLACK;
+
+    lv_style_copy(&cell_selection_style, &cell_editor_style);
+    cell_selection_style.body.border.width = 1;
+    cell_selection_style.body.border.color = LV_COLOR_BLACK;
 
     lv_style_copy(&name_cell, &lv_style_plain);
     name_cell.body.border.width = 1;

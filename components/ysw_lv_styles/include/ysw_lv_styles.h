@@ -19,6 +19,7 @@ extern lv_style_t cn_style;
 extern lv_style_t selected_cn_style;
 
 extern lv_style_t cell_editor_style;
+extern lv_style_t cell_selection_style;
 
 extern lv_style_t value_cell;
 extern lv_style_t win_style_content;
