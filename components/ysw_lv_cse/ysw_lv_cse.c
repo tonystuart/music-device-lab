@@ -335,11 +335,13 @@ static void fire_drag_end(lv_obj_t *cse)
     }
 }
 
-static void capture_selection(lv_obj_t *cse, ysw_lv_cse_ext_t *ext, lv_point_t *point)
+static void capture_selection(lv_obj_t *cse, lv_point_t *point)
 {
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     ext->dragging = false;
     ext->selected_cn = NULL;
     ext->selection_type = YSW_BOUNDS_NONE;
+    ext->last_click = *point;
     uint32_t cn_count = ysw_cs_get_cn_count(ext->cs);
     for (uint8_t i = 0; i < cn_count; i++) {
         lv_area_t cn_area;
@@ -551,12 +553,10 @@ static void do_click(lv_obj_t *cse)
 
 static void on_signal_pressed(lv_obj_t *cse, void *param)
 {
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
     lv_point_t *point = &proc->types.pointer.act_point;
-    capture_selection(cse, ext, point);
-    ext->last_click = *point;
+    capture_selection(cse, point);
 }
 
 static void on_signal_pressing(lv_obj_t *cse, void *param)

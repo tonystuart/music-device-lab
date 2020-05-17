@@ -33,7 +33,13 @@ typedef void (*ysw_lv_cpe_event_cb_t)(lv_obj_t *ysw_lv_cpe, ysw_lv_cpe_event_t e
 
 typedef struct {
     ysw_cp_t *cp;
-    int32_t selected_step;
+    ysw_step_t *selected_step;
+    ysw_step_t original_step;
+    lv_area_t original_coords;
+    lv_point_t last_click;
+    ysw_step_t *drag_start_step;
+    bool dragging;
+    bool long_press;
     const lv_style_t *style_bg; // background
     const lv_style_t *style_oi; // odd interval
     const lv_style_t *style_ei; // even interval
