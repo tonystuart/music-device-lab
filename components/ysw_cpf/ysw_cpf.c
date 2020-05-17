@@ -13,7 +13,7 @@
 #include "ysw_cp.h"
 #include "ysw_cs.h"
 #include "ysw_heap.h"
-#include "ysw_cpe.h"
+#include "ysw_lv_cpe.h"
 
 #include "lvgl/lvgl.h"
 
@@ -44,9 +44,9 @@ ysw_cpf_t *ysw_cpf_create(ysw_cpf_config_t *config)
     ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_PLAY, config->play_cb);
     ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_PREV, config->prev_cb);
 
-    cpf->cpe = ysw_cpe_create(cpf->frame->win);
-    ysw_frame_set_content(cpf->frame, cpf->cpe->table);
-    ysw_cpe_set_event_cb(cpf->cpe, config->cpe_event_cb);
+    cpf->cpe = ysw_lv_cpe_create(cpf->frame->win);
+    ysw_frame_set_content(cpf->frame, cpf->cpe);
+    ysw_lv_cpe_set_event_cb(cpf->cpe, config->cpe_event_cb);
 
     return cpf;
 }
@@ -59,12 +59,12 @@ void ysw_cpf_del(ysw_cpf_t *cpf)
 
 void ysw_cpf_set_cp(ysw_cpf_t *cpf, ysw_cp_t *cp)
 {
-    ysw_cpe_set_cp(cpf->cpe, cp);
+    ysw_lv_cpe_set_cp(cpf->cpe, cp);
 }
 
 void ysw_cpf_redraw(ysw_cpf_t *cpf)
 {
-    lv_obj_invalidate(cpf->cpe->table);
+    lv_obj_invalidate(cpf->cpe);
 }
 
 void ysw_cpf_set_header_text(ysw_cpf_t *cpf, const char *header_text)

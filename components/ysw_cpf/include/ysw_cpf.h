@@ -8,7 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "lvgl/lvgl.h"
-#include "ysw_cpe.h"
+#include "ysw_lv_cpe.h"
 #include "ysw_frame.h"
 
 typedef struct {
@@ -26,12 +26,12 @@ typedef struct {
     lv_event_cb_t trash_cb;
     lv_event_cb_t up_cb;
     lv_event_cb_t down_cb;
-    ysw_cpe_event_cb_t cpe_event_cb;
+    ysw_lv_cpe_event_cb_t cpe_event_cb;
 } ysw_cpf_config_t;
 
 typedef struct {
     ysw_frame_t *frame;
-    ysw_cpe_t *cpe;
+    lv_obj_t *cpe;
 } ysw_cpf_t;
 
 ysw_cpf_t *ysw_cpf_create(ysw_cpf_config_t *config);

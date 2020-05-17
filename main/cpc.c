@@ -16,7 +16,7 @@
 #include "ysw_cpf.h"
 #include "ysw_cn.h"
 #include "ysw_instruments.h"
-#include "ysw_cpe.h"
+#include "ysw_lv_cpe.h"
 #include "ysw_mode.h"
 #include "ysw_music.h"
 #include "ysw_name.h"
@@ -379,17 +379,17 @@ static void on_down(lv_obj_t * btn, lv_event_t event)
 {
 }
 
-static void cpe_event_cb(lv_obj_t *cpe, ysw_cpe_event_t event, ysw_cpe_event_cb_data_t *data)
+static void cpe_event_cb(lv_obj_t *cpe, ysw_lv_cpe_event_t event, ysw_lv_cpe_event_cb_data_t *data)
 {
     switch (event) {
-        case YSW_CPE_SELECT:
+        case YSW_LV_CPE_SELECT:
             break;
-        case YSW_CPE_DESELECT:
+        case YSW_LV_CPE_DESELECT:
             break;
-        case YSW_CPE_DRAG_END:
+        case YSW_LV_CPE_DRAG_END:
             stage();
             break;
-        case YSW_CPE_CREATE:
+        case YSW_LV_CPE_CREATE:
             create_step(cpe);
             break;
     }
