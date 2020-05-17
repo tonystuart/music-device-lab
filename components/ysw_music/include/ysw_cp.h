@@ -13,9 +13,12 @@
 #include "ysw_cn.h"
 #include "ysw_cs.h"
 
+#define YSW_STEP_NEW_MEASURE 0x01
+
 typedef struct {
     ysw_degree_t degree;
     ysw_cs_t *cs;
+    uint8_t flags;
     uint8_t state;
 } ysw_step_t;
 
@@ -31,7 +34,7 @@ typedef struct {
     ysw_time_t time;
 } ysw_cp_t;
 
-ysw_step_t *ysw_step_create(ysw_cs_t *cs, uint8_t degree);
+ysw_step_t *ysw_step_create(ysw_cs_t *cs, uint8_t degree, uint8_t flags);
 void ysw_step_free(ysw_step_t *step);
 void ysw_cp_set_name(ysw_cp_t *cp, const char* name);
 note_t *ysw_cp_get_notes(ysw_cp_t *cp, uint32_t *note_count);
@@ -39,7 +42,7 @@ uint32_t ysw_cp_get_note_count(ysw_cp_t *cp);
 void ysw_cp_set_percent_tempo(ysw_cp_t *cp);
 void ysw_cp_set_instrument(ysw_cp_t *cp, uint8_t instrument);
 void ysw_cp_set_tonic(ysw_cp_t *cp, uint8_t tonic);
-int ysw_cp_add_cs(ysw_cp_t *cp, uint8_t degree, ysw_cs_t *cs);
+int ysw_cp_add_cs(ysw_cp_t *cp, uint8_t degree, ysw_cs_t *cs, uint8_t flags);
 int ysw_cp_add_step(ysw_cp_t *cp, ysw_step_t *new_step);
 void ysw_cp_free(ysw_cp_t *cp);
 ysw_cp_t *ysw_cp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo, ysw_time_t time);
@@ -96,7 +99,7 @@ static inline uint32_t ysw_cp_get_beat_unit(ysw_cp_t *cp)
 
 static inline ysw_step_t *ysw_step_copy(ysw_step_t *old_step)
 {
-    return ysw_step_create(old_step->cs, old_step->degree);
+    return ysw_step_create(old_step->cs, old_step->degree, old_step->flags);
 }
 
 static inline void ysw_step_select(ysw_step_t *step, bool selected)

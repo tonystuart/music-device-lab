@@ -34,7 +34,7 @@ typedef enum {
     CHORD_STYLE = 1,
     CHORD_NOTE,
     CHORD_PROGRESSION,
-    PROGRESSION_CHORD_STYLE,
+    PROGRESSION_STEP,
     MELODY,
     RHYTHM,
     MIX,
@@ -154,9 +154,10 @@ static void parse_cp(this_t *this)
 
     while (!done && get_tokens(this)) {
         record_type_t type = atoi(this->tokens[0]);
-        if (type == PROGRESSION_CHORD_STYLE && this->token_count == 3) {
+        if (type == PROGRESSION_STEP && this->token_count == 4) {
             uint8_t degree = atoi(this->tokens[1]);
             uint32_t cs_index = atoi(this->tokens[2]);
+            uint8_t flags = atoi(this->tokens[3]);
             uint32_t cs_count = ysw_array_get_count(this->music->cs_array);
             if (cs_index >= cs_count) {
                 ESP_LOGW(TAG, "parse_cp cs_index=%d, cs_count=%d", cs_index, cs_count);
@@ -165,7 +166,7 @@ static void parse_cp(this_t *this)
             }
             ysw_cs_t *cs = ysw_array_get(this->music->cs_array, cs_index);
             //ESP_LOGD(TAG, "using index=%d, cs=%p, name=%s", cs_index, cs, cs->name);
-            ysw_cp_add_cs(cp, degree, cs);
+            ysw_cp_add_cs(cp, degree, cs, flags);
         } else {
             push_back_tokens(this);
             done = true;

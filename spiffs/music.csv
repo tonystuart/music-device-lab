@@ -1,4 +1,4 @@
-#record_type (chord_style),index,name,instrument,octave,mode,transposition,tempo,time
+#type (chord_style),index,name,instrument,octave,mode,transposition,tempo,time
 1,0,Let it be strum,24,4,0,0,120,6
 
 #type (chord_note),degree,velocity,time,duration,flags
@@ -18,7 +18,7 @@
 #type (chord_style),index,name,instrument,octave,mode,transposition,tempo,time
 1,1,Twelve bar blues main,32,3,0,0,80,6
 
-#type (chord_note),index,degree,velocity,time,duration,flags
+#type (chord_note),degree,velocity,time,duration,flags
 2,1,100,0,46,0
 2,3,80,50,46,0
 2,5,80,100,46,0
@@ -31,7 +31,7 @@
 #type (chord_style),index,name,instrument,octave,mode,transposition,tempo,time
 1,2,Twelve bar blues alt,32,3,0,0,80,6
 
-#type (chord_note),index,degree,velocity,time,duration,flags
+#type (chord_note),degree,velocity,time,duration,flags
 2,1,100,0,46,0
 2,3,80,50,46,0
 2,5,80,100,46,0
@@ -44,47 +44,47 @@
 #type (progression),index,name,instrument,octave,mode,transposition,tempo,time
 3,0,Let it be progression,24,4,0,0,120,6
 
-#type (progression),degree,chord_style
-4,1,0
-4,5,0
-4,6,0
-4,4,0
-4,1,0
-4,5,0
-4,4,0
-4,1,0
+#type (progression_step),degree,chord_style_index
+4,1,0,1
+4,5,0,0
+4,6,0,1
+4,4,0,0
+4,1,0,1
+4,5,0,0
+4,4,0,1
+4,1,0,0
 
-4,1,0
-4,5,0
-4,6,0
-4,4,0
-4,1,0
-4,5,0
-4,4,0
-4,1,0
+4,1,0,1
+4,5,0,0
+4,6,0,1
+4,4,0,0
+4,1,0,1
+4,5,0,0
+4,4,0,1
+4,1,0,0
 
-4,6,0
-4,5,0
-4,4,0
-4,1,0
-4,1,0
-4,5,0
-4,4,0
-4,1,0
+4,6,0,1
+4,5,0,0
+4,4,0,1
+4,1,0,0
+4,1,0,1
+4,5,0,0
+4,4,0,1
+4,1,0,0
 
 #type (progression),index,name,instrument,octave,mode,transposition,tempo,time
 3,1,Twelve bar blues progression,32,3,0,0,80,6
 
-#type (progression),index,degree,chord_style
-4,1,1
-4,1,1
-4,1,1
-4,1,1
-4,4,1
-4,4,1
-4,1,1
-4,1,1
-4,5,2
-4,4,1
-4,1,1
-4,1,1
+#type (progression_step),degree,chord_style_index
+4,1,1,1
+4,1,1,1
+4,1,1,1
+4,1,1,1
+4,4,1,1
+4,4,1,1
+4,1,1,1
+4,1,1,1
+4,5,2,1
+4,4,1,1
+4,1,1,1
+4,1,1,1

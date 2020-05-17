@@ -53,12 +53,13 @@ void ysw_cp_set_name(ysw_cp_t *cp, const char* name)
     cp->name = ysw_heap_string_reallocate(cp->name, name);
 }
 
-ysw_step_t *ysw_step_create(ysw_cs_t *cs, uint8_t degree)
+ysw_step_t *ysw_step_create(ysw_cs_t *cs, uint8_t degree, uint8_t flags)
 {
     assert(cs);
     ysw_step_t *step = ysw_heap_allocate(sizeof(ysw_step_t));
     step->degree = degree;
     step->cs = cs;
+    step->flags = flags;
     return step;
 }
 
@@ -72,14 +73,12 @@ void ysw_step_free(ysw_step_t *step)
     ysw_heap_free(step);
 }
 
-// TODO: reorder degree, cs in parameter list
-
-int ysw_cp_add_cs(ysw_cp_t *cp, uint8_t degree, ysw_cs_t *cs)
+int ysw_cp_add_cs(ysw_cp_t *cp, uint8_t degree, ysw_cs_t *cs, uint8_t flags)
 {
     assert(cp);
     assert(degree < YSW_MIDI_MAX);
     assert(cs);
-    ysw_step_t *step = ysw_step_create(cs, degree);
+    ysw_step_t *step = ysw_step_create(cs, degree, flags);
     int index = ysw_cp_add_step(cp, step);
     return index;
 }
