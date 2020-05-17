@@ -145,7 +145,7 @@ static void copy_to_clipboard(ysw_step_t *step)
     ysw_array_push(clipboard, new_step);
 }
 
-static void visit_cp(cp_visitor_t visitor, lv_event_t event)
+static void visit_steps(cp_visitor_t visitor, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED || event == LV_EVENT_LONG_PRESSED_REPEAT) {
         uint32_t visitor_count = 0;
@@ -324,7 +324,7 @@ static void on_copy(lv_obj_t * btn, lv_event_t event)
         } else {
             clipboard = ysw_array_create(10);
         }
-        visit_cp(copy_to_clipboard, event);
+        visit_steps(copy_to_clipboard, event);
     }
 }
 
