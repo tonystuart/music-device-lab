@@ -128,6 +128,7 @@ uint8_t ysw_cs_get_instrument(ysw_cs_t *cs)
 note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
 {
     int end_time = 0;
+    // TODO: replace variable cs_duration with constant
     uint32_t cs_duration = ysw_cs_get_duration(cs);
     int cn_count = ysw_cs_get_cn_count(cs);
     note_t *notes = ysw_heap_allocate(sizeof(note_t) * (cn_count + 1)); // +1 for fill-to-measure
@@ -140,6 +141,7 @@ note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
         ysw_cn_t *cn = ysw_cs_get_cn(cs, j);
         if (cn->start < cs_duration) {
             note_p->start = cn->start;
+            // TODO: normalize notes to fixed duration
             if (cn->start + cn->duration > cs_duration) {
                 note_p->duration = cs_duration - cn->start;
             } else {

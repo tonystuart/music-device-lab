@@ -25,7 +25,6 @@ typedef struct {
 typedef struct {
     char *name;
     ysw_array_t *steps;
-    uint8_t tonic; // TODO: deprecate in favor of octave and mode
     uint8_t instrument;
     uint8_t octave;
     ysw_mode_t mode;
@@ -37,11 +36,11 @@ typedef struct {
 ysw_step_t *ysw_step_create(ysw_cs_t *cs, uint8_t degree, uint8_t flags);
 void ysw_step_free(ysw_step_t *step);
 void ysw_cp_set_name(ysw_cp_t *cp, const char* name);
+uint32_t ysw_cp_get_steps_in_measures(ysw_cp_t *cp, uint8_t measures[], uint32_t size);
 note_t *ysw_cp_get_notes(ysw_cp_t *cp, uint32_t *note_count);
 uint32_t ysw_cp_get_note_count(ysw_cp_t *cp);
 void ysw_cp_set_percent_tempo(ysw_cp_t *cp);
 void ysw_cp_set_instrument(ysw_cp_t *cp, uint8_t instrument);
-void ysw_cp_set_tonic(ysw_cp_t *cp, uint8_t tonic);
 int ysw_cp_add_cs(ysw_cp_t *cp, uint8_t degree, ysw_cs_t *cs, uint8_t flags);
 int ysw_cp_add_step(ysw_cp_t *cp, ysw_step_t *new_step);
 void ysw_cp_free(ysw_cp_t *cp);
@@ -80,6 +79,7 @@ static inline uint32_t ysw_step_get_cn_count(ysw_step_t *step)
 
 static inline uint32_t ysw_step_get_duration(ysw_step_t *step)
 {
+    // TODO: Use chord progression's time signature
     return ysw_cs_get_duration(step->cs);
 }
 

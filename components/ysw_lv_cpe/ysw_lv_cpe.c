@@ -115,20 +115,11 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
 
     lv_draw_line(&bottom_left, &bottom_right, mask, ext->fg_style, ext->fg_style->body.border.opa);
 
-    uint32_t measure_count = 0;
-    uint8_t measure_columns[step_count];
-    memset(measure_columns, 0, sizeof(measure_columns));
+    uint8_t steps_in_measures[step_count];
 
-    for (uint32_t i = 0; i < step_count; i++) {
-        ysw_step_t *step = ysw_cp_get_step(ext->cp, i);
-        bool is_new_measure = step->flags & YSW_STEP_NEW_MEASURE;
-        if (!i || is_new_measure) {
-            measure_count++;
-        }
-        measure_columns[measure_count-1]++;
-    }
+    ysw_cp_get_steps_in_measures(ext->cp, steps_in_measures, step_count);
 
-    measure_count = 0;
+    uint32_t measure = 0;
 
     for (uint32_t i = 0; i < step_count; i++) {
         ysw_step_t *step = ysw_cp_get_step(ext->cp, i);
@@ -139,15 +130,14 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
 
         if (!i || is_new_measure) {
 
-            measure_count++;
-
             lv_area_t heading_area = {
                 .x1 = left,
                 .y1 = m.cpe_top,
-                .x2 = left + (measure_columns[measure_count-1] * m.col_width),
+                .x2 = left + (steps_in_measures[measure] * m.col_width),
                 .y2 = m.cp_top,
             };
 
+            measure++;
             lv_area_t heading_mask;
 
             if (lv_area_intersect(&heading_mask, mask, &heading_area)) {
@@ -157,7 +147,7 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
                 };
 
                 char buffer[32];
-                ysw_itoa(measure_count, buffer, sizeof(buffer));
+                ysw_itoa(measure, buffer, sizeof(buffer));
 
                 lv_draw_label(&heading_area,
                         &heading_mask,
