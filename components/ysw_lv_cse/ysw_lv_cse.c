@@ -132,9 +132,9 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         if (lv_area_intersect(&row_mask, mask, &row_area)) {
 
             if (i & 0x01) {
-                lv_draw_rect(&row_area, &row_mask, ext->style_oi, ext->style_oi->body.opa);
+                lv_draw_rect(&row_area, &row_mask, ext->oi_style, ext->oi_style->body.opa);
             } else {
-                lv_draw_rect(&row_area, &row_mask, ext->style_ei, ext->style_oi->body.opa);
+                lv_draw_rect(&row_area, &row_mask, ext->ei_style, ext->oi_style->body.opa);
 
                 lv_area_t label_mask;
                 lv_area_t label_area = {
@@ -146,8 +146,8 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                 if (lv_area_intersect(&label_mask, mask, &label_area)) {
                     lv_draw_label(&label_area,
                             &label_mask,
-                            ext->style_ei,
-                            ext->style_ei->text.opa,
+                            ext->ei_style,
+                            ext->ei_style->text.opa,
                             key_labels[i],
                             LV_TXT_FLAG_EXPAND,
                             NULL,
@@ -167,9 +167,9 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                     .y = row_area.y1
                 };
                 if (i & 0x01) {
-                    lv_draw_line(&point1, &point2, mask, ext->style_oi, ext->style_oi->body.border.opa);
+                    lv_draw_line(&point1, &point2, mask, ext->oi_style, ext->oi_style->body.border.opa);
                 } else {
-                    lv_draw_line(&point1, &point2, mask, ext->style_ei, ext->style_ei->body.border.opa);
+                    lv_draw_line(&point1, &point2, mask, ext->ei_style, ext->ei_style->body.border.opa);
                 }
             }
         }
@@ -184,7 +184,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             .x = x + ((i * w) / get_column_count(ext)),
             .y = y + h
         };
-        lv_draw_line(&point1, &point2, mask, ext->style_ei, ext->style_ei->body.border.opa);
+        lv_draw_line(&point1, &point2, mask, ext->ei_style, ext->ei_style->body.border.opa);
     }
 
     uint32_t cn_count = ysw_cs_get_cn_count(ext->cs);
@@ -203,12 +203,12 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
 
             if (ysw_cn_is_selected(cn)) {
                 if (ext->dragging) {
-                    lv_draw_rect(&cn_area, &cn_mask, ext->style_sn, ext->style_sn->body.opa);
+                    lv_draw_rect(&cn_area, &cn_mask, ext->sn_style, ext->sn_style->body.opa);
                 } else {
-                    lv_draw_rect(&cn_area, &cn_mask, ext->style_sn, ext->style_sn->body.opa);
+                    lv_draw_rect(&cn_area, &cn_mask, ext->sn_style, ext->sn_style->body.opa);
                 }
             } else {
-                lv_draw_rect(&cn_area, &cn_mask, ext->style_cn, ext->style_cn->body.opa);
+                lv_draw_rect(&cn_area, &cn_mask, ext->rn_style, ext->rn_style->body.opa);
             }
 
             char buffer[32];
@@ -221,15 +221,15 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             // vertically center the text
             lv_point_t offset = {
                 .x = 0,
-                .y = ((cn_area.y2 - cn_area.y1) - ext->style_cn->text.font->line_height) / 2
+                .y = ((cn_area.y2 - cn_area.y1) - ext->rn_style->text.font->line_height) / 2
             };
 
             if (ysw_cn_is_selected(cn)) {
                 if (ext->dragging) {
                     lv_draw_label(&cn_area,
                             &cn_mask,
-                            ext->style_sn,
-                            ext->style_sn->text.opa,
+                            ext->sn_style,
+                            ext->sn_style->text.opa,
                             buffer,
                             LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
                             &offset,
@@ -239,8 +239,8 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                 } else {
                     lv_draw_label(&cn_area,
                             &cn_mask,
-                            ext->style_sn,
-                            ext->style_sn->text.opa,
+                            ext->sn_style,
+                            ext->sn_style->text.opa,
                             buffer,
                             LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
                             &offset,
@@ -251,8 +251,8 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             } else {
                 lv_draw_label(&cn_area,
                         &cn_mask,
-                        ext->style_cn,
-                        ext->style_cn->text.opa,
+                        ext->rn_style,
+                        ext->rn_style->text.opa,
                         buffer,
                         LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
                         &offset,
@@ -693,18 +693,18 @@ lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
     ext->dragging = false;
     ext->long_press = false;
     ext->drag_start_cs = NULL;
-    ext->style_bg = &lv_style_plain;
-    ext->style_oi = &odd_interval_style;
-    ext->style_ei = &even_interval_style;
-    ext->style_cn = &cn_style;
-    ext->style_sn = &selected_cn_style;
+    ext->bg_style = &lv_style_plain;
+    ext->oi_style = &ysw_style_oi;
+    ext->ei_style = &ysw_style_ei;
+    ext->rn_style = &ysw_style_rn;
+    ext->sn_style = &ysw_style_sn;
     ext->event_cb = NULL;
 
     lv_obj_set_signal_cb(cse, signal_cb);
     lv_obj_set_design_cb(cse, design_cb);
     lv_obj_set_click(cse, true);
     lv_obj_set_size(cse, LV_DPI * 2, LV_DPI / 3);
-    lv_obj_set_style(cse, &lv_style_plain);
+    lv_obj_set_style(cse, ext->bg_style);
 
     return cse;
 }

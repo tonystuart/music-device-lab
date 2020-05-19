@@ -54,11 +54,11 @@ typedef struct {
     ysw_cs_t *drag_start_cs;
     bool dragging;
     bool long_press;
-    const lv_style_t *style_bg; // background
-    const lv_style_t *style_oi; // odd interval
-    const lv_style_t *style_ei; // even interval
-    const lv_style_t *style_cn; // chord note
-    const lv_style_t *style_sn; // selected note
+    const lv_style_t *bg_style; // background
+    const lv_style_t *oi_style; // odd interval
+    const lv_style_t *ei_style; // even interval
+    const lv_style_t *rn_style; // regular note
+    const lv_style_t *sn_style; // selected note
     ysw_lv_cse_event_cb_t event_cb;
 } ysw_lv_cse_ext_t;
 

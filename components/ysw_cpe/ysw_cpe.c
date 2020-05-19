@@ -149,7 +149,7 @@ static void on_click(ysw_cpe_t *cpe, uint16_t row, uint16_t column)
             cpe->ddlist = lv_ddlist_create(cpe->table, NULL);
             set_bounds(cpe->ddlist, row, column);
             lv_ddlist_set_draw_arrow(cpe->ddlist, true);
-            lv_ddlist_set_style(cpe->ddlist, LV_DDLIST_STYLE_BG, &cell_editor_style);
+            lv_ddlist_set_style(cpe->ddlist, LV_DDLIST_STYLE_BG, &lv_style_transp);
             lv_ddlist_set_options(cpe->ddlist, "I\nII\nIII\nIV\nV\nVI\nVII");
             lv_ddlist_set_selected(cpe->ddlist, step->degree - 1); // -1 because degrees are 1-based
             lv_ddlist_set_align(cpe->ddlist, LV_LABEL_ALIGN_CENTER);
@@ -198,11 +198,11 @@ ysw_cpe_t *ysw_cpe_create(lv_obj_t *win)
 
     lv_obj_align(cpe->table, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-    lv_table_set_style(cpe->table, LV_TABLE_STYLE_BG, &plain_color_tight);
-    lv_table_set_style(cpe->table, LV_TABLE_STYLE_CELL1, &value_cell);
-    lv_table_set_style(cpe->table, LV_TABLE_STYLE_CELL2, &cell_selection_style);
-    lv_table_set_style(cpe->table, LV_TABLE_STYLE_CELL3, &name_cell);
-    lv_table_set_style(cpe->table, LV_TABLE_STYLE_CELL4, &selected_cell);
+    lv_table_set_style(cpe->table, LV_TABLE_STYLE_BG, &ysw_style_plain_color_tight);
+    lv_table_set_style(cpe->table, LV_TABLE_STYLE_CELL1, &ysw_style_white_cell);
+    lv_table_set_style(cpe->table, LV_TABLE_STYLE_CELL2, &ysw_style_red_cell);
+    lv_table_set_style(cpe->table, LV_TABLE_STYLE_CELL3, &ysw_style_gray_cell);
+    lv_table_set_style(cpe->table, LV_TABLE_STYLE_CELL4, &ysw_style_yellow_cell);
 
     lv_table_set_row_cnt(cpe->table, 1); // just the headings for now
     lv_table_set_col_cnt(cpe->table, COLUMN_COUNT);

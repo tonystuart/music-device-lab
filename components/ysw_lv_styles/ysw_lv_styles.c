@@ -12,138 +12,109 @@
 
 #define TAG "YSW_LV_STYLES"
 
-// Generic Styles are named for what they are rather than what they do
-lv_style_t plain_color_tight;
+lv_style_t ysw_style_plain_color_tight;
+lv_style_t ysw_style_pretty_color_tight;
+lv_style_t ysw_style_sdb_content;
 
-// Specific Styles are named for what they do rather than what they are
-lv_style_t even_interval_style;
-lv_style_t odd_interval_style;
-lv_style_t cn_style;
-lv_style_t selected_cn_style;
+lv_style_t ysw_style_oi; // cse odd interval
+lv_style_t ysw_style_ei; // cse even interval
+lv_style_t ysw_style_rn; // cse regular note
+lv_style_t ysw_style_sn; // cse selected note
 
-lv_style_t cell_editor_style;
-lv_style_t cell_selection_style;
-
-lv_style_t value_cell;
-lv_style_t win_style_content;
-lv_style_t page_bg_style;
-lv_style_t page_scrl_style;
-lv_style_t name_cell;
-lv_style_t selected_cell;
-
-void log_style_metrics(lv_style_t *style, char *tag)
-{
-    ESP_LOGD(TAG, "sizeof(lv_style_t)=%d", sizeof(lv_style_t));
-    ESP_LOGD(tag, "radius=%d, width=%d, part=%#x, padding top=%d, bottom=%d, left=%d, right=%d, inner=%d", style->body.radius, style->body.border.width, style->body.border.part, style->body.padding.top, style->body.padding.bottom, style->body.padding.left, style->body.padding.right, style->body.padding.inner);
-}
+lv_style_t ysw_style_gray_cell;
+lv_style_t ysw_style_white_cell;
+lv_style_t ysw_style_yellow_cell;
+lv_style_t ysw_style_red_cell;
 
 void ysw_lv_styles_initialize()
 {
-    lv_style_copy(&odd_interval_style, &lv_style_plain);
-    odd_interval_style.text.font = &lv_font_roboto_12;
-    odd_interval_style.body.main_color = LV_COLOR_SILVER;
-    odd_interval_style.body.grad_color = LV_COLOR_SILVER;
-    odd_interval_style.body.border.color = LV_COLOR_RED;
-    odd_interval_style.body.border.width = 0;
-    odd_interval_style.text.color = LV_COLOR_WHITE;
-    odd_interval_style.text.opa = LV_OPA_COVER;
-    odd_interval_style.line.color = LV_COLOR_BLUE;
-    odd_interval_style.line.width = 1;
-    odd_interval_style.line.opa = LV_OPA_COVER;
+    lv_style_copy(&ysw_style_plain_color_tight, &lv_style_plain_color);
+    ysw_style_plain_color_tight.body.radius = 0;
+    ysw_style_plain_color_tight.body.border.width = 0;
+    ysw_style_plain_color_tight.body.border.part = LV_BORDER_NONE;
+    ysw_style_plain_color_tight.body.padding.top = 0;
+    ysw_style_plain_color_tight.body.padding.bottom = 0;
+    ysw_style_plain_color_tight.body.padding.left = 0;
+    ysw_style_plain_color_tight.body.padding.right = 0;
+    ysw_style_plain_color_tight.body.padding.inner = 0;
 
-    lv_style_copy(&even_interval_style, &lv_style_plain);
-    even_interval_style.text.font = &lv_font_roboto_12;
-    even_interval_style.body.main_color = LV_COLOR_WHITE;
-    even_interval_style.body.grad_color = LV_COLOR_WHITE;
-    even_interval_style.body.border.color = LV_COLOR_RED;
-    even_interval_style.body.border.width = 0;
-    even_interval_style.text.color = LV_COLOR_BLACK;
-    even_interval_style.text.opa =  LV_OPA_COVER;
-    even_interval_style.line.color = LV_COLOR_BLUE;
-    even_interval_style.line.width = 1;
-    even_interval_style.line.opa = LV_OPA_COVER;
+    lv_style_copy(&ysw_style_pretty_color_tight, &lv_style_pretty_color);
+    ysw_style_pretty_color_tight.body.radius = 0;
+    ysw_style_pretty_color_tight.body.border.width = 0;
+    ysw_style_pretty_color_tight.body.border.part = LV_BORDER_NONE;
+    ysw_style_pretty_color_tight.body.padding.top = 0;
+    ysw_style_pretty_color_tight.body.padding.bottom = 0;
+    ysw_style_pretty_color_tight.body.padding.left = 0;
+    ysw_style_pretty_color_tight.body.padding.right = 0;
+    ysw_style_pretty_color_tight.body.padding.inner = 0;
 
-    lv_style_copy(&cn_style, &lv_style_pretty);
-    cn_style.text.font = &lv_font_roboto_12;
-    cn_style.body.main_color = LV_COLOR_RED;
-    cn_style.body.grad_color = LV_COLOR_RED;
-    cn_style.body.opa = LV_OPA_50;
+    lv_style_copy(&ysw_style_sdb_content, &lv_style_transp);
+    ysw_style_sdb_content.body.radius = 0;
+    ysw_style_sdb_content.body.border.width = 0;
+    ysw_style_sdb_content.body.border.part = LV_BORDER_NONE;
+    ysw_style_sdb_content.body.padding.top = 5;
+    ysw_style_sdb_content.body.padding.bottom = 0;
+    ysw_style_sdb_content.body.padding.left = 5;
+    ysw_style_sdb_content.body.padding.right = 0;
+    ysw_style_sdb_content.body.padding.inner = 5;
 
-    lv_style_copy(&selected_cn_style, &lv_style_pretty);
-    selected_cn_style.text.font = &lv_font_roboto_12;
-    selected_cn_style.body.main_color = LV_COLOR_YELLOW;
-    selected_cn_style.body.grad_color = LV_COLOR_YELLOW;
-    selected_cn_style.body.opa = LV_OPA_80;
+    lv_style_copy(&ysw_style_oi, &lv_style_plain);
+    ysw_style_oi.text.font = &lv_font_roboto_12;
+    ysw_style_oi.body.main_color = LV_COLOR_SILVER;
+    ysw_style_oi.body.grad_color = LV_COLOR_SILVER;
+    ysw_style_oi.body.border.color = LV_COLOR_RED;
+    ysw_style_oi.body.border.width = 0;
+    ysw_style_oi.text.color = LV_COLOR_WHITE;
+    ysw_style_oi.text.opa = LV_OPA_COVER;
+    ysw_style_oi.line.color = LV_COLOR_BLUE;
+    ysw_style_oi.line.width = 1;
+    ysw_style_oi.line.opa = LV_OPA_COVER;
 
+    lv_style_copy(&ysw_style_ei, &lv_style_plain);
+    ysw_style_ei.text.font = &lv_font_roboto_12;
+    ysw_style_ei.body.main_color = LV_COLOR_WHITE;
+    ysw_style_ei.body.grad_color = LV_COLOR_WHITE;
+    ysw_style_ei.body.border.color = LV_COLOR_RED;
+    ysw_style_ei.body.border.width = 0;
+    ysw_style_ei.text.color = LV_COLOR_BLACK;
+    ysw_style_ei.text.opa =  LV_OPA_COVER;
+    ysw_style_ei.line.color = LV_COLOR_BLUE;
+    ysw_style_ei.line.width = 1;
+    ysw_style_ei.line.opa = LV_OPA_COVER;
 
+    lv_style_copy(&ysw_style_rn, &lv_style_pretty);
+    ysw_style_rn.text.font = &lv_font_roboto_12;
+    ysw_style_rn.body.main_color = LV_COLOR_RED;
+    ysw_style_rn.body.grad_color = LV_COLOR_RED;
+    ysw_style_rn.body.opa = LV_OPA_50;
 
+    lv_style_copy(&ysw_style_sn, &lv_style_pretty);
+    ysw_style_sn.text.font = &lv_font_roboto_12;
+    ysw_style_sn.body.main_color = LV_COLOR_YELLOW;
+    ysw_style_sn.body.grad_color = LV_COLOR_YELLOW;
+    ysw_style_sn.body.opa = LV_OPA_80;
 
+    lv_style_copy(&ysw_style_gray_cell, &lv_style_plain);
+    ysw_style_gray_cell.body.border.width = 1;
+    ysw_style_gray_cell.body.border.color = LV_COLOR_BLACK;
+    ysw_style_gray_cell.body.main_color = LV_COLOR_SILVER;
+    ysw_style_gray_cell.body.grad_color = LV_COLOR_SILVER;
 
+    lv_style_copy(&ysw_style_white_cell, &lv_style_plain);
+    ysw_style_white_cell.body.border.width = 1;
+    ysw_style_white_cell.body.border.color = LV_COLOR_BLACK;
 
+    lv_style_copy(&ysw_style_yellow_cell, &lv_style_plain);
+    ysw_style_yellow_cell.body.border.width = 1;
+    ysw_style_yellow_cell.body.border.color = LV_COLOR_BLACK;
+    ysw_style_yellow_cell.body.main_color = LV_COLOR_YELLOW;
+    ysw_style_yellow_cell.body.grad_color = LV_COLOR_YELLOW;
 
-    lv_style_copy(&page_bg_style, &lv_style_pretty_color);
-    page_bg_style.body.radius = 0;
-    page_bg_style.body.border.width = 0;
-    page_bg_style.body.border.part = LV_BORDER_NONE;
-    page_bg_style.body.padding.top = 0;
-    page_bg_style.body.padding.bottom = 0;
-    page_bg_style.body.padding.left = 0;
-    page_bg_style.body.padding.right = 0;
-    page_bg_style.body.padding.inner = 0;
-
-    lv_style_copy(&page_scrl_style, &lv_style_pretty_color);
-    page_scrl_style.body.radius = 0;
-    page_scrl_style.body.border.width = 0;
-    page_scrl_style.body.border.part = LV_BORDER_NONE;
-    page_scrl_style.body.padding.top = 0;
-    page_scrl_style.body.padding.bottom = 0;
-    page_scrl_style.body.padding.left = 0;
-    page_scrl_style.body.padding.right = 0;
-    page_scrl_style.body.padding.inner = 0;
-
-    lv_style_copy(&plain_color_tight, &lv_style_plain_color);
-    plain_color_tight.body.radius = 0;
-    plain_color_tight.body.border.width = 0;
-    plain_color_tight.body.border.part = LV_BORDER_NONE;
-    plain_color_tight.body.padding.top = 0;
-    plain_color_tight.body.padding.bottom = 0;
-    plain_color_tight.body.padding.left = 0;
-    plain_color_tight.body.padding.right = 0;
-    plain_color_tight.body.padding.inner = 0;
-
-    lv_style_copy(&win_style_content, &lv_style_transp);
-    win_style_content.body.radius = 0;
-    win_style_content.body.border.width = 0;
-    win_style_content.body.border.part = LV_BORDER_NONE;
-    win_style_content.body.padding.top = 5;
-    win_style_content.body.padding.bottom = 0;
-    win_style_content.body.padding.left = 5;
-    win_style_content.body.padding.right = 0;
-    win_style_content.body.padding.inner = 5;
-
-    lv_style_copy(&value_cell, &lv_style_plain);
-    value_cell.body.border.width = 1;
-    value_cell.body.border.color = LV_COLOR_BLACK;
-
-    lv_style_copy(&cell_editor_style, &lv_style_plain);
-    cell_editor_style.body.main_color = LV_COLOR_RED;
-    cell_editor_style.body.grad_color = LV_COLOR_RED;
-    cell_editor_style.text.color = LV_COLOR_BLACK;
-
-    lv_style_copy(&cell_selection_style, &cell_editor_style);
-    cell_selection_style.body.border.width = 1;
-    cell_selection_style.body.border.color = LV_COLOR_BLACK;
-
-    lv_style_copy(&name_cell, &lv_style_plain);
-    name_cell.body.border.width = 1;
-    name_cell.body.border.color = LV_COLOR_BLACK;
-    name_cell.body.main_color = LV_COLOR_SILVER;
-    name_cell.body.grad_color = LV_COLOR_SILVER;
-
-    lv_style_copy(&selected_cell, &lv_style_plain);
-    selected_cell.body.border.width = 1;
-    selected_cell.body.border.color = LV_COLOR_BLACK;
-    selected_cell.body.main_color = LV_COLOR_YELLOW;
-    selected_cell.body.grad_color = LV_COLOR_YELLOW;
+    lv_style_copy(&ysw_style_red_cell, &lv_style_plain);
+    ysw_style_red_cell.body.main_color = LV_COLOR_RED;
+    ysw_style_red_cell.body.grad_color = LV_COLOR_RED;
+    ysw_style_red_cell.text.color = LV_COLOR_BLACK;
+    ysw_style_red_cell.body.border.width = 1;
+    ysw_style_red_cell.body.border.color = LV_COLOR_BLACK;
 }
 

@@ -28,6 +28,21 @@
 
 #define MINIMUM_DRAG 5
 
+typedef struct {
+    lv_coord_t cpe_left;
+    lv_coord_t cpe_top;
+    lv_coord_t cpe_height;
+    lv_coord_t cpe_width;
+    lv_coord_t col_count;
+    lv_coord_t col_width;
+    lv_coord_t row_height;
+    lv_coord_t cp_left;
+    lv_coord_t cp_top;
+    lv_coord_t cp_width;
+    lv_coord_t cp_height;
+    lv_coord_t min_scroll_left;
+} metrics_t;
+
 static lv_design_cb_t super_design_cb;
 static lv_signal_cb_t super_signal_cb;
 
@@ -42,84 +57,112 @@ static char *key_labels[] =
     "VII",
 };
 
-static void draw_line(lv_coord_t x1, lv_coord_t y1, lv_coord_t x2, lv_coord_t y2, const lv_area_t *mask, const lv_style_t *style)
+static void get_metrics(lv_obj_t *cpe, metrics_t *m)
 {
-    lv_point_t p1 = {
-        .x = x1,
-        .y = y1,
-    };
-    lv_point_t p2 = {
-        .x = x2,
-        .y = y2,
-    };
-    lv_draw_line(&p1, &p2, mask, style, style->body.border.opa);
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    uint32_t step_count = ysw_cp_get_step_count(ext->cp);
+
+    m->cpe_left = cpe->coords.x1;
+    m->cpe_top = cpe->coords.y1;
+
+    m->cpe_height = lv_obj_get_height(cpe);
+    m->cpe_width = lv_obj_get_width(cpe);
+
+    m->col_count = step_count > 16 ? 16 : step_count > 0 ? step_count : 1;
+    m->col_width = m->cpe_width / m->col_count;
+    m->row_height = m->cpe_height / 9; // 9 = header + 7 degrees + footer
+
+    m->cp_left = m->cpe_left + ext->scroll_left;
+    m->cp_top = m->cpe_top + m->row_height;
+
+    m->cp_width = step_count * m->col_width;
+    m->cp_height = m->cpe_height - (2 * m->row_height);
+
+    m->min_scroll_left = m->cpe_width - m->cp_width;
 }
 
 static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mode)
 {
     super_design_cb(cpe, mask, mode);
 
+    metrics_t m;
+    get_metrics(cpe, &m);
+
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
-
-    if (!ext->cp) {
-        return;
-    }
-
-    // TODO: Factor out code in common with get_step_area (e.g. get_cpe_metrics)
-
     uint32_t step_count = ysw_cp_get_step_count(ext->cp);
 
-    lv_coord_t h = lv_obj_get_height(cpe);
-    lv_coord_t w = lv_obj_get_width(cpe);
+    lv_point_t top_left = {
+        .x = m.cpe_left,
+        .y = m.cp_top,
+    };
 
-    lv_coord_t x = cpe->coords.x1;
-    lv_coord_t y = cpe->coords.y1;
+    lv_point_t top_right = {
+        .x = m.cpe_left + m.cpe_width,
+        .y = m.cp_top,
+    };
 
-    lv_coord_t column_count = step_count > 16 ? 16 : step_count > 0 ? step_count : 1;
-    lv_coord_t column_width = w / column_count;
-    lv_coord_t row_height = h / 9; // 9 = header + 7 degrees + footer
+    lv_draw_line(&top_left, &top_right, mask, ext->fg_style, ext->fg_style->body.border.opa);
 
-    lv_coord_t px = x;
-    lv_coord_t py = y + row_height;
+    lv_point_t bottom_left = {
+        .x = m.cpe_left,
+        .y = m.cp_top + m.cp_height,
+    };
 
-    lv_coord_t pw = w;
-    lv_coord_t ph = h - (2 * row_height);
+    lv_point_t bottom_right = {
+        .x = m.cpe_left + m.cpe_width,
+        .y = m.cp_top + m.cp_height,
+    };
 
-    ESP_LOGD(TAG, "h=%d, w=%d, ph=%d", h, w, ph);
+    lv_draw_line(&bottom_left, &bottom_right, mask, ext->fg_style, ext->fg_style->body.border.opa);
 
-    draw_line(px, py, px + pw, py, mask, ext->style_ei);
-    draw_line(px, py + ph, px + pw, py + ph, mask, ext->style_ei);
+    uint32_t measure_count = 0;
+    uint8_t measure_columns[step_count];
+    memset(measure_columns, 0, sizeof(measure_columns));
 
-    uint32_t measure = 0;
+    for (uint32_t i = 0; i < step_count; i++) {
+        ysw_step_t *step = ysw_cp_get_step(ext->cp, i);
+        bool is_new_measure = step->flags & YSW_STEP_NEW_MEASURE;
+        if (!i || is_new_measure) {
+            measure_count++;
+        }
+        measure_columns[measure_count-1]++;
+    }
+
+    measure_count = 0;
 
     for (uint32_t i = 0; i < step_count; i++) {
         ysw_step_t *step = ysw_cp_get_step(ext->cp, i);
 
-        lv_coord_t left = px + (i * column_width);
+        lv_coord_t left = m.cp_left + (i * m.col_width);
 
-        if (step->flags & YSW_STEP_NEW_MEASURE) {
-            measure++;
+        bool is_new_measure = step->flags & YSW_STEP_NEW_MEASURE;
 
-            lv_area_t measure_heading_area = {
+        if (!i || is_new_measure) {
+
+            measure_count++;
+
+            lv_area_t heading_area = {
                 .x1 = left,
-                .y1 = y,
-                .x2 = left + column_width,
-                .y2 = py,
+                .y1 = m.cpe_top,
+                .x2 = left + (measure_columns[measure_count-1] * m.col_width),
+                .y2 = m.cp_top,
             };
 
-            lv_area_t measure_heading_mask;
+            lv_area_t heading_mask;
 
-            if (lv_area_intersect(&measure_heading_mask, mask, &measure_heading_area)) {
+            if (lv_area_intersect(&heading_mask, mask, &heading_area)) {
                 lv_point_t offset = {
                     .x = 0,
-                    .y = 0, // e.g. to center vertically
+                    .y = ((heading_area.y2 - heading_area.y1) - ext->fg_style->text.font->line_height) / 2,
                 };
+
                 char buffer[32];
-                ysw_itoa(measure, buffer, sizeof(buffer));
-                lv_draw_label(&measure_heading_area,
-                        &measure_heading_mask,
-                        ext->style_ei,
-                        ext->style_ei->text.opa,
+                ysw_itoa(measure_count, buffer, sizeof(buffer));
+
+                lv_draw_label(&heading_area,
+                        &heading_mask,
+                        ext->fg_style,
+                        ext->fg_style->text.opa,
                         buffer,
                         LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
                         &offset,
@@ -131,17 +174,25 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
         }
 
         if (i) {
-            lv_coord_t column_top = step->flags & YSW_STEP_NEW_MEASURE ? y : py;
-            draw_line(left, column_top, left, py + ph, mask, ext->style_ei);
+            lv_coord_t col_top = is_new_measure ? m.cpe_top : m.cp_top;
+            lv_point_t p = {
+                .x = left,
+                .y = col_top,
+            };
+            lv_point_t p2 = {
+                .x = left,
+                .y = m.cp_top + m.cp_height,
+            };
+            lv_draw_line(&p, &p2, mask, ext->fg_style, ext->fg_style->body.border.opa);
         }
 
-        lv_coord_t cell_top = py + ((YSW_MIDI_UNPO - step->degree) * row_height);
+        lv_coord_t cell_top = m.cp_top + ((YSW_MIDI_UNPO - step->degree) * m.row_height);
 
         lv_area_t cell_area = {
             .x1 = left,
             .y1 = cell_top,
-            .x2 = left + column_width,
-            .y2 = cell_top + row_height,
+            .x2 = left + m.col_width,
+            .y2 = cell_top + m.row_height,
         };
 
         lv_area_t cell_mask;
@@ -149,21 +200,21 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
         if (lv_area_intersect(&cell_mask, mask, &cell_area)) {
 
             if (ext->selected_step == step) {
-                lv_draw_rect(&cell_area, &cell_mask, ext->style_sn, ext->style_sn->body.opa);
+                lv_draw_rect(&cell_area, &cell_mask, ext->ss_style, ext->ss_style->body.opa);
             } else {
-                lv_draw_rect(&cell_area, &cell_mask, ext->style_cn, ext->style_cn->body.opa);
+                lv_draw_rect(&cell_area, &cell_mask, ext->rs_style, ext->rs_style->body.opa);
             }
 
             // vertically center the text
             lv_point_t offset = {
                 .x = 0,
-                .y = ((cell_area.y2 - cell_area.y1) - ext->style_ei->text.font->line_height) / 2
+                .y = ((cell_area.y2 - cell_area.y1) - ext->fg_style->text.font->line_height) / 2,
             };
 
             lv_draw_label(&cell_area,
                     &cell_mask,
-                    ext->style_ei,
-                    ext->style_ei->text.opa,
+                    ext->fg_style,
+                    ext->fg_style->text.opa,
                     key_labels[to_index(step->degree)],
                     LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
                     &offset,
@@ -174,10 +225,10 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
 
         if (ext->selected_step == step) {
             lv_area_t footer_area = {
-                .x1 = x,
-                .y1 = py + ph,
-                .x2 = x + w,
-                .y2 = py + ph + row_height,
+                .x1 = m.cpe_left,
+                .y1 = m.cp_top + m.cp_height,
+                .x2 = m.cpe_left + m.cpe_width,
+                .y2 = m.cp_top + m.cp_height + m.row_height,
             };
 
             lv_area_t footer_mask;
@@ -187,13 +238,13 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
                 // vertically center the text
                 lv_point_t offset = {
                     .x = 0,
-                    .y = ((footer_area.y2 - footer_area.y1) - ext->style_ei->text.font->line_height) / 2
+                    .y = ((footer_area.y2 - footer_area.y1) - ext->fg_style->text.font->line_height) / 2
                 };
 
                 lv_draw_label(&footer_area,
                         &footer_mask,
-                        ext->style_ei,
-                        ext->style_ei->text.opa,
+                        ext->fg_style,
+                        ext->fg_style->text.opa,
                         step->cs->name,
                         LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
                         &offset,
@@ -238,38 +289,22 @@ static void fire_drag_end(lv_obj_t *cpe)
 {
 }
 
-static void get_step_area( lv_obj_t *cpe, uint32_t step_index, lv_area_t *ret_area)
+static void get_step_area(lv_obj_t *cpe, uint32_t step_index, lv_area_t *ret_area)
 {
+    metrics_t m;
+    get_metrics(cpe, &m);
+
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
-    uint32_t step_count = ysw_cp_get_step_count(ext->cp);
     ysw_step_t *step = ysw_cp_get_step(ext->cp, step_index);
 
-    lv_coord_t h = lv_obj_get_height(cpe);
-    lv_coord_t w = lv_obj_get_width(cpe);
-
-    lv_coord_t x = cpe->coords.x1;
-    lv_coord_t y = cpe->coords.y1;
-
-    // TODO: Factor out code in common with draw_main (e.g. get_cpe_metrics)
-
-    lv_coord_t column_count = step_count > 16 ? 16 : step_count > 0 ? step_count : 1;
-    lv_coord_t column_width = w / column_count;
-    lv_coord_t row_height = h / 9; // 9 = header + 7 degrees + footer
-
-    lv_coord_t px = x;
-    lv_coord_t py = y + row_height;
-
-    lv_coord_t pw = w;
-    lv_coord_t ph = h - (2 * row_height);
-
-    lv_coord_t left = px + (step_index * column_width);
-    lv_coord_t cell_top = py + ((YSW_MIDI_UNPO - step->degree) * row_height);
+    lv_coord_t left = m.cp_left + (step_index * m.col_width);
+    lv_coord_t cell_top = m.cp_top + ((YSW_MIDI_UNPO - step->degree) * m.row_height);
 
     lv_area_t cell_area = {
         .x1 = left,
         .y1 = cell_top,
-        .x2 = left + column_width,
-        .y2 = cell_top + row_height,
+        .x2 = left + m.col_width,
+        .y2 = cell_top + m.row_height,
     };
 
     if (ret_area) {
@@ -283,7 +318,6 @@ static void capture_selection(lv_obj_t *cpe, lv_point_t *point)
     ext->dragging = false;
     ext->selected_step = NULL;
     ext->original_step = (ysw_step_t){};
-    ext->original_coords = (lv_area_t){};
     ext->last_click = *point;
     uint32_t step_count = ysw_cp_get_step_count(ext->cp);
     for (uint8_t i = 0; i < step_count; i++) {
@@ -292,12 +326,15 @@ static void capture_selection(lv_obj_t *cpe, lv_point_t *point)
         get_step_area(cpe, i, &step_area);
         if ((step_area.x1 <= point->x && point->x <= step_area.x2) &&
             (step_area.y1 <= point->y && point->y <= step_area.y2)) {
+                // dragging step
                 ext->selected_step = step;
                 ext->original_step = *step;
-                ext->original_coords = cpe->coords;
                 return;
             }
     }
+    // scrolling screen
+    ext->original_scroll_left = ext->scroll_left;
+    ESP_LOGD(TAG, "capture original_scroll_left=%d", ext->original_scroll_left);
 }
 
 static void do_drag(lv_obj_t *cpe, lv_point_t *point)
@@ -318,16 +355,25 @@ static void do_drag(lv_obj_t *cpe, lv_point_t *point)
 
         if (ext->selected_step) {
             if (drag_y) {
-                // TODO: factor out common metrics
-                uint8_t new_degree = ext->original_step.degree - (y / 20);
+                metrics_t m;
+                get_metrics(cpe, &m);
+                uint8_t new_degree = ext->original_step.degree - (y / m.row_height);
                 if (new_degree >= 1 && new_degree <= YSW_MIDI_UNPO) {
                     ext->selected_step->degree = new_degree;
                 }
             }
         } else {
             if (drag_x) {
-                lv_coord_t new_x1 = ext->original_coords.x1 + x;
-                cpe->coords.x1 = new_x1;
+                metrics_t m;
+                get_metrics(cpe, &m);
+                lv_coord_t new_scroll_left = ext->original_scroll_left + x;
+                if (new_scroll_left < m.min_scroll_left) {
+                    new_scroll_left = m.min_scroll_left;
+                }
+                if (new_scroll_left > 0) {
+                    new_scroll_left = 0;
+                }
+                ext->scroll_left = new_scroll_left;
             }
         }
     }
@@ -465,20 +511,20 @@ lv_obj_t *ysw_lv_cpe_create(lv_obj_t *par)
     ext->cp = NULL;
     ext->selected_step = NULL;
     ext->original_step = (ysw_step_t){};
-    ext->original_coords = (lv_area_t){};
+    ext->scroll_left = 0;
+    ext->original_scroll_left = 0;
 
-    ext->style_bg = &lv_style_plain;
-    ext->style_oi = &odd_interval_style;
-    ext->style_ei = &even_interval_style;
-    ext->style_cn = &cn_style;
-    ext->style_sn = &selected_cn_style;
+    ext->bg_style = &lv_style_plain;
+    ext->fg_style = &ysw_style_ei;
+    ext->rs_style = &ysw_style_rn;
+    ext->ss_style = &ysw_style_sn;
 
     ext->event_cb = NULL;
 
     lv_obj_set_signal_cb(cpe, signal_cb);
     lv_obj_set_design_cb(cpe, design_cb);
     lv_obj_set_click(cpe, true);
-    lv_obj_set_style(cpe, &lv_style_plain);
+    lv_obj_set_style(cpe, ext->bg_style);
 
     return cpe;
 }
@@ -491,6 +537,8 @@ void ysw_lv_cpe_set_cp(lv_obj_t *cpe, ysw_cp_t *cp)
         return;
     }
     ext->cp = cp;
+    ext->scroll_left = 0;
+    // TODO: reinitialize rest of ext
     lv_obj_invalidate(cpe);
 }
 

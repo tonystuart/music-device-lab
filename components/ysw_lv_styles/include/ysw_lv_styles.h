@@ -11,21 +11,19 @@
 
 #include "lvgl/lvgl.h"
 
+extern lv_style_t ysw_style_plain_color_tight;
+extern lv_style_t ysw_style_pretty_color_tight;
+extern lv_style_t ysw_style_sdb_content;
 
-extern lv_style_t plain_color_tight;
-extern lv_style_t even_interval_style;
-extern lv_style_t odd_interval_style;
-extern lv_style_t cn_style;
-extern lv_style_t selected_cn_style;
+extern lv_style_t ysw_style_ei; // cse even interval
+extern lv_style_t ysw_style_oi; // cse odd interval
+extern lv_style_t ysw_style_rn; // cse regular note
+extern lv_style_t ysw_style_sn; // cse selected note
 
-extern lv_style_t cell_editor_style;
-extern lv_style_t cell_selection_style;
+extern lv_style_t ysw_style_gray_cell;
+extern lv_style_t ysw_style_white_cell;
+extern lv_style_t ysw_style_yellow_cell;
+extern lv_style_t ysw_style_red_cell;
 
-extern lv_style_t value_cell;
-extern lv_style_t win_style_content;
-extern lv_style_t page_bg_style;
-extern lv_style_t page_scrl_style;
-extern lv_style_t name_cell;
-extern lv_style_t selected_cell;
 
 void ysw_lv_styles_initialize();

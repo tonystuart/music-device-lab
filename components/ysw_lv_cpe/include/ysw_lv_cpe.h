@@ -35,16 +35,15 @@ typedef struct {
     ysw_cp_t *cp;
     ysw_step_t *selected_step;
     ysw_step_t original_step;
-    lv_area_t original_coords;
+    lv_coord_t scroll_left;
+    lv_coord_t original_scroll_left;
     lv_point_t last_click;
-    ysw_step_t *drag_start_step;
     bool dragging;
     bool long_press;
-    const lv_style_t *style_bg; // background
-    const lv_style_t *style_oi; // odd interval
-    const lv_style_t *style_ei; // even interval
-    const lv_style_t *style_cn; // chord note
-    const lv_style_t *style_sn; // selected note
+    const lv_style_t *bg_style; // background
+    const lv_style_t *fg_style; // foreground
+    const lv_style_t *rs_style; // regular step
+    const lv_style_t *ss_style; // selected step
     ysw_lv_cpe_event_cb_t event_cb;
 } ysw_lv_cpe_ext_t;
 

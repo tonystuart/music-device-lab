@@ -34,7 +34,7 @@
 
 #define TAG "YSW_CPC"
 
-typedef void (*cp_visitor_t)(ysw_step_t *step);
+typedef void (*step_visitor_t)(ysw_step_t *step);
 
 static ysw_music_t *music;
 static ysw_cpf_t *cpf;
@@ -145,7 +145,7 @@ static void copy_to_clipboard(ysw_step_t *step)
     ysw_array_push(clipboard, new_step);
 }
 
-static void visit_steps(cp_visitor_t visitor, lv_event_t event)
+static void visit_steps(step_visitor_t visitor, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED || event == LV_EVENT_LONG_PRESSED_REPEAT) {
         uint32_t visitor_count = 0;

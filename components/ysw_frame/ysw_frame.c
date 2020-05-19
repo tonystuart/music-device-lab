@@ -31,12 +31,12 @@ ysw_frame_t *ysw_frame_create()
     lv_coord_t footer_h = BUTTON_SIZE + 5 + 5;
 
     frame->container = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_set_style(frame->container, &plain_color_tight);
+    lv_obj_set_style(frame->container, &ysw_style_plain_color_tight);
     lv_obj_set_size(frame->container, display_w, display_h);
 
     frame->win = lv_win_create(frame->container, NULL);
     lv_win_set_style(frame->win, LV_WIN_STYLE_BG, &lv_style_pretty);
-    lv_win_set_style(frame->win, LV_WIN_STYLE_CONTENT, &win_style_content);
+    lv_win_set_style(frame->win, LV_WIN_STYLE_CONTENT, &ysw_style_sdb_content);
     lv_win_set_title(frame->win, "");
     lv_win_set_btn_size(frame->win, BUTTON_SIZE);
     lv_obj_set_height(frame->win, display_h - footer_h);
@@ -50,7 +50,7 @@ ysw_frame_t *ysw_frame_create()
     lv_obj_align(frame->footer_label, frame->footer, LV_ALIGN_IN_TOP_RIGHT, -10, 0);
 
     lv_obj_t *page = lv_win_get_content(frame->win);
-    lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &page_scrl_style);
+    lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &ysw_style_pretty_color_tight);
 
     return frame;
 }

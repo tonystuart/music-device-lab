@@ -114,7 +114,7 @@ ysw_sdb_t *ysw_sdb_create(const char *title)
 
     lv_obj_align(sdb->win, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_win_set_style(sdb->win, LV_WIN_STYLE_BG, &lv_style_pretty);
-    lv_win_set_style(sdb->win, LV_WIN_STYLE_CONTENT, &win_style_content);
+    lv_win_set_style(sdb->win, LV_WIN_STYLE_CONTENT, &ysw_style_sdb_content);
     lv_win_set_title(sdb->win, title);
     lv_win_set_layout(sdb->win, LV_LAYOUT_PRETTY);
 
@@ -135,7 +135,7 @@ void ysw_sdb_add_string(ysw_sdb_t *sdb, ysw_sdb_string_cb_t cb, const char *name
     lv_obj_set_user_data(ta, cb);
     lv_obj_set_width(ta, 200);
     lv_obj_set_protect(ta, LV_PROTECT_FOLLOW);
-    lv_ta_set_style(ta, LV_TA_STYLE_BG, &value_cell);
+    lv_ta_set_style(ta, LV_TA_STYLE_BG, &ysw_style_white_cell);
     lv_ta_set_one_line(ta, true);
     lv_ta_set_cursor_type(ta, LV_CURSOR_LINE|LV_CURSOR_HIDDEN);
     lv_ta_set_text(ta, value);
@@ -152,7 +152,7 @@ void ysw_sdb_add_choice(ysw_sdb_t *sdb, ysw_sdb_choice_cb_t cb, const char *name
     lv_ddlist_set_options(ddlist, options);
     lv_ddlist_set_fix_height(ddlist, 100);
     lv_ddlist_set_fix_width(ddlist, 200);
-    lv_ddlist_set_style(ddlist, LV_DDLIST_STYLE_BG, &value_cell);
+    lv_ddlist_set_style(ddlist, LV_DDLIST_STYLE_BG, &ysw_style_white_cell);
     lv_ddlist_set_align(ddlist, LV_LABEL_ALIGN_LEFT);
     lv_ddlist_set_selected(ddlist, value);
     lv_obj_set_protect(ddlist, LV_PROTECT_FOLLOW);
