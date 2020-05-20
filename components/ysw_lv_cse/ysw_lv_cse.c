@@ -49,11 +49,6 @@ static char *key_labels[] =
 
 #define MINIMUM_DURATION 10
 
-static inline uint8_t get_column_count(ysw_lv_cse_ext_t *ext)
-{
-    return ysw_cs_get_beats_per_measure(ext->cs);
-}
-
 static void get_cn_info(
         lv_obj_t *cse,
         ysw_cn_t *cn,
@@ -63,9 +58,6 @@ static void get_cn_info(
 {
     uint8_t degree;
     int8_t octave;
-
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    uint32_t cs_duration = ysw_cs_get_duration(ext->cs);
 
     ysw_degree_normalize(cn->degree, &degree, &octave);
 
@@ -77,8 +69,8 @@ static void get_cn_info(
 
     lv_coord_t delta_y = -ysw_cn_get_accidental(cn) * ((h / ROW_COUNT) / 2);
 
-    lv_coord_t x1 = x + (cn->start * w) / cs_duration;
-    lv_coord_t x2 = x + ((cn->start + cn->duration) * w) / cs_duration;
+    lv_coord_t x1 = x + (cn->start * w) / YSW_CS_DURATION;
+    lv_coord_t x2 = x + ((cn->start + cn->duration) * w) / YSW_CS_DURATION;
 
     lv_coord_t y1 = y + (((YSW_MIDI_UNPO - degree) * h) / ROW_COUNT) + delta_y;
     lv_coord_t y2 = y + ((((YSW_MIDI_UNPO - degree) + 1) * h) / ROW_COUNT) + delta_y;
@@ -175,13 +167,13 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         }
     }
 
-    for (int i = 0; i < get_column_count(ext); i++) {
+    for (int i = 0; i < ext->cs->divisions; i++) {
         lv_point_t point1 = {
-            .x = x + ((i * w) / get_column_count(ext)),
+            .x = x + ((i * w) / ext->cs->divisions),
             .y = y
         };
         lv_point_t point2 = {
-            .x = x + ((i * w) / get_column_count(ext)),
+            .x = x + ((i * w) / ext->cs->divisions),
             .y = y + h
         };
         lv_draw_line(&point1, &point2, mask, ext->ei_style, ext->ei_style->body.border.opa);
@@ -312,7 +304,7 @@ static void fire_create(lv_obj_t *cse, lv_point_t *point)
         lv_coord_t x_offset = point->x - cse->coords.x1;
         lv_coord_t y_offset = point->y - cse->coords.y1;
 
-        double pixels_per_tick = (double)w / ysw_cs_get_duration(ext->cs);
+        double pixels_per_tick = (double)w / YSW_CS_DURATION;
         double pixels_per_degree = (double)h / ROW_COUNT;
 
         lv_coord_t tick_index = x_offset / pixels_per_tick;
@@ -380,10 +372,9 @@ static void select_only(lv_obj_t *cse, ysw_cn_t *selected_cn)
 static void drag_horizontally(lv_obj_t *cse, ysw_cn_t *cn, ysw_cn_t *drag_start_cn, lv_coord_t x)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    uint32_t total_duration = ysw_cs_get_duration(ext->cs);
 
     lv_coord_t w = lv_obj_get_width(cse);
-    double ticks_per_pixel = (double)total_duration / w;
+    double ticks_per_pixel = (double)YSW_CS_DURATION / w;
     lv_coord_t delta_ticks = x * ticks_per_pixel;
 
     //ESP_LOGD(TAG, "drag_horizontally w=%d", w);
@@ -428,14 +419,14 @@ static void drag_horizontally(lv_obj_t *cse, ysw_cn_t *cn, ysw_cn_t *drag_start_
         }
     }
 
-    if (new_duration > total_duration) {
-        new_duration = total_duration;
+    if (new_duration > YSW_CS_DURATION) {
+        new_duration = YSW_CS_DURATION;
     }
     if (new_start < 0) {
         new_start = 0;
     }
-    if (new_start + new_duration > total_duration) {
-        new_start = total_duration - new_duration;
+    if (new_start + new_duration > YSW_CS_DURATION) {
+        new_start = YSW_CS_DURATION - new_duration;
     }
 
     cn->start = new_start;

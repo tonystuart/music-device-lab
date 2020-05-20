@@ -241,8 +241,8 @@ void ysw_cpe_set_cp(ysw_cpe_t *cpe, ysw_cp_t *cp)
         char buffer[16];
         int row = i + 1; // +1 for header
         ysw_step_t *step = ysw_cp_get_step(cp, i);
-        double beats_per_measure = ysw_cs_get_beats_per_measure(step->cs);
-        double beat_unit = ysw_cs_get_beat_unit(step->cs);
+        double beats_per_measure = step->cs->divisions; // ysw_cs_get_beats_per_measure(step->cs);
+        double beat_unit = 4; // ysw_cs_get_beat_unit(step->cs);
         measure += beats_per_measure / beat_unit;
         lv_table_set_cell_value(cpe->table, row, 0, ysw_itoa(measure, buffer, sizeof(buffer)));
         lv_table_set_cell_value(cpe->table, row, 1, ysw_degree_get_name(step->degree));

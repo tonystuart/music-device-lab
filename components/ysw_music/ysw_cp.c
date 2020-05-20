@@ -177,14 +177,14 @@ note_t *ysw_cp_get_notes(ysw_cp_t *cp, uint32_t *note_count)
     for (int i = 0; i < step_count; i++) {
         ysw_step_t *step = ysw_cp_get_step(cp, i);
         if (!i || (step->flags & YSW_STEP_NEW_MEASURE)) {
-            time_correction = (double)400 / (steps_in_measures[measure] * 400);
+            time_correction = 1.0 / steps_in_measures[measure];
             measure++;
         }
         uint8_t cs_root = step->degree;
         int cn_count = ysw_step_get_cn_count(step);
         for (int j = 0; j < cn_count; j++) {
             ysw_cn_t *cn = ysw_step_get_cn(step, j);
-            note_p->start = cs_time + cn->start;
+            note_p->start = cs_time + (cn->start * time_correction);
             note_p->duration = cn->duration * time_correction;
             note_p->channel = 0;
             note_p->midi_note = ysw_cn_to_midi_note(cn, tonic, cs_root);
@@ -193,7 +193,7 @@ note_t *ysw_cp_get_notes(ysw_cp_t *cp, uint32_t *note_count)
             ESP_LOGD(TAG, "start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
             note_p++;
         }
-        cs_time += ysw_step_get_duration(step);
+        cs_time += YSW_CS_DURATION * time_correction;
     }
     *note_count = note_p - notes;
     return notes;

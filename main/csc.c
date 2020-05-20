@@ -9,12 +9,14 @@
 
 #include "csc.h"
 
+#include "sequencer.h"
+
 #include "ysw_cs.h"
 #include "ysw_csf.h"
 #include "ysw_cn.h"
+#include "ysw_division.h"
 #include "ysw_instruments.h"
 #include "ysw_lv_cse.h"
-#include "sequencer.h"
 #include "ysw_mode.h"
 #include "ysw_music.h"
 #include "ysw_name.h"
@@ -23,7 +25,6 @@
 #include "ysw_sequencer.h"
 #include "ysw_synthesizer.h"
 #include "ysw_tempo.h"
-#include "ysw_time.h"
 #include "ysw_transposition.h"
 
 #include "lvgl/lvgl.h"
@@ -76,8 +77,7 @@ static void update_footer()
 {
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
     char buf[64];
-    snprintf(buf, sizeof(buf), "%d BPM %d/%d", cs->tempo,
-            ysw_cs_get_beats_per_measure(cs), ysw_cs_get_beat_unit(cs));
+    snprintf(buf, sizeof(buf), "%d BPM %s", cs->tempo, ysw_division_to_tick(cs->divisions));
     ysw_csf_set_footer_text(csf, buf);
 }
 
@@ -107,7 +107,7 @@ static void create_cs(uint32_t new_index)
             cs->mode,
             cs->transposition,
             cs->tempo,
-            cs->time);
+            cs->divisions);
 
     ysw_music_insert_cs(music, new_index, new_cs);
     cs_index = new_index;
@@ -117,18 +117,8 @@ static void create_cs(uint32_t new_index)
 static void create_cn(lv_obj_t *cse, int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration)
 {
     ESP_LOGD(TAG, "create_cn degree=%d, velocity=%d, start=%d, duration=%d", degree, velocity, start, duration);
-    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-    uint16_t cs_duration = ysw_time_to_measure_duration(cs->time);
-    if (duration > cs_duration) {
-        duration = cs_duration;
-        ESP_LOGD(TAG, "create_cn setting duration=%d", duration);
-    }
-    if (start + duration > cs_duration) {
-        start = cs_duration - duration;
-        ESP_LOGD(TAG, "create_cn setting start=%d", start);
-    }
-
     ysw_cn_t *cn = ysw_cn_create(degree, velocity, start, duration, 0);
+    ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
     ysw_cs_add_cn(cs, cn);
     refresh();
 }
@@ -287,10 +277,10 @@ static void on_tempo_change(uint8_t new_tempo_index)
     stage();
 }
 
-static void on_time_change(ysw_time_t new_time)
+static void on_division_change(uint8_t new_division_index)
 {
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
-    cs->time = new_time;
+    cs->divisions = ysw_division_from_index(new_division_index);
     update_footer();
     stage();
 }
@@ -301,6 +291,7 @@ static void on_settings(lv_obj_t * btn, lv_event_t event)
         ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
         uint8_t trans_index = ysw_transposition_to_index(cs->transposition);
         uint8_t tempo_index = ysw_tempo_to_index(cs->tempo);
+        uint8_t division_index = ysw_division_to_index(cs->divisions);
         ysw_sdb_t *sdb = ysw_sdb_create("Chord Style Settings");
         ysw_sdb_add_string(sdb, on_name_change, "Name", cs->name);
         ysw_sdb_add_choice(sdb, on_instrument_change, "Instrument", cs->instrument, ysw_instruments);
@@ -308,7 +299,7 @@ static void on_settings(lv_obj_t * btn, lv_event_t event)
         ysw_sdb_add_choice(sdb, on_mode_change, "Mode", cs->mode, ysw_modes);
         ysw_sdb_add_choice(sdb, on_transposition_change, "Transposition", trans_index, ysw_transposition);
         ysw_sdb_add_choice(sdb, on_tempo_change, "Tempo", tempo_index, ysw_tempo);
-        ysw_sdb_add_choice(sdb, on_time_change, "Time", cs->time, ysw_time);
+        ysw_sdb_add_choice(sdb, on_division_change, "Divisions", division_index, ysw_division);
     }
 }
 

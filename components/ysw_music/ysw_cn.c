@@ -40,6 +40,50 @@ void ysw_cn_free(ysw_cn_t *cn)
     ysw_heap_free(cn);
 }
 
+static inline uint32_t round_tick(uint32_t value)
+{
+    return ((value + YSW_CSN_TICK_INCREMENT - 1) / YSW_CSN_TICK_INCREMENT) * YSW_CSN_TICK_INCREMENT;
+}
+
+void ysw_cn_normalize(ysw_cn_t *cn)
+{
+    if (cn->duration > YSW_CS_DURATION) {
+        cn->duration = YSW_CS_DURATION;
+        ESP_LOGD(TAG, "create_cn setting duration=%d", cn->duration);
+    }
+    if (cn->start + cn->duration > YSW_CS_DURATION) {
+        cn->start = YSW_CS_DURATION - cn->duration;
+        ESP_LOGD(TAG, "create_cn setting start=%d", cn->start);
+    }
+
+#if 0
+    if (cn->start > YSW_CS_DURATION - YSW_CSN_MIN_DURATION) {
+        cn->start = YSW_CS_DURATION - YSW_CSN_MIN_DURATION;
+    }
+    if (cn->duration < YSW_CSN_MIN_DURATION) {
+        cn->duration = YSW_CSN_MIN_DURATION;
+    }
+    if (cn->start + cn->duration > YSW_CS_DURATION) {
+        cn->duration = YSW_CS_DURATION - cn->start;
+    }
+#endif
+
+    if (cn->degree < YSW_CSN_MIN_DEGREE) {
+        cn->degree = YSW_CSN_MIN_DEGREE;
+    } else if (cn->degree > YSW_CSN_MAX_DEGREE) {
+        cn->degree = YSW_CSN_MAX_DEGREE;
+    }
+
+    if (cn->velocity > YSW_CSN_MAX_VELOCITY) {
+        cn->velocity = YSW_CSN_MAX_VELOCITY;
+    }
+
+    cn->start = round_tick(cn->start);
+    cn->duration = round_tick(cn->duration);
+
+    ESP_LOGD(TAG, "normalize_cn start=%d, duration=%d, degree=%d, velocity=%d", cn->start, cn->duration, cn->degree, cn->velocity);
+}
+
 uint8_t ysw_cn_to_midi_note(ysw_cn_t *cn, uint8_t scale_tonic, uint8_t root_number)
 {
     ysw_accidental_t accidental = ysw_cn_get_accidental(cn);

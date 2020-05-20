@@ -94,8 +94,9 @@ static inline bool ysw_cn_is_selected(ysw_cn_t *cn)
     return cn->state & YSW_CSN_SELECTED;
 }
 
-void ysw_cn_free(ysw_cn_t *ysw_cn);
 ysw_cn_t *ysw_cn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags);
 ysw_cn_t *ysw_cn_copy(ysw_cn_t *cn);
+void ysw_cn_free(ysw_cn_t *ysw_cn);
+void ysw_cn_normalize(ysw_cn_t *cn);
 uint8_t ysw_cn_to_midi_note(ysw_cn_t *cn, uint8_t scale_tonic, uint8_t root_number);
 int ysw_cn_compare(const void *left, const void *right);

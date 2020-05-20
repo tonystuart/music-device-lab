@@ -77,24 +77,8 @@ static inline uint32_t ysw_step_get_cn_count(ysw_step_t *step)
     return ysw_array_get_count(step->cs->cn_array);
 }
 
-static inline uint32_t ysw_step_get_duration(ysw_step_t *step)
-{
-    // TODO: Use chord progression's time signature
-    return ysw_cs_get_duration(step->cs);
-}
-
 static inline void ysw_cp_sort_cn_array(ysw_cp_t *cp)
 {
-}
-
-static inline uint32_t ysw_cp_get_beats_per_measure(ysw_cp_t *cp)
-{
-    return 4; // TODO: return current value
-}
-
-static inline uint32_t ysw_cp_get_beat_unit(ysw_cp_t *cp)
-{
-    return 4; // TODO: return current value
 }
 
 static inline ysw_step_t *ysw_step_copy(ysw_step_t *old_step)
@@ -114,5 +98,20 @@ static inline void ysw_step_select(ysw_step_t *step, bool selected)
 static inline bool ysw_step_is_selected(ysw_step_t *step)
 {
     return step->state & YSW_CSN_SELECTED;
+}
+
+static inline uint32_t ysw_cp_get_beats_per_measure(ysw_cp_t *cp)
+{
+    return ysw_time_to_beats_per_measure(cp->time);
+}
+
+static inline uint32_t ysw_cp_get_beat_unit(ysw_cp_t *cp)
+{
+    return ysw_time_to_beat_unit(cp->time);
+}
+
+static inline uint32_t ysw_cp_get_duration(ysw_cp_t *cp)
+{
+    return ysw_time_to_measure_duration(cp->time);
 }
 

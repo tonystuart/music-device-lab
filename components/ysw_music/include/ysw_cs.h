@@ -16,6 +16,8 @@
 #include "ysw_ticks.h"
 #include "ysw_time.h"
 
+#define YSW_CS_DURATION (4 * YSW_TICKS_DEFAULT_TPQN)
+
 // See Miller (2nd edition), pp 38-42
 // https://en.wikipedia.org/wiki/Mode_(music)
 
@@ -39,7 +41,7 @@ typedef struct {
     ysw_mode_t mode;
     int8_t transposition;
     uint8_t tempo;
-    ysw_time_t time;
+    uint8_t divisions;
 } ysw_cs_t;
 
 ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo, ysw_time_t time);
@@ -56,24 +58,7 @@ static inline ysw_cn_t *ysw_cs_get_cn(ysw_cs_t *cs, uint32_t index)
     return ysw_array_get(cs->cn_array, index);
 }
 
-static inline uint32_t ysw_cs_get_beats_per_measure(ysw_cs_t *cs)
-{
-    return ysw_time_to_beats_per_measure(cs->time);
-}
-
-static inline uint32_t ysw_cs_get_beat_unit(ysw_cs_t *cs)
-{
-    return ysw_time_to_beat_unit(cs->time);
-}
-
-static inline uint32_t ysw_cs_get_duration(ysw_cs_t *cs)
-{
-    return ysw_time_to_measure_duration(cs->time);
-}
-
 void ysw_cs_free(ysw_cs_t *cs);
-
-void ysw_cs_normalize_cn(ysw_cs_t *cs, ysw_cn_t *cn);
 
 uint32_t ysw_cs_add_cn(ysw_cs_t *cs, ysw_cn_t *cn);
 
