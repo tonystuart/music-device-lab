@@ -115,3 +115,8 @@ static inline uint32_t ysw_cp_get_duration(ysw_cp_t *cp)
     return ysw_time_to_measure_duration(cp->time);
 }
 
+static inline void ysw_cp_insert_step(ysw_cp_t *cp, uint32_t index, ysw_step_t *step)
+{
+    ysw_array_insert(cp->steps, index, step);
+}
+

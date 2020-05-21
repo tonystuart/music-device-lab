@@ -26,7 +26,7 @@
 
 #define LV_OBJX_NAME "ysw_lv_cpe"
 
-#define MINIMUM_DRAG 5
+#define MINIMUM_DRAG 10
 
 typedef struct {
     lv_coord_t cpe_left;
@@ -271,12 +271,24 @@ static void fire_deselect(lv_obj_t *cpe, ysw_step_t *step)
 {
 }
 
-static void fire_create(lv_obj_t *cpe, lv_point_t *point)
+static void fire_create(lv_obj_t *cpe, uint32_t step_index, uint8_t degree)
 {
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    if (ext->event_cb) {
+        ysw_lv_cpe_event_cb_data_t data = {
+            .create.step_index = step_index,
+            .create.degree = degree,
+        };
+        ext->event_cb(cpe, YSW_LV_CPE_CREATE, &data);
+    }
 }
 
 static void fire_drag_end(lv_obj_t *cpe)
 {
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    if (ext->event_cb) {
+        ext->event_cb(cpe, YSW_LV_CPE_DRAG_END, NULL);
+    }
 }
 
 static void get_step_area(lv_obj_t *cpe, uint32_t step_index, lv_area_t *ret_area)
@@ -307,7 +319,7 @@ static void capture_selection(lv_obj_t *cpe, lv_point_t *point)
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
     ext->dragging = false;
     ext->selected_step = NULL;
-    ext->original_step = (ysw_step_t){};
+    ext->drag_start_step = (ysw_step_t){};
     ext->last_click = *point;
     uint32_t step_count = ysw_cp_get_step_count(ext->cp);
     for (uint8_t i = 0; i < step_count; i++) {
@@ -318,13 +330,13 @@ static void capture_selection(lv_obj_t *cpe, lv_point_t *point)
             (step_area.y1 <= point->y && point->y <= step_area.y2)) {
                 // dragging step
                 ext->selected_step = step;
-                ext->original_step = *step;
+                ext->drag_start_step = *step;
                 return;
             }
     }
     // scrolling screen
-    ext->original_scroll_left = ext->scroll_left;
-    ESP_LOGD(TAG, "capture original_scroll_left=%d", ext->original_scroll_left);
+    ext->drag_start_scroll_left = ext->scroll_left;
+    ESP_LOGD(TAG, "capture drag_start_scroll_left=%d", ext->drag_start_scroll_left);
 }
 
 static void do_drag(lv_obj_t *cpe, lv_point_t *point)
@@ -347,7 +359,7 @@ static void do_drag(lv_obj_t *cpe, lv_point_t *point)
             if (drag_y) {
                 metrics_t m;
                 get_metrics(cpe, &m);
-                uint8_t new_degree = ext->original_step.degree - (y / m.row_height);
+                uint8_t new_degree = ext->drag_start_step.degree - (y / m.row_height);
                 if (new_degree >= 1 && new_degree <= YSW_MIDI_UNPO) {
                     ext->selected_step->degree = new_degree;
                 }
@@ -356,7 +368,7 @@ static void do_drag(lv_obj_t *cpe, lv_point_t *point)
             if (drag_x) {
                 metrics_t m;
                 get_metrics(cpe, &m);
-                lv_coord_t new_scroll_left = ext->original_scroll_left + x;
+                lv_coord_t new_scroll_left = ext->drag_start_scroll_left + x;
                 if (new_scroll_left < m.min_scroll_left) {
                     new_scroll_left = m.min_scroll_left;
                 }
@@ -400,7 +412,10 @@ static void on_signal_released(lv_obj_t *cpe, void *param)
     lv_indev_proc_t *proc = &indev_act->proc;
     do_drag(cpe, &proc->types.pointer.act_point);
     if (ext->dragging) {
-        fire_drag_end(cpe);
+        if (ext->selected_step) {
+            fire_drag_end(cpe);
+            ext->selected_step = NULL;
+        }
         ext->dragging = false;
     } else {
         do_click(cpe);
@@ -415,7 +430,7 @@ static void on_signal_press_lost(lv_obj_t *cpe, void *param)
     if (ext->dragging) {
         ext->dragging = false;
         if (ext->selected_step) {
-            // could save original on drag and set back
+            // could save settings on drag start and set back
         }
     }
     lv_obj_invalidate(cpe);
@@ -437,7 +452,23 @@ static void on_signal_long_press(lv_obj_t *cpe, void *param) {
                 fire_deselect(cpe, ext->selected_step);
             }
         } else {
-            fire_create(cpe, point);
+            metrics_t m;
+            get_metrics(cpe, &m);
+            if (point->y < m.cp_top + m.cp_height) {
+                lv_coord_t adj_x = (point->x - m.cp_left) + ext->scroll_left;
+                lv_coord_t adj_y = (point->y - m.cp_top);
+                uint32_t step_index = adj_x / m.col_width;
+                uint32_t row_index = adj_y / m.row_height;
+                uint8_t degree = YSW_MIDI_UNPO - row_index;
+                bool insert_after = (adj_x % m.col_width) > (m.col_width / 2);
+                if (ysw_cp_get_step_count(ext->cp) > 0 && insert_after) {
+                    step_index++;
+                }
+                ESP_LOGD(TAG, "point->x=%d, y=%d, cp_left=%d, cp_top=%d, scroll_left=%d, col_width=%d, row_height=%d, insert_after=%d", point->x, point->y, m.cp_left, m.cp_top, ext->scroll_left, m.col_width, m.row_height, insert_after);
+                fire_create(cpe, step_index, degree);
+            } else {
+                // change chord style
+            }
         }
         ext->long_press = true;
     }
@@ -500,9 +531,9 @@ lv_obj_t *ysw_lv_cpe_create(lv_obj_t *par)
 
     ext->cp = NULL;
     ext->selected_step = NULL;
-    ext->original_step = (ysw_step_t){};
+    ext->drag_start_step = (ysw_step_t){};
     ext->scroll_left = 0;
-    ext->original_scroll_left = 0;
+    ext->drag_start_scroll_left = 0;
 
     ext->bg_style = &lv_style_plain;
     ext->fg_style = &ysw_style_ei;

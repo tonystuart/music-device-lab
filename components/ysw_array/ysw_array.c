@@ -120,7 +120,7 @@ void ysw_array_insert(ysw_array_t *array, uint32_t index, void *value)
         ESP_LOGD(TAG, "insert resizing to size=%d", array->size);
         array->data = ysw_heap_reallocate(array->data, sizeof(void*) * array->size);
     }
-    for (uint32_t i = array->count - 1, j = array->count - 2; j >= index; i--, j--) {
+    for (uint32_t i = array->count - 1, j = array->count - 2; (int32_t)j >= (int32_t)index; i--, j--) {
         array->data[i] = array->data[j];
     }
     array->data[index] = value;

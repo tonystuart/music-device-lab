@@ -116,25 +116,22 @@ static void create_cp(uint32_t new_index)
     update_frame();
 }
 
-static void create_step(lv_obj_t *cpe)
+static void create_step(lv_obj_t *cpe, ysw_lv_cpe_create_t *create)
 {
-#if 0
-    ESP_LOGD(TAG, "create_step degree=%d, velocity=%d, start=%d, duration=%d", degree, velocity, start, duration);
-    ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
-    uint16_t cp_duration = ysw_time_to_measure_duration(cp->time);
-    if (duration > cp_duration) {
-        duration = cp_duration;
-        ESP_LOGD(TAG, "create_step setting duration=%d", duration);
+    ESP_LOGD(TAG, "create_step step_index=%d, degree=%d", create->step_index, create->degree);
+    if (ysw_music_get_cs_count(music)) {
+        ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
+        ysw_cs_t *cs = ysw_music_get_cs(music, 0);
+        ysw_step_t *step = ysw_step_create(cs, create->degree, YSW_STEP_NEW_MEASURE);
+        uint32_t index = create->step_index;
+        uint32_t step_count = ysw_cp_get_step_count(cp);
+        if (index > step_count) {
+            index = step_count;
+        }
+        ESP_LOGD(TAG, "create_step cp_index=%d, step_index=%d", cp_index, index);
+        ysw_cp_insert_step(cp, index, step);
+        refresh();
     }
-    if (start + duration > cp_duration) {
-        start = cp_duration - duration;
-        ESP_LOGD(TAG, "create_step setting start=%d", start);
-    }
-
-    ysw_step_t *step = ysw_step_create(degree, velocity, start, duration, 0);
-    ysw_cp_add_step(cp, step);
-    refresh();
-#endif
 }
 
 static void copy_to_clipboard(ysw_step_t *step)
@@ -371,11 +368,11 @@ static void on_trash(lv_obj_t * btn, lv_event_t event)
     }
 }
 
-static void on_up(lv_obj_t * btn, lv_event_t event)
+static void on_left(lv_obj_t * btn, lv_event_t event)
 {
 }
 
-static void on_down(lv_obj_t * btn, lv_event_t event)
+static void on_right(lv_obj_t * btn, lv_event_t event)
 {
 }
 
@@ -390,7 +387,7 @@ static void cpe_event_cb(lv_obj_t *cpe, ysw_lv_cpe_event_t event, ysw_lv_cpe_eve
             stage();
             break;
         case YSW_LV_CPE_CREATE:
-            create_step(cpe);
+            create_step(cpe, &data->create);
             break;
     }
 }
@@ -412,8 +409,8 @@ void cpc_create(ysw_music_t *new_music, uint32_t new_cp_index)
         .new_cb = on_new_chord_style,
         .copy_cb = on_copy,
         .paste_cb = on_paste,
-        .up_cb = on_up,
-        .down_cb = on_down,
+        .left_cb = on_left,
+        .right_cb = on_right,
         .trash_cb = on_trash,
         .cpe_event_cb = cpe_event_cb,
     };

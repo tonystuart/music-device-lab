@@ -24,8 +24,8 @@ typedef struct {
     lv_event_cb_t copy_cb;
     lv_event_cb_t paste_cb;
     lv_event_cb_t trash_cb;
-    lv_event_cb_t up_cb;
-    lv_event_cb_t down_cb;
+    lv_event_cb_t left_cb;
+    lv_event_cb_t right_cb;
     ysw_lv_cpe_event_cb_t cpe_event_cb;
 } ysw_cpf_config_t;
 
