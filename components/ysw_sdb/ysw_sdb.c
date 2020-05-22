@@ -20,6 +20,8 @@
 
 #define TAG "YSW_SDB"
 
+static lv_signal_cb_t ddlist_signal_cb;
+
 static ysw_sdb_t *get_sdb(lv_obj_t *field)
 {
     lv_obj_t *container = lv_obj_get_parent(field);
@@ -97,6 +99,27 @@ static void on_ddlist_event(lv_obj_t *ddlist, lv_event_t event)
     }
 }
 
+static lv_res_t on_ddlist_signal(lv_obj_t *ddlist, lv_signal_t signal, void *param)
+{
+    lv_res_t res = ddlist_signal_cb(ddlist, signal, param);
+    //ESP_LOGD(TAG, "on_ddlist_signal signal=%d", signal);
+    if (res == LV_RES_OK && signal == LV_SIGNAL_CORD_CHG) {
+        lv_area_t *original = (lv_area_t*)param;
+        if (lv_area_get_height(original) != lv_area_get_height(&ddlist->coords)) {
+            lv_obj_t *scrl = lv_obj_get_parent(ddlist);
+            lv_obj_t *page = lv_obj_get_parent(scrl);
+            lv_coord_t viewport_h = page->coords.y2 - page->coords.y1;
+            lv_coord_t scroll_top = scrl->coords.y1 - page->coords.y1;
+            lv_coord_t last_visible_y = viewport_h - scroll_top; // minus a minus
+            lv_coord_t dist = ddlist->coords.y2 - last_visible_y;
+            if (dist > 0) {
+                lv_page_scroll_ver(page, -dist);
+            }
+        }
+    }
+    return res;
+}
+
 static void create_field_name(ysw_sdb_t *sdb, const char *name)
 {
     lv_obj_t *label = lv_label_create(sdb->win, NULL);
@@ -148,6 +171,7 @@ void ysw_sdb_add_choice(ysw_sdb_t *sdb, ysw_sdb_choice_cb_t cb, const char *name
 
     lv_obj_t *ddlist = lv_ddlist_create(sdb->win, NULL);
     lv_obj_set_user_data(ddlist, cb);
+    lv_ddlist_set_anim_time(ddlist, 0);
     lv_ddlist_set_draw_arrow(ddlist, true);
     lv_ddlist_set_options(ddlist, options);
     lv_ddlist_set_fix_height(ddlist, 100);
@@ -157,6 +181,10 @@ void ysw_sdb_add_choice(ysw_sdb_t *sdb, ysw_sdb_choice_cb_t cb, const char *name
     lv_ddlist_set_selected(ddlist, value);
     lv_obj_set_protect(ddlist, LV_PROTECT_FOLLOW);
     lv_obj_set_event_cb(ddlist, on_ddlist_event);
+    if (!ddlist_signal_cb) {
+        ddlist_signal_cb = lv_obj_get_signal_cb(ddlist);
+    }
+    lv_obj_set_signal_cb(ddlist, on_ddlist_signal);
 }
 
 void ysw_sdb_close(ysw_sdb_t *sdb)
