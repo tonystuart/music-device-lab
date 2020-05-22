@@ -31,7 +31,7 @@
 
 #include "esp_log.h"
 
-#define TAG "YSW_CSC"
+#define TAG "CSC"
 
 typedef void (*cn_visitor_t)(ysw_cn_t *cn);
 
@@ -430,5 +430,12 @@ void csc_create(ysw_music_t *new_music, uint32_t new_cs_index)
 
     csf = ysw_csf_create(&config);
     update_frame();
+}
+
+void csc_control_cb(note_t *note)
+{
+    if (note->midi_note == YSW_CS_METRONOME_NOTE) {
+        ysw_csf_set_metronome(csf, note->start);
+    }
 }
 

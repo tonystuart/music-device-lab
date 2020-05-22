@@ -11,13 +11,13 @@
 #include "stdint.h"
 
 const char *ysw_division =
-"1\n"
-"2\n"
-"3\n"
-"4\n"
-"6\n"
-"8\n"
-"16";
+"1 (400 TPD)\n"
+"2 (200 TPD)\n"
+"3 (133 TPD)\n"
+"4 (100 TPD)\n"
+"6 (66 TPD)\n"
+"8 (50 TPD)\n"
+"16 (25 TPD)";
 
 const uint8_t index_division_map[] = {
     1, 2, 3, 4, 6, 8, 16

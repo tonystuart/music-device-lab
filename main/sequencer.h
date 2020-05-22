@@ -11,6 +11,8 @@
 
 #include "ysw_sequencer.h"
 
+typedef void (*csc_control_cb_t)(note_t *note);
+
 void sequencer_send(ysw_sequencer_message_t *message);
-void sequencer_initialize();
+void sequencer_initialize(csc_control_cb_t csc_control_cb);
 

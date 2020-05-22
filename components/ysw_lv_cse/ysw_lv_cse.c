@@ -217,6 +217,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             };
 
             if (ysw_cn_is_selected(cn)) {
+                // TODO: remove block if we don't use a separate style for dragging
                 if (ext->dragging) {
                     lv_draw_label(&cn_area,
                             &cn_mask,
@@ -253,6 +254,19 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                         LV_BIDI_DIR_LTR);
             }
         }
+    }
+
+    if (ext->metronome >= 0) {
+        lv_point_t top = {
+            .x = x + ((w * ext->metronome) / YSW_CS_DURATION),
+            .y = y,
+        };
+        lv_point_t bottom = {
+            .x = x + ((w * ext->metronome) / YSW_CS_DURATION),
+            .y = y + h,
+        };
+        ESP_LOGD(TAG, "metronome=%d, x1=%d, y1=%d, x2=%d, y2=%d", ext->metronome, top.x, top.y, bottom.x, bottom.y);
+        lv_draw_line(&top, &bottom, mask, ext->sn_style, ext->sn_style->body.border.opa);
     }
 }
 
@@ -684,6 +698,7 @@ lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
     ext->dragging = false;
     ext->long_press = false;
     ext->drag_start_cs = NULL;
+    ext->metronome = -1;
     ext->bg_style = &lv_style_plain;
     ext->oi_style = &ysw_style_oi;
     ext->ei_style = &ysw_style_ei;
@@ -717,3 +732,12 @@ void ysw_lv_cse_set_event_cb(lv_obj_t *cse, ysw_lv_cse_event_cb_t event_cb)
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     ext->event_cb = event_cb;
 }
+
+void ysw_lv_cse_set_metronome(lv_obj_t *cse, uint32_t tick)
+{
+    ESP_LOGD(TAG, "ysw_lv_cse_set_metronome tick=%d", tick);
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    ext->metronome = tick;
+    lv_obj_invalidate(cse);
+}
+

@@ -32,7 +32,7 @@
 
 #include "esp_log.h"
 
-#define TAG "YSW_CPC"
+#define TAG "CPC"
 
 typedef void (*step_visitor_t)(ysw_step_t *step);
 

@@ -7,26 +7,36 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
+#include "sequencer.h"
+
 #include "synthesizer.h"
 
-#include "ysw_sequencer.h"
+#include "ysw_cs.h"
 #include "ysw_message.h"
+#include "ysw_sequencer.h"
 
 #include "esp_log.h"
 
-#define TAG "YSW_MAIN_SEQUENCER"
+#define TAG "SEQUENCER"
 
 static QueueHandle_t sequencer_queue;
+static csc_control_cb_t on_csc_control;
 
-static void on_note_on(uint8_t channel, uint8_t midi_note, uint8_t velocity)
+static void on_note_on(note_t *note)
 {
-    ysw_synthesizer_message_t message = {
-        .type = YSW_SYNTHESIZER_NOTE_ON,
-        .note_on.channel = channel,
-        .note_on.midi_note = midi_note,
-        .note_on.velocity = velocity,
-    };
-    synthesizer_send(&message);
+    if (note->channel == YSW_CS_CONTROL_CHANNEL) {
+        if (on_csc_control) {
+            on_csc_control(note);
+        }
+    } else {
+        ysw_synthesizer_message_t message = {
+            .type = YSW_SYNTHESIZER_NOTE_ON,
+            .note_on.channel = note->channel,
+            .note_on.midi_note = note->midi_note,
+            .note_on.velocity = note->velocity,
+        };
+        synthesizer_send(&message);
+    }
 }
 
 static void on_note_off(uint8_t channel, uint8_t midi_note)
@@ -62,8 +72,10 @@ void sequencer_send(ysw_sequencer_message_t *message)
     }
 }
 
-void sequencer_initialize()
+void sequencer_initialize(csc_control_cb_t csc_control_cb)
 {
+    on_csc_control = csc_control_cb;
+
     ysw_sequencer_config_t config = {
         .on_note_on = on_note_on,
         .on_note_off = on_note_off,

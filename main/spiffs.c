@@ -14,7 +14,7 @@
 #include "esp_log.h"
 #include "esp_spiffs.h"
 
-#define TAG "YSW_MAIN_SPIFFS"
+#define TAG "SPIFFS"
 
 void spiffs_initialize(const char *base_path)
 {

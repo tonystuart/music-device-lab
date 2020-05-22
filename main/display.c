@@ -15,7 +15,7 @@
 #include "driver/spi_master.h"
 #include "esp_log.h"
 
-#define TAG "YSW_MAIN_DISPLAY"
+#define TAG "DISPLAY"
 
 void display_initialize()
 {

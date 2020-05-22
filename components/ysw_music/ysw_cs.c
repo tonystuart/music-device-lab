@@ -99,32 +99,45 @@ note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
 {
     int end_time = 0;
     int cn_count = ysw_cs_get_cn_count(cs);
-    note_t *notes = ysw_heap_allocate(sizeof(note_t) * (cn_count + 1)); // +1 for fill-to-measure
+    uint32_t max_note_count = cn_count;
+    max_note_count += cs->divisions; // metronome ticks
+    max_note_count += 1; // file-to-measure
+    note_t *notes = ysw_heap_allocate(sizeof(note_t) * max_note_count);
     note_t *note_p = notes;
     uint8_t tonic = cs->octave * 12;
     uint8_t root = ysw_degree_intervals[0][cs->mode % 7];
     // TODO: Revisit whether root should be 1-based, factor out a 0-based function
     root++;
+    uint32_t ticks_per_division = YSW_CS_DURATION / cs->divisions;
+    uint32_t metronome_tick = 0;
     for (int j = 0; j < cn_count; j++) {
         ysw_cn_t *cn = ysw_cs_get_cn(cs, j);
-        if (cn->start < YSW_CS_DURATION) {
-            note_p->start = cn->start;
-            note_p->duration = cn->duration;
-            note_p->channel = 0;
-            note_p->midi_note = ysw_cn_to_midi_note(cn, tonic, root) + cs->transposition;
-            note_p->velocity = cn->velocity;
-            note_p->instrument = cs->instrument;
-            //ESP_LOGD(TAG, "ysw_cs_get_notes start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
-            end_time = note_p->start + note_p->duration;
+        while (metronome_tick <= cn->start) {
+            note_p->start = metronome_tick;
+            note_p->duration = 0;
+            note_p->channel = YSW_CS_CONTROL_CHANNEL;
+            note_p->midi_note = YSW_CS_METRONOME_NOTE;
+            note_p->velocity = 0;
+            note_p->instrument = 0;
             note_p++;
+            metronome_tick += ticks_per_division;
         }
+        note_p->start = cn->start;
+        note_p->duration = cn->duration;
+        note_p->channel = YSW_CS_MUSIC_CHANNEL;
+        note_p->midi_note = ysw_cn_to_midi_note(cn, tonic, root) + cs->transposition;
+        note_p->velocity = cn->velocity;
+        note_p->instrument = cs->instrument;
+        //ESP_LOGD(TAG, "ysw_cs_get_notes start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
+        end_time = note_p->start + note_p->duration;
+        note_p++;
     }
     uint32_t fill_to_measure = YSW_CS_DURATION - end_time;
     if (fill_to_measure) {
         note_p->start = end_time;
         note_p->duration = fill_to_measure;
-        note_p->channel = 0;
-        note_p->midi_note = 0; // TODO: 0-11 are reserved by ysw, 128 to 255 are reserved by application
+        note_p->channel = YSW_CS_CONTROL_CHANNEL;
+        note_p->midi_note = YSW_CS_FILL_TO_MEASURE_NOTE;
         note_p->velocity = 0;
         note_p->instrument = 0;
         note_p++;

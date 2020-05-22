@@ -54,6 +54,7 @@ typedef struct {
     ysw_cs_t *drag_start_cs;
     bool dragging;
     bool long_press;
+    int32_t metronome;
     const lv_style_t *bg_style; // background
     const lv_style_t *oi_style; // odd interval
     const lv_style_t *ei_style; // even interval
@@ -67,3 +68,4 @@ void ysw_lv_cse_set_cs(lv_obj_t *cse, ysw_cs_t *cs);
 void ysw_lv_cse_select(lv_obj_t *cse, ysw_cn_t *cn, bool is_selected);
 bool ysw_lv_cse_is_selected(lv_obj_t *cse, ysw_cn_t *cn);
 void ysw_lv_cse_set_event_cb(lv_obj_t *cse, ysw_lv_cse_event_cb_t event_cb);
+void ysw_lv_cse_set_metronome(lv_obj_t *cse, uint32_t tick);

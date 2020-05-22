@@ -12,4 +12,5 @@
 #include "ysw_music.h"
 
 void csc_create(ysw_music_t *new_music, uint32_t new_cs_index);
+void csc_control_cb(note_t *note);
 

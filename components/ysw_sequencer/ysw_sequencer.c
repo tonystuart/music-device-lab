@@ -88,7 +88,7 @@ static void play_note(note_t *note, int next_note_index)
     }
 
     if (next_note_index != -1) {
-        config.on_note_on(note->channel, note->midi_note, note->velocity);
+        config.on_note_on(note);
         active_notes[next_note_index].channel = note->channel;
         active_notes[next_note_index].midi_note = note->midi_note;
         // Limit duration to avoid issues with VS1053b sustained polyphony

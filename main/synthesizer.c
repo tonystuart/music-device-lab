@@ -19,7 +19,7 @@
 
 #include "esp_log.h"
 
-#define TAG "YSW_MAIN_SYNTHESIZER"
+#define TAG "SYNTHESIZER"
 
 static QueueHandle_t synthesizer_queue;
 
