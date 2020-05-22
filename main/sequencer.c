@@ -20,13 +20,15 @@
 #define TAG "SEQUENCER"
 
 static QueueHandle_t sequencer_queue;
-static csc_control_cb_t on_csc_control;
+static csc_metronome_cb_t on_csc_metronome;
 
 static void on_note_on(note_t *note)
 {
     if (note->channel == YSW_CS_CONTROL_CHANNEL) {
-        if (on_csc_control) {
-            on_csc_control(note);
+        if (note->midi_note == YSW_CS_METRONOME_NOTE) {
+            if (on_csc_metronome) {
+                on_csc_metronome(note->start);
+            }
         }
     } else {
         ysw_synthesizer_message_t message = {
@@ -61,7 +63,11 @@ static void on_program_change(uint8_t channel, uint8_t program)
 
 static void on_state_change(ysw_sequencer_state_t new_state)
 {
-    if (new_state == YSW_SEQUENCER_STATE_PLAYBACK_COMPLETE) {
+    if (new_state == YSW_SEQUENCER_STATE_NOT_PLAYING) {
+        ESP_LOGD(TAG, "on_state_change setting metronome to -1");
+        if (on_csc_metronome) {
+            on_csc_metronome(-1);
+        }
     }
 }
 
@@ -72,9 +78,9 @@ void sequencer_send(ysw_sequencer_message_t *message)
     }
 }
 
-void sequencer_initialize(csc_control_cb_t csc_control_cb)
+void sequencer_initialize(csc_metronome_cb_t csc_metronome_cb)
 {
-    on_csc_control = csc_control_cb;
+    on_csc_metronome = csc_metronome_cb;
 
     ysw_sequencer_config_t config = {
         .on_note_on = on_note_on,

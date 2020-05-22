@@ -330,6 +330,12 @@ static void run_sequencer(void* parameters)
         if (clip_playing()) {
             ticks_to_wait = process_notes();
         }
+        if (ticks_to_wait == portMAX_DELAY) {
+            if (config.on_state_change) {
+                ESP_LOGD(TAG, "run_sequencer NOT_PLAYING");
+                config.on_state_change(YSW_SEQUENCER_STATE_NOT_PLAYING);
+            }
+        }
         ysw_sequencer_message_t message;
         BaseType_t is_message = xQueueReceive(input_queue, &message, ticks_to_wait);
         if (is_message) {

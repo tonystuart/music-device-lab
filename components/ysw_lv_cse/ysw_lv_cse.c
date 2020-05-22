@@ -265,7 +265,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             .x = x + ((w * ext->metronome) / YSW_CS_DURATION),
             .y = y + h,
         };
-        ESP_LOGD(TAG, "metronome=%d, x1=%d, y1=%d, x2=%d, y2=%d", ext->metronome, top.x, top.y, bottom.x, bottom.y);
+        //ESP_LOGD(TAG, "metronome=%d, x1=%d, y1=%d, x2=%d, y2=%d", ext->metronome, top.x, top.y, bottom.x, bottom.y);
         lv_draw_line(&top, &bottom, mask, ext->sn_style, ext->sn_style->body.border.opa);
     }
 }
@@ -735,7 +735,7 @@ void ysw_lv_cse_set_event_cb(lv_obj_t *cse, ysw_lv_cse_event_cb_t event_cb)
 
 void ysw_lv_cse_set_metronome(lv_obj_t *cse, uint32_t tick)
 {
-    ESP_LOGD(TAG, "ysw_lv_cse_set_metronome tick=%d", tick);
+    //ESP_LOGD(TAG, "ysw_lv_cse_set_metronome tick=%d", tick);
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     ext->metronome = tick;
     lv_obj_invalidate(cse);

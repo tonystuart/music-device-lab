@@ -432,10 +432,11 @@ void csc_create(ysw_music_t *new_music, uint32_t new_cs_index)
     update_frame();
 }
 
-void csc_control_cb(note_t *note)
+void csc_metronome_cb(int32_t tick)
 {
-    if (note->midi_note == YSW_CS_METRONOME_NOTE) {
-        ysw_csf_set_metronome(csf, note->start);
+    ESP_LOGD(TAG, "csc_metronome_cb tick=%d", tick);
+    if (csf) {
+        ysw_csf_set_metronome(csf, tick);
     }
 }
 

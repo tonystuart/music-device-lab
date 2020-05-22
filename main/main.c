@@ -79,7 +79,7 @@ void app_main()
     display_initialize();
     spiffs_initialize(SPIFFS_PARTITION);
     synthesizer_initialize();
-    sequencer_initialize(csc_control_cb);
+    sequencer_initialize(csc_metronome_cb);
 
     ysw_lv_styles_initialize();
 

@@ -11,8 +11,8 @@
 
 #include "ysw_sequencer.h"
 
-typedef void (*csc_control_cb_t)(note_t *note);
+typedef void (*csc_metronome_cb_t)(int32_t tick);
 
 void sequencer_send(ysw_sequencer_message_t *message);
-void sequencer_initialize(csc_control_cb_t csc_control_cb);
+void sequencer_initialize(csc_metronome_cb_t csc_metronome_cb);
 

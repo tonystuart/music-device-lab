@@ -18,6 +18,7 @@
 typedef enum {
     YSW_SEQUENCER_STATE_LOOP_COMPLETE,
     YSW_SEQUENCER_STATE_PLAYBACK_COMPLETE,
+    YSW_SEQUENCER_STATE_NOT_PLAYING,
 } ysw_sequencer_state_t;
 
 typedef void (*ysw_sequencer_on_note_on_t)(note_t *note);
