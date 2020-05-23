@@ -123,10 +123,11 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         lv_area_t row_mask;
         if (lv_area_intersect(&row_mask, mask, &row_area)) {
 
+            ESP_LOGD(TAG, "calling draw_rect");
             if (i & 0x01) {
                 lv_draw_rect(&row_area, &row_mask, ext->oi_style, ext->oi_style->body.opa);
             } else {
-                lv_draw_rect(&row_area, &row_mask, ext->ei_style, ext->oi_style->body.opa);
+                lv_draw_rect(&row_area, &row_mask, ext->ei_style, ext->ei_style->body.opa);
 
                 lv_area_t label_mask;
                 lv_area_t label_area = {
@@ -148,6 +149,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                             LV_BIDI_DIR_LTR);
                 }
             }
+            ESP_LOGD(TAG, "later");
 
             if (i) {
                 lv_point_t point1 = {
@@ -194,6 +196,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         if (lv_area_intersect(&cn_mask, mask, &cn_area)) {
 
             if (ysw_cn_is_selected(cn)) {
+                // TODO: remove block if we don't use a separate style for dragging
                 if (ext->dragging) {
                     lv_draw_rect(&cn_area, &cn_mask, ext->sn_style, ext->sn_style->body.opa);
                 } else {
@@ -256,17 +259,16 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         }
     }
 
-    if (ext->metronome >= 0) {
+    if (ext->metro_note) {
         lv_point_t top = {
-            .x = x + ((w * ext->metronome) / YSW_CS_DURATION),
+            .x = x + ((w * ext->metro_note->start) / YSW_CS_DURATION),
             .y = y,
         };
         lv_point_t bottom = {
-            .x = x + ((w * ext->metronome) / YSW_CS_DURATION),
+            .x = x + ((w * ext->metro_note->start) / YSW_CS_DURATION),
             .y = y + h,
         };
-        //ESP_LOGD(TAG, "metronome=%d, x1=%d, y1=%d, x2=%d, y2=%d", ext->metronome, top.x, top.y, bottom.x, bottom.y);
-        lv_draw_line(&top, &bottom, mask, ext->sn_style, ext->sn_style->body.border.opa);
+        lv_draw_line(&top, &bottom, mask, ext->mn_style, ext->mn_style->body.border.opa);
     }
 }
 
@@ -698,12 +700,13 @@ lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
     ext->dragging = false;
     ext->long_press = false;
     ext->drag_start_cs = NULL;
-    ext->metronome = -1;
+    ext->metro_note = NULL;
     ext->bg_style = &lv_style_plain;
     ext->oi_style = &ysw_style_oi;
     ext->ei_style = &ysw_style_ei;
     ext->rn_style = &ysw_style_rn;
     ext->sn_style = &ysw_style_sn;
+    ext->mn_style = &ysw_style_mn;
     ext->event_cb = NULL;
 
     lv_obj_set_signal_cb(cse, signal_cb);
@@ -733,12 +736,11 @@ void ysw_lv_cse_set_event_cb(lv_obj_t *cse, ysw_lv_cse_event_cb_t event_cb)
     ext->event_cb = event_cb;
 }
 
-void ysw_lv_cse_set_metronome(lv_obj_t *cse, uint32_t tick)
+void ysw_lv_cse_on_metro(lv_obj_t *cse, note_t *metro_note)
 {
-    //ESP_LOGD(TAG, "ysw_lv_cse_set_metronome tick=%d", tick);
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    if (tick != ext->metronome) {
-        ext->metronome = tick;
+    if (metro_note != ext->metro_note) {
+        ext->metro_note = metro_note;
         lv_obj_invalidate(cse);
     }
 }

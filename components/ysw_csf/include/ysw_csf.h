@@ -40,4 +40,4 @@ void ysw_csf_set_cs(ysw_csf_t *csf, ysw_cs_t *cs);
 void ysw_csf_redraw(ysw_csf_t *csf);
 void ysw_csf_set_header_text(ysw_csf_t *csf, const char *header_text);
 void ysw_csf_set_footer_text(ysw_csf_t *csf, const char *footer_text);
-void ysw_csf_set_metronome(ysw_csf_t *csf, uint32_t tick);
+void ysw_cfs_on_metro(ysw_csf_t *csf, note_t *metro_note);

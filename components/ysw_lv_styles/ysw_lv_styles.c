@@ -20,6 +20,7 @@ lv_style_t ysw_style_oi; // cse odd interval
 lv_style_t ysw_style_ei; // cse even interval
 lv_style_t ysw_style_rn; // cse regular note
 lv_style_t ysw_style_sn; // cse selected note
+lv_style_t ysw_style_mn; // cse selected note
 
 lv_style_t ysw_style_gray_cell;
 lv_style_t ysw_style_white_cell;
@@ -90,12 +91,18 @@ void ysw_lv_styles_initialize()
 
     lv_style_copy(&ysw_style_sn, &lv_style_pretty);
     ysw_style_sn.text.font = &lv_font_roboto_12;
-    ysw_style_sn.line.color = LV_COLOR_ORANGE;
-    ysw_style_sn.line.width = 3;
-    ysw_style_sn.line.opa = LV_OPA_COVER;
     ysw_style_sn.body.main_color = LV_COLOR_YELLOW;
     ysw_style_sn.body.grad_color = LV_COLOR_YELLOW;
     ysw_style_sn.body.opa = LV_OPA_80;
+
+    lv_style_copy(&ysw_style_mn, &lv_style_pretty);
+    ysw_style_mn.text.font = &lv_font_roboto_12;
+    ysw_style_mn.line.color = LV_COLOR_RED;
+    ysw_style_mn.line.width = 3;
+    ysw_style_mn.line.opa = LV_OPA_COVER;
+    ysw_style_mn.body.main_color = LV_COLOR_RED;
+    ysw_style_mn.body.grad_color = LV_COLOR_RED;
+    ysw_style_mn.body.opa = LV_OPA_80;
 
     lv_style_copy(&ysw_style_gray_cell, &lv_style_plain);
     ysw_style_gray_cell.body.border.width = 1;

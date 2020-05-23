@@ -76,8 +76,8 @@ void ysw_csf_set_footer_text(ysw_csf_t *csf, const char *footer_text)
     ysw_frame_set_footer_text(csf->frame, footer_text);
 }
 
-void ysw_csf_set_metronome(ysw_csf_t *csf, uint32_t tick)
+void ysw_cfs_on_metro(ysw_csf_t *csf, note_t *metro_note)
 {
-    ysw_lv_cse_set_metronome(csf->cse, tick);
+    ysw_lv_cse_on_metro(csf->cse, metro_note);
 }
 

@@ -11,8 +11,20 @@
 
 #include "ysw_sequencer.h"
 
-typedef void (*csc_metronome_cb_t)(int32_t tick);
+typedef enum {
+    META_NOTE,
+    NOT_PLAYING,
+} sequencer_cb_type_t;
+
+typedef struct {
+    sequencer_cb_type_t type;
+    union {
+        note_t *meta_note;
+    };
+} sequencer_cb_message_t;
+
+typedef void (*sequencer_cb_t)(sequencer_cb_message_t *sequencer_cb_message);
 
 void sequencer_send(ysw_sequencer_message_t *message);
-void sequencer_initialize(csc_metronome_cb_t csc_metronome_cb);
+void sequencer_initialize(sequencer_cb_t sequencer_cb);
 

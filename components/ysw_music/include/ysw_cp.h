@@ -15,6 +15,8 @@
 
 #define YSW_STEP_NEW_MEASURE 0x01
 
+#define YSW_CP_METRO (YSW_CS_METRO + 1)
+
 typedef struct {
     ysw_degree_t degree;
     ysw_cs_t *cs;
@@ -38,7 +40,6 @@ void ysw_step_free(ysw_step_t *step);
 void ysw_cp_set_name(ysw_cp_t *cp, const char* name);
 uint32_t ysw_cp_get_steps_in_measures(ysw_cp_t *cp, uint8_t measures[], uint32_t size);
 note_t *ysw_cp_get_notes(ysw_cp_t *cp, uint32_t *note_count);
-uint32_t ysw_cp_get_note_count(ysw_cp_t *cp);
 void ysw_cp_set_percent_tempo(ysw_cp_t *cp);
 void ysw_cp_set_instrument(ysw_cp_t *cp, uint8_t instrument);
 int ysw_cp_add_cs(ysw_cp_t *cp, uint8_t degree, ysw_cs_t *cs, uint8_t flags);

@@ -19,10 +19,10 @@
 #define YSW_CS_DURATION (4 * YSW_TICKS_DEFAULT_TPQN)
 
 #define YSW_CS_MUSIC_CHANNEL 0
-#define YSW_CS_CONTROL_CHANNEL (YSW_MIDI_MAX_CHANNELS - 1)
+#define YSW_CS_META_CHANNEL (YSW_MIDI_MAX_CHANNELS - 1)
 
-#define YSW_CS_FILL_TO_MEASURE_NOTE 0
-#define YSW_CS_METRONOME_NOTE 1
+#define YSW_CS_META_FILL 0
+#define YSW_CS_METRO 1
 
 // See Miller (2nd edition), pp 38-42
 // https://en.wikipedia.org/wiki/Mode_(music)

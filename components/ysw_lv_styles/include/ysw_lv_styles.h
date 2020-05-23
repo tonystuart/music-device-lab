@@ -19,6 +19,7 @@ extern lv_style_t ysw_style_ei; // cse even interval
 extern lv_style_t ysw_style_oi; // cse odd interval
 extern lv_style_t ysw_style_rn; // cse regular note
 extern lv_style_t ysw_style_sn; // cse selected note
+extern lv_style_t ysw_style_mn; // cse metro note
 
 extern lv_style_t ysw_style_gray_cell;
 extern lv_style_t ysw_style_white_cell;

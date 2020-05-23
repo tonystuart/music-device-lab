@@ -41,14 +41,17 @@ typedef struct {
     lv_point_t last_click;
     bool dragging;
     bool long_press;
+    note_t *metro_note;
     const lv_style_t *bg_style; // background
     const lv_style_t *fg_style; // foreground
     const lv_style_t *rs_style; // regular step
     const lv_style_t *ss_style; // selected step
+    const lv_style_t *ms_style; // metro step
     ysw_lv_cpe_event_cb_t event_cb;
 } ysw_lv_cpe_ext_t;
 
 lv_obj_t *ysw_lv_cpe_create(lv_obj_t *par);
 void ysw_lv_cpe_set_event_cb(lv_obj_t *cpe, ysw_lv_cpe_event_cb_t event_cb);
 void ysw_lv_cpe_set_cp(lv_obj_t *cpe, ysw_cp_t *cp);
+void ysw_lv_cpe_on_metro(lv_obj_t *cpe, note_t *metro_note);
 

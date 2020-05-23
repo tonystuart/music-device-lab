@@ -165,15 +165,15 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
 
         if (i) {
             lv_coord_t col_top = is_new_measure ? m.cpe_top : m.cp_top;
-            lv_point_t p = {
+            lv_point_t top = {
                 .x = left,
                 .y = col_top,
             };
-            lv_point_t p2 = {
+            lv_point_t bottom = {
                 .x = left,
                 .y = m.cp_top + m.cp_height,
             };
-            lv_draw_line(&p, &p2, mask, ext->fg_style, ext->fg_style->body.border.opa);
+            lv_draw_line(&top, &bottom, mask, ext->fg_style, ext->fg_style->body.border.opa);
         }
 
         lv_coord_t cell_top = m.cp_top + ((YSW_MIDI_UNPO - step->degree) * m.row_height);
@@ -189,28 +189,30 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
 
         if (lv_area_intersect(&cell_mask, mask, &cell_area)) {
 
-            if (ext->selected_step == step) {
-                lv_draw_rect(&cell_area, &cell_mask, ext->ss_style, ext->ss_style->body.opa);
-            } else {
-                lv_draw_rect(&cell_area, &cell_mask, ext->rs_style, ext->rs_style->body.opa);
-            }
+            /*if (ext->metro_note && ext->metro_note->velocity == i) {
+              lv_draw_rect(&cell_area, &cell_mask, ext->ms_style, ext->ms_style->body.opa);
+              } else*/ if (ext->selected_step == step) {
+                  lv_draw_rect(&cell_area, &cell_mask, ext->ss_style, ext->ss_style->body.opa);
+              } else {
+                  lv_draw_rect(&cell_area, &cell_mask, ext->rs_style, ext->rs_style->body.opa);
+              }
 
-            // vertically center the text
-            lv_point_t offset = {
-                .x = 0,
-                .y = ((cell_area.y2 - cell_area.y1) - ext->fg_style->text.font->line_height) / 2,
-            };
+        // vertically center the text
+        lv_point_t offset = {
+            .x = 0,
+            .y = ((cell_area.y2 - cell_area.y1) - ext->fg_style->text.font->line_height) / 2,
+        };
 
-            lv_draw_label(&cell_area,
-                    &cell_mask,
-                    ext->fg_style,
-                    ext->fg_style->text.opa,
-                    key_labels[to_index(step->degree)],
-                    LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
-                    &offset,
-                    NULL,
-                    NULL,
-                    LV_BIDI_DIR_LTR);
+        lv_draw_label(&cell_area,
+                &cell_mask,
+                ext->fg_style,
+                ext->fg_style->text.opa,
+                key_labels[to_index(step->degree)],
+                LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
+                &offset,
+                NULL,
+                NULL,
+                LV_BIDI_DIR_LTR);
         }
 
         if (ext->selected_step == step) {
@@ -244,6 +246,18 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
             }
         }
 
+    }
+    if (ext->metro_note) {
+        lv_coord_t left = m.cp_left + (ext->metro_note->velocity * m.col_width);
+        lv_point_t top = {
+            .x = left,
+            .y = m.cp_top,
+        };
+        lv_point_t bottom = {
+            .x = left,
+            .y = m.cp_top + m.cp_height,
+        };
+        lv_draw_line(&top, &bottom, mask, ext->ms_style, ext->ms_style->body.border.opa);
     }
 }
 
@@ -534,11 +548,15 @@ lv_obj_t *ysw_lv_cpe_create(lv_obj_t *par)
     ext->drag_start_step = (ysw_step_t){};
     ext->scroll_left = 0;
     ext->drag_start_scroll_left = 0;
+    ext->dragging = false;
+    ext->long_press = false;
+    ext->metro_note = NULL;
 
     ext->bg_style = &lv_style_plain;
     ext->fg_style = &ysw_style_ei;
     ext->rs_style = &ysw_style_rn;
     ext->ss_style = &ysw_style_sn;
+    ext->ms_style = &ysw_style_mn;
 
     ext->event_cb = NULL;
 
@@ -569,3 +587,13 @@ void ysw_lv_cpe_set_event_cb(lv_obj_t *cpe, ysw_lv_cpe_event_cb_t event_cb)
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
     ext->event_cb = event_cb;
 }
+
+void ysw_lv_cpe_on_metro(lv_obj_t *cpe, note_t *metro_note)
+{
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    if (metro_note != ext->metro_note) {
+        ext->metro_note = metro_note;
+        lv_obj_invalidate(cpe);
+    }
+}
+

@@ -432,10 +432,10 @@ void csc_create(ysw_music_t *new_music, uint32_t new_cs_index)
     update_frame();
 }
 
-void csc_metronome_cb(int32_t tick)
+void csc_on_metro(note_t *metro_note)
 {
     if (csf) {
-        ysw_csf_set_metronome(csf, tick);
+        ysw_cfs_on_metro(csf, metro_note);
     }
 }
 

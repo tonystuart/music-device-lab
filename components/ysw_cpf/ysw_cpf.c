@@ -77,3 +77,8 @@ void ysw_cpf_set_footer_text(ysw_cpf_t *cpf, const char *footer_text)
     ysw_frame_set_footer_text(cpf->frame, footer_text);
 }
 
+void ysw_cpf_on_metro(ysw_cpf_t *cpf, note_t *metro_note)
+{
+    ysw_lv_cpe_on_metro(cpf->cpe, metro_note);
+}
+

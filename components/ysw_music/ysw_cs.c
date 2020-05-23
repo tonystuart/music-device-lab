@@ -101,7 +101,7 @@ note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
     int cn_count = ysw_cs_get_cn_count(cs);
     uint32_t max_note_count = cn_count;
     max_note_count += cs->divisions; // metronome ticks
-    max_note_count += 1; // file-to-measure
+    max_note_count += 1; // fill-to-measure
     note_t *notes = ysw_heap_allocate(sizeof(note_t) * max_note_count);
     note_t *note_p = notes;
     uint8_t tonic = cs->octave * 12;
@@ -115,8 +115,8 @@ note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
         while (metronome_tick <= cn->start) {
             note_p->start = metronome_tick;
             note_p->duration = 0;
-            note_p->channel = YSW_CS_CONTROL_CHANNEL;
-            note_p->midi_note = YSW_CS_METRONOME_NOTE;
+            note_p->channel = YSW_CS_META_CHANNEL;
+            note_p->midi_note = YSW_CS_METRO;
             note_p->velocity = 0;
             note_p->instrument = 0;
             note_p++;
@@ -136,8 +136,8 @@ note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
     if (fill_to_measure) {
         note_p->start = end_time;
         note_p->duration = fill_to_measure;
-        note_p->channel = YSW_CS_CONTROL_CHANNEL;
-        note_p->midi_note = YSW_CS_FILL_TO_MEASURE_NOTE;
+        note_p->channel = YSW_CS_META_CHANNEL;
+        note_p->midi_note = YSW_CS_META_FILL;
         note_p->velocity = 0;
         note_p->instrument = 0;
         note_p++;

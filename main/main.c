@@ -66,6 +66,20 @@ static void create_dashboard(void)
     lv_obj_set_event_cb(list_btn, event_handler);
 }
 
+static void on_sequencer_cb(sequencer_cb_message_t *message)
+{
+    if (message->type == META_NOTE) {
+        if (message->meta_note->midi_note == YSW_CS_METRO) {
+            csc_on_metro(message->meta_note);
+        } else if (message->meta_note->midi_note == YSW_CP_METRO) {
+            cpc_on_metro(message->meta_note);
+        }
+    } else if (message->type == NOT_PLAYING) {
+        csc_on_metro(NULL);
+        cpc_on_metro(NULL);
+    }
+}
+
 void app_main()
 {
     ESP_LOGD(TAG, "sizeof(ysw_cs_t)=%d", sizeof(ysw_cs_t));
@@ -79,7 +93,7 @@ void app_main()
     display_initialize();
     spiffs_initialize(SPIFFS_PARTITION);
     synthesizer_initialize();
-    sequencer_initialize(csc_metronome_cb);
+    sequencer_initialize(on_sequencer_cb);
 
     ysw_lv_styles_initialize();
 

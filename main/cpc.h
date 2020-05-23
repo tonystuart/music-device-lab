@@ -12,4 +12,5 @@
 #include "ysw_music.h"
 
 void cpc_create(ysw_music_t *new_music, uint32_t new_cs_index);
+void cpc_on_metro(note_t *metro_note);
 

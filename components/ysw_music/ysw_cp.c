@@ -153,7 +153,6 @@ static uint32_t ysw_cp_get_cn_count(ysw_cp_t *cp)
     uint32_t cn_count = 0;
     int step_count = ysw_cp_get_step_count(cp);
     for (int i = 0; i < step_count; i++) {
-        ESP_LOGD(TAG, "i=%d, step_count=%d", i, step_count);
         ysw_cs_t *cs = ysw_cp_get_cs(cp, i);
         cn_count += ysw_cs_get_cn_count(cs);
     }
@@ -164,36 +163,55 @@ note_t *ysw_cp_get_notes(ysw_cp_t *cp, uint32_t *note_count)
 {
     assert(cp);
     assert(note_count);
-    int cs_time = 0;
+
     int step_count = ysw_cp_get_step_count(cp);
     uint8_t steps_in_measures[step_count];
     ysw_cp_get_steps_in_measures(cp, steps_in_measures, step_count);
+
     uint32_t cn_count = ysw_cp_get_cn_count(cp);
-    note_t *notes = ysw_heap_allocate(sizeof(note_t) * (cn_count + 1)); // +1 for fill-to-measure
+    uint32_t max_note_count = cn_count;
+    max_note_count += step_count; // metronome ticks
+    max_note_count += 1; // fill-to-measure
+    note_t *notes = ysw_heap_allocate(sizeof(note_t) * max_note_count);
     note_t *note_p = notes;
-    uint8_t tonic = (cp->octave * 12) + ysw_degree_intervals[0][cp->mode % 7];
-    double time_correction = 1;
+
+    int cs_time = 0;
     uint32_t measure = 0;
+    double time_scaler = 1;
+    uint8_t tonic = (cp->octave * 12) + ysw_degree_intervals[0][cp->mode % 7];
+
     for (int i = 0; i < step_count; i++) {
+
         ysw_step_t *step = ysw_cp_get_step(cp, i);
         if (!i || (step->flags & YSW_STEP_NEW_MEASURE)) {
-            time_correction = 1.0 / steps_in_measures[measure];
+            time_scaler = 1.0 / steps_in_measures[measure];
             measure++;
         }
+
+        note_p->start = cs_time;
+        note_p->duration = 0;
+        note_p->channel = YSW_CS_META_CHANNEL;
+        note_p->midi_note = YSW_CP_METRO;
+        note_p->velocity = i; // TODO: find a legit way to pass this to those who need it
+        note_p->instrument = 0;
+        note_p++;
+
         uint8_t cs_root = step->degree;
         int cn_count = ysw_step_get_cn_count(step);
         for (int j = 0; j < cn_count; j++) {
             ysw_cn_t *cn = ysw_step_get_cn(step, j);
-            note_p->start = cs_time + (cn->start * time_correction);
-            note_p->duration = cn->duration * time_correction;
-            note_p->channel = 0;
+            uint32_t note_start = cs_time + (cn->start * time_scaler);
+
+            note_p->start = note_start;
+            note_p->duration = cn->duration * time_scaler;
+            note_p->channel = YSW_CS_MUSIC_CHANNEL;
             note_p->midi_note = ysw_cn_to_midi_note(cn, tonic, cs_root);
             note_p->velocity = cn->velocity;
             note_p->instrument = cp->instrument;
-            ESP_LOGD(TAG, "start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
+            //ESP_LOGD(TAG, "note start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
             note_p++;
         }
-        cs_time += YSW_CS_DURATION * time_correction;
+        cs_time += YSW_CS_DURATION * time_scaler;
     }
     *note_count = note_p - notes;
     return notes;

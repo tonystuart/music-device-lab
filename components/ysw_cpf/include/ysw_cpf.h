@@ -40,3 +40,4 @@ void ysw_cpf_set_cp(ysw_cpf_t *cpf, ysw_cp_t *cp);
 void ysw_cpf_redraw(ysw_cpf_t *cpf);
 void ysw_cpf_set_header_text(ysw_cpf_t *cpf, const char *header_text);
 void ysw_cpf_set_footer_text(ysw_cpf_t *cpf, const char *footer_text);
+void ysw_cpf_on_metro(ysw_cpf_t *cpf, note_t *metro_note);

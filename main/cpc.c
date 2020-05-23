@@ -419,3 +419,10 @@ void cpc_create(ysw_music_t *new_music, uint32_t new_cp_index)
     update_frame();
 }
 
+void cpc_on_metro(note_t *metro_note)
+{
+    if (cpf) {
+        ysw_cpf_on_metro(cpf, metro_note);
+    }
+}
+

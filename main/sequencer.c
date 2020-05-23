@@ -20,15 +20,17 @@
 #define TAG "SEQUENCER"
 
 static QueueHandle_t sequencer_queue;
-static csc_metronome_cb_t on_csc_metronome;
+static sequencer_cb_t sequencer_cb;
 
 static void on_note_on(note_t *note)
 {
-    if (note->channel == YSW_CS_CONTROL_CHANNEL) {
-        if (note->midi_note == YSW_CS_METRONOME_NOTE) {
-            if (on_csc_metronome) {
-                on_csc_metronome(note->start);
-            }
+    if (note->channel == YSW_CS_META_CHANNEL) {
+        if (sequencer_cb) {
+            sequencer_cb_message_t sequencer_cb_message = {
+                .type = META_NOTE,
+                .meta_note = note,
+            };
+            sequencer_cb(&sequencer_cb_message);
         }
     } else {
         ysw_synthesizer_message_t message = {
@@ -64,8 +66,11 @@ static void on_program_change(uint8_t channel, uint8_t program)
 static void on_state_change(ysw_sequencer_state_t new_state)
 {
     if (new_state == YSW_SEQUENCER_STATE_NOT_PLAYING) {
-        if (on_csc_metronome) {
-            on_csc_metronome(-1);
+        if (sequencer_cb) {
+            sequencer_cb_message_t sequencer_cb_message = {
+                .type = NOT_PLAYING,
+            };
+            sequencer_cb(&sequencer_cb_message);
         }
     }
 }
@@ -77,9 +82,9 @@ void sequencer_send(ysw_sequencer_message_t *message)
     }
 }
 
-void sequencer_initialize(csc_metronome_cb_t csc_metronome_cb)
+void sequencer_initialize(sequencer_cb_t new_sequencer_cb)
 {
-    on_csc_metronome = csc_metronome_cb;
+    sequencer_cb = new_sequencer_cb;
 
     ysw_sequencer_config_t config = {
         .on_note_on = on_note_on,
