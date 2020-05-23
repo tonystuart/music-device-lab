@@ -90,6 +90,9 @@ void ysw_lv_styles_initialize()
 
     lv_style_copy(&ysw_style_sn, &lv_style_pretty);
     ysw_style_sn.text.font = &lv_font_roboto_12;
+    ysw_style_sn.line.color = LV_COLOR_ORANGE;
+    ysw_style_sn.line.width = 3;
+    ysw_style_sn.line.opa = LV_OPA_COVER;
     ysw_style_sn.body.main_color = LV_COLOR_YELLOW;
     ysw_style_sn.body.grad_color = LV_COLOR_YELLOW;
     ysw_style_sn.body.opa = LV_OPA_80;

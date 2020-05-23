@@ -64,7 +64,6 @@ static void on_program_change(uint8_t channel, uint8_t program)
 static void on_state_change(ysw_sequencer_state_t new_state)
 {
     if (new_state == YSW_SEQUENCER_STATE_NOT_PLAYING) {
-        ESP_LOGD(TAG, "on_state_change setting metronome to -1");
         if (on_csc_metronome) {
             on_csc_metronome(-1);
         }

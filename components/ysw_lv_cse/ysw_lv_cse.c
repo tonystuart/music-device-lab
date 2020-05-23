@@ -737,7 +737,9 @@ void ysw_lv_cse_set_metronome(lv_obj_t *cse, uint32_t tick)
 {
     //ESP_LOGD(TAG, "ysw_lv_cse_set_metronome tick=%d", tick);
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    ext->metronome = tick;
-    lv_obj_invalidate(cse);
+    if (tick != ext->metronome) {
+        ext->metronome = tick;
+        lv_obj_invalidate(cse);
+    }
 }
 

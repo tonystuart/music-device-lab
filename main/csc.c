@@ -434,7 +434,6 @@ void csc_create(ysw_music_t *new_music, uint32_t new_cs_index)
 
 void csc_metronome_cb(int32_t tick)
 {
-    ESP_LOGD(TAG, "csc_metronome_cb tick=%d", tick);
     if (csf) {
         ysw_csf_set_metronome(csf, tick);
     }
