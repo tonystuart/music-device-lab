@@ -82,3 +82,8 @@ void ysw_cpf_on_metro(ysw_cpf_t *cpf, note_t *metro_note)
     ysw_lv_cpe_on_metro(cpf->cpe, metro_note);
 }
 
+void ysw_cpf_ensure_visible(ysw_cpf_t *cpf, uint32_t first_step_index, uint32_t last_step_index)
+{
+    ysw_lv_cpe_ensure_visible(cpf->cpe, first_step_index, last_step_index);
+}
+

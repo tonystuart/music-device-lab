@@ -126,23 +126,28 @@ static void play_clip(ysw_sequencer_clip_t *new_clip)
 {
     ESP_LOGD(TAG, "play_clip note_count=%d, tempo=%d", new_clip->note_count, new_clip->tempo);
     if (clip_playing()) {
+        ESP_LOGD(TAG, "play_clip releasing notes");
         release_all_notes();
     }
     free_clip(&active);
     active = *new_clip;
     if (active.notes == staged.notes) {
         // playing staged clip: don't free them, just unstage them
+        ESP_LOGD(TAG, "play_clip playing staged clip");
         staged.notes = NULL;
         staged.note_count = 0;
         staged.tempo = 0;
     } else {
         // playing new clip: clear any staged clip
+        ESP_LOGD(TAG, "play_clip playing new clip");
         free_clip(&staged);
     }
     next_note = 0;
     if (active.note_count) {
+        ESP_LOGD(TAG, "play_clip adjusting start millis");
         adjust_playback_start_millis();
     }
+    ESP_LOGD(TAG, "play_clip start_millis=%d", start_millis);
 }
 
 static void stage_clip(ysw_sequencer_clip_t *new_clip)
@@ -309,10 +314,14 @@ static TickType_t process_notes()
             next_note = 0;
             loop_next();
             ticks_to_wait = 0;
+        } else if (staged.notes) {
+            ESP_LOGD(TAG, "playback complete, playing staged clip");
+            play_clip(&staged);
+            ticks_to_wait = 0;
         } else {
             next_note = 0;
             start_millis = 0;
-            ESP_LOGD(TAG, "playback of notes is complete");
+            ESP_LOGD(TAG, "playback complete, nothing more to do");
             if (config.on_state_change) {
                 config.on_state_change(YSW_SEQUENCER_STATE_PLAYBACK_COMPLETE);
             }

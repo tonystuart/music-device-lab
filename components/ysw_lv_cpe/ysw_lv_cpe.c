@@ -213,7 +213,7 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
                 LV_BIDI_DIR_LTR);
         }
 
-        if (ysw_step_is_selected(step)) {
+        if (step == ext->selected_step) {
             lv_area_t footer_area = {
                 .x1 = m.cpe_left,
                 .y1 = m.cp_top + m.cp_height,
@@ -277,10 +277,24 @@ static bool design_cb(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
 
 static void fire_select(lv_obj_t *cpe, ysw_step_t *step)
 {
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    if (ext->event_cb) {
+        ysw_lv_cpe_event_cb_data_t data = {
+            .select.step = step,
+        };
+        ext->event_cb(cpe, YSW_LV_CPE_SELECT, &data);
+    }
 }
 
 static void fire_deselect(lv_obj_t *cpe, ysw_step_t *step)
 {
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    if (ext->event_cb) {
+        ysw_lv_cpe_event_cb_data_t data = {
+            .deselect.step = step,
+        };
+        ext->event_cb(cpe, YSW_LV_CPE_DESELECT, &data);
+    }
 }
 
 static void fire_create(lv_obj_t *cpe, uint32_t step_index, uint8_t degree)
@@ -664,5 +678,22 @@ void ysw_lv_cpe_on_metro(lv_obj_t *cpe, note_t *metro_note)
         ext->metro_note = metro_note;
         lv_obj_invalidate(cpe);
     }
+}
+
+void ysw_lv_cpe_ensure_visible(lv_obj_t *cpe, uint32_t first_step_index, uint32_t last_step_index)
+{
+    // nb: scroll_left is always <= 0
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    metrics_t m;
+    get_metrics(cpe, &m);
+    lv_coord_t left = first_step_index * m.col_width;
+    lv_coord_t right = (last_step_index + 1) * m.col_width;
+    ESP_LOGD(TAG, "first=%d, last=%d, col_width=%d, scroll_left=%d, left=%d, right=%d", first_step_index, last_step_index, m.col_width, ext->scroll_left, left, right);
+    if (left < -ext->scroll_left) {
+        ext->scroll_left = -left;
+    } else if (right > -ext->scroll_left + m.cpe_width) {
+        ext->scroll_left = m.cpe_width - right;
+    }
+    ESP_LOGD(TAG, "new scroll_left=%d", ext->scroll_left);
 }
 

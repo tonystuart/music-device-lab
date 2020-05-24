@@ -37,6 +37,7 @@ typedef struct {
 ysw_step_t *ysw_step_create(ysw_cs_t *cs, uint8_t degree, uint8_t flags);
 void ysw_step_free(ysw_step_t *step);
 void ysw_cp_set_name(ysw_cp_t *cp, const char* name);
+int32_t ysw_cp_get_step_index(ysw_cp_t *cp, ysw_step_t *target_step);
 uint32_t ysw_cp_get_steps_in_measures(ysw_cp_t *cp, uint8_t measures[], uint32_t size);
 note_t *ysw_cp_get_notes(ysw_cp_t *cp, uint32_t *note_count);
 void ysw_cp_set_percent_tempo(ysw_cp_t *cp);

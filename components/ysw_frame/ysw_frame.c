@@ -57,8 +57,6 @@ ysw_frame_t *ysw_frame_create()
 
 lv_obj_t *ysw_frame_add_header_button(ysw_frame_t *frame, const void *img_src, lv_event_cb_t event_cb)
 {
-    ESP_LOGD(TAG, "ysw_frame_add_header_button");
-
     lv_obj_t *btn = lv_win_add_btn(frame->win, img_src);
     if (event_cb) {
         lv_obj_set_event_cb(btn, event_cb);
@@ -68,8 +66,6 @@ lv_obj_t *ysw_frame_add_header_button(ysw_frame_t *frame, const void *img_src, l
 
 lv_obj_t *ysw_frame_add_footer_button(ysw_frame_t *frame, const void *img_src, lv_event_cb_t event_cb)
 {
-    ESP_LOGD(TAG, "ysw_frame_add_footer_button");
-
     lv_obj_t *win = lv_obj_get_child_back(frame->container, NULL);
     lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
 
