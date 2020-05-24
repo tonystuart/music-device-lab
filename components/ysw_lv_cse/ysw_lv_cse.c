@@ -617,7 +617,8 @@ static void on_signal_press_lost(lv_obj_t *cse, void *param)
     lv_obj_invalidate(cse);
 }
 
-static void on_signal_long_press(lv_obj_t *cse, void *param) {
+static void on_signal_long_press(lv_obj_t *cse, void *param)
+{
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;

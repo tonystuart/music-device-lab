@@ -35,7 +35,7 @@ typedef void (*ysw_lv_cpe_event_cb_t)(lv_obj_t *ysw_lv_cpe, ysw_lv_cpe_event_t e
 typedef struct {
     ysw_cp_t *cp;
     ysw_step_t *selected_step;
-    ysw_step_t drag_start_step;
+    ysw_cp_t *drag_start_cp;
     lv_coord_t scroll_left;
     lv_coord_t drag_start_scroll_left;
     lv_point_t last_click;

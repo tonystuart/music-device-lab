@@ -189,9 +189,7 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
 
         if (lv_area_intersect(&cell_mask, mask, &cell_area)) {
 
-            /*if (ext->metro_note && ext->metro_note->velocity == i) {
-              lv_draw_rect(&cell_area, &cell_mask, ext->ms_style, ext->ms_style->body.opa);
-              } else*/ if (ext->selected_step == step) {
+              if (ysw_step_is_selected(step)) {
                   lv_draw_rect(&cell_area, &cell_mask, ext->ss_style, ext->ss_style->body.opa);
               } else {
                   lv_draw_rect(&cell_area, &cell_mask, ext->rs_style, ext->rs_style->body.opa);
@@ -215,7 +213,7 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
                 LV_BIDI_DIR_LTR);
         }
 
-        if (ext->selected_step == step) {
+        if (ysw_step_is_selected(step)) {
             lv_area_t footer_area = {
                 .x1 = m.cpe_left,
                 .y1 = m.cp_top + m.cp_height,
@@ -333,7 +331,6 @@ static void capture_selection(lv_obj_t *cpe, lv_point_t *point)
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
     ext->dragging = false;
     ext->selected_step = NULL;
-    ext->drag_start_step = (ysw_step_t){};
     ext->last_click = *point;
     uint32_t step_count = ysw_cp_get_step_count(ext->cp);
     for (uint8_t i = 0; i < step_count; i++) {
@@ -344,13 +341,60 @@ static void capture_selection(lv_obj_t *cpe, lv_point_t *point)
             (step_area.y1 <= point->y && point->y <= step_area.y2)) {
                 // dragging step
                 ext->selected_step = step;
-                ext->drag_start_step = *step;
-                return;
+                if (ysw_step_is_selected(step)) {
+                    // return on first selected step, otherwise pick last one
+                    return;
+                }
             }
     }
-    // scrolling screen
-    ext->drag_start_scroll_left = ext->scroll_left;
-    ESP_LOGD(TAG, "capture drag_start_scroll_left=%d", ext->drag_start_scroll_left);
+    if (!ext->selected_step) {
+        // scrolling screen
+        ext->drag_start_scroll_left = ext->scroll_left;
+        ESP_LOGD(TAG, "capture drag_start_scroll_left=%d", ext->drag_start_scroll_left);
+    }
+}
+
+static void select_only(lv_obj_t *cpe, ysw_step_t *selected_step)
+{
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    uint32_t step_count = ysw_cp_get_step_count(ext->cp);
+    for (int i = 0; i < step_count; i++) {
+        ysw_step_t *step = ysw_cp_get_step(ext->cp, i);
+        if (selected_step == step) {
+            ysw_step_select(selected_step, true);
+            fire_select(cpe, selected_step);
+        } else {
+            if (ysw_step_is_selected(step)) {
+                ysw_step_select(step, false);
+                fire_deselect(cpe, step);
+            }
+        }
+    }
+}
+
+static void drag_vertically(lv_obj_t *cpe, ysw_step_t *step, ysw_step_t *drag_start_step, lv_coord_t y)
+{
+    metrics_t m;
+    get_metrics(cpe, &m);
+    uint8_t new_degree = drag_start_step->degree - (y / m.row_height);
+    if (new_degree >= 1 && new_degree <= YSW_MIDI_UNPO) {
+        step->degree = new_degree;
+    }
+}
+
+static void scroll_horizontally(lv_obj_t *cpe, lv_coord_t x)
+{
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    metrics_t m;
+    get_metrics(cpe, &m);
+    lv_coord_t new_scroll_left = ext->drag_start_scroll_left + x;
+    if (new_scroll_left < m.min_scroll_left) {
+        new_scroll_left = m.min_scroll_left;
+    }
+    if (new_scroll_left > 0) {
+        new_scroll_left = 0;
+    }
+    ext->scroll_left = new_scroll_left;
 }
 
 static void do_drag(lv_obj_t *cpe, lv_point_t *point)
@@ -367,29 +411,37 @@ static void do_drag(lv_obj_t *cpe, lv_point_t *point)
 
     if (ext->dragging) {
 
-        ESP_LOGE(TAG, "do_drag dragged x=%d, y=%d from start x=%d, y=%d, step=%p", x, y, ext->last_click.x, ext->last_click.y, ext->selected_step);
-
         if (ext->selected_step) {
-            if (drag_y) {
-                metrics_t m;
-                get_metrics(cpe, &m);
-                uint8_t new_degree = ext->drag_start_step.degree - (y / m.row_height);
-                if (new_degree >= 1 && new_degree <= YSW_MIDI_UNPO) {
-                    ext->selected_step->degree = new_degree;
+
+            if (!ysw_step_is_selected(ext->selected_step)) {
+                select_only(cpe, ext->selected_step);
+            }
+
+            if (!ext->drag_start_cp) {
+                ESP_LOGE(TAG, "do_drag starting new drag");
+                ext->drag_start_cp = ysw_cp_copy(ext->cp);
+            }
+
+            ESP_LOGE(TAG, "do_drag dragged x=%d, y=%d from start x=%d, y=%d, step=%p", x, y, ext->last_click.x, ext->last_click.y, ext->selected_step);
+
+            uint32_t step_count = ysw_cp_get_step_count(ext->cp);
+            uint32_t drag_start_step_count = ysw_cp_get_step_count(ext->drag_start_cp);
+            if (step_count != drag_start_step_count) {
+                ESP_LOGE(TAG, "expected step_count=%d to equal drag_start_step_count=%d", step_count, drag_start_step_count);
+            } else {
+                for (int i = 0; i < step_count; i++) {
+                    ysw_step_t *step = ysw_cp_get_step(ext->cp, i);
+                    ysw_step_t *drag_start_step = ysw_cp_get_step(ext->drag_start_cp, i);
+                    if (ysw_step_is_selected(step)) {
+                        if (drag_y) {
+                            drag_vertically(cpe, step, drag_start_step, y);
+                        }
+                    }
                 }
             }
         } else {
             if (drag_x) {
-                metrics_t m;
-                get_metrics(cpe, &m);
-                lv_coord_t new_scroll_left = ext->drag_start_scroll_left + x;
-                if (new_scroll_left < m.min_scroll_left) {
-                    new_scroll_left = m.min_scroll_left;
-                }
-                if (new_scroll_left > 0) {
-                    new_scroll_left = 0;
-                }
-                ext->scroll_left = new_scroll_left;
+                scroll_horizontally(cpe, x);
             }
         }
     }
@@ -400,6 +452,8 @@ static void do_click(lv_obj_t *cpe)
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
     if (ext->long_press) {
         ext->long_press = false;
+    } else {
+        select_only(cpe, ext->selected_step);
     }
 }
 
@@ -428,12 +482,14 @@ static void on_signal_released(lv_obj_t *cpe, void *param)
     if (ext->dragging) {
         if (ext->selected_step) {
             fire_drag_end(cpe);
-            ext->selected_step = NULL;
+            ysw_cp_free(ext->drag_start_cp);
+            ext->drag_start_cp = NULL;
         }
         ext->dragging = false;
     } else {
         do_click(cpe);
     }
+    ext->selected_step = NULL;
     lv_obj_invalidate(cpe);
 }
 
@@ -443,14 +499,43 @@ static void on_signal_press_lost(lv_obj_t *cpe, void *param)
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
     if (ext->dragging) {
         ext->dragging = false;
-        if (ext->selected_step) {
-            // could save settings on drag start and set back
+        if (ext->drag_start_cp) {
+            uint32_t step_count = ysw_cp_get_step_count(ext->cp);
+            for (uint32_t i = 0; i < step_count; i++) {
+                ysw_step_t *step = ysw_cp_get_step(ext->cp, i);
+                ysw_step_t *drag_start_step = ysw_cp_get_step(ext->drag_start_cp, i);
+                *step = *drag_start_step;
+            }
+            ysw_cp_free(ext->drag_start_cp);
+            ext->drag_start_cp = NULL;
         }
     }
+    ext->selected_step = NULL;
     lv_obj_invalidate(cpe);
 }
 
-static void on_signal_long_press(lv_obj_t *cpe, void *param) {
+static void prepare_create(lv_obj_t *cpe, lv_point_t *point)
+{
+    metrics_t m;
+    get_metrics(cpe, &m);
+    if (point->y < m.cp_top + m.cp_height) {
+        ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+        lv_coord_t adj_x = (point->x - m.cp_left) + ext->scroll_left;
+        lv_coord_t adj_y = (point->y - m.cp_top);
+        uint32_t step_index = adj_x / m.col_width;
+        uint32_t row_index = adj_y / m.row_height;
+        uint8_t degree = YSW_MIDI_UNPO - row_index;
+        bool insert_after = (adj_x % m.col_width) > (m.col_width / 2);
+        if (ysw_cp_get_step_count(ext->cp) > 0 && insert_after) {
+            step_index++;
+        }
+        ESP_LOGD(TAG, "point->x=%d, y=%d, cp_left=%d, cp_top=%d, scroll_left=%d, col_width=%d, row_height=%d, insert_after=%d", point->x, point->y, m.cp_left, m.cp_top, ext->scroll_left, m.col_width, m.row_height, insert_after);
+        fire_create(cpe, step_index, degree);
+    }
+}
+
+static void on_signal_long_press(lv_obj_t *cpe, void *param)
+{
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
@@ -466,23 +551,7 @@ static void on_signal_long_press(lv_obj_t *cpe, void *param) {
                 fire_deselect(cpe, ext->selected_step);
             }
         } else {
-            metrics_t m;
-            get_metrics(cpe, &m);
-            if (point->y < m.cp_top + m.cp_height) {
-                lv_coord_t adj_x = (point->x - m.cp_left) + ext->scroll_left;
-                lv_coord_t adj_y = (point->y - m.cp_top);
-                uint32_t step_index = adj_x / m.col_width;
-                uint32_t row_index = adj_y / m.row_height;
-                uint8_t degree = YSW_MIDI_UNPO - row_index;
-                bool insert_after = (adj_x % m.col_width) > (m.col_width / 2);
-                if (ysw_cp_get_step_count(ext->cp) > 0 && insert_after) {
-                    step_index++;
-                }
-                ESP_LOGD(TAG, "point->x=%d, y=%d, cp_left=%d, cp_top=%d, scroll_left=%d, col_width=%d, row_height=%d, insert_after=%d", point->x, point->y, m.cp_left, m.cp_top, ext->scroll_left, m.col_width, m.row_height, insert_after);
-                fire_create(cpe, step_index, degree);
-            } else {
-                // change chord style
-            }
+            prepare_create(cpe, point);
         }
         ext->long_press = true;
     }
@@ -545,11 +614,11 @@ lv_obj_t *ysw_lv_cpe_create(lv_obj_t *par)
 
     ext->cp = NULL;
     ext->selected_step = NULL;
-    ext->drag_start_step = (ysw_step_t){};
     ext->scroll_left = 0;
     ext->drag_start_scroll_left = 0;
     ext->dragging = false;
     ext->long_press = false;
+    ext->drag_start_cp = NULL;
     ext->metro_note = NULL;
 
     ext->bg_style = &lv_style_plain;

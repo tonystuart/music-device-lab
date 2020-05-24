@@ -32,6 +32,25 @@ ysw_cp_t *ysw_cp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode
     return cp;
 }
 
+ysw_cp_t *ysw_cp_copy(ysw_cp_t *old_cp)
+{
+    uint32_t step_count = ysw_cp_get_step_count(old_cp);
+    ysw_cp_t *new_cp = ysw_heap_allocate(sizeof(ysw_cp_t));
+    new_cp->name = ysw_heap_strdup(old_cp->name);
+    new_cp->steps = ysw_array_create(step_count);
+    new_cp->instrument = old_cp->instrument;
+    new_cp->octave = old_cp->octave;
+    new_cp->mode = old_cp->mode;
+    new_cp->transposition = old_cp->transposition;
+    new_cp->tempo = old_cp->tempo;
+    for (int i = 0; i < step_count; i++) {
+        ysw_step_t *old_step = ysw_cp_get_step(old_cp, i);
+        ysw_step_t *new_step = ysw_step_copy(old_step);
+        ysw_cp_add_step(new_cp, new_step);
+    }
+    return new_cp;
+}
+
 void ysw_cp_free(ysw_cp_t *cp)
 {
     assert(cp);

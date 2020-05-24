@@ -45,6 +45,7 @@ int ysw_cp_add_cs(ysw_cp_t *cp, uint8_t degree, ysw_cs_t *cs, uint8_t flags);
 int ysw_cp_add_step(ysw_cp_t *cp, ysw_step_t *new_step);
 void ysw_cp_free(ysw_cp_t *cp);
 ysw_cp_t *ysw_cp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo);
+ysw_cp_t *ysw_cp_copy(ysw_cp_t *old_cp);
 void ysw_cp_dump(ysw_cp_t *progresssion, char *tag);
 
 static inline ysw_step_t *ysw_cp_get_step(ysw_cp_t *cp, uint32_t index)
