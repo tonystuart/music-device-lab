@@ -18,7 +18,7 @@
 
 #define TAG "YSW_PROGRESSION"
 
-ysw_cp_t *ysw_cp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo, ysw_time_t time)
+ysw_cp_t *ysw_cp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo)
 {
     ESP_LOGD(TAG, "ysw_cp_create name=%s", name);
     ysw_cp_t *cp = ysw_heap_allocate(sizeof(ysw_cp_t));
@@ -29,7 +29,6 @@ ysw_cp_t *ysw_cp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode
     cp->mode = mode;
     cp->transposition = transposition;
     cp->tempo = tempo;
-    cp->time = time;
     return cp;
 }
 

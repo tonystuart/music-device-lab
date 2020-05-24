@@ -25,7 +25,6 @@
 #include "ysw_sequencer.h"
 #include "ysw_synthesizer.h"
 #include "ysw_tempo.h"
-#include "ysw_time.h"
 #include "ysw_transposition.h"
 
 #include "lvgl/lvgl.h"
@@ -78,8 +77,7 @@ static void update_footer()
 {
     ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
     char buf[64];
-    snprintf(buf, sizeof(buf), "%d BPM %d/%d", cp->tempo,
-            ysw_cp_get_beats_per_measure(cp), ysw_cp_get_beat_unit(cp));
+    snprintf(buf, sizeof(buf), "%d BPM", cp->tempo);
     ysw_cpf_set_footer_text(cpf, buf);
 }
 
@@ -108,8 +106,7 @@ static void create_cp(uint32_t new_index)
             cp->octave,
             cp->mode,
             cp->transposition,
-            cp->tempo,
-            cp->time);
+            cp->tempo);
 
     ysw_music_insert_cp(music, new_index, new_cp);
     cp_index = new_index;
@@ -272,28 +269,19 @@ static void on_tempo_change(uint8_t new_tempo_index)
     stage();
 }
 
-static void on_time_change(ysw_time_t new_time)
-{
-    ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
-    cp->time = new_time;
-    update_footer();
-    stage();
-}
-
 static void on_settings(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_RELEASED) {
         ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
         uint8_t trans_index = ysw_transposition_to_index(cp->transposition);
         uint8_t tempo_index = ysw_tempo_to_index(cp->tempo);
-        ysw_sdb_t *sdb = ysw_sdb_create("Chord Style Settings");
+        ysw_sdb_t *sdb = ysw_sdb_create("Chord Progression Settings");
         ysw_sdb_add_string(sdb, on_name_change, "Name", cp->name);
         ysw_sdb_add_choice(sdb, on_instrument_change, "Instrument", cp->instrument, ysw_instruments);
         ysw_sdb_add_choice(sdb, on_octave_change, "Octave", cp->octave, ysw_octaves);
         ysw_sdb_add_choice(sdb, on_mode_change, "Mode", cp->mode, ysw_modes);
         ysw_sdb_add_choice(sdb, on_transposition_change, "Transposition", trans_index, ysw_transposition);
         ysw_sdb_add_choice(sdb, on_tempo_change, "Tempo", tempo_index, ysw_tempo);
-        ysw_sdb_add_choice(sdb, on_time_change, "Time", cp->time, ysw_time);
     }
 }
 

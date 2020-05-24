@@ -146,8 +146,7 @@ static void parse_cp(this_t *this)
         atoi(this->tokens[4]),
         atoi(this->tokens[5]),
         atoi(this->tokens[6]),
-        atoi(this->tokens[7]),
-        atoi(this->tokens[8]));
+        atoi(this->tokens[7]));
     ysw_array_push(this->music->cp_array, cp);
 
     bool done = false;

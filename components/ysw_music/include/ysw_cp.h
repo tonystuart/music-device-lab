@@ -32,7 +32,6 @@ typedef struct {
     ysw_mode_t mode;
     int8_t transposition;
     uint8_t tempo;
-    ysw_time_t time;
 } ysw_cp_t;
 
 ysw_step_t *ysw_step_create(ysw_cs_t *cs, uint8_t degree, uint8_t flags);
@@ -45,7 +44,7 @@ void ysw_cp_set_instrument(ysw_cp_t *cp, uint8_t instrument);
 int ysw_cp_add_cs(ysw_cp_t *cp, uint8_t degree, ysw_cs_t *cs, uint8_t flags);
 int ysw_cp_add_step(ysw_cp_t *cp, ysw_step_t *new_step);
 void ysw_cp_free(ysw_cp_t *cp);
-ysw_cp_t *ysw_cp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo, ysw_time_t time);
+ysw_cp_t *ysw_cp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo);
 void ysw_cp_dump(ysw_cp_t *progresssion, char *tag);
 
 static inline ysw_step_t *ysw_cp_get_step(ysw_cp_t *cp, uint32_t index)
@@ -99,21 +98,6 @@ static inline void ysw_step_select(ysw_step_t *step, bool selected)
 static inline bool ysw_step_is_selected(ysw_step_t *step)
 {
     return step->state & YSW_CSN_SELECTED;
-}
-
-static inline uint32_t ysw_cp_get_beats_per_measure(ysw_cp_t *cp)
-{
-    return ysw_time_to_beats_per_measure(cp->time);
-}
-
-static inline uint32_t ysw_cp_get_beat_unit(ysw_cp_t *cp)
-{
-    return ysw_time_to_beat_unit(cp->time);
-}
-
-static inline uint32_t ysw_cp_get_duration(ysw_cp_t *cp)
-{
-    return ysw_time_to_measure_duration(cp->time);
 }
 
 static inline void ysw_cp_insert_step(ysw_cp_t *cp, uint32_t index, ysw_step_t *step)
