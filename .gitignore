@@ -1,6 +1,7 @@
 build
 sdkconfig.old
 a
+a.c*
 .vscode
 .*.swp
 tags
