@@ -99,6 +99,17 @@ static void on_ddlist_event(lv_obj_t *ddlist, lv_event_t event)
     }
 }
 
+static void on_sw_event(lv_obj_t *sw, lv_event_t event)
+{
+    if (event == LV_EVENT_VALUE_CHANGED) {
+        bool new_value = lv_sw_get_state(sw);
+        ysw_sdb_switch_cb_t cb = lv_obj_get_user_data(sw);
+        if (cb) {
+            cb(new_value);
+        }
+    }
+}
+
 static lv_res_t on_ddlist_signal(lv_obj_t *ddlist, lv_signal_t signal, void *param)
 {
     lv_res_t res = ddlist_signal_cb(ddlist, signal, param);
@@ -150,7 +161,15 @@ ysw_sdb_t *ysw_sdb_create(const char *title)
     return sdb;
 }
 
-void ysw_sdb_add_string(ysw_sdb_t *sdb, ysw_sdb_string_cb_t cb, const char *name, const char *value)
+void ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name)
+{
+    lv_obj_t *label = lv_label_create(sdb->win, NULL);
+    lv_label_set_text(label, name);
+    lv_label_set_align(label, LV_LABEL_ALIGN_CENTER);
+    lv_obj_set_protect(label, LV_PROTECT_FOLLOW);
+}
+
+void ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value, ysw_sdb_string_cb_t cb)
 {
     create_field_name(sdb, name);
 
@@ -165,7 +184,7 @@ void ysw_sdb_add_string(ysw_sdb_t *sdb, ysw_sdb_string_cb_t cb, const char *name
     lv_obj_set_event_cb(ta, on_ta_event);
 }
 
-void ysw_sdb_add_choice(ysw_sdb_t *sdb, ysw_sdb_choice_cb_t cb, const char *name, uint8_t value, const char *options)
+void ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const char *options, ysw_sdb_choice_cb_t cb)
 {
     create_field_name(sdb, name);
 
@@ -185,6 +204,23 @@ void ysw_sdb_add_choice(ysw_sdb_t *sdb, ysw_sdb_choice_cb_t cb, const char *name
         ddlist_signal_cb = lv_obj_get_signal_cb(ddlist);
     }
     lv_obj_set_signal_cb(ddlist, on_ddlist_signal);
+}
+
+void ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, ysw_sdb_switch_cb_t cb)
+{
+    create_field_name(sdb, name);
+
+    lv_obj_t *sw = lv_sw_create(sdb->win, NULL);
+
+    lv_obj_set_user_data(sw, cb);
+    lv_obj_set_width(sw, 80);
+    lv_obj_set_protect(sw, LV_PROTECT_FOLLOW);
+    if (value) {
+        lv_sw_on(sw, LV_ANIM_OFF);
+    } else {
+        lv_sw_off(sw, LV_ANIM_OFF);
+    }
+    lv_obj_set_event_cb(sw, on_sw_event);
 }
 
 void ysw_sdb_close(ysw_sdb_t *sdb)

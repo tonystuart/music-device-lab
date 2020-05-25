@@ -10,6 +10,7 @@
 #include "csc.h"
 #include "cpc.h"
 #include "display.h"
+#include "gsc.h"
 #include "sequencer.h"
 #include "spiffs.h"
 #include "synthesizer.h"
@@ -29,10 +30,6 @@
 
 static ysw_music_t *music;
 
-void test_feature(void)
-{
-}
-
 static void event_handler(lv_obj_t *btn, lv_event_t event)
 {
     if (event == LV_EVENT_CLICKED) {
@@ -41,8 +38,8 @@ static void event_handler(lv_obj_t *btn, lv_event_t event)
             csc_create(music, 0);
         } else if (strcmp(text, "Progressions") == 0) {
             cpc_create(music, 0);
-        } else {
-            test_feature();
+        } else if (strcmp(text, "Globals") == 0) {
+            gsc_create(music);
         }
     }
 }
@@ -62,7 +59,7 @@ static void create_dashboard(void)
     list_btn = lv_list_add_btn(dashboard, LV_SYMBOL_BELL, "Progressions");
     lv_obj_set_event_cb(list_btn, event_handler);
 
-    list_btn = lv_list_add_btn(dashboard, LV_SYMBOL_IMAGE, "Test");
+    list_btn = lv_list_add_btn(dashboard, LV_SYMBOL_IMAGE, "Globals");
     lv_obj_set_event_cb(list_btn, event_handler);
 }
 

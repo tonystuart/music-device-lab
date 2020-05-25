@@ -277,12 +277,12 @@ static void on_settings(lv_obj_t * btn, lv_event_t event)
         uint8_t trans_index = ysw_transposition_to_index(cp->transposition);
         uint8_t tempo_index = ysw_tempo_to_index(cp->tempo);
         ysw_sdb_t *sdb = ysw_sdb_create("Chord Progression Settings");
-        ysw_sdb_add_string(sdb, on_name_change, "Name", cp->name);
-        ysw_sdb_add_choice(sdb, on_instrument_change, "Instrument", cp->instrument, ysw_instruments);
-        ysw_sdb_add_choice(sdb, on_octave_change, "Octave", cp->octave, ysw_octaves);
-        ysw_sdb_add_choice(sdb, on_mode_change, "Mode", cp->mode, ysw_modes);
-        ysw_sdb_add_choice(sdb, on_transposition_change, "Transposition", trans_index, ysw_transposition);
-        ysw_sdb_add_choice(sdb, on_tempo_change, "Tempo", tempo_index, ysw_tempo);
+        ysw_sdb_add_string(sdb, "Name", cp->name, on_name_change);
+        ysw_sdb_add_choice(sdb, "Instrument", cp->instrument, ysw_instruments, on_instrument_change);
+        ysw_sdb_add_choice(sdb, "Octave", cp->octave, ysw_octaves, on_octave_change);
+        ysw_sdb_add_choice(sdb, "Mode", cp->mode, ysw_modes, on_mode_change);
+        ysw_sdb_add_choice(sdb, "Transposition", trans_index, ysw_transposition, on_transposition_change);
+        ysw_sdb_add_choice(sdb, "Tempo", tempo_index, ysw_tempo, on_tempo_change);
     }
 }
 

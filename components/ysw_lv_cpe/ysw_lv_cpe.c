@@ -28,6 +28,8 @@
 
 #define MINIMUM_DRAG 10
 
+ysw_lv_cpe_gs_t ysw_lv_cpe_gs;
+
 typedef struct {
     lv_coord_t cpe_left;
     lv_coord_t cpe_top;
@@ -85,10 +87,15 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
 {
     super_design_cb(cpe, mask, mode);
 
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+
+    if (ext->metro_note) {
+        ysw_lv_cpe_ensure_visible(cpe, ext->metro_note->velocity, ext->metro_note->velocity);
+    }
+
     metrics_t m;
     get_metrics(cpe, &m);
 
-    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
     uint32_t step_count = ysw_cp_get_step_count(ext->cp);
 
     lv_point_t top_left = {
@@ -120,6 +127,8 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
     ysw_cp_get_steps_in_measures(ext->cp, steps_in_measures, step_count);
 
     uint32_t measure = 0;
+
+    ysw_step_t *first_selected_step = NULL;
 
     for (uint32_t i = 0; i < step_count; i++) {
         ysw_step_t *step = ysw_cp_get_step(ext->cp, i);
@@ -213,7 +222,9 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
                 LV_BIDI_DIR_LTR);
         }
 
-        if (step == ext->selected_step) {
+        //if (step == ext->selected_step) {
+        if (!first_selected_step && ysw_step_is_selected(step)) {
+            first_selected_step = step;
             lv_area_t footer_area = {
                 .x1 = m.cpe_left,
                 .y1 = m.cp_top + m.cp_height,

@@ -15,6 +15,7 @@
 
 typedef void (*ysw_sdb_string_cb_t)(const char *new_value);
 typedef void (*ysw_sdb_choice_cb_t)(uint8_t new_value);
+typedef void (*ysw_sdb_switch_cb_t)(bool new_value);
 
 typedef struct {
     lv_obj_t *win;
@@ -22,6 +23,8 @@ typedef struct {
 } ysw_sdb_t;
 
 ysw_sdb_t *ysw_sdb_create(const char *title);
-void ysw_sdb_add_string(ysw_sdb_t *sdb, ysw_sdb_string_cb_t cb, const char *name, const char *value);
-void ysw_sdb_add_choice(ysw_sdb_t *sdb, ysw_sdb_choice_cb_t cb, const char *name, uint8_t value, const char *options);
+void ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name);
+void ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value, ysw_sdb_string_cb_t cb);
+void ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const char *options, ysw_sdb_choice_cb_t cb);
+void ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, ysw_sdb_switch_cb_t cb);
 void ysw_sdb_close(ysw_sdb_t *sdb);

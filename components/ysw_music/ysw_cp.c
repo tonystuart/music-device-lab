@@ -16,7 +16,7 @@
 #include "ysw_ticks.h"
 #include "ysw_degree.h"
 
-#define TAG "YSW_PROGRESSION"
+#define TAG "YSW_CP"
 
 ysw_cp_t *ysw_cp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo)
 {

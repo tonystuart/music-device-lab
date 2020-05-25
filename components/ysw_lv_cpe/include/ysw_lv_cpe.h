@@ -44,7 +44,7 @@ typedef void (*ysw_lv_cpe_event_cb_t)(lv_obj_t *ysw_lv_cpe, ysw_lv_cpe_event_t e
 
 typedef struct {
     ysw_cp_t *cp;
-    ysw_step_t *selected_step;
+    ysw_step_t *selected_step; // only set while pressed
     ysw_cp_t *drag_start_cp;
     lv_coord_t scroll_left;
     lv_coord_t drag_start_scroll_left;
@@ -59,6 +59,13 @@ typedef struct {
     const lv_style_t *ms_style; // metro step
     ysw_lv_cpe_event_cb_t event_cb;
 } ysw_lv_cpe_ext_t;
+
+typedef struct {
+    bool auto_scroll;
+    bool auto_play;
+} ysw_lv_cpe_gs_t;
+
+extern ysw_lv_cpe_gs_t ysw_lv_cpe_gs;
 
 lv_obj_t *ysw_lv_cpe_create(lv_obj_t *par);
 void ysw_lv_cpe_set_event_cb(lv_obj_t *cpe, ysw_lv_cpe_event_cb_t event_cb);
