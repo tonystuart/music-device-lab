@@ -27,6 +27,9 @@ lv_style_t ysw_style_white_cell;
 lv_style_t ysw_style_yellow_cell;
 lv_style_t ysw_style_red_cell;
 
+lv_style_t ysw_style_btn_rel;
+lv_style_t ysw_style_btn_pr;
+
 void ysw_lv_styles_initialize()
 {
     lv_style_copy(&ysw_style_plain_color_tight, &lv_style_plain_color);
@@ -126,5 +129,35 @@ void ysw_lv_styles_initialize()
     ysw_style_red_cell.text.color = LV_COLOR_BLACK;
     ysw_style_red_cell.body.border.width = 1;
     ysw_style_red_cell.body.border.color = LV_COLOR_BLACK;
+
+    lv_style_copy(&ysw_style_btn_rel, &lv_style_btn_rel);
+    ysw_style_btn_rel.body.radius = 1;
+    ysw_style_btn_rel.body.border.width = 1;
+    //ysw_style_btn_rel.body.border.part = LV_BORDER_FULL;
+    //ysw_style_btn_rel.body.border.color = LV_COLOR_BLACK;
+    ysw_style_btn_rel.body.main_color = LV_COLOR_MAKE(0xd8, 0xd8, 0xd8);
+    ysw_style_btn_rel.body.grad_color = LV_COLOR_MAKE(0xd8, 0xd8, 0xd8);
+    ysw_style_btn_rel.body.padding.top = 1;
+    ysw_style_btn_rel.body.padding.bottom = 1;
+    ysw_style_btn_rel.body.padding.left = 1;
+    ysw_style_btn_rel.body.padding.right = 1;
+    ysw_style_btn_rel.body.padding.inner = 1;
+    ysw_style_btn_rel.text.color = LV_COLOR_BLACK;
+    ysw_style_btn_rel.text.opa = LV_OPA_COVER;
+
+    lv_style_copy(&ysw_style_btn_pr, &lv_style_btn_pr);
+    ysw_style_btn_pr.body.radius = 1;
+    ysw_style_btn_pr.body.border.width = 1;
+    //ysw_style_btn_pr.body.border.part = LV_BORDER_FULL;
+    //ysw_style_btn_pr.body.border.color = LV_COLOR_BLACK;
+    ysw_style_btn_pr.body.main_color = LV_COLOR_GRAY;
+    ysw_style_btn_pr.body.grad_color = LV_COLOR_GRAY;
+    ysw_style_btn_pr.body.padding.top = 1;
+    ysw_style_btn_pr.body.padding.bottom = 1;
+    ysw_style_btn_pr.body.padding.left = 1;
+    ysw_style_btn_pr.body.padding.right = 1;
+    ysw_style_btn_pr.body.padding.inner = 1;
+    ysw_style_btn_pr.text.color = LV_COLOR_WHITE;
+    ysw_style_btn_pr.text.opa = LV_OPA_COVER;
 }
 

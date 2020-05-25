@@ -49,7 +49,7 @@ static char *key_labels[] =
 
 #define ROW_COUNT YSW_MIDI_UNPO
 
-#define MINIMUM_DRAG 5
+#define MINIMUM_DRAG 10
 
 #define MINIMUM_DURATION 10
 

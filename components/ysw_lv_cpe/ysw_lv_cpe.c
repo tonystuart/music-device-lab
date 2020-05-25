@@ -138,9 +138,7 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
 
         lv_coord_t left = m.cp_left + (i * m.col_width);
 
-        bool is_new_measure = step->flags & YSW_STEP_NEW_MEASURE;
-
-        if (!i || is_new_measure) {
+        if (!i || ysw_step_is_new_measure(step)) {
 
             lv_area_t heading_area = {
                 .x1 = left,
@@ -176,7 +174,7 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
         }
 
         if (i) {
-            lv_coord_t col_top = is_new_measure ? m.cpe_top : m.cp_top;
+            lv_coord_t col_top = ysw_step_is_new_measure(step) ? m.cpe_top : m.cp_top;
             lv_point_t top = {
                 .x = left,
                 .y = col_top,
@@ -696,18 +694,18 @@ void ysw_lv_cpe_on_metro(lv_obj_t *cpe, note_t *metro_note)
 
 void ysw_lv_cpe_ensure_visible(lv_obj_t *cpe, uint32_t first_step_index, uint32_t last_step_index)
 {
-    // nb: scroll_left is always <= 0
+    // NB: scroll_left is always <= 0
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
     metrics_t m;
     get_metrics(cpe, &m);
     lv_coord_t left = first_step_index * m.col_width;
     lv_coord_t right = (last_step_index + 1) * m.col_width;
-    ESP_LOGD(TAG, "first=%d, last=%d, col_width=%d, scroll_left=%d, left=%d, right=%d", first_step_index, last_step_index, m.col_width, ext->scroll_left, left, right);
+    //ESP_LOGD(TAG, "first=%d, last=%d, col_width=%d, scroll_left=%d, left=%d, right=%d", first_step_index, last_step_index, m.col_width, ext->scroll_left, left, right);
     if (left < -ext->scroll_left) {
         ext->scroll_left = -left;
     } else if (right > -ext->scroll_left + m.cpe_width) {
         ext->scroll_left = m.cpe_width - right;
     }
-    ESP_LOGD(TAG, "new scroll_left=%d", ext->scroll_left);
+    //ESP_LOGD(TAG, "new scroll_left=%d", ext->scroll_left);
 }
 

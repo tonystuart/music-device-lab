@@ -36,6 +36,7 @@ ysw_cpf_t *ysw_cpf_create(ysw_cpf_config_t *config)
     ysw_frame_add_footer_button(cpf->frame, LV_SYMBOL_TRASH, config->trash_cb);
     ysw_frame_add_footer_button(cpf->frame, LV_SYMBOL_LEFT, config->left_cb);
     ysw_frame_add_footer_button(cpf->frame, LV_SYMBOL_RIGHT, config->right_cb);
+    ysw_frame_add_footer_button(cpf->frame, LV_SYMBOL_EDIT, config->edit_cb);
 
     ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_CLOSE, config->close_cb);
     ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_NEXT, config->next_cb);

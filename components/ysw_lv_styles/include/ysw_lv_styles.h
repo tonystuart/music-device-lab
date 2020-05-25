@@ -26,5 +26,7 @@ extern lv_style_t ysw_style_white_cell;
 extern lv_style_t ysw_style_yellow_cell;
 extern lv_style_t ysw_style_red_cell;
 
+extern lv_style_t ysw_style_btn_rel;
+extern lv_style_t ysw_style_btn_pr;
 
 void ysw_lv_styles_initialize();

@@ -108,3 +108,17 @@ static inline void ysw_cp_insert_step(ysw_cp_t *cp, uint32_t index, ysw_step_t *
     ysw_array_insert(cp->steps, index, step);
 }
 
+static inline bool ysw_step_is_new_measure(ysw_step_t *step)
+{
+    return step->flags & YSW_STEP_NEW_MEASURE;
+}
+
+static inline void ysw_step_set_new_measure(ysw_step_t *step, bool new_measure)
+{
+    if (new_measure) {
+        step->flags |= YSW_STEP_NEW_MEASURE;
+    } else {
+        step->flags &= ~YSW_STEP_NEW_MEASURE;
+    }
+}
+

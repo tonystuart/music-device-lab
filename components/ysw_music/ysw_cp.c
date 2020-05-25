@@ -141,7 +141,7 @@ uint32_t ysw_cp_get_steps_to_next_measure(ysw_cp_t *cp, uint32_t step_index)
     for (uint32_t i = step_index + 1; i < step_count && !found; i++) {
         steps_to_next_measure++;
         ysw_step_t *step = ysw_cp_get_step(cp, i);
-        if (step->flags & YSW_STEP_NEW_MEASURE) {
+        if (ysw_step_is_new_measure(step)) {
             found = true;
         }
     }
@@ -154,7 +154,7 @@ uint32_t ysw_cp_get_measure_count(ysw_cp_t *cp)
     uint32_t step_count = ysw_cp_get_step_count(cp);
     for (uint32_t i = 0; i < step_count; i++) {
         ysw_step_t *step = ysw_cp_get_step(cp, i);
-        if (!i || (step->flags & YSW_STEP_NEW_MEASURE)) {
+        if (!i || ysw_step_is_new_measure(step)) {
             measure_count++;
         }
     }
@@ -169,7 +169,7 @@ uint32_t ysw_cp_get_steps_in_measures(ysw_cp_t *cp, uint8_t steps_in_measures[],
     memset(steps_in_measures, 0, size);
     for (uint32_t i = 0; i < step_count; i++) {
         ysw_step_t *step = ysw_cp_get_step(cp, i);
-        if (!i || (step->flags & YSW_STEP_NEW_MEASURE)) {
+        if (!i || ysw_step_is_new_measure(step)) {
             measure_index++;
         }
         steps_in_measures[measure_index]++;
@@ -213,7 +213,7 @@ note_t *ysw_cp_get_notes(ysw_cp_t *cp, uint32_t *note_count)
     for (int i = 0; i < step_count; i++) {
 
         ysw_step_t *step = ysw_cp_get_step(cp, i);
-        if (!i || (step->flags & YSW_STEP_NEW_MEASURE)) {
+        if (!i || ysw_step_is_new_measure(step)) {
             time_scaler = 1.0 / steps_in_measures[measure];
             measure++;
         }

@@ -26,6 +26,7 @@ typedef struct {
     lv_event_cb_t trash_cb;
     lv_event_cb_t left_cb;
     lv_event_cb_t right_cb;
+    lv_event_cb_t edit_cb;
     ysw_lv_cpe_event_cb_t cpe_event_cb;
 } ysw_cpf_config_t;
 

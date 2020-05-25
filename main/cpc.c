@@ -23,6 +23,7 @@
 #include "ysw_octaves.h"
 #include "ysw_sdb.h"
 #include "ysw_sequencer.h"
+#include "ysw_ssc.h"
 #include "ysw_synthesizer.h"
 #include "ysw_tempo.h"
 #include "ysw_transposition.h"
@@ -391,15 +392,12 @@ static void on_trash(lv_obj_t * btn, lv_event_t event)
 static void on_left(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED) {
-        ESP_LOGD(TAG, "on_left");
         uint32_t changes = 0;
         ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
         uint32_t step_count = ysw_cp_get_step_count(cp);
-        ESP_LOGD(TAG, "on_left step_count=%d", step_count);
         for (int32_t i = 0, j = 1; j < step_count; i++, j++) {
             ysw_step_t *this_step = ysw_cp_get_step(cp, j);
             if (ysw_step_is_selected(this_step)) {
-                ESP_LOGD(TAG, "on_left j=%d selected", j);
                 ysw_step_t *other_step = ysw_array_get(cp->steps, i);
                 ysw_array_set(cp->steps, i, this_step);
                 ysw_array_set(cp->steps, j, other_step);
@@ -415,15 +413,12 @@ static void on_left(lv_obj_t * btn, lv_event_t event)
 static void on_right(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_PRESSED) {
-        ESP_LOGD(TAG, "on_right");
         uint32_t changes = 0;
         ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
         uint32_t step_count = ysw_cp_get_step_count(cp);
-        ESP_LOGD(TAG, "on_right step_count=%d", step_count);
         for (int32_t i = step_count - 1, j = step_count - 2; j >= 0; i--, j--) {
             ysw_step_t *this_step = ysw_cp_get_step(cp, j);
             if (ysw_step_is_selected(this_step)) {
-                ESP_LOGD(TAG, "on_right j=%d selected", j);
                 ysw_step_t *other_step = ysw_array_get(cp->steps, i);
                 ysw_array_set(cp->steps, i, this_step);
                 ysw_array_set(cp->steps, j, other_step);
@@ -432,6 +427,21 @@ static void on_right(lv_obj_t * btn, lv_event_t event)
         }
         if (changes) {
             refresh();
+        }
+    }
+}
+
+static void on_edit(lv_obj_t * btn, lv_event_t event)
+{
+    if (event == LV_EVENT_PRESSED) {
+        ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
+        uint32_t step_count = ysw_cp_get_step_count(cp);
+        for (uint32_t i = 0; i < step_count; i++) {
+            ysw_step_t *step = ysw_cp_get_step(cp, i);
+            if (ysw_step_is_selected(step)) {
+                ysw_ssc_create(music, cp, i);
+                return;
+            }
         }
     }
 }
@@ -479,6 +489,7 @@ void cpc_create(ysw_music_t *new_music, uint32_t new_cp_index)
         .paste_cb = on_paste,
         .left_cb = on_left,
         .right_cb = on_right,
+        .edit_cb = on_edit,
         .trash_cb = on_trash,
         .cpe_event_cb = cpe_event_cb,
     };

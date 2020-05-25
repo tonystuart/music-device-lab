@@ -110,6 +110,27 @@ static void on_sw_event(lv_obj_t *sw, lv_event_t event)
     }
 }
 
+static void on_cb_event(lv_obj_t *cb, lv_event_t event)
+{
+    if (event == LV_EVENT_VALUE_CHANGED) {
+        bool new_value = lv_cb_is_checked(cb);
+        ysw_sdb_checkbox_cb_t callback = lv_obj_get_user_data(cb);
+        if (callback) {
+            callback(new_value);
+        }
+    }
+}
+
+static void on_btn_event(lv_obj_t *btn, lv_event_t event)
+{
+    if (event == LV_EVENT_CLICKED) {
+        ysw_sdb_button_cb_t callback = lv_obj_get_user_data(btn);
+        if (callback) {
+            callback();
+        }
+    }
+}
+
 static lv_res_t on_ddlist_signal(lv_obj_t *ddlist, lv_signal_t signal, void *param)
 {
     lv_res_t res = ddlist_signal_cb(ddlist, signal, param);
@@ -193,7 +214,27 @@ void ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const c
     lv_ddlist_set_anim_time(ddlist, 0);
     lv_ddlist_set_draw_arrow(ddlist, true);
     lv_ddlist_set_options(ddlist, options);
-    lv_ddlist_set_fix_height(ddlist, 100);
+    lv_ddlist_ext_t *lv_ddlist_ext = lv_obj_get_ext_attr(ddlist);
+    lv_coord_t height = lv_obj_get_height(lv_ddlist_ext->label);
+    ESP_LOGD(TAG, "ysw_sdb_add_choice height=%d", height);
+#if 0
+    if (height < 100) {
+        lv_ddlist_open(ddlist, LV_ANIM_OFF);
+        lv_ddlist_set_stay_open(ddlist, true);
+    } else {
+        lv_ddlist_set_fix_height(ddlist, 100);
+    }
+#endif
+#if 0
+    if (height > 100) {
+        lv_ddlist_set_fix_height(ddlist, 100);
+    }
+    lv_ddlist_open(ddlist, LV_ANIM_OFF);
+    lv_ddlist_set_stay_open(ddlist, true);
+#endif
+    if (height > 100) {
+        lv_ddlist_set_fix_height(ddlist, 100);
+    }
     lv_ddlist_set_fix_width(ddlist, 200);
     lv_ddlist_set_style(ddlist, LV_DDLIST_STYLE_BG, &ysw_style_white_cell);
     lv_ddlist_set_align(ddlist, LV_LABEL_ALIGN_LEFT);
@@ -211,7 +252,6 @@ void ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, ysw_sdb_sw
     create_field_name(sdb, name);
 
     lv_obj_t *sw = lv_sw_create(sdb->win, NULL);
-
     lv_obj_set_user_data(sw, cb);
     lv_obj_set_width(sw, 80);
     lv_obj_set_protect(sw, LV_PROTECT_FOLLOW);
@@ -221,6 +261,34 @@ void ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, ysw_sdb_sw
         lv_sw_off(sw, LV_ANIM_OFF);
     }
     lv_obj_set_event_cb(sw, on_sw_event);
+}
+
+void ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, ysw_sdb_checkbox_cb_t callback)
+{
+    lv_obj_t *cb = lv_cb_create(sdb->win, NULL);
+    lv_cb_set_text(cb, name);
+    lv_obj_set_user_data(cb, callback);
+    lv_obj_set_protect(cb, LV_PROTECT_FOLLOW);
+    lv_cb_set_checked(cb, value);
+    lv_obj_set_event_cb(cb, on_cb_event);
+}
+
+void ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, ysw_sdb_button_cb_t callback)
+{
+    lv_obj_t *spacer = lv_obj_create(sdb->win, NULL);
+    lv_obj_set_size(spacer, 100, 0);
+
+    lv_obj_t *btn = lv_btn_create(sdb->win, NULL);
+    lv_btn_set_style(btn, LV_BTN_STYLE_REL, &ysw_style_btn_rel);
+    lv_btn_set_style(btn, LV_BTN_STYLE_PR, &ysw_style_btn_pr);
+    lv_obj_set_width(btn, 200);
+    lv_btn_set_fit2(btn, LV_FIT_NONE, LV_FIT_TIGHT);
+    lv_obj_set_user_data(btn, callback);
+    lv_obj_set_protect(btn, LV_PROTECT_FOLLOW);
+    lv_obj_set_event_cb(btn, on_btn_event);
+
+    lv_obj_t *label = lv_label_create(btn, NULL);
+    lv_label_set_text(label, name);
 }
 
 void ysw_sdb_close(ysw_sdb_t *sdb)
