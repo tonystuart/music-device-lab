@@ -43,20 +43,22 @@ static int32_t last_step_index = -1;
 
 static void stage()
 {
-    ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
-    ysw_cp_sort_cn_array(cp);
+    if (ysw_lv_cpe_gs.auto_play) {
+        ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
+        ysw_cp_sort_cn_array(cp);
 
-    uint32_t note_count = 0;
-    note_t *notes = ysw_cp_get_notes(cp, &note_count);
+        uint32_t note_count = 0;
+        note_t *notes = ysw_cp_get_notes(cp, &note_count);
 
-    ysw_sequencer_message_t message = {
-        .type = YSW_SEQUENCER_STAGE,
-        .stage.notes = notes,
-        .stage.note_count = note_count,
-        .stage.tempo = cp->tempo,
-    };
+        ysw_sequencer_message_t message = {
+            .type = YSW_SEQUENCER_STAGE,
+            .stage.notes = notes,
+            .stage.note_count = note_count,
+            .stage.tempo = cp->tempo,
+        };
 
-    sequencer_send(&message);
+        sequencer_send(&message);
+    }
 }
 
 static void pause()

@@ -28,7 +28,10 @@
 
 #define MINIMUM_DRAG 10
 
-ysw_lv_cpe_gs_t ysw_lv_cpe_gs;
+ysw_lv_cpe_gs_t ysw_lv_cpe_gs = {
+    .auto_scroll = true,
+    .auto_play = false,
+};
 
 typedef struct {
     lv_coord_t cpe_left;
@@ -89,7 +92,7 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
 
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
 
-    if (ext->metro_note) {
+    if (ext->metro_note && ysw_lv_cpe_gs.auto_scroll) {
         ysw_lv_cpe_ensure_visible(cpe, ext->metro_note->velocity, ext->metro_note->velocity);
     }
 
