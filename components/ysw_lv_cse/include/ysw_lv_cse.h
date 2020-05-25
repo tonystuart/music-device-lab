@@ -64,6 +64,12 @@ typedef struct {
     ysw_lv_cse_event_cb_t event_cb;
 } ysw_lv_cse_ext_t;
 
+typedef struct {
+    bool auto_play;
+} ysw_lv_cse_gs_t;
+
+extern ysw_lv_cse_gs_t ysw_lv_cse_gs;
+
 lv_obj_t *ysw_lv_cse_create(lv_obj_t *par);
 void ysw_lv_cse_set_cs(lv_obj_t *cse, ysw_cs_t *cs);
 void ysw_lv_cse_select(lv_obj_t *cse, ysw_cn_t *cn, bool is_selected);

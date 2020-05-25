@@ -39,7 +39,7 @@ ysw_csf_t *ysw_csf_create(ysw_csf_config_t *config)
     ysw_frame_add_header_button(csf->frame, LV_SYMBOL_CLOSE, config->close_cb);
     ysw_frame_add_header_button(csf->frame, LV_SYMBOL_NEXT, config->next_cb);
     ysw_frame_add_header_button(csf->frame, LV_SYMBOL_LOOP, config->loop_cb);
-    ysw_frame_add_header_button(csf->frame, LV_SYMBOL_PAUSE, config->pause_cb);
+    ysw_frame_add_header_button(csf->frame, LV_SYMBOL_STOP, config->stop_cb);
     ysw_frame_add_header_button(csf->frame, LV_SYMBOL_PLAY, config->play_cb);
     ysw_frame_add_header_button(csf->frame, LV_SYMBOL_PREV, config->prev_cb);
 

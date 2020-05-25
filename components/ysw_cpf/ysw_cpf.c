@@ -40,7 +40,7 @@ ysw_cpf_t *ysw_cpf_create(ysw_cpf_config_t *config)
     ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_CLOSE, config->close_cb);
     ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_NEXT, config->next_cb);
     ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_LOOP, config->loop_cb);
-    ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_PAUSE, config->pause_cb);
+    ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_STOP, config->stop_cb);
     ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_PLAY, config->play_cb);
     ysw_frame_add_header_button(cpf->frame, LV_SYMBOL_PREV, config->prev_cb);
 

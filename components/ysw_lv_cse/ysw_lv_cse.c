@@ -27,6 +27,10 @@
 
 #define LV_OBJX_NAME "ysw_lv_cse"
 
+ysw_lv_cse_gs_t ysw_lv_cse_gs = {
+    .auto_play = true,
+};
+
 static lv_design_cb_t super_design_cb;
 static lv_signal_cb_t super_signal_cb;
 
@@ -123,7 +127,6 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         lv_area_t row_mask;
         if (lv_area_intersect(&row_mask, mask, &row_area)) {
 
-            ESP_LOGD(TAG, "calling draw_rect");
             if (i & 0x01) {
                 lv_draw_rect(&row_area, &row_mask, ext->oi_style, ext->oi_style->body.opa);
             } else {
@@ -149,7 +152,6 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                             LV_BIDI_DIR_LTR);
                 }
             }
-            ESP_LOGD(TAG, "later");
 
             if (i) {
                 lv_point_t point1 = {

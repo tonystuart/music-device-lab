@@ -14,7 +14,7 @@
 typedef struct {
     lv_event_cb_t next_cb;
     lv_event_cb_t play_cb;
-    lv_event_cb_t pause_cb;
+    lv_event_cb_t stop_cb;
     lv_event_cb_t loop_cb;
     lv_event_cb_t prev_cb;
     lv_event_cb_t close_cb;

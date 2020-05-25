@@ -81,6 +81,7 @@ static inline uint32_t ysw_step_get_cn_count(ysw_step_t *step)
 
 static inline void ysw_cp_sort_cn_array(ysw_cp_t *cp)
 {
+    // TODO: sort chord styles in this chord progression
 }
 
 static inline ysw_step_t *ysw_step_copy(ysw_step_t *old_step)

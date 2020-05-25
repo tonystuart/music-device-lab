@@ -12,6 +12,7 @@
 #include "gsc.h"
 
 #include "ysw_lv_cpe.h"
+#include "ysw_lv_cse.h"
 #include "ysw_music.h"
 #include "ysw_sdb.h"
 
@@ -31,11 +32,18 @@ static void on_ysw_lv_cpe_gs_play(bool new_value)
     ysw_lv_cpe_gs.auto_play = new_value;
 }
 
+static void on_ysw_lv_cse_gs_play(bool new_value)
+{
+    ysw_lv_cse_gs.auto_play = new_value;
+}
+
 void gsc_create(ysw_music_t *music)
 {
     ysw_sdb_t *sdb = ysw_sdb_create("Global Settings");
     ysw_sdb_add_separator(sdb, "Chord Progressions");
     ysw_sdb_add_switch(sdb, "Auto Scroll", ysw_lv_cpe_gs.auto_scroll, on_ysw_lv_cpe_gs_scroll);
     ysw_sdb_add_switch(sdb, "Auto Play", ysw_lv_cpe_gs.auto_play, on_ysw_lv_cpe_gs_play);
+    ysw_sdb_add_separator(sdb, "Chord Styles");
+    ysw_sdb_add_switch(sdb, "Auto Play", ysw_lv_cse_gs.auto_play, on_ysw_lv_cse_gs_play);
 }
 

@@ -40,7 +40,7 @@ static ysw_csf_t *csf;
 static uint32_t cs_index;
 static ysw_array_t *clipboard;
 
-static void stage()
+static void send_notes(ysw_sequencer_message_type_t type)
 {
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
     ysw_cs_sort_cn_array(cs);
@@ -49,7 +49,7 @@ static void stage()
     note_t *notes = ysw_cs_get_notes(cs, &note_count);
 
     ysw_sequencer_message_t message = {
-        .type = YSW_SEQUENCER_STAGE,
+        .type = type,
         .stage.notes = notes,
         .stage.note_count = note_count,
         .stage.tempo = cs->tempo,
@@ -58,7 +58,19 @@ static void stage()
     sequencer_send(&message);
 }
 
-static void pause()
+static void play()
+{
+    send_notes(YSW_SEQUENCER_PLAY);
+}
+
+static void stage()
+{
+    if (ysw_lv_cse_gs.auto_play) {
+        send_notes(YSW_SEQUENCER_STAGE);
+    }
+}
+
+static void stop()
 {
     ysw_sequencer_message_t message = {
         .type = YSW_SEQUENCER_PAUSE,
@@ -182,14 +194,14 @@ static void on_next(lv_obj_t * btn, lv_event_t event)
 static void on_play(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_RELEASED) {
-        stage();
+        play();
     }
 }
 
-static void on_pause(lv_obj_t * btn, lv_event_t event)
+static void on_stop(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_RELEASED) {
-        pause();
+        stop();
     }
 }
 
@@ -413,7 +425,7 @@ void csc_create(ysw_music_t *new_music, uint32_t new_cs_index)
     ysw_csf_config_t config = {
         .next_cb = on_next,
         .play_cb = on_play,
-        .pause_cb = on_pause,
+        .stop_cb = on_stop,
         .loop_cb = on_loop,
         .prev_cb = on_prev,
         .close_cb = on_close,

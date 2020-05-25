@@ -41,27 +41,37 @@ static uint32_t cp_index;
 static ysw_array_t *clipboard;
 static int32_t last_step_index = -1;
 
+static void send_notes(ysw_sequencer_message_type_t type)
+{
+    ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
+    ysw_cp_sort_cn_array(cp);
+
+    uint32_t note_count = 0;
+    note_t *notes = ysw_cp_get_notes(cp, &note_count);
+
+    ysw_sequencer_message_t message = {
+        .type = type,
+        .stage.notes = notes,
+        .stage.note_count = note_count,
+        .stage.tempo = cp->tempo,
+    };
+
+    sequencer_send(&message);
+}
+
+static void play()
+{
+    send_notes(YSW_SEQUENCER_PLAY);
+}
+
 static void stage()
 {
     if (ysw_lv_cpe_gs.auto_play) {
-        ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
-        ysw_cp_sort_cn_array(cp);
-
-        uint32_t note_count = 0;
-        note_t *notes = ysw_cp_get_notes(cp, &note_count);
-
-        ysw_sequencer_message_t message = {
-            .type = YSW_SEQUENCER_STAGE,
-            .stage.notes = notes,
-            .stage.note_count = note_count,
-            .stage.tempo = cp->tempo,
-        };
-
-        sequencer_send(&message);
+        send_notes(YSW_SEQUENCER_STAGE);
     }
 }
 
-static void pause()
+static void stop()
 {
     ysw_sequencer_message_t message = {
         .type = YSW_SEQUENCER_PAUSE,
@@ -177,14 +187,14 @@ static void on_next(lv_obj_t * btn, lv_event_t event)
 static void on_play(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_RELEASED) {
-        stage();
+        play();
     }
 }
 
-static void on_pause(lv_obj_t * btn, lv_event_t event)
+static void on_stop(lv_obj_t * btn, lv_event_t event)
 {
     if (event == LV_EVENT_RELEASED) {
-        pause();
+        stop();
     }
 }
 
@@ -458,7 +468,7 @@ void cpc_create(ysw_music_t *new_music, uint32_t new_cp_index)
     ysw_cpf_config_t config = {
         .next_cb = on_next,
         .play_cb = on_play,
-        .pause_cb = on_pause,
+        .stop_cb = on_stop,
         .loop_cb = on_loop,
         .prev_cb = on_prev,
         .close_cb = on_close,
