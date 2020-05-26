@@ -9,7 +9,6 @@
 
 #include "ysw_degree.h"
 
-#include "ysw_common.h"
 #include "ysw_midi.h"
 
 #include "esp_log.h"
@@ -27,7 +26,7 @@ const char *ysw_degree =
 "IV\n"
 "V\n"
 "VI\n"
-"VIII";
+"VII";
 
 const char *ysw_degree_names[] = {
     "I",

@@ -11,6 +11,7 @@
 
 #include "ysw_music.h"
 
-void csc_create(ysw_music_t *new_music, uint32_t new_cs_index);
+void csc_edit(ysw_music_t *new_music, uint32_t cs_index);
+ysw_cs_t *csc_create(ysw_music_t *music, uint32_t new_cs_index);
 void csc_on_metro(note_t *metro_note);
 

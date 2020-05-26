@@ -9,9 +9,11 @@
 
 #include "ysw_ssc.h"
 #include "ysw_common.h"
+#include "ysw_degree.h"
 #include "ysw_cp.h"
 #include "ysw_sdb.h"
 #include "ysw_heap.h"
+#include "../../main/csc.h" // TODO: Fix this when we extract callbacks
 #include "lvgl/lvgl.h"
 #include "esp_log.h"
 #include "stdio.h"
@@ -32,6 +34,15 @@ static void on_new_measure(uint8_t new_value)
 
 static void on_edit_style(void)
 {
+    uint32_t cs_index = ysw_music_get_cs_index(g_music, g_step->cs);
+    csc_edit(g_music, cs_index);
+}
+
+static void on_create_style(void)
+{
+    uint32_t cs_index = ysw_music_get_cs_index(g_music, g_step->cs);
+    g_step->cs = csc_create(g_music, cs_index + 1);
+    // TODO: Set ddlist index to cs_index + 1
 }
 
 static void on_apply_all(void)
@@ -52,6 +63,11 @@ static void on_apply_selected(void)
             step->cs = g_step->cs;
         }
     }
+}
+
+static void on_degree(uint8_t new_index)
+{
+    g_step->degree = ysw_degree_from_index(new_index);
 }
 
 static void on_chord_style(uint8_t new_index)
@@ -100,10 +116,12 @@ void ysw_ssc_create(ysw_music_t *music, ysw_cp_t *cp, uint32_t step_index)
     lv_win_add_btn(sdb->win, LV_SYMBOL_PLAY);
     lv_win_add_btn(sdb->win, LV_SYMBOL_PREV);
     ysw_sdb_add_separator(sdb, cp->name);
+    ysw_sdb_add_choice(sdb, "Degree", ysw_degree_to_index(g_step->degree), ysw_degree, on_degree);
     ysw_sdb_add_choice(sdb, "New Measure", ysw_step_is_new_measure(g_step), "No\nYes", on_new_measure);
     ysw_sdb_add_choice(sdb, "Chord Style", cs_index, chord_styles, on_chord_style);
-    ysw_sdb_add_button(sdb, "Edit this Style", on_edit_style);
-    ysw_sdb_add_button(sdb, "Apply to All Steps", on_apply_all);
+    ysw_sdb_add_button(sdb, "Edit This Style", on_edit_style);
+    ysw_sdb_add_button(sdb, "Create New Style", on_create_style);
+    ysw_sdb_add_button(sdb, "Apply Style to All Steps", on_apply_all);
     ysw_sdb_add_button(sdb, "Apply to Selected Steps", on_apply_selected);
 
     ysw_heap_free(chord_styles); // choice uses ddlist, which uses label, which allocs space

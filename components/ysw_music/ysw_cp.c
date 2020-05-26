@@ -121,16 +121,9 @@ void ysw_cp_dump(ysw_cp_t *cp, char *tag)
     }
 }
 
-int32_t ysw_cp_get_step_index(ysw_cp_t *cp, ysw_step_t *target_step)
+int32_t ysw_cp_get_step_index(ysw_cp_t *cp, ysw_step_t *step)
 {
-    uint32_t step_count = ysw_cp_get_step_count(cp);
-    for (uint32_t i = 0; i < step_count; i++) {
-        ysw_step_t *step = ysw_cp_get_step(cp, i);
-        if (step == target_step) {
-            return i;
-        }
-    }
-    return -1;
+    return ysw_array_find(cp->steps, step);
 }
 
 uint32_t ysw_cp_get_steps_to_next_measure(ysw_cp_t *cp, uint32_t step_index)

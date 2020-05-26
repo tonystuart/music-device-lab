@@ -138,6 +138,16 @@ void ysw_array_remove(ysw_array_t *array, uint32_t index)
     array->count--;
 }
 
+int32_t ysw_array_find(ysw_array_t *array, void *value)
+{
+    for (uint32_t i = 0; i < array->count; i++) {
+        if (array->data[i] == value) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 uint32_t ysw_array_get_free_space(ysw_array_t *array)
 {
     assert(array);

@@ -107,7 +107,7 @@ static void refresh()
     stage();
 }
 
-static void create_cs(uint32_t new_index)
+static ysw_cs_t *create_cs(uint32_t new_index)
 {
     ysw_cs_t *cs = ysw_music_get_cs(music, cs_index);
 
@@ -124,6 +124,7 @@ static void create_cs(uint32_t new_index)
     ysw_music_insert_cs(music, new_index, new_cs);
     cs_index = new_index;
     update_frame();
+    return new_cs;
 }
 
 static void create_cn(lv_obj_t *cse, int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration)
@@ -417,7 +418,7 @@ static void cse_event_cb(lv_obj_t *cse, ysw_lv_cse_event_t event, ysw_lv_cse_eve
     }
 }
 
-void csc_create(ysw_music_t *new_music, uint32_t new_cs_index)
+void csc_edit(ysw_music_t *new_music, uint32_t new_cs_index)
 {
     music = new_music;
     cs_index = new_cs_index;
@@ -442,6 +443,36 @@ void csc_create(ysw_music_t *new_music, uint32_t new_cs_index)
 
     csf = ysw_csf_create(&config);
     update_frame();
+}
+
+ysw_cs_t *csc_create(ysw_music_t *new_music, uint32_t new_cs_index)
+{
+    // TODO: See if we can reuse csc_edit
+    music = new_music;
+    //cs_index = new_cs_index;
+
+    ysw_csf_config_t config = {
+        .next_cb = on_next,
+        .play_cb = on_play,
+        .stop_cb = on_stop,
+        .loop_cb = on_loop,
+        .prev_cb = on_prev,
+        .close_cb = on_close,
+        .settings_cb = on_settings,
+        .save_cb = on_save,
+        .new_cb = on_new_chord_style,
+        .copy_cb = on_copy,
+        .paste_cb = on_paste,
+        .volume_mid_cb = on_volume_mid,
+        .volume_max_cb = on_volume_max,
+        .trash_cb = on_trash,
+        .cse_event_cb = cse_event_cb,
+    };
+
+    csf = ysw_csf_create(&config);
+    ysw_cs_t *new_cs = create_cs(new_cs_index);
+    update_frame();
+    return new_cs;
 }
 
 void csc_on_metro(note_t *metro_note)

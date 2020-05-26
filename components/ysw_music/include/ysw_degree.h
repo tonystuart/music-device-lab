@@ -9,9 +9,12 @@
 
 #pragma once
 
+#include "ysw_common.h"
 #include "stdint.h"
 #include "stddef.h"
 
+extern const char *ysw_degree;
+extern const char *ysw_degree_names[];
 extern const uint8_t ysw_degree_intervals[7][7];
 
 typedef enum {
@@ -43,3 +46,14 @@ typedef enum {
 uint8_t ysw_degree_to_note(uint8_t scale_tonic, uint8_t root_number, int8_t degree_number, ysw_accidental_t accidental);
 void ysw_degree_normalize(int8_t degree_number, uint8_t *normalized_degree_number, int8_t *octave);
 const char* ysw_degree_get_name(uint8_t name_index);
+
+static inline uint8_t ysw_degree_from_index(uint8_t index)
+{
+    return to_count(index);
+}
+
+static inline uint8_t ysw_degree_to_index(int8_t degree)
+{
+    return to_index(degree);
+}
+

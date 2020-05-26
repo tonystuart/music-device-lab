@@ -35,7 +35,7 @@ static void event_handler(lv_obj_t *btn, lv_event_t event)
     if (event == LV_EVENT_CLICKED) {
         const char *text = lv_list_get_btn_text(btn);
         if (strcmp(text, "Chords") == 0) {
-            csc_create(music, 0);
+            csc_edit(music, 0);
         } else if (strcmp(text, "Progressions") == 0) {
             cpc_create(music, 0);
         } else if (strcmp(text, "Globals") == 0) {

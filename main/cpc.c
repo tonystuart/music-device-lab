@@ -38,9 +38,9 @@ typedef void (*step_visitor_t)(ysw_step_t *step);
 
 static ysw_music_t *music;
 static ysw_cpf_t *cpf;
-static uint32_t cp_index;
 static ysw_array_t *clipboard;
-static int32_t last_step_index = -1;
+static uint32_t cp_index;
+static int32_t step_index = -1;
 
 static void send_notes(ysw_sequencer_message_type_t type)
 {
@@ -341,21 +341,21 @@ static void on_paste(lv_obj_t * btn, lv_event_t event)
                     ysw_step_select(step, false);
                 }
                 uint32_t insert_index;
-                if (last_step_index < 0) {
+                if (step_index < 0) {
                     insert_index = 0;
-                } else if (last_step_index < step_count) {
-                    insert_index = last_step_index + 1;
+                } else if (step_index < step_count) {
+                    insert_index = step_index + 1;
                 } else {
                     insert_index = step_count;
                 }
                 uint32_t first = insert_index;
-                ESP_LOGD(TAG, "last_step_index=%d, paste_count=%d, step_count=%d, insert_index=%d", last_step_index, paste_count, step_count, insert_index);
+                ESP_LOGD(TAG, "step_index=%d, paste_count=%d, step_count=%d, insert_index=%d", step_index, paste_count, step_count, insert_index);
                 for (uint32_t i = 0; i < paste_count; i++) {
                     ysw_step_t *step = ysw_array_get(clipboard, i);
                     ysw_step_t *new_step = ysw_step_copy(step);
                     new_step->state = step->state;
                     ysw_cp_insert_step(cp, insert_index, new_step);
-                    last_step_index = ++insert_index;
+                    step_index = ++insert_index;
                 }
                 ysw_cpf_ensure_visible(cpf, first, first + paste_count - 1); // -1 because width is included
                 ESP_LOGD(TAG, "on_paste calling refresh");
@@ -436,12 +436,15 @@ static void on_edit(lv_obj_t * btn, lv_event_t event)
     if (event == LV_EVENT_PRESSED) {
         ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
         uint32_t step_count = ysw_cp_get_step_count(cp);
-        for (uint32_t i = 0; i < step_count; i++) {
-            ysw_step_t *step = ysw_cp_get_step(cp, i);
-            if (ysw_step_is_selected(step)) {
-                ysw_ssc_create(music, cp, i);
-                return;
+        if (step_count) {
+            if (step_index < 0) {
+                step_index = 0;
+            } else if (step_index >= step_count) {
+                step_index = step_count - 1;
             }
+            ysw_step_t *step = ysw_cp_get_step(cp, step_index);
+            ysw_step_select(step, true);
+            ysw_ssc_create(music, cp, step_index);
         }
     }
 }
@@ -449,8 +452,8 @@ static void on_edit(lv_obj_t * btn, lv_event_t event)
 static void on_select(lv_obj_t *cpe, ysw_lv_cpe_select_t *select)
 {
     ysw_cp_t *cp = ysw_music_get_cp(music, cp_index);
-    last_step_index = ysw_cp_get_step_index(cp, select->step);
-    ESP_LOGD(TAG, "on_select last_step_index=%d", last_step_index);
+    step_index = ysw_cp_get_step_index(cp, select->step);
+    ESP_LOGD(TAG, "on_select step_index=%d", step_index);
 }
 
 static void cpe_event_cb(lv_obj_t *cpe, ysw_lv_cpe_event_t event, ysw_lv_cpe_event_cb_data_t *data)

@@ -23,6 +23,11 @@ ysw_cs_t *ysw_music_get_cs(ysw_music_t *music, uint32_t index)
     return ysw_array_get(music->cs_array, index);
 }
 
+int32_t ysw_music_get_cs_index(ysw_music_t *music, ysw_cs_t *cs)
+{
+    return ysw_array_find(music->cs_array, cs);
+}
+
 uint32_t ysw_music_get_cp_count(ysw_music_t *music)
 {
     return ysw_array_get_count(music->cp_array);
