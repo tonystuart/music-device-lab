@@ -119,10 +119,10 @@ void ysw_ssc_create(ysw_music_t *music, ysw_cp_t *cp, uint32_t step_index)
     ysw_sdb_add_choice(sdb, "Degree", ysw_degree_to_index(g_step->degree), ysw_degree, on_degree);
     ysw_sdb_add_choice(sdb, "New Measure", ysw_step_is_new_measure(g_step), "No\nYes", on_new_measure);
     ysw_sdb_add_choice(sdb, "Chord Style", cs_index, chord_styles, on_chord_style);
-    ysw_sdb_add_button(sdb, "Edit This Style", on_edit_style);
-    ysw_sdb_add_button(sdb, "Create New Style", on_create_style);
-    ysw_sdb_add_button(sdb, "Apply Style to All Steps", on_apply_all);
-    ysw_sdb_add_button(sdb, "Apply to Selected Steps", on_apply_selected);
+    ysw_sdb_add_button(sdb, "Edit Style", on_edit_style);
+    ysw_sdb_add_button(sdb, "Create Style", on_create_style);
+    ysw_sdb_add_button(sdb, "Apply to All", on_apply_all);
+    ysw_sdb_add_button(sdb, "Apply Selected", on_apply_selected);
 
     ysw_heap_free(chord_styles); // choice uses ddlist, which uses label, which allocs space
 }

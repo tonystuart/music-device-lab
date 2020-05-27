@@ -275,6 +275,7 @@ void ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, ysw_sdb_
 
 void ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, ysw_sdb_button_cb_t callback)
 {
+#if 0
     lv_obj_t *spacer = lv_obj_create(sdb->win, NULL);
     lv_obj_set_size(spacer, 100, 0);
 
@@ -285,6 +286,17 @@ void ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, ysw_sdb_button_cb_t ca
     lv_btn_set_fit2(btn, LV_FIT_NONE, LV_FIT_TIGHT);
     lv_obj_set_user_data(btn, callback);
     lv_obj_set_protect(btn, LV_PROTECT_FOLLOW);
+    lv_obj_set_event_cb(btn, on_btn_event);
+
+    lv_obj_t *label = lv_label_create(btn, NULL);
+    lv_label_set_text(label, name);
+#endif
+    lv_obj_t *btn = lv_btn_create(sdb->win, NULL);
+    lv_btn_set_style(btn, LV_BTN_STYLE_REL, &ysw_style_btn_rel);
+    lv_btn_set_style(btn, LV_BTN_STYLE_PR, &ysw_style_btn_pr);
+    lv_obj_set_width(btn, 140);
+    lv_btn_set_fit2(btn, LV_FIT_NONE, LV_FIT_TIGHT);
+    lv_obj_set_user_data(btn, callback);
     lv_obj_set_event_cb(btn, on_btn_event);
 
     lv_obj_t *label = lv_label_create(btn, NULL);
