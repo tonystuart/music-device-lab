@@ -12,7 +12,7 @@
 #include "sequencer.h"
 
 #include "ysw_cs.h"
-#include "ysw_cn.h"
+#include "ysw_sn.h"
 #include "ysw_division.h"
 #include "ysw_heap.h"
 #include "ysw_instruments.h"
@@ -33,15 +33,15 @@
 
 #define TAG "CSC"
 
-typedef void (*cn_visitor_t)(csc_t *csc, ysw_cn_t *cn);
+typedef void (*sn_visitor_t)(csc_t *csc, ysw_sn_t *sn);
 
 static void send_notes(csc_t *csc, ysw_sequencer_message_type_t type)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
-    ysw_cs_sort_cn_array(cs);
+    ysw_cs_sort_sn_array(cs);
 
     uint32_t note_count = 0;
-    note_t *notes = ysw_cs_get_notes(cs, &note_count);
+    ysw_note_t *notes = ysw_cs_get_notes(cs, &note_count);
 
     ysw_sequencer_message_t message = {
         .type = type,
@@ -122,39 +122,39 @@ static ysw_cs_t *create_cs(csc_t *csc, uint32_t new_index)
     return new_cs;
 }
 
-static void copy_to_clipboard(csc_t *csc, ysw_cn_t *cn)
+static void copy_to_clipboard(csc_t *csc, ysw_sn_t *sn)
 {
-    ysw_cn_t *new_cn = ysw_cn_copy(cn);
-    ysw_cn_select(cn, false);
-    ysw_cn_select(new_cn, true);
-    ysw_array_push(csc->clipboard, new_cn);
+    ysw_sn_t *new_sn = ysw_sn_copy(sn);
+    ysw_sn_select(sn, false);
+    ysw_sn_select(new_sn, true);
+    ysw_array_push(csc->clipboard, new_sn);
 }
 
-static void decrease_volume(csc_t *csc, ysw_cn_t *cn)
+static void decrease_volume(csc_t *csc, ysw_sn_t *sn)
 {
-    int new_velocity = ((cn->velocity - 1) / 10) * 10;
+    int new_velocity = ((sn->velocity - 1) / 10) * 10;
     if (new_velocity >= 0) {
-        cn->velocity = new_velocity;
+        sn->velocity = new_velocity;
     }
 }
 
-static void increase_volume(csc_t *csc, ysw_cn_t *cn)
+static void increase_volume(csc_t *csc, ysw_sn_t *sn)
 {
-    int new_velocity = ((cn->velocity + 10) / 10) * 10;
+    int new_velocity = ((sn->velocity + 10) / 10) * 10;
     if (new_velocity <= 120) {
-        cn->velocity = new_velocity;
+        sn->velocity = new_velocity;
     }
 }
 
-static void visit_cn(csc_t *csc, cn_visitor_t visitor)
+static void visit_sn(csc_t *csc, sn_visitor_t visitor)
 {
     uint32_t visitor_count = 0;
     ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
-    uint32_t cn_count = ysw_cs_get_cn_count(cs);
-    for (uint32_t i = 0; i < cn_count; i++) {
-        ysw_cn_t *cn = ysw_cs_get_cn(cs, i);
-        if (ysw_cn_is_selected(cn)) {
-            visitor(csc, cn);
+    uint32_t sn_count = ysw_cs_get_sn_count(cs);
+    for (uint32_t i = 0; i < sn_count; i++) {
+        ysw_sn_t *sn = ysw_cs_get_sn(cs, i);
+        if (ysw_sn_is_selected(sn)) {
+            visitor(csc, sn);
             visitor_count++;
         }
     }
@@ -300,30 +300,30 @@ static void on_new(csc_t *csc, lv_obj_t * btn, lv_event_t event)
 static void on_copy(csc_t *csc, lv_obj_t * btn, lv_event_t event)
 {
     if (csc->clipboard) {
-        uint32_t old_cn_count = ysw_array_get_count(csc->clipboard);
-        for (int i = 0; i < old_cn_count; i++) {
-            ysw_cn_t *old_cn = ysw_array_get(csc->clipboard, i);
-            ysw_cn_free(old_cn);
+        uint32_t old_sn_count = ysw_array_get_count(csc->clipboard);
+        for (int i = 0; i < old_sn_count; i++) {
+            ysw_sn_t *old_sn = ysw_array_get(csc->clipboard, i);
+            ysw_sn_free(old_sn);
         }
         ysw_array_truncate(csc->clipboard, 0);
     } else {
         csc->clipboard = ysw_array_create(10);
     }
-    visit_cn(csc, copy_to_clipboard);
+    visit_sn(csc, copy_to_clipboard);
 }
 
 static void on_paste(csc_t *csc, lv_obj_t * btn, lv_event_t event)
 {
     if (csc->clipboard) {
         ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
-        uint32_t cn_count = ysw_array_get_count(csc->clipboard);
-        for (uint32_t i = 0; i < cn_count; i++) {
-            ysw_cn_t *cn = ysw_array_get(csc->clipboard, i);
-            ysw_cn_t *new_cn = ysw_cn_copy(cn);
-            new_cn->state = cn->state;
-            ysw_cs_add_cn(cs, new_cn);
+        uint32_t sn_count = ysw_array_get_count(csc->clipboard);
+        for (uint32_t i = 0; i < sn_count; i++) {
+            ysw_sn_t *sn = ysw_array_get(csc->clipboard, i);
+            ysw_sn_t *new_sn = ysw_sn_copy(sn);
+            new_sn->state = sn->state;
+            ysw_cs_add_sn(cs, new_sn);
         }
-        if (cn_count) {
+        if (sn_count) {
             refresh(csc);
         }
     }
@@ -334,39 +334,39 @@ static void on_trash(csc_t *csc, lv_obj_t * btn, lv_event_t event)
     uint32_t target = 0;
     uint32_t changes = 0;
     ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
-    uint32_t cn_count = ysw_cs_get_cn_count(cs);
-    for (uint32_t source = 0; source < cn_count; source++) {
-        ysw_cn_t *cn = ysw_array_get(cs->cn_array, source);
-        if (ysw_cn_is_selected(cn)) {
-            ysw_cn_free(cn);
+    uint32_t sn_count = ysw_cs_get_sn_count(cs);
+    for (uint32_t source = 0; source < sn_count; source++) {
+        ysw_sn_t *sn = ysw_array_get(cs->sn_array, source);
+        if (ysw_sn_is_selected(sn)) {
+            ysw_sn_free(sn);
             changes++;
         } else {
-            ysw_array_set(cs->cn_array, target, cn);
+            ysw_array_set(cs->sn_array, target, sn);
             target++;
         }
     }
     if (changes) {
-        ysw_array_truncate(cs->cn_array, target);
+        ysw_array_truncate(cs->sn_array, target);
         refresh(csc);
     }
 }
 
 static void on_volume_mid(csc_t *csc, lv_obj_t * btn)
 {
-    visit_cn(csc, decrease_volume);
+    visit_sn(csc, decrease_volume);
 }
 
 static void on_volume_max(csc_t *csc, lv_obj_t * btn, lv_event_t event)
 {
-    visit_cn(csc, increase_volume);
+    visit_sn(csc, increase_volume);
 }
 
-static void on_create_cn(csc_t *csc, int8_t degree, uint32_t start)
+static void on_create_sn(csc_t *csc, int8_t degree, uint32_t start)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
     uint32_t duration = (YSW_CS_DURATION / cs->divisions) - 5;
-    ysw_cn_t *cn = ysw_cn_create(degree, 80, start, duration, 0);
-    ysw_cs_add_cn(cs, cn);
+    ysw_sn_t *sn = ysw_sn_create(degree, 80, start, duration, 0);
+    ysw_cs_add_sn(cs, sn);
     refresh(csc);
 }
 
@@ -400,7 +400,7 @@ csc_t *csc_create(ysw_music_t *music, uint32_t cs_index)
     csc->cs_index = cs_index;
     csc->frame = create_frame(csc);
     csc->cse = ysw_lv_cse_create(csc->frame->win, csc);
-    ysw_lv_cse_set_create_cb(csc->cse, on_create_cn);
+    ysw_lv_cse_set_create_cb(csc->cse, on_create_sn);
     ysw_lv_cse_set_drag_end_cb(csc->cse, stage);
     ysw_frame_set_content(csc->frame, csc->cse);
     update_frame(csc);
@@ -421,7 +421,7 @@ void csc_set_close_cb(csc_t *csc, void *cb, void *context)
     csc->close_cb_context = context;
 }
 
-void csc_on_metro(csc_t *csc, note_t *metro_note)
+void csc_on_metro(csc_t *csc, ysw_note_t *metro_note)
 {
     ysw_lv_cse_on_metro(csc->cse, metro_note);
 }

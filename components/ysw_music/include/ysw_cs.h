@@ -10,9 +10,10 @@
 #pragma once
 
 #include "ysw_array.h"
-#include "ysw_cn.h"
+#include "ysw_sn.h"
 #include "ysw_degree.h"
-#include "ysw_song.h"
+#include "ysw_midi.h"
+#include "ysw_note.h"
 #include "ysw_ticks.h"
 #include "ysw_time.h"
 
@@ -41,7 +42,7 @@ typedef enum PACKED {
 
 typedef struct {
     char *name;
-    ysw_array_t *cn_array;
+    ysw_array_t *sn_array;
     uint8_t instrument;
     uint8_t octave;
     ysw_mode_t mode;
@@ -54,21 +55,21 @@ ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode
 
 ysw_cs_t *ysw_cs_copy(ysw_cs_t *old_cs);
 
-static inline uint32_t ysw_cs_get_cn_count(ysw_cs_t *cs)
+static inline uint32_t ysw_cs_get_sn_count(ysw_cs_t *cs)
 {
-    return ysw_array_get_count(cs->cn_array);
+    return ysw_array_get_count(cs->sn_array);
 }
 
-static inline ysw_cn_t *ysw_cs_get_cn(ysw_cs_t *cs, uint32_t index)
+static inline ysw_sn_t *ysw_cs_get_sn(ysw_cs_t *cs, uint32_t index)
 {
-    return ysw_array_get(cs->cn_array, index);
+    return ysw_array_get(cs->sn_array, index);
 }
 
 void ysw_cs_free(ysw_cs_t *cs);
 
-uint32_t ysw_cs_add_cn(ysw_cs_t *cs, ysw_cn_t *cn);
+uint32_t ysw_cs_add_sn(ysw_cs_t *cs, ysw_sn_t *sn);
 
-void ysw_cs_sort_cn_array(ysw_cs_t *cs);
+void ysw_cs_sort_sn_array(ysw_cs_t *cs);
 
 void ysw_cs_set_name(ysw_cs_t *cs, const char *name);
 
@@ -78,6 +79,6 @@ const char *ysw_cs_get_name(ysw_cs_t *cs);
 
 uint8_t ysw_cs_get_instrument(ysw_cs_t *cs);
 
-note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count);
+ysw_note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count);
 
 void ysw_cs_dump(ysw_cs_t *cs, char *tag);

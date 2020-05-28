@@ -8,7 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_music.h"
-
+#include "esp_log.h"
 #include "assert.h"
 
 #define TAG "YSW_MUSIC"
@@ -28,14 +28,14 @@ int32_t ysw_music_get_cs_index(ysw_music_t *music, ysw_cs_t *cs)
     return ysw_array_find(music->cs_array, cs);
 }
 
-uint32_t ysw_music_get_cp_count(ysw_music_t *music)
+uint32_t ysw_music_get_hp_count(ysw_music_t *music)
 {
-    return ysw_array_get_count(music->cp_array);
+    return ysw_array_get_count(music->hp_array);
 }
 
-ysw_cp_t *ysw_music_get_cp(ysw_music_t *music, uint32_t index)
+ysw_hp_t *ysw_music_get_hp(ysw_music_t *music, uint32_t index)
 {
-    return ysw_array_get(music->cp_array, index);
+    return ysw_array_get(music->hp_array, index);
 }
 
 void ysw_music_insert_cs(ysw_music_t *music, uint32_t index, ysw_cs_t *cs)
@@ -43,9 +43,9 @@ void ysw_music_insert_cs(ysw_music_t *music, uint32_t index, ysw_cs_t *cs)
     ysw_array_insert(music->cs_array, index, cs);
 }
 
-void ysw_music_insert_cp(ysw_music_t *music, uint32_t index, ysw_cp_t *cp)
+void ysw_music_insert_hp(ysw_music_t *music, uint32_t index, ysw_hp_t *hp)
 {
-    ysw_array_insert(music->cp_array, index, cp);
+    ysw_array_insert(music->hp_array, index, hp);
 }
 
 void ysw_music_dump(ysw_music_t *music, char *tag)
@@ -57,10 +57,10 @@ void ysw_music_dump(ysw_music_t *music, char *tag)
         ysw_cs_dump(cs, tag);
     }
 
-    uint32_t cp_count = ysw_music_get_cp_count(music);
-    for (uint32_t i = 0; i < cp_count; i++) {
-        ysw_cp_t *cp = ysw_music_get_cp(music, i);
-        ESP_LOGI(tag, "cp[%d]=%s", i, cp->name);
-        ysw_cp_dump(cp, tag);
+    uint32_t hp_count = ysw_music_get_hp_count(music);
+    for (uint32_t i = 0; i < hp_count; i++) {
+        ysw_hp_t *hp = ysw_music_get_hp(music, i);
+        ESP_LOGI(tag, "hp[%d]=%s", i, hp->name);
+        ysw_hp_dump(hp, tag);
     }
 }

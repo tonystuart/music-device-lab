@@ -8,7 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "csc.h"
-#include "cpc.h"
+#include "hpc.h"
 #include "display.h"
 #include "gsc.h"
 #include "sequencer.h"
@@ -31,7 +31,7 @@
 // TODO: Move to dynamic structure
 
 static ysw_music_t *music;
-static cpc_t *cpc;
+static hpc_t *hpc;
 static csc_t *csc;
 
 static void event_handler(lv_obj_t *btn, lv_event_t event)
@@ -42,8 +42,8 @@ static void event_handler(lv_obj_t *btn, lv_event_t event)
             // TODO: add close cb and clear csc
             csc = csc_create(music, 0);
         } else if (strcmp(text, "Progressions") == 0) {
-            // TODO: add close cb and clear cpc
-            cpc = cpc_create(music, 0);
+            // TODO: add close cb and clear hpc
+            hpc = hpc_create(music, 0);
         } else if (strcmp(text, "Globals") == 0) {
             gsc_create(music);
         }
@@ -74,15 +74,15 @@ static void on_sequencer_cb(sequencer_cb_message_t *message)
     if (message->type == META_NOTE) {
         if (csc && message->meta_note->midi_note == YSW_CS_METRO) {
             csc_on_metro(csc, message->meta_note);
-        } else if (cpc && message->meta_note->midi_note == YSW_CP_METRO) {
-            cpc_on_metro(cpc, message->meta_note);
+        } else if (hpc && message->meta_note->midi_note == YSW_HP_METRO) {
+            hpc_on_metro(hpc, message->meta_note);
         }
     } else if (message->type == NOT_PLAYING) {
         if (csc) {
             csc_on_metro(csc, NULL);
         } // not else
-        if (cpc) {
-            cpc_on_metro(cpc, NULL);
+        if (hpc) {
+            hpc_on_metro(hpc, NULL);
         }
     }
 }

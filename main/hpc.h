@@ -14,22 +14,22 @@
 #include "ysw_music.h"
 #include "stdint.h"
 
-typedef struct cpc_s cpc_t;
+typedef struct hpc_s hpc_t;
 
-typedef void (*cpc_close_cb_t)(void *context, cpc_t *cpc);
+typedef void (*hpc_close_cb_t)(void *context, hpc_t *hpc);
 
-typedef struct cpc_s {
+typedef struct hpc_s {
     ysw_frame_t *frame;
-    lv_obj_t *cpe;
+    lv_obj_t *hpe;
     ysw_music_t *music;
     ysw_array_t *clipboard;
-    uint32_t cp_index;
+    uint32_t hp_index;
     int32_t step_index;
-    cpc_close_cb_t close_cb;
+    hpc_close_cb_t close_cb;
     void *close_cb_context;
-} cpc_t;
+} hpc_t;
 
-cpc_t *cpc_create(ysw_music_t *new_music, uint32_t new_cs_index);
-void cpc_set_close_cb(cpc_t *cpc, cpc_close_cb_t cb, void *context);
-void cpc_on_metro(cpc_t *cpc, note_t *metro_note);
+hpc_t *hpc_create(ysw_music_t *new_music, uint32_t new_cs_index);
+void hpc_set_close_cb(hpc_t *hpc, hpc_close_cb_t cb, void *context);
+void hpc_on_metro(hpc_t *hpc, ysw_note_t *metro_note);
 

@@ -31,5 +31,5 @@ typedef struct csc_s {
 csc_t *csc_create(ysw_music_t *music, uint32_t cs_index);
 csc_t *csc_create_new(ysw_music_t *music, uint32_t old_cs_index);
 void csc_set_close_cb(csc_t *csc, void *cb, void *context);
-void csc_on_metro(csc_t *csc, note_t *metro_note);
+void csc_on_metro(csc_t *csc, ysw_note_t *metro_note);
 

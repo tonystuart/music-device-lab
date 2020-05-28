@@ -19,7 +19,7 @@ typedef enum {
 typedef struct {
     sequencer_cb_type_t type;
     union {
-        note_t *meta_note;
+        ysw_note_t *meta_note;
     };
 } sequencer_cb_message_t;
 

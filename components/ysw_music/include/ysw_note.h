@@ -9,15 +9,15 @@
 
 #pragma once
 
-#include "ysw_hp.h"
-#include "ysw_music.h"
+#include "ysw_common.h"
 #include "stdint.h"
 
-typedef struct {
-    ysw_music_t *music;
-    ysw_hp_t *hp;
-    ysw_step_t *step;
-} ssc_t;
-
-void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t step_index);
+typedef struct PACKED note {
+    uint32_t start;
+    uint16_t duration;
+    uint8_t channel;
+    uint8_t midi_note;
+    uint8_t velocity;
+    uint8_t instrument;
+} ysw_note_t;
 

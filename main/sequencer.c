@@ -22,7 +22,7 @@
 static QueueHandle_t sequencer_queue;
 static sequencer_cb_t sequencer_cb;
 
-static void on_note_on(note_t *note)
+static void on_note_on(ysw_note_t *note)
 {
     if (note->channel == YSW_CS_META_CHANNEL) {
         if (sequencer_cb) {

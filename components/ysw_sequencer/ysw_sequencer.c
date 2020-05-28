@@ -70,7 +70,7 @@ static void release_all_notes()
     active_count = 0;
 }
 
-static void play_note(note_t *note, int next_note_index)
+static void play_note(ysw_note_t *note, int next_note_index)
 {
     if (note->instrument != programs[note->channel]) {
         if (note->channel != YSW_MIDI_DRUM_CHANNEL) {
@@ -245,7 +245,7 @@ static TickType_t process_notes()
     TickType_t ticks_to_wait = portMAX_DELAY;
     uint32_t playback_millis = get_current_playback_millis();
 
-    note_t *note;
+    ysw_note_t *note;
     if (next_note < active.note_count) {
         note = &active.notes[next_note];
     } else {
