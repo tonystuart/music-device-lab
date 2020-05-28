@@ -20,7 +20,24 @@
 
 #define BUTTON_SIZE 20
 
-ysw_frame_t *ysw_frame_create()
+// Key to ysw_frame context management:
+// We stash the context in the header and footer
+// We stash the callback in each button's user data
+// We fetch the context using the parent relationship
+
+static void on_btn_event(lv_obj_t *btn, lv_event_t event)
+{
+    if (event == LV_EVENT_CLICKED) {
+        ysw_frame_cb_t cb = lv_obj_get_user_data(btn);
+        if (cb) {
+            lv_obj_t *parent = lv_obj_get_parent(btn);
+            void *context = lv_obj_get_user_data(parent);
+            cb(context);
+        }
+    }
+}
+
+ysw_frame_t *ysw_frame_create(void *context)
 {
     ESP_LOGD(TAG, "ysw_frame_create");
 
@@ -40,10 +57,13 @@ ysw_frame_t *ysw_frame_create()
     lv_win_set_title(frame->win, "");
     lv_win_set_btn_size(frame->win, BUTTON_SIZE);
     lv_obj_set_height(frame->win, display_h - footer_h);
+    lv_win_ext_t *ext = lv_obj_get_ext_attr(frame->win);
+    lv_obj_set_user_data(ext->header, context);
 
     frame->footer = lv_obj_create(frame->container, NULL);
     lv_obj_set_size(frame->footer, display_w, footer_h);
     lv_obj_align(frame->footer, frame->win, LV_ALIGN_OUT_BOTTOM_RIGHT, 5, 5);
+    lv_obj_set_user_data(frame->footer, context);
 
     frame->footer_label = lv_label_create(frame->footer, NULL);
     lv_label_set_text(frame->footer_label, "");
@@ -55,16 +75,15 @@ ysw_frame_t *ysw_frame_create()
     return frame;
 }
 
-lv_obj_t *ysw_frame_add_header_button(ysw_frame_t *frame, const void *img_src, lv_event_cb_t event_cb)
+lv_obj_t *ysw_frame_add_header_button(ysw_frame_t *frame, const void *img_src, void *cb)
 {
     lv_obj_t *btn = lv_win_add_btn(frame->win, img_src);
-    if (event_cb) {
-        lv_obj_set_event_cb(btn, event_cb);
-    }
+    lv_obj_set_user_data(btn, cb);
+    lv_obj_set_event_cb(btn, on_btn_event);
     return btn;
 }
 
-lv_obj_t *ysw_frame_add_footer_button(ysw_frame_t *frame, const void *img_src, lv_event_cb_t event_cb)
+lv_obj_t *ysw_frame_add_footer_button(ysw_frame_t *frame, const void *img_src, void *cb)
 {
     lv_obj_t *win = lv_obj_get_child_back(frame->container, NULL);
     lv_win_ext_t *ext = lv_obj_get_ext_attr(win);
@@ -85,9 +104,8 @@ lv_obj_t *ysw_frame_add_footer_button(ysw_frame_t *frame, const void *img_src, l
         lv_obj_align(btn, frame->last_button, LV_ALIGN_OUT_RIGHT_MID, 4, 0);
     }
 
-    if (event_cb) {
-        lv_obj_set_event_cb(btn, event_cb);
-    }
+    lv_obj_set_user_data(btn, cb);
+    lv_obj_set_event_cb(btn, on_btn_event);
 
     frame->last_button = btn;
     return btn;

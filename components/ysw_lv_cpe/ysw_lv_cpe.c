@@ -92,8 +92,8 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
 
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
 
-    if (ext->metro_note && ysw_lv_cpe_gs.auto_scroll) {
-        ysw_lv_cpe_ensure_visible(cpe, ext->metro_note->velocity, ext->metro_note->velocity);
+    if (ext->metro_marker != -1 && ysw_lv_cpe_gs.auto_scroll) {
+        ysw_lv_cpe_ensure_visible(cpe, ext->metro_marker, ext->metro_marker);
     }
 
     metrics_t m;
@@ -257,8 +257,8 @@ static void draw_main(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
         }
 
     }
-    if (ext->metro_note) {
-        lv_coord_t left = m.cp_left + (ext->metro_note->velocity * m.col_width);
+    if (ext->metro_marker != -1) {
+        lv_coord_t left = m.cp_left + (ext->metro_marker * m.col_width);
         lv_point_t top = {
             .x = left,
             .y = m.cp_top,
@@ -287,45 +287,35 @@ static bool design_cb(lv_obj_t *cpe, const lv_area_t *mask, lv_design_mode_t mod
     return result;
 }
 
+static void fire_create(lv_obj_t *cpe, uint32_t step_index, uint8_t degree)
+{
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    if (ext->create_cb) {
+        ext->create_cb(ext->context, step_index, degree);
+    }
+}
+
 static void fire_select(lv_obj_t *cpe, ysw_step_t *step)
 {
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
-    if (ext->event_cb) {
-        ysw_lv_cpe_event_cb_data_t data = {
-            .select.step = step,
-        };
-        ext->event_cb(cpe, YSW_LV_CPE_SELECT, &data);
+    if (ext->select_cb) {
+        ext->select_cb(ext->context, step);
     }
 }
 
 static void fire_deselect(lv_obj_t *cpe, ysw_step_t *step)
 {
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
-    if (ext->event_cb) {
-        ysw_lv_cpe_event_cb_data_t data = {
-            .deselect.step = step,
-        };
-        ext->event_cb(cpe, YSW_LV_CPE_DESELECT, &data);
-    }
-}
-
-static void fire_create(lv_obj_t *cpe, uint32_t step_index, uint8_t degree)
-{
-    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
-    if (ext->event_cb) {
-        ysw_lv_cpe_event_cb_data_t data = {
-            .create.step_index = step_index,
-            .create.degree = degree,
-        };
-        ext->event_cb(cpe, YSW_LV_CPE_CREATE, &data);
+    if (ext->deselect_cb) {
+        ext->deselect_cb(ext->context, step);
     }
 }
 
 static void fire_drag_end(lv_obj_t *cpe)
 {
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
-    if (ext->event_cb) {
-        ext->event_cb(cpe, YSW_LV_CPE_DRAG_END, NULL);
+    if (ext->drag_end_cb) {
+        ext->drag_end_cb(ext->context);
     }
 }
 
@@ -616,7 +606,7 @@ static lv_res_t signal_cb(lv_obj_t *cpe, lv_signal_t signal, void *param)
     return res;
 }
 
-lv_obj_t *ysw_lv_cpe_create(lv_obj_t *par)
+lv_obj_t *ysw_lv_cpe_create(lv_obj_t *par, void *context)
 {
     lv_obj_t *cpe = lv_obj_create(par, NULL);
     LV_ASSERT_MEM(cpe);
@@ -645,7 +635,7 @@ lv_obj_t *ysw_lv_cpe_create(lv_obj_t *par)
     ext->dragging = false;
     ext->long_press = false;
     ext->drag_start_cp = NULL;
-    ext->metro_note = NULL;
+    ext->metro_marker = -1;
 
     ext->bg_style = &lv_style_plain;
     ext->fg_style = &ysw_style_ei;
@@ -653,7 +643,11 @@ lv_obj_t *ysw_lv_cpe_create(lv_obj_t *par)
     ext->ss_style = &ysw_style_sn;
     ext->ms_style = &ysw_style_mn;
 
-    ext->event_cb = NULL;
+    ext->create_cb = NULL;
+    ext->select_cb = NULL;
+    ext->deselect_cb = NULL;
+    ext->drag_end_cb = NULL;
+    ext->context = context;
 
     lv_obj_set_signal_cb(cpe, signal_cb);
     lv_obj_set_design_cb(cpe, design_cb);
@@ -676,18 +670,36 @@ void ysw_lv_cpe_set_cp(lv_obj_t *cpe, ysw_cp_t *cp)
     lv_obj_invalidate(cpe);
 }
 
-void ysw_lv_cpe_set_event_cb(lv_obj_t *cpe, ysw_lv_cpe_event_cb_t event_cb)
+void ysw_lv_cpe_set_create_cb(lv_obj_t *cpe, void *cb)
 {
-    LV_ASSERT_OBJ(cpe, LV_OBJX_NAME);
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
-    ext->event_cb = event_cb;
+    ext->create_cb = cb;
+}
+
+void ysw_lv_cpe_set_select_cb(lv_obj_t *cpe, void *cb)
+{
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    ext->select_cb = cb;
+}
+
+void ysw_lv_cpe_set_deselect_cb(lv_obj_t *cpe, void *cb)
+{
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    ext->deselect_cb = cb;
+}
+
+void ysw_lv_cpe_set_drag_end_cb(lv_obj_t *cpe, void *cb)
+{
+    ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
+    ext->drag_end_cb = cb;
 }
 
 void ysw_lv_cpe_on_metro(lv_obj_t *cpe, note_t *metro_note)
 {
     ysw_lv_cpe_ext_t *ext = lv_obj_get_ext_attr(cpe);
-    if (metro_note != ext->metro_note) {
-        ext->metro_note = metro_note;
+    int32_t metro_marker = metro_note ? metro_note->velocity : -1;
+    if (metro_marker != ext->metro_marker) {
+        ext->metro_marker = metro_marker;
         lv_obj_invalidate(cpe);
     }
 }

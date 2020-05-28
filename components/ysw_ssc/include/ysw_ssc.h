@@ -13,12 +13,11 @@
 #include "ysw_music.h"
 #include "stdint.h"
 
-#if 0
 typedef struct {
-    ysw_sdb_choice_cb_t *chord_style_cb;
-    ysw_sdb_checkbox_cb_t *new_measure_cb;
-} ysw_ssc_config_t;
-#endif
+    ysw_music_t *music;
+    ysw_cp_t *cp;
+    ysw_step_t *step;
+} ssc_t;
 
 void ysw_ssc_create(ysw_music_t *music, ysw_cp_t *cp, uint32_t step_index);
 

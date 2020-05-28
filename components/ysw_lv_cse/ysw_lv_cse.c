@@ -261,13 +261,13 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         }
     }
 
-    if (ext->metro_note) {
+    if (ext->metro_marker != -1) {
         lv_point_t top = {
-            .x = x + ((w * ext->metro_note->start) / YSW_CS_DURATION),
+            .x = x + ((w * ext->metro_marker) / YSW_CS_DURATION),
             .y = y,
         };
         lv_point_t bottom = {
-            .x = x + ((w * ext->metro_note->start) / YSW_CS_DURATION),
+            .x = x + ((w * ext->metro_marker) / YSW_CS_DURATION),
             .y = y + h,
         };
         lv_draw_line(&top, &bottom, mask, ext->mn_style, ext->mn_style->body.border.opa);
@@ -290,32 +290,10 @@ static bool design_cb(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
     return result;
 }
 
-static void fire_select(lv_obj_t *cse, ysw_cn_t *cn)
-{
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    if (ext->event_cb) {
-        ysw_lv_cse_event_cb_data_t data = {
-            .select.cn = cn,
-        };
-        ext->event_cb(cse, YSW_LV_CSE_SELECT, &data);
-    }
-}
-
-static void fire_deselect(lv_obj_t *cse, ysw_cn_t *cn)
-{
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    if (ext->event_cb) {
-        ysw_lv_cse_event_cb_data_t data = {
-            .deselect.cn = cn,
-        };
-        ext->event_cb(cse, YSW_LV_CSE_DESELECT, &data);
-    }
-}
-
 static void fire_create(lv_obj_t *cse, lv_point_t *point)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    if (ext->event_cb) {
+    if (ext->create_cb) {
         lv_coord_t w = lv_obj_get_width(cse);
         lv_coord_t h = lv_obj_get_height(cse);
 
@@ -328,20 +306,31 @@ static void fire_create(lv_obj_t *cse, lv_point_t *point)
         lv_coord_t tick_index = x_offset / pixels_per_tick;
         lv_coord_t row_index = y_offset / pixels_per_degree;
 
-        ysw_lv_cse_event_cb_data_t data = {
-            .create.start = tick_index,
-            .create.degree = YSW_MIDI_UNPO - row_index,
-        };
+        ext->create_cb(ext->context, tick_index, YSW_MIDI_UNPO - row_index);
+    }
+}
 
-        ext->event_cb(cse, YSW_LV_CSE_CREATE, &data);
+static void fire_select(lv_obj_t *cse, ysw_cn_t *cn)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (ext->select_cb) {
+        ext->select_cb(ext->context, cn);
+    }
+}
+
+static void fire_deselect(lv_obj_t *cse, ysw_cn_t *cn)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (ext->deselect_cb) {
+        ext->deselect_cb(ext->context, cn);
     }
 }
 
 static void fire_drag_end(lv_obj_t *cse)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    if (ext->event_cb) {
-        ext->event_cb(cse, YSW_LV_CSE_DRAG_END, NULL);
+    if (ext->drag_end_cb) {
+        ext->drag_end_cb(ext->context);
     }
 }
 
@@ -675,7 +664,7 @@ static lv_res_t signal_cb(lv_obj_t *cse, lv_signal_t signal, void *param)
     return res;
 }
 
-lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
+lv_obj_t *ysw_lv_cse_create(lv_obj_t *par, void *context)
 {
     lv_obj_t *cse = lv_obj_create(par, NULL);
     LV_ASSERT_MEM(cse);
@@ -703,18 +692,25 @@ lv_obj_t *ysw_lv_cse_create(lv_obj_t *par)
     ext->dragging = false;
     ext->long_press = false;
     ext->drag_start_cs = NULL;
-    ext->metro_note = NULL;
+    ext->metro_marker = -1;
+
     ext->bg_style = &lv_style_plain;
     ext->oi_style = &ysw_style_oi;
     ext->ei_style = &ysw_style_ei;
     ext->rn_style = &ysw_style_rn;
     ext->sn_style = &ysw_style_sn;
     ext->mn_style = &ysw_style_mn;
-    ext->event_cb = NULL;
+
+    ext->create_cb = NULL;
+    ext->select_cb = NULL;
+    ext->deselect_cb = NULL;
+    ext->drag_end_cb = NULL;
+    ext->context = context;
 
     lv_obj_set_signal_cb(cse, signal_cb);
     lv_obj_set_design_cb(cse, design_cb);
     lv_obj_set_click(cse, true);
+    // TODO: verify this does nothing and remove
     lv_obj_set_size(cse, LV_DPI * 2, LV_DPI / 3);
     lv_obj_set_style(cse, ext->bg_style);
 
@@ -732,18 +728,36 @@ void ysw_lv_cse_set_cs(lv_obj_t *cse, ysw_cs_t *cs)
     lv_obj_invalidate(cse);
 }
 
-void ysw_lv_cse_set_event_cb(lv_obj_t *cse, ysw_lv_cse_event_cb_t event_cb)
+void ysw_lv_cse_set_create_cb(lv_obj_t *cse, void *cb)
 {
-    LV_ASSERT_OBJ(cse, LV_OBJX_NAME);
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    ext->event_cb = event_cb;
+    ext->create_cb = cb;
+}
+
+void ysw_lv_cse_set_select_cb(lv_obj_t *cse, void *cb)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    ext->select_cb = cb;
+}
+
+void ysw_lv_cse_set_deselect_cb(lv_obj_t *cse, void *cb)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    ext->deselect_cb = cb;
+}
+
+void ysw_lv_cse_set_drag_end_cb(lv_obj_t *cse, void *cb)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    ext->drag_end_cb = cb;
 }
 
 void ysw_lv_cse_on_metro(lv_obj_t *cse, note_t *metro_note)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    if (metro_note != ext->metro_note) {
-        ext->metro_note = metro_note;
+    int32_t metro_marker = metro_note ? metro_note->start : -1;
+    if (metro_marker != ext->metro_marker) {
+        ext->metro_marker = metro_marker;
         lv_obj_invalidate(cse);
     }
 }

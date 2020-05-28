@@ -20,6 +20,12 @@
 
 #define TAG "YSW_SDB"
 
+// Key to SDB context management:
+// We stash the context in the sdb
+// We stash the sdb in the win's user data
+// We stash the callback in each widget's user data
+// We fetch the context via the sdb using the parent relationship
+
 static lv_signal_cb_t ddlist_signal_cb;
 
 static ysw_sdb_t *get_sdb(lv_obj_t *field)
@@ -83,7 +89,7 @@ static void on_ta_event(lv_obj_t *ta, lv_event_t event)
         const char *new_value = lv_ta_get_text(ta);
         ysw_sdb_string_cb_t cb = lv_obj_get_user_data(ta);
         if (cb) {
-            cb(new_value);
+            cb(get_sdb(ta)->context, new_value);
         }
     }
 }
@@ -94,7 +100,7 @@ static void on_ddlist_event(lv_obj_t *ddlist, lv_event_t event)
         uint8_t new_value = lv_ddlist_get_selected(ddlist);
         ysw_sdb_choice_cb_t cb = lv_obj_get_user_data(ddlist);
         if (cb) {
-            cb(new_value);
+            cb(get_sdb(ddlist)->context, new_value);
         }
     }
 }
@@ -105,7 +111,7 @@ static void on_sw_event(lv_obj_t *sw, lv_event_t event)
         bool new_value = lv_sw_get_state(sw);
         ysw_sdb_switch_cb_t cb = lv_obj_get_user_data(sw);
         if (cb) {
-            cb(new_value);
+            cb(get_sdb(sw)->context, new_value);
         }
     }
 }
@@ -116,7 +122,7 @@ static void on_cb_event(lv_obj_t *cb, lv_event_t event)
         bool new_value = lv_cb_is_checked(cb);
         ysw_sdb_checkbox_cb_t callback = lv_obj_get_user_data(cb);
         if (callback) {
-            callback(new_value);
+            callback(get_sdb(cb)->context, new_value);
         }
     }
 }
@@ -124,9 +130,9 @@ static void on_cb_event(lv_obj_t *cb, lv_event_t event)
 static void on_btn_event(lv_obj_t *btn, lv_event_t event)
 {
     if (event == LV_EVENT_CLICKED) {
-        ysw_sdb_button_cb_t callback = lv_obj_get_user_data(btn);
-        if (callback) {
-            callback();
+        ysw_sdb_button_cb_t cb = lv_obj_get_user_data(btn);
+        if (cb) {
+            cb(get_sdb(btn)->context);
         }
     }
 }
@@ -161,10 +167,11 @@ static void create_field_name(ysw_sdb_t *sdb, const char *name)
     lv_obj_set_width(label, 100);
 }
 
-ysw_sdb_t *ysw_sdb_create(const char *title)
+ysw_sdb_t *ysw_sdb_create(const char *title, void *context)
 {
     ysw_sdb_t *sdb = ysw_heap_allocate(sizeof(ysw_sdb_t));
     sdb->win = lv_win_create(lv_scr_act(), NULL);
+    sdb->context = context;
     lv_obj_set_user_data(sdb->win, sdb);
 
     lv_obj_align(sdb->win, NULL, LV_ALIGN_CENTER, 0, 0);
@@ -190,7 +197,7 @@ void ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name)
     lv_obj_set_protect(label, LV_PROTECT_FOLLOW);
 }
 
-void ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value, ysw_sdb_string_cb_t cb)
+void ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value, void *cb)
 {
     create_field_name(sdb, name);
 
@@ -205,7 +212,7 @@ void ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value, ysw
     lv_obj_set_event_cb(ta, on_ta_event);
 }
 
-void ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const char *options, ysw_sdb_choice_cb_t cb)
+void ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const char *options, void *cb)
 {
     create_field_name(sdb, name);
 
@@ -247,7 +254,7 @@ void ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const c
     lv_obj_set_signal_cb(ddlist, on_ddlist_signal);
 }
 
-void ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, ysw_sdb_switch_cb_t cb)
+void ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, void *cb)
 {
     create_field_name(sdb, name);
 
@@ -263,7 +270,7 @@ void ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, ysw_sdb_sw
     lv_obj_set_event_cb(sw, on_sw_event);
 }
 
-void ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, ysw_sdb_checkbox_cb_t callback)
+void ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, void *callback)
 {
     lv_obj_t *cb = lv_cb_create(sdb->win, NULL);
     lv_cb_set_text(cb, name);
@@ -273,7 +280,7 @@ void ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, ysw_sdb_
     lv_obj_set_event_cb(cb, on_cb_event);
 }
 
-void ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, ysw_sdb_button_cb_t callback)
+void ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, void *callback)
 {
 #if 0
     lv_obj_t *spacer = lv_obj_create(sdb->win, NULL);

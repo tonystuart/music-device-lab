@@ -22,24 +22,24 @@
 
 #define TAG "GSC"
 
-static void on_ysw_lv_cpe_gs_scroll(bool new_value)
+static void on_ysw_lv_cpe_gs_scroll(void *context, bool auto_scroll)
 {
-    ysw_lv_cpe_gs.auto_scroll = new_value;
+    ysw_lv_cpe_gs.auto_scroll = auto_scroll;
 }
 
-static void on_ysw_lv_cpe_gs_play(bool new_value)
+static void on_ysw_lv_cpe_gs_play(void *context, bool auto_play)
 {
-    ysw_lv_cpe_gs.auto_play = new_value;
+    ysw_lv_cpe_gs.auto_play = auto_play;
 }
 
-static void on_ysw_lv_cse_gs_play(bool new_value)
+static void on_ysw_lv_cse_gs_play(void *context, bool auto_play)
 {
-    ysw_lv_cse_gs.auto_play = new_value;
+    ysw_lv_cse_gs.auto_play = auto_play;
 }
 
 void gsc_create(ysw_music_t *music)
 {
-    ysw_sdb_t *sdb = ysw_sdb_create("Global Settings");
+    ysw_sdb_t *sdb = ysw_sdb_create("Global Settings", NULL);
     ysw_sdb_add_separator(sdb, "Chord Progression Settings");
     ysw_sdb_add_checkbox(sdb, "Auto Scroll", ysw_lv_cpe_gs.auto_scroll, on_ysw_lv_cpe_gs_scroll);
     ysw_sdb_add_checkbox(sdb, "Auto Play", ysw_lv_cpe_gs.auto_play, on_ysw_lv_cpe_gs_play);

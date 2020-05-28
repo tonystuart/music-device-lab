@@ -28,16 +28,22 @@
 #define SPIFFS_PARTITION "/spiffs"
 #define MUSIC_DEFINITIONS "/spiffs/music.csv"
 
+// TODO: Move to dynamic structure
+
 static ysw_music_t *music;
+static cpc_t *cpc;
+static csc_t *csc;
 
 static void event_handler(lv_obj_t *btn, lv_event_t event)
 {
     if (event == LV_EVENT_CLICKED) {
         const char *text = lv_list_get_btn_text(btn);
         if (strcmp(text, "Chords") == 0) {
-            csc_edit(music, 0);
+            // TODO: add close cb and clear csc
+            csc = csc_create(music, 0);
         } else if (strcmp(text, "Progressions") == 0) {
-            cpc_create(music, 0);
+            // TODO: add close cb and clear cpc
+            cpc = cpc_create(music, 0);
         } else if (strcmp(text, "Globals") == 0) {
             gsc_create(music);
         }
@@ -66,14 +72,18 @@ static void create_dashboard(void)
 static void on_sequencer_cb(sequencer_cb_message_t *message)
 {
     if (message->type == META_NOTE) {
-        if (message->meta_note->midi_note == YSW_CS_METRO) {
-            csc_on_metro(message->meta_note);
-        } else if (message->meta_note->midi_note == YSW_CP_METRO) {
-            cpc_on_metro(message->meta_note);
+        if (csc && message->meta_note->midi_note == YSW_CS_METRO) {
+            csc_on_metro(csc, message->meta_note);
+        } else if (cpc && message->meta_note->midi_note == YSW_CP_METRO) {
+            cpc_on_metro(cpc, message->meta_note);
         }
     } else if (message->type == NOT_PLAYING) {
-        csc_on_metro(NULL);
-        cpc_on_metro(NULL);
+        if (csc) {
+            csc_on_metro(csc, NULL);
+        } // not else
+        if (cpc) {
+            cpc_on_metro(cpc, NULL);
+        }
     }
 }
 

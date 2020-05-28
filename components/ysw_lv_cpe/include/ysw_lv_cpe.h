@@ -12,35 +12,10 @@
 #include "lvgl.h"
 #include "ysw_cp.h"
 
-typedef enum {
-    YSW_LV_CPE_SELECT,
-    YSW_LV_CPE_DESELECT,
-    YSW_LV_CPE_DRAG_END,
-    YSW_LV_CPE_CREATE,
-} ysw_lv_cpe_event_t;
-
-typedef struct {
-    ysw_step_t *step;
-} ysw_lv_cpe_select_t;
-
-typedef struct {
-    ysw_step_t *step;
-} ysw_lv_cpe_deselect_t;
-
-typedef struct {
-    uint32_t step_index;
-    int8_t degree;
-} ysw_lv_cpe_create_t;
-
-typedef struct {
-    union {
-        ysw_lv_cpe_select_t select;
-        ysw_lv_cpe_deselect_t deselect;
-        ysw_lv_cpe_create_t create;
-    };
-} ysw_lv_cpe_event_cb_data_t;
-
-typedef void (*ysw_lv_cpe_event_cb_t)(lv_obj_t *ysw_lv_cpe, ysw_lv_cpe_event_t event, ysw_lv_cpe_event_cb_data_t *data);
+typedef void (*ysw_lv_cpe_select_cb_t)(void *context, ysw_step_t *step);
+typedef void (*ysw_lv_cpe_deselect_cb_t)(void *context, ysw_step_t *step);
+typedef void (*ysw_lv_cpe_create_cb_t)(void *context, uint32_t step_index, uint8_t degree);
+typedef void (*ysw_lv_cpe_drag_end_cb_t)(void *context);
 
 typedef struct {
     ysw_cp_t *cp;
@@ -51,13 +26,17 @@ typedef struct {
     lv_point_t last_click;
     bool dragging;
     bool long_press;
-    note_t *metro_note;
+    int32_t metro_marker;
     const lv_style_t *bg_style; // background
     const lv_style_t *fg_style; // foreground
     const lv_style_t *rs_style; // regular step
     const lv_style_t *ss_style; // selected step
     const lv_style_t *ms_style; // metro step
-    ysw_lv_cpe_event_cb_t event_cb;
+    ysw_lv_cpe_create_cb_t create_cb;
+    ysw_lv_cpe_select_cb_t select_cb;
+    ysw_lv_cpe_deselect_cb_t deselect_cb;
+    ysw_lv_cpe_drag_end_cb_t drag_end_cb;
+    void *context;
 } ysw_lv_cpe_ext_t;
 
 typedef struct {
@@ -67,8 +46,11 @@ typedef struct {
 
 extern ysw_lv_cpe_gs_t ysw_lv_cpe_gs;
 
-lv_obj_t *ysw_lv_cpe_create(lv_obj_t *par);
-void ysw_lv_cpe_set_event_cb(lv_obj_t *cpe, ysw_lv_cpe_event_cb_t event_cb);
+lv_obj_t *ysw_lv_cpe_create(lv_obj_t *par, void *context);
+void ysw_lv_cpe_set_create_cb(lv_obj_t *cpe, void *cb);
+void ysw_lv_cpe_set_select_cb(lv_obj_t *cpe, void *cb);
+void ysw_lv_cpe_set_deselect_cb(lv_obj_t *cpe, void *cb);
+void ysw_lv_cpe_set_drag_end_cb(lv_obj_t *cpe, void *cb);
 void ysw_lv_cpe_set_cp(lv_obj_t *cpe, ysw_cp_t *cp);
 void ysw_lv_cpe_on_metro(lv_obj_t *cpe, note_t *metro_note);
 void ysw_lv_cpe_ensure_visible(lv_obj_t *cpe, uint32_t first_step_index, uint32_t last_step_index);

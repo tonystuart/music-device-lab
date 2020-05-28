@@ -15,53 +15,33 @@
 #include "ysw_cs.h"
 #include "ysw_bounds.h"
 
-typedef enum {
-    YSW_LV_CSE_SELECT,
-    YSW_LV_CSE_DESELECT,
-    YSW_LV_CSE_DRAG_END,
-    YSW_LV_CSE_CREATE,
-} ysw_lv_cse_event_t;
-
-typedef struct {
-    ysw_cn_t *cn;
-} ysw_lv_cse_select_t;
-
-typedef struct {
-    ysw_cn_t *cn;
-} ysw_lv_cse_deselect_t;
-
-typedef struct {
-    uint32_t start;
-    int8_t degree;
-} ysw_lv_cse_create_t;
-
-typedef struct {
-    union {
-        ysw_lv_cse_select_t select;
-        ysw_lv_cse_deselect_t deselect;
-        ysw_lv_cse_create_t create;
-    };
-} ysw_lv_cse_event_cb_data_t;
-
-typedef void (*ysw_lv_cse_event_cb_t)(lv_obj_t *ysw_lv_cse, ysw_lv_cse_event_t event, ysw_lv_cse_event_cb_data_t *data);
+typedef void (*ysw_lv_cse_select_cb_t)(void *context, ysw_cn_t *cn);
+typedef void (*ysw_lv_cse_deselect_cb_t)(void *context, ysw_cn_t *cn);
+typedef void (*ysw_lv_cse_create_cb_t)(void *context, uint32_t start, int8_t degree);
+typedef void (*ysw_lv_cse_drag_end_cb_t)(void *context);
 
 typedef struct {
     // TODO: Rename / reorder by role (e.g. dragging)
     ysw_cs_t *cs;
     lv_point_t last_click;
-    ysw_cn_t *selected_cn;
+    ysw_cn_t *selected_cn; // only set wile pressed
     ysw_bounds_t selection_type;
     ysw_cs_t *drag_start_cs;
     bool dragging;
     bool long_press;
-    note_t *metro_note;
+    int32_t metro_marker;
     const lv_style_t *bg_style; // background
     const lv_style_t *oi_style; // odd interval
     const lv_style_t *ei_style; // even interval
     const lv_style_t *rn_style; // regular note
     const lv_style_t *sn_style; // selected note
     const lv_style_t *mn_style; // metro note
-    ysw_lv_cse_event_cb_t event_cb;
+    ysw_lv_cse_create_cb_t create_cb;
+    ysw_lv_cse_select_cb_t select_cb;
+    ysw_lv_cse_deselect_cb_t deselect_cb;
+    ysw_lv_cse_drag_end_cb_t drag_end_cb;
+    void *context;
+
 } ysw_lv_cse_ext_t;
 
 typedef struct {
@@ -70,9 +50,10 @@ typedef struct {
 
 extern ysw_lv_cse_gs_t ysw_lv_cse_gs;
 
-lv_obj_t *ysw_lv_cse_create(lv_obj_t *par);
+lv_obj_t *ysw_lv_cse_create(lv_obj_t *par, void *context);
+void ysw_lv_cse_set_create_cb(lv_obj_t *cse, void *cb);
+void ysw_lv_cse_set_select_cb(lv_obj_t *cse, void *cb);
+void ysw_lv_cse_set_deselect_cb(lv_obj_t *cse, void *cb);
+void ysw_lv_cse_set_drag_end_cb(lv_obj_t *cse, void *cb);
 void ysw_lv_cse_set_cs(lv_obj_t *cse, ysw_cs_t *cs);
-void ysw_lv_cse_select(lv_obj_t *cse, ysw_cn_t *cn, bool is_selected);
-bool ysw_lv_cse_is_selected(lv_obj_t *cse, ysw_cn_t *cn);
-void ysw_lv_cse_set_event_cb(lv_obj_t *cse, ysw_lv_cse_event_cb_t event_cb);
 void ysw_lv_cse_on_metro(lv_obj_t *cse, note_t *metro_note);
