@@ -26,10 +26,10 @@ typedef struct {
 } ysw_sdb_t;
 
 ysw_sdb_t *ysw_sdb_create(const char *title, void *context);
-void ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name);
-void ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value, void *cb);
-void ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const char *options, void *cb);
-void ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, void *cb);
-void ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, void *cb);
-void ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, void *cb);
+lv_obj_t *ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name);
+lv_obj_t *ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value, void *cb);
+lv_obj_t *ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const char *options, void *cb);
+lv_obj_t *ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, void *cb);
+lv_obj_t *ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, void *cb);
+lv_obj_t *ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, void *cb);
 void ysw_sdb_close(ysw_sdb_t *sdb);

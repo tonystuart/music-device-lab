@@ -361,11 +361,13 @@ static void on_volume_max(csc_t *csc, lv_obj_t * btn, lv_event_t event)
     visit_sn(csc, increase_volume);
 }
 
-static void on_create_sn(csc_t *csc, int8_t degree, uint32_t start)
+static void on_create_sn(csc_t *csc, uint32_t start, int8_t degree)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
-    uint32_t duration = (YSW_CS_DURATION / cs->divisions) - 5;
-    ysw_sn_t *sn = ysw_sn_create(degree, 80, start, duration, 0);
+    uint32_t division_duration = YSW_CS_DURATION / cs->divisions;
+    uint32_t start_floor = (start / division_duration) * division_duration;
+    uint32_t duration = division_duration - 5;
+    ysw_sn_t *sn = ysw_sn_create(degree, 80, start_floor, duration, 0);
     ysw_cs_add_sn(cs, sn);
     refresh(csc);
 }

@@ -65,8 +65,12 @@ static void on_edit_style(ssc_t *ssc)
 
 static void on_new_style_close(ssc_t *ssc, csc_t *csc)
 {
-    // TODO: refresh ddlist and select new index
-    ESP_LOGE(TAG, "on_new_style_close refresh ddlist and select new index");
+    uint32_t cs_index = 0;
+    char *chord_styles = get_chord_styles(ssc, &cs_index);
+    ESP_LOGD(TAG, "on_new_style_close chord_styles=%s", chord_styles);
+    lv_ddlist_set_options(ssc->styles, chord_styles);
+    lv_ddlist_set_selected(ssc->styles, cs_index);
+    ysw_heap_free(chord_styles);
 }
 
 static void on_create_style(ssc_t *ssc)
@@ -133,7 +137,7 @@ void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t step_index)
     ysw_sdb_add_separator(sdb, hp->name);
     ysw_sdb_add_choice(sdb, "Degree", ysw_degree_to_index(ssc->step->degree), ysw_degree, on_degree);
     ysw_sdb_add_choice(sdb, "New Measure", ysw_step_is_new_measure(ssc->step), "No\nYes", on_new_measure);
-    ysw_sdb_add_choice(sdb, "Chord Style", cs_index, chord_styles, on_chord_style);
+    ssc->styles = ysw_sdb_add_choice(sdb, "Chord Style", cs_index, chord_styles, on_chord_style);
     ysw_sdb_add_button(sdb, "Edit Style", on_edit_style);
     ysw_sdb_add_button(sdb, "Create Style", on_create_style);
     ysw_sdb_add_button(sdb, "Apply to All", on_apply_all);

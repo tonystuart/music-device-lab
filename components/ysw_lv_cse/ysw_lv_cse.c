@@ -755,7 +755,9 @@ void ysw_lv_cse_set_drag_end_cb(lv_obj_t *cse, void *cb)
 void ysw_lv_cse_on_metro(lv_obj_t *cse, ysw_note_t *metro_note)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    ESP_LOGD(TAG, "metro_note=%p", metro_note);
     int32_t metro_marker = metro_note ? metro_note->start : -1;
+    ESP_LOGD(TAG, "metro_marker=%d", metro_marker);
     if (metro_marker != ext->metro_marker) {
         ext->metro_marker = metro_marker;
         lv_obj_invalidate(cse);

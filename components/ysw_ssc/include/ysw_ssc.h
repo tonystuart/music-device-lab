@@ -11,12 +11,14 @@
 
 #include "ysw_hp.h"
 #include "ysw_music.h"
+#include "lvgl.h"
 #include "stdint.h"
 
 typedef struct {
     ysw_music_t *music;
     ysw_hp_t *hp;
     ysw_step_t *step;
+    lv_obj_t *styles;
 } ssc_t;
 
 void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t step_index);
