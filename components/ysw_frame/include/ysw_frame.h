@@ -21,7 +21,7 @@ typedef struct {
     lv_obj_t *last_button;
 } ysw_frame_t;
 
-typedef void (*ysw_frame_cb_t)(void *context);
+typedef void (*ysw_frame_cb_t)(void *context, lv_obj_t *btn);
 
 ysw_frame_t *ysw_frame_create(void *context);
 lv_obj_t *ysw_frame_add_header_button(ysw_frame_t *frame, const void *img_src, void *cb);

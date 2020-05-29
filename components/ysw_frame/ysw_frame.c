@@ -32,7 +32,7 @@ static void on_btn_event(lv_obj_t *btn, lv_event_t event)
         if (cb) {
             lv_obj_t *parent = lv_obj_get_parent(btn);
             void *context = lv_obj_get_user_data(parent);
-            cb(context);
+            cb(context, btn);
         }
     }
 }
