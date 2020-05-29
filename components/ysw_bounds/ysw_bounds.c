@@ -34,7 +34,6 @@ ysw_bounds_t ysw_bounds_check(lv_area_t *area, lv_point_t *point)
             bounds_type = YSW_BOUNDS_RIGHT;
         }
     }
-    ESP_LOGD(TAG, "ysw_bounds_check bounds_type=%d", bounds_type);
     return bounds_type;
 }
 

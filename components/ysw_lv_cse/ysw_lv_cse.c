@@ -49,7 +49,7 @@ static char *key_labels[] =
 
 #define ROW_COUNT YSW_MIDI_UNPO
 
-#define MINIMUM_DRAG 10
+#define MINIMUM_DRAG 5
 
 #define MINIMUM_DURATION 10
 
@@ -358,20 +358,26 @@ static void capture_selection(lv_obj_t *cse, lv_point_t *point)
     }
 }
 
-static void select_only(lv_obj_t *cse, ysw_sn_t *selected_sn)
+static void select_sn(lv_obj_t *cse, ysw_sn_t *sn)
+{
+    ysw_sn_select(sn, true);
+    fire_select(cse, sn);
+}
+
+static void deselect_sn(lv_obj_t *cse, ysw_sn_t *sn)
+{
+    ysw_sn_select(sn, false);
+    fire_deselect(cse, sn);
+}
+
+static void deselect_all(lv_obj_t *cse)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
     for (int i = 0; i < sn_count; i++) {
         ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
-        if (selected_sn == sn) {
-            ysw_sn_select(selected_sn, true);
-            fire_select(cse, selected_sn);
-        } else {
-            if (ysw_sn_is_selected(sn)) {
-                ysw_sn_select(sn, false);
-                fire_deselect(cse, sn);
-            }
+        if (ysw_sn_is_selected(sn)) {
+            deselect_sn(cse, sn);
         }
     }
 }
@@ -508,7 +514,7 @@ static void do_drag(lv_obj_t *cse, lv_point_t *point)
     if (ext->dragging) {
 
         if (!ysw_sn_is_selected(ext->selected_sn)) {
-            select_only(cse, ext->selected_sn);
+            select_sn(cse, ext->selected_sn);
         }
 
         if (!ext->drag_start_cs) {
@@ -544,8 +550,8 @@ static void do_click(lv_obj_t *cse)
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->long_press) {
         ext->long_press = false;
-    } else {
-        select_only(cse, ext->selected_sn);
+    } else if (!ext->selected_sn) {
+        deselect_all(cse);
     }
 }
 
@@ -555,6 +561,15 @@ static void on_signal_pressed(lv_obj_t *cse, void *param)
     lv_indev_proc_t *proc = &indev_act->proc;
     lv_point_t *point = &proc->types.pointer.act_point;
     capture_selection(cse, point);
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (ext->selected_sn) {
+        bool selected = ysw_sn_is_selected(ext->selected_sn);
+        if (selected) {
+            deselect_sn(cse, ext->selected_sn);
+        } else {
+            select_sn(cse, ext->selected_sn);
+        }
+    }
 }
 
 static void on_signal_pressing(lv_obj_t *cse, void *param)
@@ -588,7 +603,7 @@ static void on_signal_released(lv_obj_t *cse, void *param)
 
 static void on_signal_press_lost(lv_obj_t *cse, void *param)
 {
-    ESP_LOGD(TAG, "on_signal_press_lost entered");
+    ESP_LOGE(TAG, "on_signal_press_lost entered");
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->dragging) {
         ext->dragging = false;
@@ -616,18 +631,10 @@ static void on_signal_long_press(lv_obj_t *cse, void *param)
     lv_point_t *point = &proc->types.pointer.act_point;
     do_drag(cse, point);
     if (!ext->dragging) {
-        if (ext->selected_sn) {
-            bool selected = !ysw_sn_is_selected(ext->selected_sn);
-            ysw_sn_select(ext->selected_sn, selected);
-            if (selected) {
-                fire_select(cse, ext->selected_sn);
-            } else {
-                fire_deselect(cse, ext->selected_sn);
-            }
-        } else {
+        if (!ext->selected_sn) {
             fire_create(cse, point);
+            ext->long_press = true;
         }
-        ext->long_press = true;
     }
 }
 
