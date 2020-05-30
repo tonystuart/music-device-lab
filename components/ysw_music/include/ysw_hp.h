@@ -13,7 +13,7 @@
 #include "ysw_sn.h"
 #include "ysw_cs.h"
 
-#define YSW_STEP_NEW_MEASURE 0x01
+#define YSW_PS_NEW_MEASURE 0x01
 
 #define YSW_HP_METRO (YSW_CS_METRO + 1)
 
@@ -22,11 +22,11 @@ typedef struct {
     ysw_cs_t *cs;
     uint8_t flags;
     uint8_t state;
-} ysw_step_t;
+} ysw_ps_t;
 
 typedef struct {
     char *name;
-    ysw_array_t *steps;
+    ysw_array_t *pss;
     uint8_t instrument;
     uint8_t octave;
     ysw_mode_t mode;
@@ -34,49 +34,49 @@ typedef struct {
     uint8_t tempo;
 } ysw_hp_t;
 
-ysw_step_t *ysw_step_create(ysw_cs_t *cs, uint8_t degree, uint8_t flags);
-void ysw_step_free(ysw_step_t *step);
+ysw_ps_t *ysw_ps_create(ysw_cs_t *cs, uint8_t degree, uint8_t flags);
+void ysw_ps_free(ysw_ps_t *ps);
 void ysw_hp_set_name(ysw_hp_t *hp, const char* name);
-int32_t ysw_hp_get_step_index(ysw_hp_t *hp, ysw_step_t *target_step);
-uint32_t ysw_hp_get_steps_in_measures(ysw_hp_t *hp, uint8_t measures[], uint32_t size);
+int32_t ysw_hp_get_ps_index(ysw_hp_t *hp, ysw_ps_t *target_ps);
+uint32_t ysw_hp_get_pss_in_measures(ysw_hp_t *hp, uint8_t measures[], uint32_t size);
 ysw_note_t *ysw_hp_get_notes(ysw_hp_t *hp, uint32_t *note_count);
 void ysw_hp_set_percent_tempo(ysw_hp_t *hp);
 void ysw_hp_set_instrument(ysw_hp_t *hp, uint8_t instrument);
 int ysw_hp_add_cs(ysw_hp_t *hp, uint8_t degree, ysw_cs_t *cs, uint8_t flags);
-int ysw_hp_add_step(ysw_hp_t *hp, ysw_step_t *new_step);
+int ysw_hp_add_ps(ysw_hp_t *hp, ysw_ps_t *new_ps);
 void ysw_hp_free(ysw_hp_t *hp);
 ysw_hp_t *ysw_hp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo);
 ysw_hp_t *ysw_hp_copy(ysw_hp_t *old_hp);
 void ysw_hp_dump(ysw_hp_t *progresssion, char *tag);
 
-static inline ysw_step_t *ysw_hp_get_step(ysw_hp_t *hp, uint32_t index)
+static inline ysw_ps_t *ysw_hp_get_ps(ysw_hp_t *hp, uint32_t index)
 {
-    return ysw_array_get(hp->steps, index);
+    return ysw_array_get(hp->pss, index);
 }
 
 static inline ysw_cs_t *ysw_hp_get_cs(ysw_hp_t *hp, uint32_t index)
 {
-    return ysw_hp_get_step(hp, index)->cs;
+    return ysw_hp_get_ps(hp, index)->cs;
 }
 
 static inline ysw_degree_t ysw_hp_get_degree(ysw_hp_t *hp, uint32_t index)
 {
-    return ysw_hp_get_step(hp, index)->degree;
+    return ysw_hp_get_ps(hp, index)->degree;
 }
 
-static inline uint32_t ysw_hp_get_step_count(ysw_hp_t *hp)
+static inline uint32_t ysw_hp_get_ps_count(ysw_hp_t *hp)
 {
-    return ysw_array_get_count(hp->steps);
+    return ysw_array_get_count(hp->pss);
 }
 
-static inline ysw_sn_t *ysw_step_get_sn(ysw_step_t *step, uint32_t index)
+static inline ysw_sn_t *ysw_ps_get_sn(ysw_ps_t *ps, uint32_t index)
 {
-    return ysw_array_get(step->cs->sn_array, index);
+    return ysw_array_get(ps->cs->sn_array, index);
 }
 
-static inline uint32_t ysw_step_get_sn_count(ysw_step_t *step)
+static inline uint32_t ysw_ps_get_sn_count(ysw_ps_t *ps)
 {
-    return ysw_array_get_count(step->cs->sn_array);
+    return ysw_array_get_count(ps->cs->sn_array);
 }
 
 static inline void ysw_hp_sort_sn_array(ysw_hp_t *hp)
@@ -84,41 +84,41 @@ static inline void ysw_hp_sort_sn_array(ysw_hp_t *hp)
     // TODO: sort chord styles in this chord progression
 }
 
-static inline ysw_step_t *ysw_step_copy(ysw_step_t *old_step)
+static inline ysw_ps_t *ysw_ps_copy(ysw_ps_t *old_ps)
 {
-    return ysw_step_create(old_step->cs, old_step->degree, old_step->flags);
+    return ysw_ps_create(old_ps->cs, old_ps->degree, old_ps->flags);
 }
 
-static inline void ysw_step_select(ysw_step_t *step, bool selected)
+static inline void ysw_ps_select(ysw_ps_t *ps, bool selected)
 {
     if (selected) {
-        step->state |= YSW_CSN_SELECTED;
+        ps->state |= YSW_CSN_SELECTED;
     } else {
-        step->state &= ~YSW_CSN_SELECTED;
+        ps->state &= ~YSW_CSN_SELECTED;
     }
 }
 
-static inline bool ysw_step_is_selected(ysw_step_t *step)
+static inline bool ysw_ps_is_selected(ysw_ps_t *ps)
 {
-    return step->state & YSW_CSN_SELECTED;
+    return ps->state & YSW_CSN_SELECTED;
 }
 
-static inline void ysw_hp_insert_step(ysw_hp_t *hp, uint32_t index, ysw_step_t *step)
+static inline void ysw_hp_insert_ps(ysw_hp_t *hp, uint32_t index, ysw_ps_t *ps)
 {
-    ysw_array_insert(hp->steps, index, step);
+    ysw_array_insert(hp->pss, index, ps);
 }
 
-static inline bool ysw_step_is_new_measure(ysw_step_t *step)
+static inline bool ysw_ps_is_new_measure(ysw_ps_t *ps)
 {
-    return step->flags & YSW_STEP_NEW_MEASURE;
+    return ps->flags & YSW_PS_NEW_MEASURE;
 }
 
-static inline void ysw_step_set_new_measure(ysw_step_t *step, bool new_measure)
+static inline void ysw_ps_set_new_measure(ysw_ps_t *ps, bool new_measure)
 {
     if (new_measure) {
-        step->flags |= YSW_STEP_NEW_MEASURE;
+        ps->flags |= YSW_PS_NEW_MEASURE;
     } else {
-        step->flags &= ~YSW_STEP_NEW_MEASURE;
+        ps->flags &= ~YSW_PS_NEW_MEASURE;
     }
 }
 

@@ -34,7 +34,7 @@
 
 #define TAG "HPC"
 
-typedef void (*step_visitor_t)(hpc_t *hpc, ysw_step_t *step);
+typedef void (*ps_visitor_t)(hpc_t *hpc, ysw_ps_t *ps);
 
 static void send_notes(hpc_t *hpc, ysw_sequencer_message_type_t type)
 {
@@ -121,23 +121,23 @@ static void create_hp(hpc_t *hpc, uint32_t new_index)
     update_frame(hpc);
 }
 
-static void copy_to_clipboard(hpc_t *hpc, ysw_step_t *step)
+static void copy_to_clipboard(hpc_t *hpc, ysw_ps_t *ps)
 {
-    ysw_step_t *new_step = ysw_step_copy(step);
-    ysw_step_select(step, false);
-    ysw_step_select(new_step, true);
-    ysw_array_push(hpc->clipboard, new_step);
+    ysw_ps_t *new_ps = ysw_ps_copy(ps);
+    ysw_ps_select(ps, false);
+    ysw_ps_select(new_ps, true);
+    ysw_array_push(hpc->clipboard, new_ps);
 }
 
-static void visit_steps(hpc_t *hpc, step_visitor_t visitor)
+static void visit_pss(hpc_t *hpc, ps_visitor_t visitor)
 {
     uint32_t visitor_count = 0;
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
-    uint32_t step_count = ysw_hp_get_step_count(hp);
-    for (uint32_t i = 0; i < step_count; i++) {
-        ysw_step_t *step = ysw_hp_get_step(hp, i);
-        if (ysw_step_is_selected(step)) {
-            visitor(hpc, step);
+    uint32_t ps_count = ysw_hp_get_ps_count(hp);
+    for (uint32_t i = 0; i < ps_count; i++) {
+        ysw_ps_t *ps = ysw_hp_get_ps(hp, i);
+        if (ysw_ps_is_selected(ps)) {
+            visitor(hpc, ps);
             visitor_count++;
         }
     }
@@ -240,10 +240,13 @@ static void on_prev(hpc_t *hpc, lv_obj_t *btn)
 
 static void on_close(hpc_t *hpc, lv_obj_t *btn)
 {
+    ESP_LOGD(TAG, "on_close hpc->close_cb=%p", hpc->close_cb);
     if (hpc->close_cb) {
         hpc->close_cb(hpc->close_cb_context, hpc);
     }
+    ESP_LOGD(TAG, "on_close deleting hpc->frame");
     ysw_frame_del(hpc->frame); // deletes contents
+    ESP_LOGD(TAG, "on_close freeing hpc");
     ysw_heap_free(hpc);
 }
 
@@ -273,16 +276,16 @@ static void on_new(hpc_t *hpc, lv_obj_t *btn)
 static void on_copy(hpc_t *hpc, lv_obj_t *btn)
 {
     if (hpc->clipboard) {
-        uint32_t old_step_count = ysw_array_get_count(hpc->clipboard);
-        for (int i = 0; i < old_step_count; i++) {
-            ysw_step_t *old_step = ysw_array_get(hpc->clipboard, i);
-            ysw_step_free(old_step);
+        uint32_t old_ps_count = ysw_array_get_count(hpc->clipboard);
+        for (int i = 0; i < old_ps_count; i++) {
+            ysw_ps_t *old_ps = ysw_array_get(hpc->clipboard, i);
+            ysw_ps_free(old_ps);
         }
         ysw_array_truncate(hpc->clipboard, 0);
     } else {
         hpc->clipboard = ysw_array_create(10);
     }
-    visit_steps(hpc, copy_to_clipboard);
+    visit_pss(hpc, copy_to_clipboard);
 }
 
 static void on_paste(hpc_t *hpc, lv_obj_t *btn)
@@ -292,27 +295,27 @@ static void on_paste(hpc_t *hpc, lv_obj_t *btn)
         uint32_t paste_count = ysw_array_get_count(hpc->clipboard);
         if (paste_count) {
             ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
-            uint32_t step_count = ysw_hp_get_step_count(hp);
-            for (uint32_t i = 0; i < step_count; i++) {
-                ysw_step_t *step = ysw_hp_get_step(hp, i);
-                ysw_step_select(step, false);
+            uint32_t ps_count = ysw_hp_get_ps_count(hp);
+            for (uint32_t i = 0; i < ps_count; i++) {
+                ysw_ps_t *ps = ysw_hp_get_ps(hp, i);
+                ysw_ps_select(ps, false);
             }
             uint32_t insert_index;
-            if (hpc->step_index < step_count) {
-                // paste after most recently selected step
-                insert_index = hpc->step_index + 1;
+            if (hpc->ps_index < ps_count) {
+                // paste after most recently selected ps
+                insert_index = hpc->ps_index + 1;
             } else {
                 // paste at end (which is also beginning, if empty)
-                insert_index = step_count;
+                insert_index = ps_count;
             }
             uint32_t first = insert_index;
-            ESP_LOGD(TAG, "step_index=%d, paste_count=%d, step_count=%d, insert_index=%d", hpc->step_index, paste_count, step_count, insert_index);
+            ESP_LOGD(TAG, "ps_index=%d, paste_count=%d, ps_count=%d, insert_index=%d", hpc->ps_index, paste_count, ps_count, insert_index);
             for (uint32_t i = 0; i < paste_count; i++) {
-                ysw_step_t *step = ysw_array_get(hpc->clipboard, i);
-                ysw_step_t *new_step = ysw_step_copy(step);
-                new_step->state = step->state;
-                ysw_hp_insert_step(hp, insert_index, new_step);
-                hpc->step_index = ++insert_index;
+                ysw_ps_t *ps = ysw_array_get(hpc->clipboard, i);
+                ysw_ps_t *new_ps = ysw_ps_copy(ps);
+                new_ps->state = ps->state;
+                ysw_hp_insert_ps(hp, insert_index, new_ps);
+                hpc->ps_index = ++insert_index;
             }
             ysw_lv_hpe_ensure_visible(hpc->hpe, first, first + paste_count - 1); // -1 because width is included
             ESP_LOGD(TAG, "on_paste calling refresh");
@@ -326,19 +329,19 @@ static void on_trash(hpc_t *hpc, lv_obj_t *btn)
     uint32_t target = 0;
     uint32_t changes = 0;
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
-    uint32_t step_count = ysw_hp_get_step_count(hp);
-    for (uint32_t source = 0; source < step_count; source++) {
-        ysw_step_t *step = ysw_hp_get_step(hp, source);
-        if (ysw_step_is_selected(step)) {
-            ysw_step_free(step);
+    uint32_t ps_count = ysw_hp_get_ps_count(hp);
+    for (uint32_t source = 0; source < ps_count; source++) {
+        ysw_ps_t *ps = ysw_hp_get_ps(hp, source);
+        if (ysw_ps_is_selected(ps)) {
+            ysw_ps_free(ps);
             changes++;
         } else {
-            ysw_array_set(hp->steps, target, step);
+            ysw_array_set(hp->pss, target, ps);
             target++;
         }
     }
     if (changes) {
-        ysw_array_truncate(hp->steps, target);
+        ysw_array_truncate(hp->pss, target);
         refresh(hpc);
     }
 }
@@ -347,13 +350,13 @@ static void on_left(hpc_t *hpc, lv_obj_t *btn)
 {
     uint32_t changes = 0;
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
-    uint32_t step_count = ysw_hp_get_step_count(hp);
-    for (int32_t i = 0, j = 1; j < step_count; i++, j++) {
-        ysw_step_t *hpc_step = ysw_hp_get_step(hp, j);
-        if (ysw_step_is_selected(hpc_step)) {
-            ysw_step_t *other_step = ysw_array_get(hp->steps, i);
-            ysw_array_set(hp->steps, i, hpc_step);
-            ysw_array_set(hp->steps, j, other_step);
+    uint32_t ps_count = ysw_hp_get_ps_count(hp);
+    for (int32_t i = 0, j = 1; j < ps_count; i++, j++) {
+        ysw_ps_t *hpc_ps = ysw_hp_get_ps(hp, j);
+        if (ysw_ps_is_selected(hpc_ps)) {
+            ysw_ps_t *other_ps = ysw_array_get(hp->pss, i);
+            ysw_array_set(hp->pss, i, hpc_ps);
+            ysw_array_set(hp->pss, j, other_ps);
             changes++;
         }
     }
@@ -366,13 +369,13 @@ static void on_right(hpc_t *hpc, lv_obj_t *btn)
 {
     uint32_t changes = 0;
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
-    uint32_t step_count = ysw_hp_get_step_count(hp);
-    for (int32_t i = step_count - 1, j = step_count - 2; j >= 0; i--, j--) {
-        ysw_step_t *hpc_step = ysw_hp_get_step(hp, j);
-        if (ysw_step_is_selected(hpc_step)) {
-            ysw_step_t *other_step = ysw_array_get(hp->steps, i);
-            ysw_array_set(hp->steps, i, hpc_step);
-            ysw_array_set(hp->steps, j, other_step);
+    uint32_t ps_count = ysw_hp_get_ps_count(hp);
+    for (int32_t i = ps_count - 1, j = ps_count - 2; j >= 0; i--, j--) {
+        ysw_ps_t *hpc_ps = ysw_hp_get_ps(hp, j);
+        if (ysw_ps_is_selected(hpc_ps)) {
+            ysw_ps_t *other_ps = ysw_array_get(hp->pss, i);
+            ysw_array_set(hp->pss, i, hpc_ps);
+            ysw_array_set(hp->pss, j, other_ps);
             changes++;
         }
     }
@@ -381,43 +384,43 @@ static void on_right(hpc_t *hpc, lv_obj_t *btn)
     }
 }
 
-static void on_create_step(hpc_t *hpc, uint32_t step_index, uint8_t degree)
+static void on_create_ps(hpc_t *hpc, uint32_t ps_index, uint8_t degree)
 {
     if (ysw_music_get_cs_count(hpc->music)) {
         ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
-        uint32_t step_count = ysw_hp_get_step_count(hp);
+        uint32_t ps_count = ysw_hp_get_ps_count(hp);
         ysw_cs_t *template_cs;
-        if (hpc->step_index < step_count) {
-            ysw_step_t *last_step = ysw_hp_get_step(hp, hpc->step_index);
-            template_cs = last_step->cs;
+        if (hpc->ps_index < ps_count) {
+            ysw_ps_t *last_ps = ysw_hp_get_ps(hp, hpc->ps_index);
+            template_cs = last_ps->cs;
         } else {
             template_cs = ysw_music_get_cs(hpc->music, 0);
         }
-        ysw_step_t *step = ysw_step_create(template_cs, degree, YSW_STEP_NEW_MEASURE);
-        step_count++;
-        hpc->step_index = step_index;
-        if (hpc->step_index > step_count) {
-            hpc->step_index = step_count;
+        ysw_ps_t *ps = ysw_ps_create(template_cs, degree, YSW_PS_NEW_MEASURE);
+        ps_count++;
+        hpc->ps_index = ps_index;
+        if (hpc->ps_index > ps_count) {
+            hpc->ps_index = ps_count;
         }
-        ysw_hp_insert_step(hp, hpc->step_index, step);
-        ysw_step_select(step, true);
+        ysw_hp_insert_ps(hp, hpc->ps_index, ps);
+        ysw_ps_select(ps, true);
         refresh(hpc);
     }
 }
 
-static void on_edit_step(hpc_t *hpc, ysw_step_t *step)
+static void on_edit_ps(hpc_t *hpc, ysw_ps_t *ps)
 {
-    ysw_step_select(step, true);
+    ysw_ps_select(ps, true);
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
-    hpc->step_index = ysw_hp_get_step_index(hp, step);
-    ysw_ssc_create(hpc->music, hp, hpc->step_index);
+    hpc->ps_index = ysw_hp_get_ps_index(hp, ps);
+    ysw_ssc_create(hpc->music, hp, hpc->ps_index);
 }
 
-static void on_select(hpc_t *hpc, ysw_step_t *step)
+static void on_select(hpc_t *hpc, ysw_ps_t *ps)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
-    hpc->step_index = ysw_hp_get_step_index(hp, step);
-    ESP_LOGD(TAG, "on_select step_index=%d", hpc->step_index);
+    hpc->ps_index = ysw_hp_get_ps_index(hp, ps);
+    ESP_LOGD(TAG, "on_select ps_index=%d", hpc->ps_index);
 }
 
 static ysw_frame_t *create_frame(hpc_t *hpc)
@@ -448,11 +451,11 @@ hpc_t *hpc_create(ysw_music_t *music, uint32_t hp_index)
     hpc_t *hpc = ysw_heap_allocate(sizeof(hpc_t)); // freed in on_close
     hpc->music = music;
     hpc->hp_index = hp_index;
-    hpc->step_index = 0;
+    hpc->ps_index = 0;
     hpc->frame = create_frame(hpc);
     hpc->hpe = ysw_lv_hpe_create(hpc->frame->win, hpc);
-    ysw_lv_hpe_set_create_cb(hpc->hpe, on_create_step);
-    ysw_lv_hpe_set_edit_cb(hpc->hpe, on_edit_step);
+    ysw_lv_hpe_set_create_cb(hpc->hpe, on_create_ps);
+    ysw_lv_hpe_set_edit_cb(hpc->hpe, on_edit_ps);
     ysw_lv_hpe_set_select_cb(hpc->hpe, on_select);
     ysw_lv_hpe_set_drag_end_cb(hpc->hpe, stage);
     ysw_frame_set_content(hpc->frame, hpc->hpe);

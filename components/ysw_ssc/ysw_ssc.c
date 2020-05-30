@@ -30,7 +30,7 @@ static char *get_chord_styles(ssc_t *ssc, uint32_t *cs_index)
     for (uint32_t i = 0; i < cs_count; i++) {
         ysw_cs_t *cs = ysw_music_get_cs(ssc->music, i);
         length += strlen(cs->name) + 1; // +1 due to \n delimiter or null terminator
-        if (cs == ssc->step->cs) {
+        if (cs == ssc->ps->cs) {
             *cs_index = i;
         }
     }
@@ -54,12 +54,12 @@ static char *get_chord_styles(ssc_t *ssc, uint32_t *cs_index)
 
 static void on_new_measure(ssc_t *ssc, uint8_t new_measure)
 {
-    ysw_step_set_new_measure(ssc->step, new_measure);
+    ysw_ps_set_new_measure(ssc->ps, new_measure);
 }
 
 static void on_edit_style(ssc_t *ssc)
 {
-    uint32_t cs_index = ysw_music_get_cs_index(ssc->music, ssc->step->cs);
+    uint32_t cs_index = ysw_music_get_cs_index(ssc->music, ssc->ps->cs);
     csc_create(ssc->music, cs_index);
 }
 
@@ -75,55 +75,55 @@ static void on_new_style_close(ssc_t *ssc, csc_t *csc)
 
 static void on_create_style(ssc_t *ssc)
 {
-    uint32_t cs_index = ysw_music_get_cs_index(ssc->music, ssc->step->cs);
+    uint32_t cs_index = ysw_music_get_cs_index(ssc->music, ssc->ps->cs);
     csc_t *csc = csc_create_new(ssc->music, cs_index);
     csc_set_close_cb(csc, on_new_style_close, ssc);
-    ssc->step->cs = ysw_music_get_cs(ssc->music, cs_index + 1);
+    ssc->ps->cs = ysw_music_get_cs(ssc->music, cs_index + 1);
 }
 
 static void on_apply_all(ssc_t *ssc)
 {
-    uint32_t step_count = ysw_hp_get_step_count(ssc->hp);
-    for (uint32_t i = 0; i < step_count; i++) {
-        ysw_step_t *step = ysw_hp_get_step(ssc->hp, i);
-        step->cs = ssc->step->cs;
+    uint32_t ps_count = ysw_hp_get_ps_count(ssc->hp);
+    for (uint32_t i = 0; i < ps_count; i++) {
+        ysw_ps_t *ps = ysw_hp_get_ps(ssc->hp, i);
+        ps->cs = ssc->ps->cs;
     }
 }
 
 static void on_apply_selected(ssc_t *ssc)
 {
-    uint32_t step_count = ysw_hp_get_step_count(ssc->hp);
-    for (uint32_t i = 0; i < step_count; i++) {
-        ysw_step_t *step = ysw_hp_get_step(ssc->hp, i);
-        if (ysw_step_is_selected(step)) {
-            step->cs = ssc->step->cs;
+    uint32_t ps_count = ysw_hp_get_ps_count(ssc->hp);
+    for (uint32_t i = 0; i < ps_count; i++) {
+        ysw_ps_t *ps = ysw_hp_get_ps(ssc->hp, i);
+        if (ysw_ps_is_selected(ps)) {
+            ps->cs = ssc->ps->cs;
         }
     }
 }
 
 static void on_degree(ssc_t *ssc, uint8_t new_index)
 {
-    ssc->step->degree = ysw_degree_from_index(new_index);
+    ssc->ps->degree = ysw_degree_from_index(new_index);
 }
 
 static void on_chord_style(ssc_t *ssc, uint8_t new_index)
 {
-    ssc->step->cs = ysw_music_get_cs(ssc->music, new_index);
+    ssc->ps->cs = ysw_music_get_cs(ssc->music, new_index);
 }
 
-void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t step_index)
+void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index)
 {
     ssc_t *ssc = ysw_heap_allocate(sizeof(ssc_t)); // TODO: make sure this gets freed
     ssc->music = music;
     ssc->hp = hp;
-    ssc->step = ysw_hp_get_step(hp, step_index);
+    ssc->ps = ysw_hp_get_ps(hp, ps_index);
 
     uint32_t cs_index = 0;
     char *chord_styles = get_chord_styles(ssc, &cs_index);
 
     char title[64];
-    uint32_t step_count = ysw_hp_get_step_count(hp);
-    snprintf(title, sizeof(title), "Step %d of %d", step_index + 1, step_count);
+    uint32_t ps_count = ysw_hp_get_ps_count(hp);
+    snprintf(title, sizeof(title), "Step %d of %d", ps_index + 1, ps_count);
 
     ysw_sdb_t *sdb = ysw_sdb_create(title, ssc);
 
@@ -135,8 +135,8 @@ void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t step_index)
     lv_win_add_btn(sdb->win, LV_SYMBOL_PREV);
 
     ysw_sdb_add_separator(sdb, hp->name);
-    ysw_sdb_add_choice(sdb, "Degree", ysw_degree_to_index(ssc->step->degree), ysw_degree, on_degree);
-    ysw_sdb_add_choice(sdb, "New Measure", ysw_step_is_new_measure(ssc->step), "No\nYes", on_new_measure);
+    ysw_sdb_add_choice(sdb, "Degree", ysw_degree_to_index(ssc->ps->degree), ysw_degree, on_degree);
+    ysw_sdb_add_choice(sdb, "New Measure", ysw_ps_is_new_measure(ssc->ps), "No\nYes", on_new_measure);
     ssc->styles = ysw_sdb_add_choice(sdb, "Chord Style", cs_index, chord_styles, on_chord_style);
     ysw_sdb_add_button(sdb, "Edit Style", on_edit_style);
     ysw_sdb_add_button(sdb, "Create Style", on_create_style);

@@ -32,8 +32,8 @@
 
 typedef enum {
     CHORD_STYLE = 1,
-    CHORD_NOTE,
-    CHORD_PROGRESSION,
+    STYLE_NOTE,
+    HARMONIC_PROGRESSION,
     PROGRESSION_STEP,
     MELODY,
     RHYTHM,
@@ -110,7 +110,7 @@ static void parse_cs(this_t *this)
 
     while (!done && get_tokens(this)) {
         record_type_t type = atoi(this->tokens[0]);
-        if (type == CHORD_NOTE && this->token_count == 6) {
+        if (type == STYLE_NOTE && this->token_count == 6) {
             int8_t degree = atoi(this->tokens[1]);
             uint8_t velocity = atoi(this->tokens[2]);
             uint32_t start = atoi(this->tokens[3]);
@@ -219,7 +219,7 @@ ysw_music_t *ysw_music_parse_file(FILE *file)
         record_type_t type = atoi(this->tokens[0]);
         if (type == CHORD_STYLE && this->token_count == 9) {
             parse_cs(this);
-        } else if (type == CHORD_PROGRESSION && this->token_count == 9) {
+        } else if (type == HARMONIC_PROGRESSION && this->token_count == 9) {
             parse_hp(this);
         } else {
             ESP_LOGW(TAG, "invalid record type=%d, token_count=%d", type, this->token_count);

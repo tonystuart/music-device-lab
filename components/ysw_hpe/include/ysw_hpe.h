@@ -18,7 +18,7 @@
 typedef struct {
     int16_t row;
     int16_t column;
-    int16_t old_step_index;
+    int16_t old_ps_index;
     bool is_cell_edit;
 } selection_t;
 

@@ -12,15 +12,15 @@
 #include "lvgl.h"
 #include "ysw_hp.h"
 
-typedef void (*ysw_lv_hpe_create_cb_t)(void *context, uint32_t step_index, uint8_t degree);
-typedef void (*ysw_lv_hpe_edit_cb_t)(void *context, ysw_step_t *step);
-typedef void (*ysw_lv_hpe_select_cb_t)(void *context, ysw_step_t *step);
-typedef void (*ysw_lv_hpe_deselect_cb_t)(void *context, ysw_step_t *step);
+typedef void (*ysw_lv_hpe_create_cb_t)(void *context, uint32_t ps_index, uint8_t degree);
+typedef void (*ysw_lv_hpe_edit_cb_t)(void *context, ysw_ps_t *ps);
+typedef void (*ysw_lv_hpe_select_cb_t)(void *context, ysw_ps_t *ps);
+typedef void (*ysw_lv_hpe_deselect_cb_t)(void *context, ysw_ps_t *ps);
 typedef void (*ysw_lv_hpe_drag_end_cb_t)(void *context);
 
 typedef struct {
     ysw_hp_t *hp;
-    ysw_step_t *clicked_step; // only set while pressed
+    ysw_ps_t *clicked_ps; // only set while pressed
     ysw_hp_t *drag_start_hp;
     lv_coord_t scroll_left;
     lv_coord_t drag_start_scroll_left;
@@ -32,9 +32,9 @@ typedef struct {
     int32_t metro_marker;
     const lv_style_t *bg_style; // background
     const lv_style_t *fg_style; // foreground
-    const lv_style_t *rs_style; // regular step
-    const lv_style_t *ss_style; // selected step
-    const lv_style_t *ms_style; // metro step
+    const lv_style_t *rs_style; // regular ps
+    const lv_style_t *ss_style; // selected ps
+    const lv_style_t *ms_style; // metro ps
     ysw_lv_hpe_create_cb_t create_cb;
     ysw_lv_hpe_edit_cb_t edit_cb;
     ysw_lv_hpe_select_cb_t select_cb;
@@ -58,5 +58,5 @@ void ysw_lv_hpe_set_deselect_cb(lv_obj_t *hpe, void *cb);
 void ysw_lv_hpe_set_drag_end_cb(lv_obj_t *hpe, void *cb);
 void ysw_lv_hpe_set_hp(lv_obj_t *hpe, ysw_hp_t *hp);
 void ysw_lv_hpe_on_metro(lv_obj_t *hpe, ysw_note_t *metro_note);
-void ysw_lv_hpe_ensure_visible(lv_obj_t *hpe, uint32_t first_step_index, uint32_t last_step_index);
+void ysw_lv_hpe_ensure_visible(lv_obj_t *hpe, uint32_t first_ps_index, uint32_t last_ps_index);
 

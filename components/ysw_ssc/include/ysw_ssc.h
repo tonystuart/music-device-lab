@@ -17,9 +17,9 @@
 typedef struct {
     ysw_music_t *music;
     ysw_hp_t *hp;
-    ysw_step_t *step;
+    ysw_ps_t *ps;
     lv_obj_t *styles;
 } ssc_t;
 
-void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t step_index);
+void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index);
 

@@ -108,22 +108,22 @@ static void set_bounds(lv_obj_t *obj, lv_coord_t row, lv_coord_t column)
 static void clear_highlight(ysw_hpe_t *hpe)
 {
     close_cell_editor(hpe);
-    if (hpe->selection.old_step_index != -1) {
+    if (hpe->selection.old_ps_index != -1) {
         for (int i = 0; i < COLUMN_COUNT; i++) {
-            lv_table_set_cell_type(hpe->table, hpe->selection.old_step_index + 1, i, 1); // +1 for heading
+            lv_table_set_cell_type(hpe->table, hpe->selection.old_ps_index + 1, i, 1); // +1 for heading
         }
     }
-    hpe->selection.old_step_index = -1;
+    hpe->selection.old_ps_index = -1;
     lv_obj_refresh_style(hpe->table);
 }
 
-static void select_step(ysw_hpe_t *hpe, uint8_t step_index)
+static void select_ps(ysw_hpe_t *hpe, uint8_t ps_index)
 {
     clear_highlight(hpe);
     for (int i = 0; i < COLUMN_COUNT; i++) {
-        lv_table_set_cell_type(hpe->table, step_index + 1, i, 4); // +1 for heading
+        lv_table_set_cell_type(hpe->table, ps_index + 1, i, 4); // +1 for heading
     }
-    hpe->selection.old_step_index = step_index;
+    hpe->selection.old_ps_index = ps_index;
     lv_obj_refresh_style(hpe->table);
 }
 
@@ -136,20 +136,20 @@ static void on_click(ysw_hpe_t *hpe, uint16_t row, uint16_t column)
             hpe->selection.is_cell_edit = false;
             hpe->selection.row = -1;
         }
-        uint8_t step_index = row - 1; // -1 for headings
-        select_step(hpe, step_index);
+        uint8_t ps_index = row - 1; // -1 for headings
+        select_ps(hpe, ps_index);
         if (hpe->selection.row == row && hpe->selection.column == column) {
             close_cell_editor(hpe);
             lv_table_set_cell_type(hpe->table, hpe->selection.row, hpe->selection.column, 2);
             lv_obj_refresh_style(hpe->table);
-            ysw_step_t *step = ysw_hp_get_step(hpe->hp, step_index);
+            ysw_ps_t *ps = ysw_hp_get_ps(hpe->hp, ps_index);
             hpe->selection.is_cell_edit = true;
             hpe->ddlist = lv_ddlist_create(hpe->table, NULL);
             set_bounds(hpe->ddlist, row, column);
             lv_ddlist_set_draw_arrow(hpe->ddlist, true);
             lv_ddlist_set_style(hpe->ddlist, LV_DDLIST_STYLE_BG, &lv_style_transp);
             lv_ddlist_set_options(hpe->ddlist, "I\nII\nIII\nIV\nV\nVI\nVII");
-            lv_ddlist_set_selected(hpe->ddlist, step->degree - 1); // -1 because degrees are 1-based
+            lv_ddlist_set_selected(hpe->ddlist, ps->degree - 1); // -1 because degrees are 1-based
             lv_ddlist_set_align(hpe->ddlist, LV_LABEL_ALIGN_CENTER);
             //lv_ddlist_open(hpe->ddlist, LV_ANIM_ON);
             lv_obj_set_user_data(hpe->ddlist, hpe);
@@ -189,7 +189,7 @@ ysw_hpe_t *ysw_hpe_create(lv_obj_t *win)
 {
     ysw_hpe_t *hpe = ysw_heap_allocate(sizeof(ysw_hpe_t));
     hpe->selection.row = -1;
-    hpe->selection.old_step_index = -1;
+    hpe->selection.old_ps_index = -1;
 
     hpe->table = lv_table_create(win, NULL);
     lv_obj_set_user_data(hpe->table, hpe);
@@ -230,21 +230,21 @@ void ysw_hpe_set_hp(ysw_hpe_t *hpe, ysw_hp_t *hp)
 
     clear_highlight(hpe);
 
-    uint32_t step_count = ysw_hp_get_step_count(hp);
-    lv_table_set_row_cnt(hpe->table, step_count + 1); // +1 for the headings
+    uint32_t ps_count = ysw_hp_get_ps_count(hp);
+    lv_table_set_row_cnt(hpe->table, ps_count + 1); // +1 for the headings
 
     double measure = 0;
-    for (uint32_t i = 0; i < step_count; i++) {
-        ESP_LOGD(TAG, "setting step attributes, i=%d", i);
+    for (uint32_t i = 0; i < ps_count; i++) {
+        ESP_LOGD(TAG, "setting ps attributes, i=%d", i);
         char buffer[16];
         int row = i + 1; // +1 for header
-        ysw_step_t *step = ysw_hp_get_step(hp, i);
-        double beats_per_measure = step->cs->divisions; // ysw_cs_get_beats_per_measure(step->cs);
-        double beat_unit = 4; // ysw_cs_get_beat_unit(step->cs);
+        ysw_ps_t *ps = ysw_hp_get_ps(hp, i);
+        double beats_per_measure = ps->cs->divisions; // ysw_cs_get_beats_per_measure(ps->cs);
+        double beat_unit = 4; // ysw_cs_get_beat_unit(ps->cs);
         measure += beats_per_measure / beat_unit;
         lv_table_set_cell_value(hpe->table, row, 0, ysw_itoa(measure, buffer, sizeof(buffer)));
-        lv_table_set_cell_value(hpe->table, row, 1, ysw_degree_get_name(step->degree));
-        lv_table_set_cell_value(hpe->table, row, 2, step->cs->name);
+        lv_table_set_cell_value(hpe->table, row, 1, ysw_degree_get_name(ps->degree));
+        lv_table_set_cell_value(hpe->table, row, 2, ps->cs->name);
         lv_table_set_cell_crop(hpe->table, row, 2, true);
         for (int j = 0; j < COLUMN_COUNT; j++) {
             lv_table_set_cell_align(hpe->table, row, j, LV_LABEL_ALIGN_CENTER);

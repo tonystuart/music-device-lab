@@ -63,7 +63,7 @@ static char *key_labels[] =
 static void get_metrics(lv_obj_t *hpe, metrics_t *m)
 {
     ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
-    uint32_t step_count = ysw_hp_get_step_count(ext->hp);
+    uint32_t ps_count = ysw_hp_get_ps_count(ext->hp);
 
     m->hpe_left = hpe->coords.x1;
     m->hpe_top = hpe->coords.y1;
@@ -71,14 +71,14 @@ static void get_metrics(lv_obj_t *hpe, metrics_t *m)
     m->hpe_height = lv_obj_get_height(hpe);
     m->hpe_width = lv_obj_get_width(hpe);
 
-    m->col_count = step_count > 16 ? 16 : step_count > 0 ? step_count : 1;
+    m->col_count = ps_count > 16 ? 16 : ps_count > 0 ? ps_count : 1;
     m->col_width = m->hpe_width / m->col_count;
     m->row_height = m->hpe_height / 9; // 9 = header + 7 degrees + footer
 
     m->hp_left = m->hpe_left + ext->scroll_left;
     m->hp_top = m->hpe_top + m->row_height;
 
-    m->hp_width = step_count * m->col_width;
+    m->hp_width = ps_count * m->col_width;
     m->hp_height = m->hpe_height - (2 * m->row_height);
 
     m->min_scroll_left = m->hpe_width - m->hp_width;
@@ -97,7 +97,7 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
     metrics_t m;
     get_metrics(hpe, &m);
 
-    uint32_t step_count = ysw_hp_get_step_count(ext->hp);
+    uint32_t ps_count = ysw_hp_get_ps_count(ext->hp);
 
     lv_point_t top_left = {
         .x = m.hpe_left,
@@ -123,25 +123,25 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
 
     lv_draw_line(&bottom_left, &bottom_right, mask, ext->fg_style, ext->fg_style->body.border.opa);
 
-    uint8_t steps_in_measures[step_count];
+    uint8_t pss_in_measures[ps_count];
 
-    ysw_hp_get_steps_in_measures(ext->hp, steps_in_measures, step_count);
+    ysw_hp_get_pss_in_measures(ext->hp, pss_in_measures, ps_count);
 
     uint32_t measure = 0;
 
-    ysw_step_t *first_clicked_step = NULL;
+    ysw_ps_t *first_clicked_ps = NULL;
 
-    for (uint32_t i = 0; i < step_count; i++) {
-        ysw_step_t *step = ysw_hp_get_step(ext->hp, i);
+    for (uint32_t i = 0; i < ps_count; i++) {
+        ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
 
         lv_coord_t left = m.hp_left + (i * m.col_width);
 
-        if (!i || ysw_step_is_new_measure(step)) {
+        if (!i || ysw_ps_is_new_measure(ps)) {
 
             lv_area_t heading_area = {
                 .x1 = left,
                 .y1 = m.hpe_top,
-                .x2 = left + (steps_in_measures[measure] * m.col_width),
+                .x2 = left + (pss_in_measures[measure] * m.col_width),
                 .y2 = m.hp_top,
             };
 
@@ -172,7 +172,7 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
         }
 
         if (i) {
-            lv_coord_t col_top = ysw_step_is_new_measure(step) ? m.hpe_top : m.hp_top;
+            lv_coord_t col_top = ysw_ps_is_new_measure(ps) ? m.hpe_top : m.hp_top;
             lv_point_t top = {
                 .x = left,
                 .y = col_top,
@@ -184,7 +184,7 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
             lv_draw_line(&top, &bottom, mask, ext->fg_style, ext->fg_style->body.border.opa);
         }
 
-        lv_coord_t cell_top = m.hp_top + ((YSW_MIDI_UNPO - step->degree) * m.row_height);
+        lv_coord_t cell_top = m.hp_top + ((YSW_MIDI_UNPO - ps->degree) * m.row_height);
 
         lv_area_t cell_area = {
             .x1 = left,
@@ -197,7 +197,7 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
 
         if (lv_area_intersect(&cell_mask, mask, &cell_area)) {
 
-              if (ysw_step_is_selected(step)) {
+              if (ysw_ps_is_selected(ps)) {
                   lv_draw_rect(&cell_area, &cell_mask, ext->ss_style, ext->ss_style->body.opa);
               } else {
                   lv_draw_rect(&cell_area, &cell_mask, ext->rs_style, ext->rs_style->body.opa);
@@ -213,7 +213,7 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
                 &cell_mask,
                 ext->fg_style,
                 ext->fg_style->text.opa,
-                key_labels[to_index(step->degree)],
+                key_labels[to_index(ps->degree)],
                 LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
                 &offset,
                 NULL,
@@ -221,9 +221,9 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
                 LV_BIDI_DIR_LTR);
         }
 
-        //if (step == ext->clicked_step) {
-        if (!first_clicked_step && ysw_step_is_selected(step)) {
-            first_clicked_step = step;
+        //if (ps == ext->clicked_ps) {
+        if (!first_clicked_ps && ysw_ps_is_selected(ps)) {
+            first_clicked_ps = ps;
             lv_area_t footer_area = {
                 .x1 = m.hpe_left,
                 .y1 = m.hp_top + m.hp_height,
@@ -245,7 +245,7 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
                         &footer_mask,
                         ext->fg_style,
                         ext->fg_style->text.opa,
-                        step->cs->name,
+                        ps->cs->name,
                         LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
                         &offset,
                         NULL,
@@ -285,35 +285,35 @@ static bool design_cb(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
     return result;
 }
 
-static void fire_create(lv_obj_t *hpe, uint32_t step_index, uint8_t degree)
+static void fire_create(lv_obj_t *hpe, uint32_t ps_index, uint8_t degree)
 {
     ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
     if (ext->create_cb) {
-        ext->create_cb(ext->context, step_index, degree);
+        ext->create_cb(ext->context, ps_index, degree);
     }
 }
 
-static void fire_edit(lv_obj_t *hpe, ysw_step_t *step)
+static void fire_edit(lv_obj_t *hpe, ysw_ps_t *ps)
 {
     ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
     if (ext->edit_cb) {
-        ext->edit_cb(ext->context, step);
+        ext->edit_cb(ext->context, ps);
     }
 }
 
-static void fire_select(lv_obj_t *hpe, ysw_step_t *step)
+static void fire_select(lv_obj_t *hpe, ysw_ps_t *ps)
 {
     ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
     if (ext->select_cb) {
-        ext->select_cb(ext->context, step);
+        ext->select_cb(ext->context, ps);
     }
 }
 
-static void fire_deselect(lv_obj_t *hpe, ysw_step_t *step)
+static void fire_deselect(lv_obj_t *hpe, ysw_ps_t *ps)
 {
     ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
     if (ext->deselect_cb) {
-        ext->deselect_cb(ext->context, step);
+        ext->deselect_cb(ext->context, ps);
     }
 }
 
@@ -333,51 +333,51 @@ static void prepare_create(lv_obj_t *hpe, lv_point_t *point)
         ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
         lv_coord_t adj_x = (point->x - m.hp_left) + ext->scroll_left;
         lv_coord_t adj_y = (point->y - m.hp_top);
-        uint32_t step_index = adj_x / m.col_width;
+        uint32_t ps_index = adj_x / m.col_width;
         uint32_t row_index = adj_y / m.row_height;
         uint8_t degree = YSW_MIDI_UNPO - row_index;
         bool insert_after = (adj_x % m.col_width) > (m.col_width / 2);
-        if (ysw_hp_get_step_count(ext->hp) > 0 && insert_after) {
-            step_index++;
+        if (ysw_hp_get_ps_count(ext->hp) > 0 && insert_after) {
+            ps_index++;
         }
-        fire_create(hpe, step_index, degree);
+        fire_create(hpe, ps_index, degree);
     }
 }
 
-static void select_step(lv_obj_t *hpe, ysw_step_t *step)
+static void select_ps(lv_obj_t *hpe, ysw_ps_t *ps)
 {
-    ysw_step_select(step, true);
-    fire_select(hpe, step);
+    ysw_ps_select(ps, true);
+    fire_select(hpe, ps);
 }
 
-static void deselect_step(lv_obj_t *hpe, ysw_step_t *step)
+static void deselect_ps(lv_obj_t *hpe, ysw_ps_t *ps)
 {
-    ysw_step_select(step, false);
-    fire_deselect(hpe, step);
+    ysw_ps_select(ps, false);
+    fire_deselect(hpe, ps);
 }
 
 static void deselect_all(lv_obj_t *hpe)
 {
     ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
-    uint32_t step_count = ysw_hp_get_step_count(ext->hp);
-    for (int i = 0; i < step_count; i++) {
-        ysw_step_t *step = ysw_hp_get_step(ext->hp, i);
-        if (ysw_step_is_selected(step)) {
-            deselect_step(hpe, step);
+    uint32_t ps_count = ysw_hp_get_ps_count(ext->hp);
+    for (int i = 0; i < ps_count; i++) {
+        ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
+        if (ysw_ps_is_selected(ps)) {
+            deselect_ps(hpe, ps);
         }
     }
 }
 
-static void get_step_area(lv_obj_t *hpe, uint32_t step_index, lv_area_t *ret_area)
+static void get_ps_area(lv_obj_t *hpe, uint32_t ps_index, lv_area_t *ret_area)
 {
     metrics_t m;
     get_metrics(hpe, &m);
 
     ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
-    ysw_step_t *step = ysw_hp_get_step(ext->hp, step_index);
+    ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, ps_index);
 
-    lv_coord_t left = m.hp_left + (step_index * m.col_width);
-    lv_coord_t cell_top = m.hp_top + ((YSW_MIDI_UNPO - step->degree) * m.row_height);
+    lv_coord_t left = m.hp_left + (ps_index * m.col_width);
+    lv_coord_t cell_top = m.hp_top + ((YSW_MIDI_UNPO - ps->degree) * m.row_height);
 
     lv_area_t cell_area = {
         .x1 = left,
@@ -391,13 +391,13 @@ static void get_step_area(lv_obj_t *hpe, uint32_t step_index, lv_area_t *ret_are
     }
 }
 
-static void drag_vertically(lv_obj_t *hpe, ysw_step_t *step, ysw_step_t *drag_start_step, lv_coord_t y)
+static void drag_vertically(lv_obj_t *hpe, ysw_ps_t *ps, ysw_ps_t *drag_start_ps, lv_coord_t y)
 {
     metrics_t m;
     get_metrics(hpe, &m);
-    uint8_t new_degree = drag_start_step->degree - (y / m.row_height);
+    uint8_t new_degree = drag_start_ps->degree - (y / m.row_height);
     if (new_degree >= 1 && new_degree <= YSW_MIDI_UNPO) {
-        step->degree = new_degree;
+        ps->degree = new_degree;
     }
 }
 
@@ -422,11 +422,11 @@ static void capture_drag(lv_obj_t *hpe, lv_coord_t x, lv_coord_t y)
     if (!ext->dragging && !ext->scrolling) {
         bool drag_x = abs(x) > MINIMUM_DRAG;
         bool drag_y = abs(y) > MINIMUM_DRAG;
-        if (ext->clicked_step) {
+        if (ext->clicked_ps) {
             ext->dragging = drag_x || drag_y;
             if (ext->dragging) {
-                if (!ysw_step_is_selected(ext->clicked_step)) {
-                    select_step(hpe, ext->clicked_step);
+                if (!ysw_ps_is_selected(ext->clicked_ps)) {
+                    select_ps(hpe, ext->clicked_ps);
                 }
                 ext->drag_start_hp = ysw_hp_copy(ext->hp);
             }
@@ -442,18 +442,18 @@ static void capture_drag(lv_obj_t *hpe, lv_coord_t x, lv_coord_t y)
 static void capture_click(lv_obj_t *hpe, lv_point_t *point)
 {
     ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
-    ext->clicked_step = NULL;
+    ext->clicked_ps = NULL;
     ext->click_point = *point;
-    uint32_t step_count = ysw_hp_get_step_count(ext->hp);
-    for (uint8_t i = 0; i < step_count; i++) {
-        lv_area_t step_area;
-        ysw_step_t *step = ysw_hp_get_step(ext->hp, i);
-        get_step_area(hpe, i, &step_area);
-        if ((step_area.x1 <= point->x && point->x <= step_area.x2) &&
-            (step_area.y1 <= point->y && point->y <= step_area.y2)) {
-                ext->clicked_step = step;
-                if (ysw_step_is_selected(step)) {
-                    // return on first selected step, otherwise pick last one
+    uint32_t ps_count = ysw_hp_get_ps_count(ext->hp);
+    for (uint8_t i = 0; i < ps_count; i++) {
+        lv_area_t ps_area;
+        ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
+        get_ps_area(hpe, i, &ps_area);
+        if ((ps_area.x1 <= point->x && point->x <= ps_area.x2) &&
+            (ps_area.y1 <= point->y && point->y <= ps_area.y2)) {
+                ext->clicked_ps = ps;
+                if (ysw_ps_is_selected(ps)) {
+                    // return on first selected ps, otherwise pick last one
                     return;
                 }
             }
@@ -489,12 +489,12 @@ static void on_signal_pressing(lv_obj_t *hpe, void *param)
     lv_coord_t y = point->y - ext->click_point.y;
     capture_drag(hpe, x, y);
     if (ext->dragging) {
-        uint32_t step_count = ysw_hp_get_step_count(ext->hp);
-        for (int i = 0; i < step_count; i++) {
-            ysw_step_t *step = ysw_hp_get_step(ext->hp, i);
-            ysw_step_t *drag_start_step = ysw_hp_get_step(ext->drag_start_hp, i);
-            if (ysw_step_is_selected(step)) {
-                drag_vertically(hpe, step, drag_start_step, y);
+        uint32_t ps_count = ysw_hp_get_ps_count(ext->hp);
+        for (int i = 0; i < ps_count; i++) {
+            ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
+            ysw_ps_t *drag_start_ps = ysw_hp_get_ps(ext->drag_start_hp, i);
+            if (ysw_ps_is_selected(ps)) {
+                drag_vertically(hpe, ps, drag_start_ps, y);
             }
         }
         lv_obj_invalidate(hpe);
@@ -516,12 +516,12 @@ static void on_signal_released(lv_obj_t *hpe, void *param)
         // reset flag below for all cases
     } else if (ext->press_lost) {
         // reset flag below for all cases
-    } else if (ext->clicked_step) {
-        bool selected = ysw_step_is_selected(ext->clicked_step);
+    } else if (ext->clicked_ps) {
+        bool selected = ysw_ps_is_selected(ext->clicked_ps);
         if (selected) {
-            deselect_step(hpe, ext->clicked_step);
+            deselect_ps(hpe, ext->clicked_ps);
         } else {
-            select_step(hpe, ext->clicked_step);
+            select_ps(hpe, ext->clicked_ps);
         }
     } else {
         deselect_all(hpe);
@@ -530,7 +530,7 @@ static void on_signal_released(lv_obj_t *hpe, void *param)
     ext->drag_start_hp = NULL;
     ext->long_press = false;
     ext->press_lost = false;
-    ext->clicked_step = NULL;
+    ext->clicked_ps = NULL;
     ext->scrolling = false;
     lv_obj_invalidate(hpe);
 }
@@ -547,8 +547,8 @@ static void on_signal_long_press(lv_obj_t *hpe, void *param)
     if (!ext->dragging && !ext->scrolling) {
         lv_indev_t *indev_act = (lv_indev_t*)param;
         lv_indev_wait_release(indev_act);
-        if (ext->clicked_step) {
-            fire_edit(hpe, ext->clicked_step);
+        if (ext->clicked_ps) {
+            fire_edit(hpe, ext->clicked_ps);
         } else {
             lv_indev_proc_t *proc = &indev_act->proc;
             lv_point_t *point = &proc->types.pointer.act_point;
@@ -686,15 +686,15 @@ void ysw_lv_hpe_on_metro(lv_obj_t *hpe, ysw_note_t *metro_note)
     }
 }
 
-void ysw_lv_hpe_ensure_visible(lv_obj_t *hpe, uint32_t first_step_index, uint32_t last_step_index)
+void ysw_lv_hpe_ensure_visible(lv_obj_t *hpe, uint32_t first_ps_index, uint32_t last_ps_index)
 {
     // NB: scroll_left is always <= 0
     ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
     metrics_t m;
     get_metrics(hpe, &m);
-    lv_coord_t left = first_step_index * m.col_width;
-    lv_coord_t right = (last_step_index + 1) * m.col_width;
-    //ESP_LOGD(TAG, "first=%d, last=%d, col_width=%d, scroll_left=%d, left=%d, right=%d", first_step_index, last_step_index, m.col_width, ext->scroll_left, left, right);
+    lv_coord_t left = first_ps_index * m.col_width;
+    lv_coord_t right = (last_ps_index + 1) * m.col_width;
+    //ESP_LOGD(TAG, "first=%d, last=%d, col_width=%d, scroll_left=%d, left=%d, right=%d", first_ps_index, last_ps_index, m.col_width, ext->scroll_left, left, right);
     if (left < -ext->scroll_left) {
         ext->scroll_left = -left;
     } else if (right > -ext->scroll_left + m.hpe_width) {
