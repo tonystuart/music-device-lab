@@ -29,6 +29,7 @@ typedef struct {
     ysw_cs_t *drag_start_cs;
     bool dragging;
     bool long_press;
+    bool press_lost;
     int32_t metro_marker;
     const lv_style_t *bg_style; // background
     const lv_style_t *oi_style; // odd interval

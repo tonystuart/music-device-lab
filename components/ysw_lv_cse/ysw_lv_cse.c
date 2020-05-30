@@ -334,30 +334,6 @@ static void fire_drag_end(lv_obj_t *cse)
     }
 }
 
-static void capture_click(lv_obj_t *cse, lv_point_t *point)
-{
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    ext->dragging = false;
-    ext->clicked_sn = NULL;
-    ext->click_type = YSW_BOUNDS_NONE;
-    ext->last_click = *point;
-    uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
-    for (uint8_t i = 0; i < sn_count; i++) {
-        lv_area_t sn_area;
-        ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
-        get_sn_info(cse, sn, &sn_area, NULL, NULL);
-        ysw_bounds_t bounds_type = ysw_bounds_check(&sn_area, point);
-        if (bounds_type) {
-            ext->clicked_sn = sn;
-            ext->click_type = bounds_type;
-            if (ysw_sn_is_selected(sn)) {
-                // return on first selected sn, otherwise pick another one
-                return;
-            }
-        }
-    }
-}
-
 static void select_sn(lv_obj_t *cse, ysw_sn_t *sn)
 {
     ysw_sn_select(sn, true);
@@ -499,49 +475,41 @@ static void drag_vertically(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_sn
     }
 }
 
-// TODO: Merge if there is only one call
-static void do_drag(lv_obj_t *cse, lv_point_t *point)
+static void capture_click(lv_obj_t *cse, lv_point_t *point)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-
-    lv_coord_t x = point->x - ext->last_click.x;
-    lv_coord_t y = point->y - ext->last_click.y;
-
-    bool drag_x = abs(x) > MINIMUM_DRAG;
-    bool drag_y = abs(y) > MINIMUM_DRAG;
-
-    ext->dragging = ext->dragging || (ext->clicked_sn && (drag_x || drag_y));
-
-    if (ext->dragging) {
-
-        if (!ysw_sn_is_selected(ext->clicked_sn)) {
-            select_sn(cse, ext->clicked_sn);
-        }
-
-        if (!ext->drag_start_cs) {
-            ESP_LOGE(TAG, "do_drag starting new drag");
-            ext->drag_start_cs = ysw_cs_copy(ext->cs);
-        }
-
-        ESP_LOGE(TAG, "do_drag dragged x=%d, y=%d from start x=%d, y=%d", x, y, ext->last_click.x, ext->last_click.y);
-
-        uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
-        uint32_t drag_start_sn_count = ysw_cs_get_sn_count(ext->drag_start_cs);
-        if (sn_count != drag_start_sn_count) {
-            ESP_LOGE(TAG, "expected sn_count=%d to equal drag_start_sn_count=%d", sn_count, drag_start_sn_count);
-        } else {
-            for (int i = 0; i < sn_count; i++) {
-                ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
-                ysw_sn_t *drag_start_sn = ysw_cs_get_sn(ext->drag_start_cs, i);
-                if (ysw_sn_is_selected(sn)) {
-                    if (drag_x) {
-                        drag_horizontally(cse, sn, drag_start_sn, x);
-                    }
-                    if (drag_y) {
-                        drag_vertically(cse, sn, drag_start_sn, y);
-                    }
-                }
+    ext->clicked_sn = NULL;
+    ext->click_type = YSW_BOUNDS_NONE;
+    ext->last_click = *point;
+    uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
+    for (uint8_t i = 0; i < sn_count; i++) {
+        lv_area_t sn_area;
+        ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
+        get_sn_info(cse, sn, &sn_area, NULL, NULL);
+        ysw_bounds_t bounds_type = ysw_bounds_check(&sn_area, point);
+        if (bounds_type) {
+            ext->clicked_sn = sn;
+            ext->click_type = bounds_type;
+            if (ysw_sn_is_selected(sn)) {
+                // return on first selected sn, otherwise pick another one
+                return;
             }
+        }
+    }
+}
+
+static void capture_drag(lv_obj_t *cse, lv_coord_t x, lv_coord_t y)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (!ext->dragging) {
+        bool drag_x = abs(x) > MINIMUM_DRAG;
+        bool drag_y = abs(y) > MINIMUM_DRAG;
+        ext->dragging = ext->clicked_sn && (drag_x || drag_y);
+        if (ext->dragging) {
+            if (!ysw_sn_is_selected(ext->clicked_sn)) {
+                select_sn(cse, ext->clicked_sn);
+            }
+            ext->drag_start_cs = ysw_cs_copy(ext->cs);
         }
     }
 }
@@ -551,15 +519,40 @@ static void on_signal_pressed(lv_obj_t *cse, void *param)
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
     lv_point_t *point = &proc->types.pointer.act_point;
-    capture_click(cse, point);
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (ext->press_lost) {
+        // user has dragged back into cse widget
+        ext->press_lost = false;
+    } else {
+        // user has clicked on cse widget
+        ext->dragging = false;
+        ext->long_press = false;
+        ext->press_lost = false;
+        capture_click(cse, point);
+    }
 }
 
 static void on_signal_pressing(lv_obj_t *cse, void *param)
 {
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
-    do_drag(cse, &proc->types.pointer.act_point);
-    lv_obj_invalidate(cse);
+    lv_point_t *point = &proc->types.pointer.act_point;
+    lv_coord_t x = point->x - ext->last_click.x;
+    lv_coord_t y = point->y - ext->last_click.y;
+    capture_drag(cse, x, y);
+    if (ext->dragging) {
+        uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
+        for (int i = 0; i < sn_count; i++) {
+            ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
+            ysw_sn_t *drag_start_sn = ysw_cs_get_sn(ext->drag_start_cs, i);
+            if (ysw_sn_is_selected(sn)) {
+                drag_horizontally(cse, sn, drag_start_sn, x);
+                drag_vertically(cse, sn, drag_start_sn, y);
+            }
+        }
+        lv_obj_invalidate(cse);
+    }
 }
 
 static void on_signal_released(lv_obj_t *cse, void *param)
@@ -567,13 +560,13 @@ static void on_signal_released(lv_obj_t *cse, void *param)
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->dragging) {
         fire_drag_end(cse);
-        ext->dragging = false;
         if (ext->drag_start_cs) {
             ysw_cs_free(ext->drag_start_cs);
-            ext->drag_start_cs = NULL;
         }
     } else if (ext->long_press) {
-        ext->long_press = false;
+        // reset flag below for all cases
+    } else if (ext->press_lost) {
+        // reset flag below for all cases
     } else if (ext->clicked_sn) {
         bool selected = ysw_sn_is_selected(ext->clicked_sn);
         if (selected) {
@@ -584,6 +577,10 @@ static void on_signal_released(lv_obj_t *cse, void *param)
     } else {
         deselect_all(cse);
     }
+    ext->dragging = false;
+    ext->drag_start_cs = NULL;
+    ext->long_press = false;
+    ext->press_lost = false;
     ext->clicked_sn = NULL;
     ext->click_type = YSW_BOUNDS_NONE;
     lv_obj_invalidate(cse);
@@ -591,24 +588,8 @@ static void on_signal_released(lv_obj_t *cse, void *param)
 
 static void on_signal_press_lost(lv_obj_t *cse, void *param)
 {
-    ESP_LOGE(TAG, "on_signal_press_lost entered");
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    if (ext->dragging) {
-        ext->dragging = false;
-        if (ext->drag_start_cs) {
-            uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
-            for (uint32_t i = 0; i < sn_count; i++) {
-                ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
-                ysw_sn_t *drag_start_sn = ysw_cs_get_sn(ext->drag_start_cs, i);
-                *sn = *drag_start_sn;
-            }
-            ysw_cs_free(ext->drag_start_cs);
-            ext->drag_start_cs = NULL;
-        }
-    }
-    ext->clicked_sn = NULL;
-    ext->click_type = YSW_BOUNDS_NONE;
-    lv_obj_invalidate(cse);
+    ext->press_lost = true;
 }
 
 static void on_signal_long_press(lv_obj_t *cse, void *param)
