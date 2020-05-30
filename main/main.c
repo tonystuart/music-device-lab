@@ -16,7 +16,7 @@
 #include "synthesizer.h"
 
 #include "ysw_music.h"
-#include "ysw_music_parser.h"
+#include "ysw_mfr.h"
 #include "ysw_lv_styles.h"
 
 #include "lvgl/lvgl.h"
@@ -104,7 +104,7 @@ void app_main()
 
     ysw_lv_styles_initialize();
 
-    music = ysw_music_parse(MUSIC_DEFINITIONS);
+    music = ysw_mfr_parse(MUSIC_DEFINITIONS);
 
     if (music && ysw_music_get_cs_count(music) > 0) {
         create_dashboard();
