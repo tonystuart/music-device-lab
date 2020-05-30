@@ -49,24 +49,11 @@ void ysw_sn_normalize(ysw_sn_t *sn)
 {
     if (sn->duration > YSW_CS_DURATION) {
         sn->duration = YSW_CS_DURATION;
-        ESP_LOGD(TAG, "create_sn setting duration=%d", sn->duration);
-    }
-    if (sn->start + sn->duration > YSW_CS_DURATION) {
-        sn->start = YSW_CS_DURATION - sn->duration;
-        ESP_LOGD(TAG, "create_sn setting start=%d", sn->start);
     }
 
-#if 0
-    if (sn->start > YSW_CS_DURATION - YSW_CSN_MIN_DURATION) {
-        sn->start = YSW_CS_DURATION - YSW_CSN_MIN_DURATION;
-    }
-    if (sn->duration < YSW_CSN_MIN_DURATION) {
-        sn->duration = YSW_CSN_MIN_DURATION;
-    }
     if (sn->start + sn->duration > YSW_CS_DURATION) {
-        sn->duration = YSW_CS_DURATION - sn->start;
+        sn->start = YSW_CS_DURATION - sn->duration;
     }
-#endif
 
     if (sn->degree < YSW_CSN_MIN_DEGREE) {
         sn->degree = YSW_CSN_MIN_DEGREE;
@@ -80,8 +67,6 @@ void ysw_sn_normalize(ysw_sn_t *sn)
 
     sn->start = round_tick(sn->start);
     sn->duration = round_tick(sn->duration);
-
-    ESP_LOGD(TAG, "normalize_sn start=%d, duration=%d, degree=%d, velocity=%d", sn->start, sn->duration, sn->degree, sn->velocity);
 }
 
 uint8_t ysw_sn_to_midi_note(ysw_sn_t *sn, uint8_t scale_tonic, uint8_t root_number)

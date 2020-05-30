@@ -63,7 +63,6 @@ void ysw_cs_free(ysw_cs_t *cs)
 
 uint32_t ysw_cs_add_sn(ysw_cs_t *cs, ysw_sn_t *sn)
 {
-    ysw_sn_normalize(sn);
     uint32_t index = ysw_array_push(cs->sn_array, sn);
     return index;
 }

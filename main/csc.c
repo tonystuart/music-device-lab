@@ -368,8 +368,14 @@ static void on_create_sn(csc_t *csc, uint32_t start, int8_t degree)
     uint32_t start_floor = (start / division_duration) * division_duration;
     uint32_t duration = division_duration - 5;
     ysw_sn_t *sn = ysw_sn_create(degree, 80, start_floor, duration, 0);
+    ysw_sn_select(sn, true);
     ysw_cs_add_sn(cs, sn);
     refresh(csc);
+}
+
+static void on_edit_sn(csc_t *csc, ysw_sn_t *sn)
+{
+    ESP_LOGD(TAG, "on_edit_sn stub");
 }
 
 static ysw_frame_t *create_frame(csc_t *csc)
@@ -403,6 +409,7 @@ csc_t *csc_create(ysw_music_t *music, uint32_t cs_index)
     csc->frame = create_frame(csc);
     csc->cse = ysw_lv_cse_create(csc->frame->win, csc);
     ysw_lv_cse_set_create_cb(csc->cse, on_create_sn);
+    ysw_lv_cse_set_edit_cb(csc->cse, on_edit_sn);
     ysw_lv_cse_set_drag_end_cb(csc->cse, stage);
     ysw_frame_set_content(csc->frame, csc->cse);
     update_frame(csc);

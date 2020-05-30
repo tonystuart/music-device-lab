@@ -116,8 +116,9 @@ static void parse_cs(this_t *this)
             uint32_t start = atoi(this->tokens[3]);
             uint32_t duration = atoi(this->tokens[4]);
             int8_t flags = atoi(this->tokens[5]);
-            ysw_sn_t *note = ysw_sn_create(degree, velocity, start, duration, flags);
-            ysw_cs_add_sn(cs, note);
+            ysw_sn_t *sn = ysw_sn_create(degree, velocity, start, duration, flags);
+            ysw_sn_normalize(sn);
+            ysw_cs_add_sn(cs, sn);
         } else {
             push_back_tokens(this);
             done = true;

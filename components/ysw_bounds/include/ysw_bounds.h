@@ -19,4 +19,4 @@ typedef enum {
 } ysw_bounds_t;
 
 ysw_bounds_t ysw_bounds_check(lv_area_t *area, lv_point_t *point);
-bool ysw_bounds_check_point(lv_point_t *last_click, lv_point_t *point);
+bool ysw_bounds_check_point(lv_point_t *click_point, lv_point_t *point);

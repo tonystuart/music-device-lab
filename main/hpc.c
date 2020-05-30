@@ -381,22 +381,6 @@ static void on_right(hpc_t *hpc, lv_obj_t *btn)
     }
 }
 
-static void on_edit(hpc_t *hpc, lv_obj_t *btn)
-{
-    ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
-    uint32_t step_count = ysw_hp_get_step_count(hp);
-    if (step_count) {
-        if (hpc->step_index < 0) {
-            hpc->step_index = 0;
-        } else if (hpc->step_index >= step_count) {
-            hpc->step_index = step_count - 1;
-        }
-        ysw_step_t *step = ysw_hp_get_step(hp, hpc->step_index);
-        ysw_step_select(step, true);
-        ysw_ssc_create(hpc->music, hp, hpc->step_index);
-    }
-}
-
 static void on_create_step(hpc_t *hpc, uint32_t step_index, uint8_t degree)
 {
     ESP_LOGD(TAG, "create_step step_index=%d, degree=%d", step_index, degree);
@@ -411,8 +395,17 @@ static void on_create_step(hpc_t *hpc, uint32_t step_index, uint8_t degree)
         }
         ESP_LOGD(TAG, "create_step hp_index=%d, step_index=%d", hpc->hp_index, index);
         ysw_hp_insert_step(hp, index, step);
+        ysw_step_select(step, true);
         refresh(hpc);
     }
+}
+
+static void on_edit_step(hpc_t *hpc, ysw_step_t *step)
+{
+    ysw_step_select(step, true);
+    ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
+    hpc->step_index = ysw_hp_get_step_index(hp, step);
+    ysw_ssc_create(hpc->music, hp, hpc->step_index);
 }
 
 static void on_select(hpc_t *hpc, ysw_step_t *step)
@@ -434,7 +427,6 @@ static ysw_frame_t *create_frame(hpc_t *hpc)
     ysw_frame_add_footer_button(frame, LV_SYMBOL_TRASH, on_trash);
     ysw_frame_add_footer_button(frame, LV_SYMBOL_LEFT, on_left);
     ysw_frame_add_footer_button(frame, LV_SYMBOL_RIGHT, on_right);
-    ysw_frame_add_footer_button(frame, LV_SYMBOL_EDIT, on_edit);
 
     ysw_frame_add_header_button(frame, LV_SYMBOL_CLOSE, on_close);
     ysw_frame_add_header_button(frame, LV_SYMBOL_NEXT, on_next);
@@ -455,6 +447,7 @@ hpc_t *hpc_create(ysw_music_t *music, uint32_t hp_index)
     hpc->frame = create_frame(hpc);
     hpc->hpe = ysw_lv_hpe_create(hpc->frame->win, hpc);
     ysw_lv_hpe_set_create_cb(hpc->hpe, on_create_step);
+    ysw_lv_hpe_set_edit_cb(hpc->hpe, on_edit_step);
     ysw_lv_hpe_set_select_cb(hpc->hpe, on_select);
     ysw_lv_hpe_set_drag_end_cb(hpc->hpe, stage);
     ysw_frame_set_content(hpc->frame, hpc->hpe);

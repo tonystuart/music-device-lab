@@ -290,23 +290,19 @@ static bool design_cb(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
     return result;
 }
 
-static void fire_create(lv_obj_t *cse, lv_point_t *point)
+static void fire_create(lv_obj_t *cse, uint32_t start, int8_t degree)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->create_cb) {
-        lv_coord_t w = lv_obj_get_width(cse);
-        lv_coord_t h = lv_obj_get_height(cse);
+        ext->create_cb(ext->context, start, degree);
+    }
+}
 
-        lv_coord_t x_offset = point->x - cse->coords.x1;
-        lv_coord_t y_offset = point->y - cse->coords.y1;
-
-        double pixels_per_tick = (double)w / YSW_CS_DURATION;
-        double pixels_per_degree = (double)h / ROW_COUNT;
-
-        lv_coord_t tick_index = x_offset / pixels_per_tick;
-        lv_coord_t row_index = y_offset / pixels_per_degree;
-
-        ext->create_cb(ext->context, tick_index, YSW_MIDI_UNPO - row_index);
+static void fire_edit(lv_obj_t *cse, ysw_sn_t *sn)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (ext->edit_cb) {
+        ext->edit_cb(ext->context, sn);
     }
 }
 
@@ -332,6 +328,19 @@ static void fire_drag_end(lv_obj_t *cse)
     if (ext->drag_end_cb) {
         ext->drag_end_cb(ext->context);
     }
+}
+
+static void prepare_create(lv_obj_t *cse, lv_point_t *point)
+{
+    lv_coord_t w = lv_obj_get_width(cse);
+    lv_coord_t h = lv_obj_get_height(cse);
+    lv_coord_t x_offset = point->x - cse->coords.x1;
+    lv_coord_t y_offset = point->y - cse->coords.y1;
+    double pixels_per_tick = (double)w / YSW_CS_DURATION;
+    double pixels_per_degree = (double)h / ROW_COUNT;
+    lv_coord_t tick_index = x_offset / pixels_per_tick;
+    lv_coord_t row_index = y_offset / pixels_per_degree;
+    fire_create(cse, tick_index, YSW_MIDI_UNPO - row_index);
 }
 
 static void select_sn(lv_obj_t *cse, ysw_sn_t *sn)
@@ -480,7 +489,7 @@ static void capture_click(lv_obj_t *cse, lv_point_t *point)
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     ext->clicked_sn = NULL;
     ext->click_type = YSW_BOUNDS_NONE;
-    ext->last_click = *point;
+    ext->click_point = *point;
     uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
     for (uint8_t i = 0; i < sn_count; i++) {
         lv_area_t sn_area;
@@ -501,10 +510,10 @@ static void capture_click(lv_obj_t *cse, lv_point_t *point)
 static void capture_drag(lv_obj_t *cse, lv_coord_t x, lv_coord_t y)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    if (!ext->dragging) {
+    if (!ext->dragging && ext->clicked_sn) {
         bool drag_x = abs(x) > MINIMUM_DRAG;
         bool drag_y = abs(y) > MINIMUM_DRAG;
-        ext->dragging = ext->clicked_sn && (drag_x || drag_y);
+        ext->dragging = drag_x || drag_y;
         if (ext->dragging) {
             if (!ysw_sn_is_selected(ext->clicked_sn)) {
                 select_sn(cse, ext->clicked_sn);
@@ -538,8 +547,8 @@ static void on_signal_pressing(lv_obj_t *cse, void *param)
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
     lv_point_t *point = &proc->types.pointer.act_point;
-    lv_coord_t x = point->x - ext->last_click.x;
-    lv_coord_t y = point->y - ext->last_click.y;
+    lv_coord_t x = point->x - ext->click_point.x;
+    lv_coord_t y = point->y - ext->click_point.y;
     capture_drag(cse, x, y);
     if (ext->dragging) {
         uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
@@ -560,9 +569,7 @@ static void on_signal_released(lv_obj_t *cse, void *param)
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->dragging) {
         fire_drag_end(cse);
-        if (ext->drag_start_cs) {
-            ysw_cs_free(ext->drag_start_cs);
-        }
+        ysw_cs_free(ext->drag_start_cs);
     } else if (ext->long_press) {
         // reset flag below for all cases
     } else if (ext->press_lost) {
@@ -595,14 +602,17 @@ static void on_signal_press_lost(lv_obj_t *cse, void *param)
 static void on_signal_long_press(lv_obj_t *cse, void *param)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    lv_indev_t *indev_act = (lv_indev_t*)param;
-    lv_indev_proc_t *proc = &indev_act->proc;
-    lv_point_t *point = &proc->types.pointer.act_point;
     if (!ext->dragging) {
-        if (!ext->clicked_sn) {
-            fire_create(cse, point);
-            ext->long_press = true;
+        lv_indev_t *indev_act = (lv_indev_t*)param;
+        lv_indev_wait_release(indev_act);
+        if (ext->clicked_sn) {
+            fire_edit(cse, ext->clicked_sn);
+        } else {
+            lv_indev_proc_t *proc = &indev_act->proc;
+            lv_point_t *point = &proc->types.pointer.act_point;
+            prepare_create(cse, point);
         }
+        ext->long_press = true;
     }
 }
 
@@ -661,33 +671,21 @@ lv_obj_t *ysw_lv_cse_create(lv_obj_t *par, void *context)
         return NULL;
     }
 
-    ext->cs = NULL;
-    ext->last_click.x = 0;
-    ext->last_click.y = 0;
-    ext->dragging = false;
-    ext->long_press = false;
-    ext->drag_start_cs = NULL;
-    ext->metro_marker = -1;
+    *ext = (ysw_lv_cse_ext_t){
+        .metro_marker = -1,
+        .bg_style = &lv_style_plain,
+        .oi_style = &ysw_style_oi,
+        .ei_style = &ysw_style_ei,
+        .rn_style = &ysw_style_rn,
+        .sn_style = &ysw_style_sn,
+        .mn_style = &ysw_style_mn,
+        .context = context,
+    };
 
-    ext->bg_style = &lv_style_plain;
-    ext->oi_style = &ysw_style_oi;
-    ext->ei_style = &ysw_style_ei;
-    ext->rn_style = &ysw_style_rn;
-    ext->sn_style = &ysw_style_sn;
-    ext->mn_style = &ysw_style_mn;
-
-    ext->create_cb = NULL;
-    ext->select_cb = NULL;
-    ext->deselect_cb = NULL;
-    ext->drag_end_cb = NULL;
-    ext->context = context;
-
+    lv_obj_set_style(cse, ext->bg_style);
     lv_obj_set_signal_cb(cse, signal_cb);
     lv_obj_set_design_cb(cse, design_cb);
     lv_obj_set_click(cse, true);
-    // TODO: verify this does nothing and remove
-    lv_obj_set_size(cse, LV_DPI * 2, LV_DPI / 3);
-    lv_obj_set_style(cse, ext->bg_style);
 
     return cse;
 }
@@ -707,6 +705,12 @@ void ysw_lv_cse_set_create_cb(lv_obj_t *cse, void *cb)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     ext->create_cb = cb;
+}
+
+void ysw_lv_cse_set_edit_cb(lv_obj_t *cse, void *cb)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    ext->edit_cb = cb;
 }
 
 void ysw_lv_cse_set_select_cb(lv_obj_t *cse, void *cb)

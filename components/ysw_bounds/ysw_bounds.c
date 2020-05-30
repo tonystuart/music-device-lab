@@ -37,11 +37,11 @@ ysw_bounds_t ysw_bounds_check(lv_area_t *area, lv_point_t *point)
     return bounds_type;
 }
 
-bool ysw_bounds_check_point(lv_point_t *last_click, lv_point_t *point)
+bool ysw_bounds_check_point(lv_point_t *click_point, lv_point_t *point)
 {
     lv_coord_t x = point->x;
     lv_coord_t y = point->y;
-    return ((last_click->x - BOUNDS_BORDER) <= x && x <= (last_click->x + BOUNDS_BORDER)) &&
-        ((last_click->y - BOUNDS_BORDER) <= y && y <= (last_click->y + BOUNDS_BORDER));
+    return ((click_point->x - BOUNDS_BORDER) <= x && x <= (click_point->x + BOUNDS_BORDER)) &&
+        ((click_point->y - BOUNDS_BORDER) <= y && y <= (click_point->y + BOUNDS_BORDER));
 }
 
