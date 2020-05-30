@@ -334,12 +334,12 @@ static void fire_drag_end(lv_obj_t *cse)
     }
 }
 
-static void capture_selection(lv_obj_t *cse, lv_point_t *point)
+static void capture_click(lv_obj_t *cse, lv_point_t *point)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     ext->dragging = false;
-    ext->selected_sn = NULL;
-    ext->selection_type = YSW_BOUNDS_NONE;
+    ext->clicked_sn = NULL;
+    ext->click_type = YSW_BOUNDS_NONE;
     ext->last_click = *point;
     uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
     for (uint8_t i = 0; i < sn_count; i++) {
@@ -348,8 +348,8 @@ static void capture_selection(lv_obj_t *cse, lv_point_t *point)
         get_sn_info(cse, sn, &sn_area, NULL, NULL);
         ysw_bounds_t bounds_type = ysw_bounds_check(&sn_area, point);
         if (bounds_type) {
-            ext->selected_sn = sn;
-            ext->selection_type = bounds_type;
+            ext->clicked_sn = sn;
+            ext->click_type = bounds_type;
             if (ysw_sn_is_selected(sn)) {
                 // return on first selected sn, otherwise pick another one
                 return;
@@ -403,7 +403,7 @@ static void drag_horizontally(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_
     int32_t new_start = old_start;
     int32_t new_duration = old_duration;
 
-    if (ext->selection_type == YSW_BOUNDS_LEFT) {
+    if (ext->click_type == YSW_BOUNDS_LEFT) {
         if (left_drag) {
             new_duration = old_duration + ticks;
             new_start = old_start - ticks;
@@ -414,7 +414,7 @@ static void drag_horizontally(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_
             }
             new_start = old_start + ticks;
         }
-    } else if (ext->selection_type == YSW_BOUNDS_RIGHT) {
+    } else if (ext->click_type == YSW_BOUNDS_RIGHT) {
         if (left_drag) {
             new_duration = old_duration - ticks;
             if (new_duration < MINIMUM_DURATION) {
@@ -499,6 +499,7 @@ static void drag_vertically(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_sn
     }
 }
 
+// TODO: Merge if there is only one call
 static void do_drag(lv_obj_t *cse, lv_point_t *point)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
@@ -509,12 +510,12 @@ static void do_drag(lv_obj_t *cse, lv_point_t *point)
     bool drag_x = abs(x) > MINIMUM_DRAG;
     bool drag_y = abs(y) > MINIMUM_DRAG;
 
-    ext->dragging = ext->selected_sn && (drag_x || drag_y);
+    ext->dragging = ext->dragging || (ext->clicked_sn && (drag_x || drag_y));
 
     if (ext->dragging) {
 
-        if (!ysw_sn_is_selected(ext->selected_sn)) {
-            select_sn(cse, ext->selected_sn);
+        if (!ysw_sn_is_selected(ext->clicked_sn)) {
+            select_sn(cse, ext->clicked_sn);
         }
 
         if (!ext->drag_start_cs) {
@@ -545,31 +546,12 @@ static void do_drag(lv_obj_t *cse, lv_point_t *point)
     }
 }
 
-static void do_click(lv_obj_t *cse)
-{
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    if (ext->long_press) {
-        ext->long_press = false;
-    } else if (!ext->selected_sn) {
-        deselect_all(cse);
-    }
-}
-
 static void on_signal_pressed(lv_obj_t *cse, void *param)
 {
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
     lv_point_t *point = &proc->types.pointer.act_point;
-    capture_selection(cse, point);
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    if (ext->selected_sn) {
-        bool selected = ysw_sn_is_selected(ext->selected_sn);
-        if (selected) {
-            deselect_sn(cse, ext->selected_sn);
-        } else {
-            select_sn(cse, ext->selected_sn);
-        }
-    }
+    capture_click(cse, point);
 }
 
 static void on_signal_pressing(lv_obj_t *cse, void *param)
@@ -583,9 +565,6 @@ static void on_signal_pressing(lv_obj_t *cse, void *param)
 static void on_signal_released(lv_obj_t *cse, void *param)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    lv_indev_t *indev_act = (lv_indev_t*)param;
-    lv_indev_proc_t *proc = &indev_act->proc;
-    do_drag(cse, &proc->types.pointer.act_point);
     if (ext->dragging) {
         fire_drag_end(cse);
         ext->dragging = false;
@@ -593,11 +572,20 @@ static void on_signal_released(lv_obj_t *cse, void *param)
             ysw_cs_free(ext->drag_start_cs);
             ext->drag_start_cs = NULL;
         }
+    } else if (ext->long_press) {
+        ext->long_press = false;
+    } else if (ext->clicked_sn) {
+        bool selected = ysw_sn_is_selected(ext->clicked_sn);
+        if (selected) {
+            deselect_sn(cse, ext->clicked_sn);
+        } else {
+            select_sn(cse, ext->clicked_sn);
+        }
     } else {
-        do_click(cse);
+        deselect_all(cse);
     }
-    ext->selected_sn = NULL;
-    ext->selection_type = YSW_BOUNDS_NONE;
+    ext->clicked_sn = NULL;
+    ext->click_type = YSW_BOUNDS_NONE;
     lv_obj_invalidate(cse);
 }
 
@@ -618,8 +606,8 @@ static void on_signal_press_lost(lv_obj_t *cse, void *param)
             ext->drag_start_cs = NULL;
         }
     }
-    ext->selected_sn = NULL;
-    ext->selection_type = YSW_BOUNDS_NONE;
+    ext->clicked_sn = NULL;
+    ext->click_type = YSW_BOUNDS_NONE;
     lv_obj_invalidate(cse);
 }
 
@@ -629,9 +617,8 @@ static void on_signal_long_press(lv_obj_t *cse, void *param)
     lv_indev_t *indev_act = (lv_indev_t*)param;
     lv_indev_proc_t *proc = &indev_act->proc;
     lv_point_t *point = &proc->types.pointer.act_point;
-    do_drag(cse, point);
     if (!ext->dragging) {
-        if (!ext->selected_sn) {
+        if (!ext->clicked_sn) {
             fire_create(cse, point);
             ext->long_press = true;
         }

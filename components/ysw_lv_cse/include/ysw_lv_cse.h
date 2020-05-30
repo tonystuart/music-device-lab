@@ -24,8 +24,8 @@ typedef struct {
     // TODO: Rename / reorder by role (e.g. dragging)
     ysw_cs_t *cs;
     lv_point_t last_click;
-    ysw_sn_t *selected_sn; // only set wile pressed
-    ysw_bounds_t selection_type;
+    ysw_sn_t *clicked_sn; // only set wile pressed
+    ysw_bounds_t click_type;
     ysw_cs_t *drag_start_cs;
     bool dragging;
     bool long_press;
