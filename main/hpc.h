@@ -24,7 +24,7 @@ typedef struct hpc_s {
     ysw_music_t *music;
     ysw_array_t *clipboard;
     uint32_t hp_index;
-    int32_t step_index;
+    uint32_t step_index;
     hpc_close_cb_t close_cb;
     void *close_cb_context;
 } hpc_t;

@@ -298,11 +298,11 @@ static void on_paste(hpc_t *hpc, lv_obj_t *btn)
                 ysw_step_select(step, false);
             }
             uint32_t insert_index;
-            if (hpc->step_index < 0) {
-                insert_index = 0;
-            } else if (hpc->step_index < step_count) {
+            if (hpc->step_index < step_count) {
+                // paste after most recently selected step
                 insert_index = hpc->step_index + 1;
             } else {
+                // paste at end (which is also beginning, if empty)
                 insert_index = step_count;
             }
             uint32_t first = insert_index;
@@ -383,18 +383,23 @@ static void on_right(hpc_t *hpc, lv_obj_t *btn)
 
 static void on_create_step(hpc_t *hpc, uint32_t step_index, uint8_t degree)
 {
-    ESP_LOGD(TAG, "create_step step_index=%d, degree=%d", step_index, degree);
     if (ysw_music_get_cs_count(hpc->music)) {
         ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
-        ysw_cs_t *cs = ysw_music_get_cs(hpc->music, 0);
-        ysw_step_t *step = ysw_step_create(cs, degree, YSW_STEP_NEW_MEASURE);
-        uint32_t index = step_index;
         uint32_t step_count = ysw_hp_get_step_count(hp);
-        if (index > step_count) {
-            index = step_count;
+        ysw_cs_t *template_cs;
+        if (hpc->step_index < step_count) {
+            ysw_step_t *last_step = ysw_hp_get_step(hp, hpc->step_index);
+            template_cs = last_step->cs;
+        } else {
+            template_cs = ysw_music_get_cs(hpc->music, 0);
         }
-        ESP_LOGD(TAG, "create_step hp_index=%d, step_index=%d", hpc->hp_index, index);
-        ysw_hp_insert_step(hp, index, step);
+        ysw_step_t *step = ysw_step_create(template_cs, degree, YSW_STEP_NEW_MEASURE);
+        step_count++;
+        hpc->step_index = step_index;
+        if (hpc->step_index > step_count) {
+            hpc->step_index = step_count;
+        }
+        ysw_hp_insert_step(hp, hpc->step_index, step);
         ysw_step_select(step, true);
         refresh(hpc);
     }
@@ -443,7 +448,7 @@ hpc_t *hpc_create(ysw_music_t *music, uint32_t hp_index)
     hpc_t *hpc = ysw_heap_allocate(sizeof(hpc_t)); // freed in on_close
     hpc->music = music;
     hpc->hp_index = hp_index;
-    hpc->step_index = -1;
+    hpc->step_index = 0;
     hpc->frame = create_frame(hpc);
     hpc->hpe = ysw_lv_hpe_create(hpc->frame->win, hpc);
     ysw_lv_hpe_set_create_cb(hpc->hpe, on_create_step);
