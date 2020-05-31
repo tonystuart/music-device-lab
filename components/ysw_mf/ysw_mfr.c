@@ -15,7 +15,6 @@
 #include "ysw_music.h"
 
 #include "esp_log.h"
-#include "hash.h"
 
 #include "assert.h"
 #include "setjmp.h"
@@ -24,14 +23,6 @@
 
 #define RECORD_SIZE 128
 #define TOKENS_SIZE 20
-
-// Hash Types and Functions
-// hash_t *id_address_map;
-// void hash_ensure_assert_off();
-// hash_alloc_insert(ysw_mfr->id_address_map, id, cs);
-// ysw_mfr->id_address_map = hash_create(100, NULL, NULL);
-// hash_free_nodes(ysw_mfr->id_address_map);
-// hash_destroy(ysw_mfr->id_address_map);
 
 typedef struct {
     FILE *file;
@@ -193,7 +184,7 @@ void ysw_mfr_free(ysw_music_t *music)
     ysw_array_free(music->hp_array);
 }
 
-ysw_music_t *ysw_mfr_parse_open_file(FILE *file)
+ysw_music_t *ysw_mfr_parse_from_file(FILE *file)
 {
     ysw_mfr_t *ysw_mfr = &(ysw_mfr_t){};
 
@@ -212,7 +203,7 @@ ysw_music_t *ysw_mfr_parse_open_file(FILE *file)
         ysw_mf_type_t type = atoi(ysw_mfr->tokens[0]);
         if (type == YSW_MF_CHORD_STYLE && ysw_mfr->token_count == 9) {
             parse_cs(ysw_mfr);
-        } else if (type == YSW_MF_HARMONIC_PROGRESSION && ysw_mfr->token_count == 9) {
+        } else if (type == YSW_MF_HARMONIC_PROGRESSION && ysw_mfr->token_count == 8) {
             parse_hp(ysw_mfr);
         } else {
             ESP_LOGW(TAG, "invalid record type=%d, token_count=%d", type, ysw_mfr->token_count);
@@ -231,7 +222,7 @@ ysw_music_t *ysw_mfr_parse(char *filename)
     ysw_music_t *music = NULL;
     FILE *file = fopen(filename, "r");
     if (file) {
-        music = ysw_mfr_parse_open_file(file);
+        music = ysw_mfr_parse_from_file(file);
         fclose(file);
     }
     return music;

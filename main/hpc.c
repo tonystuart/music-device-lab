@@ -17,6 +17,7 @@
 #include "ysw_heap.h"
 #include "ysw_instruments.h"
 #include "ysw_lv_hpe.h"
+#include "ysw_mfw.h"
 #include "ysw_mode.h"
 #include "ysw_music.h"
 #include "ysw_name.h"
@@ -33,6 +34,9 @@
 #include "esp_log.h"
 
 #define TAG "HPC"
+
+// TODO: find a common location for this macro
+#define MUSIC_DEFINITIONS "/spiffs/music.csv"
 
 typedef void (*ps_visitor_t)(hpc_t *hpc, ysw_ps_t *ps);
 
@@ -266,6 +270,7 @@ static void on_settings(hpc_t *hpc, lv_obj_t *btn)
 
 static void on_save(hpc_t *hpc, lv_obj_t *btn)
 {
+    ysw_mfw_write(MUSIC_DEFINITIONS, hpc->music);
 }
 
 static void on_new(hpc_t *hpc, lv_obj_t *btn)

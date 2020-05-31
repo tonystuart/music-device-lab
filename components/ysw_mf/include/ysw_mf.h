@@ -9,6 +9,8 @@
 
 #pragma once
 
+#define YSW_MF_MAX_NAME_LENGTH 64
+
 typedef enum {
     YSW_MF_CHORD_STYLE = 1,
     YSW_MF_STYLE_NOTE,

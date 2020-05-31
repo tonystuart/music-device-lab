@@ -9,9 +9,13 @@
 
 #include "ysw_csv.h"
 
+#include "assert.h"
 #include "stdbool.h"
+#include "stdint.h"
 
 #define TAG "YSW_CSV"
+
+#define ROOM_TO_EXPAND 3 // escape, comma, eos
 
 int ysw_csv_parse(char *buffer, char *tokens[], int max_tokens)
 {
@@ -71,5 +75,23 @@ int ysw_csv_parse(char *buffer, char *tokens[], int max_tokens)
     }
     *q = 0;
     return token_count;
+}
+
+void ysw_csv_escape(const char *source, char *target, int target_size)
+{
+    assert(target_size > ROOM_TO_EXPAND);
+
+    uint32_t source_index = 0;
+    uint32_t target_index = 0;
+    uint32_t target_limit = target_size - ROOM_TO_EXPAND;
+
+    while (source[source_index] && target_index < target_limit) {
+        if (source[source_index] == ',') {
+            target[target_index++] = '\\';
+        }
+        target[target_index++] = source[source_index++];
+    }
+
+    target[target_index] = 0;
 }
 

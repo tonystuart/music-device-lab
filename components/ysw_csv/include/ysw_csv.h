@@ -10,3 +10,4 @@
 #pragma once
 
 int ysw_csv_parse(char *buffer, char *tokens[], int max_tokens);
+void ysw_csv_escape(const char *source, char *target, int target_size);

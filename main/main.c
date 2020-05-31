@@ -26,6 +26,7 @@
 #define TAG "MAIN"
 
 #define SPIFFS_PARTITION "/spiffs"
+// TODO: find a common location for this macro
 #define MUSIC_DEFINITIONS "/spiffs/music.csv"
 
 // TODO: Move to dynamic structure
