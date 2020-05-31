@@ -344,6 +344,20 @@ static void prepare_create(lv_obj_t *hpe, lv_point_t *point)
     }
 }
 
+static uint32_t count_selected_ps(lv_obj_t *hpe)
+{
+    uint32_t count = 0;
+    ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
+    uint32_t ps_count = ysw_hp_get_ps_count(ext->hp);
+    for (int i = 0; i < ps_count; i++) {
+        ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
+        if (ysw_ps_is_selected(ps)) {
+            count++;
+        }
+    }
+    return count;
+}
+
 static void select_ps(lv_obj_t *hpe, ysw_ps_t *ps)
 {
     ysw_ps_select(ps, true);
@@ -426,6 +440,9 @@ static void capture_drag(lv_obj_t *hpe, lv_coord_t x, lv_coord_t y)
             ext->dragging = drag_x || drag_y;
             if (ext->dragging) {
                 if (!ysw_ps_is_selected(ext->clicked_ps)) {
+                    if (count_selected_ps(hpe)) {
+                        deselect_all(hpe);
+                    }
                     select_ps(hpe, ext->clicked_ps);
                 }
                 ext->drag_start_hp = ysw_hp_copy(ext->hp);

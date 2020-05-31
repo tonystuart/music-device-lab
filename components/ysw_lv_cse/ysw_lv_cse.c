@@ -343,6 +343,20 @@ static void prepare_create(lv_obj_t *cse, lv_point_t *point)
     fire_create(cse, tick_index, YSW_MIDI_UNPO - row_index);
 }
 
+static uint32_t count_selected_sn(lv_obj_t *cse)
+{
+    uint32_t count = 0;
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
+    for (int i = 0; i < sn_count; i++) {
+        ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
+        if (ysw_sn_is_selected(sn)) {
+            count++;
+        }
+    }
+    return count;
+}
+
 static void select_sn(lv_obj_t *cse, ysw_sn_t *sn)
 {
     ysw_sn_select(sn, true);
@@ -500,7 +514,7 @@ static void capture_click(lv_obj_t *cse, lv_point_t *point)
             ext->clicked_sn = sn;
             ext->click_type = bounds_type;
             if (ysw_sn_is_selected(sn)) {
-                // return on first selected sn, otherwise pick another one
+                // return on first selected sn, otherwise pick last one
                 return;
             }
         }
@@ -516,6 +530,9 @@ static void capture_drag(lv_obj_t *cse, lv_coord_t x, lv_coord_t y)
         ext->dragging = drag_x || drag_y;
         if (ext->dragging) {
             if (!ysw_sn_is_selected(ext->clicked_sn)) {
+                if (count_selected_sn(cse)) {
+                    deselect_all(cse);
+                }
                 select_sn(cse, ext->clicked_sn);
             }
             ext->drag_start_cs = ysw_cs_copy(ext->cs);
