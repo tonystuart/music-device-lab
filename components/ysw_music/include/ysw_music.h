@@ -15,6 +15,10 @@
 #include "ysw_cs.h"
 #include "ysw_hp.h"
 
+#define YSW_MUSIC_PARTITION "/spiffs"
+#define YSW_MUSIC_CSV YSW_MUSIC_PARTITION "/music.csv"
+#define YSW_MUSIC_TEMP YSW_MUSIC_PARTITION "/music.tmp"
+
 typedef struct {
     ysw_array_t *cs_array;
     ysw_array_t *hp_array;

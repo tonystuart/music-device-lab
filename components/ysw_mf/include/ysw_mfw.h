@@ -12,5 +12,5 @@
 #include "stdio.h"
 #include "ysw_music.h"
 
-void ysw_mfw_write(char *filename, ysw_music_t *music);
+void ysw_mfw_write(ysw_music_t *music);
 void ysw_mfw_write_to_file(FILE *file, ysw_music_t *music);

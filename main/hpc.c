@@ -35,9 +35,6 @@
 
 #define TAG "HPC"
 
-// TODO: find a common location for this macro
-#define MUSIC_DEFINITIONS "/spiffs/music.csv"
-
 typedef void (*ps_visitor_t)(hpc_t *hpc, ysw_ps_t *ps);
 
 static void send_notes(hpc_t *hpc, ysw_sequencer_message_type_t type)
@@ -270,7 +267,7 @@ static void on_settings(hpc_t *hpc, lv_obj_t *btn)
 
 static void on_save(hpc_t *hpc, lv_obj_t *btn)
 {
-    ysw_mfw_write(MUSIC_DEFINITIONS, hpc->music);
+    ysw_mfw_write(hpc->music);
 }
 
 static void on_new(hpc_t *hpc, lv_obj_t *btn)

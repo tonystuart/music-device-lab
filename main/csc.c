@@ -34,9 +34,6 @@
 
 #define TAG "CSC"
 
-// TODO: find a common location for this macro
-#define MUSIC_DEFINITIONS "/spiffs/music.csv"
-
 typedef void (*sn_visitor_t)(csc_t *csc, ysw_sn_t *sn);
 
 static void send_notes(csc_t *csc, ysw_sequencer_message_type_t type)
@@ -294,7 +291,7 @@ static void on_settings(csc_t *csc, lv_obj_t * btn, lv_event_t event)
 
 static void on_save(csc_t *csc, lv_obj_t * btn, lv_event_t event)
 {
-    ysw_mfw_write(MUSIC_DEFINITIONS, csc->music);
+    ysw_mfw_write(csc->music);
 }
 
 static void on_new(csc_t *csc, lv_obj_t * btn, lv_event_t event)

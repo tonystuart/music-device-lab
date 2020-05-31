@@ -17,6 +17,7 @@
 #include "esp_log.h"
 
 #include "assert.h"
+#include "errno.h"
 #include "setjmp.h"
 
 #define TAG "YSW_MFR"
@@ -184,7 +185,7 @@ void ysw_mfr_free(ysw_music_t *music)
     ysw_array_free(music->hp_array);
 }
 
-ysw_music_t *ysw_mfr_parse_from_file(FILE *file)
+ysw_music_t *ysw_mfr_read_from_file(FILE *file)
 {
     ysw_mfr_t *ysw_mfr = &(ysw_mfr_t){};
 
@@ -216,15 +217,24 @@ ysw_music_t *ysw_mfr_parse_from_file(FILE *file)
     return ysw_mfr->music;
 }
 
-ysw_music_t *ysw_mfr_parse(char *filename)
+ysw_music_t *ysw_mfr_read()
 {
-    ESP_LOGD(TAG, "ysw_mfr_parse filename=%s", filename);
     ysw_music_t *music = NULL;
-    FILE *file = fopen(filename, "r");
-    if (file) {
-        music = ysw_mfr_parse_from_file(file);
-        fclose(file);
+    FILE *file = fopen(YSW_MUSIC_CSV, "r");
+    if (!file) {
+        // spiffs doesn't provide atomic rename, so check for temp file
+        ESP_LOGE(TAG, "fopen file=%s failed, errno=%d", YSW_MUSIC_CSV, errno);
+        int rc = rename(YSW_MUSIC_TEMP, YSW_MUSIC_CSV);
+        if (rc == -1) {
+            ESP_LOGE(TAG, "rename old=%s new=%s failed, errno=%d", YSW_MUSIC_TEMP, YSW_MUSIC_CSV, errno);
+            abort();
+        }
+        file = fopen(YSW_MUSIC_CSV, "r");
+        ESP_LOGE(TAG, "fopen file=%s failed (after rename), errno=%d", YSW_MUSIC_CSV, errno);
+        abort();
     }
+    music = ysw_mfr_read_from_file(file);
+    fclose(file);
     return music;
 }
 

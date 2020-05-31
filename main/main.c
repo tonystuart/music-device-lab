@@ -25,10 +25,6 @@
 
 #define TAG "MAIN"
 
-#define SPIFFS_PARTITION "/spiffs"
-// TODO: find a common location for this macro
-#define MUSIC_DEFINITIONS "/spiffs/music.csv"
-
 // TODO: Move to dynamic structure
 
 static ysw_music_t *music;
@@ -99,13 +95,13 @@ void app_main()
     esp_log_level_set("YSW_ARRAY", ESP_LOG_INFO);
 
     display_initialize();
-    spiffs_initialize(SPIFFS_PARTITION);
+    spiffs_initialize(YSW_MUSIC_PARTITION);
     synthesizer_initialize();
     sequencer_initialize(on_sequencer_cb);
 
     ysw_lv_styles_initialize();
 
-    music = ysw_mfr_parse(MUSIC_DEFINITIONS);
+    music = ysw_mfr_read();
 
     if (music && ysw_music_get_cs_count(music) > 0) {
         create_dashboard();

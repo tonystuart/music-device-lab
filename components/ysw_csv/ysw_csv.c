@@ -15,25 +15,21 @@
 
 #define TAG "YSW_CSV"
 
-#define ROOM_TO_EXPAND 3 // escape, comma, eos
-
 int ysw_csv_parse(char *buffer, char *tokens[], int max_tokens)
 {
     typedef enum {
         INITIAL,
         ESCAPE,
-        ASSIGN
     } parser_state_t;
 
     char *p = buffer;
     char *q = buffer;
-    int token_count = 0;
-    bool new_token = true;
-    bool scanning = true;
+    int token_index = 0;
+    tokens[token_index] = q;
     parser_state_t state = INITIAL;
+    bool scanning = true;
 
     while (scanning) {
-        //ESP_LOGD(TAG, "*p=%c, *q=%c, token_count=%d, new_token=%d, scanning=%d, state=%d", *p, *q, token_count, new_token, scanning, state);
         switch (state) {
             case INITIAL:
                 if (!*p || *p == '#' || *p == '\n') {
@@ -41,8 +37,16 @@ int ysw_csv_parse(char *buffer, char *tokens[], int max_tokens)
                 } else if (*p == '\\') {
                     p++;
                     state = ESCAPE;
+                } else if (*p == ',') {
+                    p++;
+                    *q++ = 0;
+                    if (token_index < (max_tokens - 1)) {
+                        tokens[++token_index] = q;
+                    } else {
+                        scanning = false;
+                    }
                 } else {
-                    state = ASSIGN;
+                    *q++ = *p++;
                 }
                 break;
             case ESCAPE:
@@ -52,46 +56,35 @@ int ysw_csv_parse(char *buffer, char *tokens[], int max_tokens)
                     // skip newline
                     p++;
                 } else {
-                    state = ASSIGN;
+                    // preserve everything else (e.g. backslash, comma, pound sign)
+                    *q++ = *p++;
                 }
-                break;
-            case ASSIGN:
-                if (new_token) {
-                    if (token_count < max_tokens) {
-                        tokens[token_count++] = q;
-                        new_token = false;
-                    } else {
-                        scanning = false;
-                    }
-                }
-                if (*p == ',') {
-                    *p = 0;
-                    new_token = true;
-                }
-                *q++ = *p++;
                 state = INITIAL;
                 break;
         }
     }
+
     *q = 0;
-    return token_count;
+    return tokens[token_index] ? token_index + 1 : token_index;
 }
+
+#define ROOM_TO_EXPAND 2 // leave room for escape character and end-of-string
 
 void ysw_csv_escape(const char *source, char *target, int target_size)
 {
     assert(target_size > ROOM_TO_EXPAND);
 
-    uint32_t source_index = 0;
-    uint32_t target_index = 0;
-    uint32_t target_limit = target_size - ROOM_TO_EXPAND;
+    const char *s = source;
+    char *t = target;
+    char *t_max = target + target_size - ROOM_TO_EXPAND;
 
-    while (source[source_index] && target_index < target_limit) {
-        if (source[source_index] == ',') {
-            target[target_index++] = '\\';
+    while (*s && t < t_max) {
+        if (*s == '\\' || *s == ',' || *s == '#' || *s == '\n') {
+            *t++ = '\\';
         }
-        target[target_index++] = source[source_index++];
+        *t++ = *s++;
     }
 
-    target[target_index] = 0;
+    *t = 0;
 }
 

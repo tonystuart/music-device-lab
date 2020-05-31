@@ -19,10 +19,9 @@
 
 #include "assert.h"
 #include "errno.h"
+#include "unistd.h"
 
 #define TAG "YSW_MFW"
-
-#define TEMP_FILENAME "music.tmp"
 
 typedef struct {
     FILE *file;
@@ -38,7 +37,7 @@ static void write_cs(ysw_mfw_t *ysw_mfw)
         ysw_cs_t *cs = ysw_music_get_cs(ysw_mfw->music, i);
         char name[YSW_MF_MAX_NAME_LENGTH];
         ysw_csv_escape(cs->name, name, sizeof(name));
-        fprintf(ysw_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d",
+        fprintf(ysw_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d\n",
                 YSW_MF_CHORD_STYLE,
                 i,
                 name,
@@ -49,7 +48,7 @@ static void write_cs(ysw_mfw_t *ysw_mfw)
                 cs->tempo,
                 cs->divisions);
 
-        printf("%d,%d,%s,%d,%d,%d,%d,%d,%d",
+        printf("%d,%d,%s,%d,%d,%d,%d,%d,%d\n",
                 YSW_MF_CHORD_STYLE,
                 i,
                 name,
@@ -68,7 +67,7 @@ static void write_cs(ysw_mfw_t *ysw_mfw)
         uint32_t sn_count = ysw_cs_get_sn_count(cs);
         for (uint32_t j = 0; j < sn_count; j++) {
             ysw_sn_t *sn = ysw_cs_get_sn(cs, j);
-            fprintf(ysw_mfw->file, "%d,%d,%d,%d,%d,%d",
+            fprintf(ysw_mfw->file, "%d,%d,%d,%d,%d,%d\n",
                     YSW_MF_STYLE_NOTE,
                     sn->degree,
                     sn->velocity,
@@ -76,7 +75,7 @@ static void write_cs(ysw_mfw_t *ysw_mfw)
                     sn->duration,
                     sn->flags);
 
-            printf("%d,%d,%d,%d,%d,%d",
+            printf("%d,%d,%d,%d,%d,%d\n",
                     YSW_MF_STYLE_NOTE,
                     sn->degree,
                     sn->velocity,
@@ -94,7 +93,7 @@ static void write_hp(ysw_mfw_t *ysw_mfw)
         ysw_hp_t *hp = ysw_music_get_hp(ysw_mfw->music, i);
         char name[YSW_MF_MAX_NAME_LENGTH];
         ysw_csv_escape(hp->name, name, sizeof(name));
-        fprintf(ysw_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d",
+        fprintf(ysw_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d\n",
                 YSW_MF_HARMONIC_PROGRESSION,
                 i,
                 name,
@@ -104,7 +103,7 @@ static void write_hp(ysw_mfw_t *ysw_mfw)
                 hp->transposition,
                 hp->tempo);
 
-        printf("%d,%d,%s,%d,%d,%d,%d,%d",
+        printf("%d,%d,%s,%d,%d,%d,%d,%d\n",
                 YSW_MF_HARMONIC_PROGRESSION,
                 i,
                 name,
@@ -128,13 +127,13 @@ static void write_hp(ysw_mfw_t *ysw_mfw)
                 abort();
             }
             uint32_t cs_index = (uint32_t)hnode_get(node);
-            fprintf(ysw_mfw->file, "%d,%d,%d,%d",
+            fprintf(ysw_mfw->file, "%d,%d,%d,%d\n",
                     YSW_MF_PROGRESSION_STEP,
                     ps->degree,
                     cs_index,
                     ps->flags);
 
-            printf("%d,%d,%d,%d",
+            printf("%d,%d,%d,%d\n",
                     YSW_MF_PROGRESSION_STEP,
                     ps->degree,
                     cs_index,
@@ -163,33 +162,39 @@ void ysw_mfw_write_to_file(FILE *file, ysw_music_t *music)
     if (!ysw_mfw->hp_map) {
         ESP_LOGE(TAG, "hash_create hp_map failed");
         abort();
-
-        write_cs(ysw_mfw);
-        write_hp(ysw_mfw);
-
-        hash_free_nodes(ysw_mfw->cs_map);
-        hash_free_nodes(ysw_mfw->hp_map);
-
-        hash_destroy(ysw_mfw->cs_map);
-        hash_destroy(ysw_mfw->hp_map);
     }
+
+    write_cs(ysw_mfw);
+    write_hp(ysw_mfw);
+
+    hash_free_nodes(ysw_mfw->cs_map);
+    hash_free_nodes(ysw_mfw->hp_map);
+
+    hash_destroy(ysw_mfw->cs_map);
+    hash_destroy(ysw_mfw->hp_map);
 }
 
-void ysw_mfw_write(char *filename, ysw_music_t *music)
+void ysw_mfw_write(ysw_music_t *music)
 {
-    ESP_LOGD(TAG, "ysw_mfw_write filename=%s", filename);
-    FILE *file = fopen(TEMP_FILENAME, "w");
+    FILE *file = fopen(YSW_MUSIC_TEMP, "w");
     if (!file) {
-        ESP_LOGE(TAG, "fopen file=%s failed, errno=%d", TEMP_FILENAME, errno);
+        ESP_LOGE(TAG, "fopen file=%s failed, errno=%d", YSW_MUSIC_TEMP, errno);
         abort();
     }
 
     ysw_mfw_write_to_file(file, music);
     fclose(file);
 
-    int rc = rename(TEMP_FILENAME, filename);
+    // spiffs doesn't provide atomic rename, see also ysw_mfr_read
+    int rc = unlink(YSW_MUSIC_CSV);
     if (rc == -1) {
-        ESP_LOGE(TAG, "rename old=%s, new=%s failed, errno=%d", TEMP_FILENAME, filename, errno);
+        ESP_LOGE(TAG, "unlink file=%s failed, errno=%d", YSW_MUSIC_CSV, errno);
+        abort();
+    }
+
+    rc = rename(YSW_MUSIC_TEMP, YSW_MUSIC_CSV);
+    if (rc == -1) {
+        ESP_LOGE(TAG, "rename old=%s, new=%s failed, errno=%d", YSW_MUSIC_TEMP, YSW_MUSIC_CSV, errno);
         abort();
     }
 }
