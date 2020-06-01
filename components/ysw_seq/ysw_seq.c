@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_sequencer.h"
+#include "ysw_seq.h"
 
 #include "esp_log.h"
 #include "ysw_heap.h"
@@ -15,7 +15,7 @@
 #include "ysw_midi.h"
 #include "ysw_ticks.h"
 
-#define TAG "YSW_SEQUENCER"
+#define TAG "YSW_SEQ"
 
 #define MAX_POLYPHONY 64
 
@@ -25,16 +25,16 @@ typedef struct {
     time_t end_time;
 } active_note_t;
 
-static ysw_sequencer_config_t config;
+static ysw_seq_config_t config;
 static QueueHandle_t input_queue;
 
-static ysw_sequencer_clip_t active;
-static ysw_sequencer_clip_t staged;
+static ysw_seq_clip_t active;
+static ysw_seq_clip_t staged;
 
 static bool loop;
 static uint32_t next_note;
 static uint32_t start_millis;
-static uint8_t playback_speed = YSW_SEQUENCER_SPEED_DEFAULT;
+static uint8_t playback_speed = YSW_SEQ_SPEED_DEFAULT;
 
 static uint8_t active_count = 0;
 static active_note_t active_notes[MAX_POLYPHONY];
@@ -52,7 +52,7 @@ static inline bool clip_playing()
     return start_millis;
 }
 
-static void free_clip(ysw_sequencer_clip_t *clip)
+static void free_clip(ysw_seq_clip_t *clip)
 {
     if (clip->notes) {
         ysw_heap_free(clip->notes);
@@ -122,7 +122,7 @@ static uint32_t get_current_playback_millis()
     return playback_millis;
 }
 
-static void play_clip(ysw_sequencer_clip_t *new_clip)
+static void play_clip(ysw_seq_clip_t *new_clip)
 {
     ESP_LOGD(TAG, "play_clip note_count=%d, tempo=%d", new_clip->note_count, new_clip->tempo);
     if (clip_playing()) {
@@ -150,7 +150,7 @@ static void play_clip(ysw_sequencer_clip_t *new_clip)
     ESP_LOGD(TAG, "play_clip start_millis=%d", start_millis);
 }
 
-static void stage_clip(ysw_sequencer_clip_t *new_clip)
+static void stage_clip(ysw_seq_clip_t *new_clip)
 {
     ESP_LOGD(TAG, "stage_clip note_count=%d, tempo=%d", new_clip->note_count, new_clip->tempo);
     if (clip_playing()) {
@@ -210,28 +210,28 @@ static void set_playback_speed(uint8_t percent)
     }
 }
 
-static void process_message(ysw_sequencer_message_t *message)
+static void process_message(ysw_seq_message_t *message)
 {
     switch (message->type) {
-        case YSW_SEQUENCER_PLAY:
+        case YSW_SEQ_PLAY:
             play_clip(&message->play);
             break;
-        case YSW_SEQUENCER_PAUSE:
+        case YSW_SEQ_PAUSE:
             pause_clip();
             break;
-        case YSW_SEQUENCER_RESUME:
+        case YSW_SEQ_RESUME:
             resume_clip();
             break;
-        case YSW_SEQUENCER_TEMPO:
+        case YSW_SEQ_TEMPO:
             set_tempo(message->tempo.qnpm);
             break;
-        case YSW_SEQUENCER_LOOP:
+        case YSW_SEQ_LOOP:
             set_loop(message->loop.loop);
             break;
-        case YSW_SEQUENCER_STAGE:
+        case YSW_SEQ_STAGE:
             stage_clip(&message->stage);
             break;
-        case YSW_SEQUENCER_SPEED:
+        case YSW_SEQ_SPEED:
             set_playback_speed(message->speed.percent);
             break;
         default:
@@ -309,7 +309,7 @@ static TickType_t process_notes()
             ticks_to_wait = to_ticks(delay_millis);
         } else if (loop) {
             if (config.on_state_change) {
-                config.on_state_change(YSW_SEQUENCER_STATE_LOOP_COMPLETE);
+                config.on_state_change(YSW_SEQ_LOOP_DONE);
             }
             next_note = 0;
             loop_next();
@@ -323,7 +323,7 @@ static TickType_t process_notes()
             start_millis = 0;
             ESP_LOGD(TAG, "playback complete, nothing more to do");
             if (config.on_state_change) {
-                config.on_state_change(YSW_SEQUENCER_STATE_PLAYBACK_COMPLETE);
+                config.on_state_change(YSW_SEQ_PLAY_DONE);
             }
         }
     }
@@ -331,9 +331,9 @@ static TickType_t process_notes()
     return ticks_to_wait;
 }
 
-static void run_sequencer(void* parameters)
+static void run_seq(void* parameters)
 {
-    ESP_LOGD(TAG, "run_sequencer core=%d", xPortGetCoreID());
+    ESP_LOGD(TAG, "run_seq core=%d", xPortGetCoreID());
     for (;;) {
         TickType_t ticks_to_wait = portMAX_DELAY;
         if (clip_playing()) {
@@ -341,11 +341,11 @@ static void run_sequencer(void* parameters)
         }
         if (ticks_to_wait == portMAX_DELAY) {
             if (config.on_state_change) {
-                ESP_LOGD(TAG, "run_sequencer NOT_PLAYING");
-                config.on_state_change(YSW_SEQUENCER_STATE_NOT_PLAYING);
+                ESP_LOGD(TAG, "run_seq NOT_PLAYING");
+                config.on_state_change(YSW_SEQ_IDLE);
             }
         }
-        ysw_sequencer_message_t message;
+        ysw_seq_message_t message;
         BaseType_t is_message = xQueueReceive(input_queue, &message, ticks_to_wait);
         if (is_message) {
             process_message(&message);
@@ -353,9 +353,9 @@ static void run_sequencer(void* parameters)
     }
 }
 
-QueueHandle_t ysw_sequencer_create_task(ysw_sequencer_config_t *new_config)
+QueueHandle_t ysw_seq_create_task(ysw_seq_config_t *new_config)
 {
     config = *new_config;
-    ysw_task_create_standard(TAG, run_sequencer, &input_queue, sizeof(ysw_sequencer_message_t));
+    ysw_task_create_standard(TAG, run_seq, &input_queue, sizeof(ysw_seq_message_t));
     return input_queue;
 }

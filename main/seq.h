@@ -9,22 +9,22 @@
 
 #pragma once
 
-#include "ysw_sequencer.h"
+#include "ysw_seq.h"
 
 typedef enum {
     META_NOTE,
     NOT_PLAYING,
-} sequencer_cb_type_t;
+} seq_cb_type_t;
 
 typedef struct {
-    sequencer_cb_type_t type;
+    seq_cb_type_t type;
     union {
         ysw_note_t *meta_note;
     };
-} sequencer_cb_message_t;
+} seq_cb_message_t;
 
-typedef void (*sequencer_cb_t)(sequencer_cb_message_t *sequencer_cb_message);
+typedef void (*seq_cb_t)(seq_cb_message_t *seq_cb_message);
 
-void sequencer_send(ysw_sequencer_message_t *message);
-void sequencer_initialize(sequencer_cb_t sequencer_cb);
+void seq_send(ysw_seq_message_t *message);
+void seq_initialize(seq_cb_t seq_cb);
 

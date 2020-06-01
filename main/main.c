@@ -11,7 +11,7 @@
 #include "hpc.h"
 #include "display.h"
 #include "gsc.h"
-#include "sequencer.h"
+#include "seq.h"
 #include "spiffs.h"
 #include "synthesizer.h"
 
@@ -66,7 +66,7 @@ static void create_dashboard(void)
     lv_obj_set_event_cb(list_btn, event_handler);
 }
 
-static void on_sequencer_cb(sequencer_cb_message_t *message)
+static void on_seq_cb(seq_cb_message_t *message)
 {
     if (message->type == META_NOTE) {
         if (csc && message->meta_note->midi_note == YSW_CS_METRO) {
@@ -97,7 +97,7 @@ void app_main()
     display_initialize();
     spiffs_initialize(YSW_MUSIC_PARTITION);
     synthesizer_initialize();
-    sequencer_initialize(on_sequencer_cb);
+    seq_initialize(on_seq_cb);
 
     ysw_lv_styles_initialize();
 

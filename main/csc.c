@@ -9,7 +9,7 @@
 
 #include "csc.h"
 
-#include "sequencer.h"
+#include "seq.h"
 
 #include "ysw_cs.h"
 #include "ysw_sn.h"
@@ -23,7 +23,7 @@
 #include "ysw_name.h"
 #include "ysw_octaves.h"
 #include "ysw_sdb.h"
-#include "ysw_sequencer.h"
+#include "ysw_seq.h"
 #include "ysw_synthesizer.h"
 #include "ysw_tempo.h"
 #include "ysw_transposition.h"
@@ -36,7 +36,7 @@
 
 typedef void (*sn_visitor_t)(csc_t *csc, ysw_sn_t *sn);
 
-static void send_notes(csc_t *csc, ysw_sequencer_message_type_t type)
+static void send_notes(csc_t *csc, ysw_seq_message_type_t type)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
     ysw_cs_sort_sn_array(cs);
@@ -44,35 +44,35 @@ static void send_notes(csc_t *csc, ysw_sequencer_message_type_t type)
     uint32_t note_count = 0;
     ysw_note_t *notes = ysw_cs_get_notes(cs, &note_count);
 
-    ysw_sequencer_message_t message = {
+    ysw_seq_message_t message = {
         .type = type,
         .stage.notes = notes,
         .stage.note_count = note_count,
         .stage.tempo = cs->tempo,
     };
 
-    sequencer_send(&message);
+    seq_send(&message);
 }
 
 static void play(csc_t *csc)
 {
-    send_notes(csc, YSW_SEQUENCER_PLAY);
+    send_notes(csc, YSW_SEQ_PLAY);
 }
 
 static void stage(csc_t *csc)
 {
     if (ysw_lv_cse_gs.auto_play) {
-        send_notes(csc, YSW_SEQUENCER_STAGE);
+        send_notes(csc, YSW_SEQ_STAGE);
     }
 }
 
 static void stop()
 {
-    ysw_sequencer_message_t message = {
-        .type = YSW_SEQUENCER_PAUSE,
+    ysw_seq_message_t message = {
+        .type = YSW_SEQ_PAUSE,
     };
 
-    sequencer_send(&message);
+    seq_send(&message);
 }
 
 static void update_header(csc_t *csc)
@@ -241,17 +241,17 @@ static void on_loop(csc_t *csc, lv_obj_t * btn, lv_event_t event)
         lv_btn_set_toggle(btn, true);
     }
     if (lv_btn_get_state(btn) == LV_BTN_STATE_TGL_PR) {
-        ysw_sequencer_message_t message = {
-            .type = YSW_SEQUENCER_LOOP,
+        ysw_seq_message_t message = {
+            .type = YSW_SEQ_LOOP,
             .loop.loop = false,
         };
-        sequencer_send(&message);
+        seq_send(&message);
     } else {
-        ysw_sequencer_message_t message = {
-            .type = YSW_SEQUENCER_LOOP,
+        ysw_seq_message_t message = {
+            .type = YSW_SEQ_LOOP,
             .loop.loop = true,
         };
-        sequencer_send(&message);
+        seq_send(&message);
     }
 }
 
