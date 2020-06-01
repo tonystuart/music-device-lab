@@ -67,6 +67,47 @@ static void release_all_notes(ysw_seq_t *seq)
     seq->active_count = 0;
 }
 
+static void fire_loop_done(ysw_seq_t *seq)
+{
+    if (seq->active.on_status) {
+        ysw_seq_status_message_t message = {
+            .type = YSW_SEQ_LOOP_DONE,
+        };
+        seq->active.on_status(seq->active.on_status_context, &message);
+    }
+}
+
+static void fire_play_done(ysw_seq_t *seq)
+{
+    if (seq->active.on_status) {
+        ysw_seq_status_message_t message = {
+            .type = YSW_SEQ_PLAY_DONE,
+        };
+        seq->active.on_status(seq->active.on_status_context, &message);
+    }
+}
+
+static void fire_idle(ysw_seq_t *seq)
+{
+    if (seq->active.on_status) {
+        ysw_seq_status_message_t message = {
+            .type = YSW_SEQ_IDLE,
+        };
+        seq->active.on_status(seq->active.on_status_context, &message);
+    }
+}
+
+static void fire_note_status(ysw_seq_t *seq, ysw_note_t *note)
+{
+    if (seq->active.on_status) {
+        ysw_seq_status_message_t message = {
+            .type = YSW_SEQ_NOTE,
+            .note = note,
+        };
+        seq->active.on_status(seq->active.on_status_context, &message);
+    }
+}
+
 static void play_note(ysw_seq_t *seq, ysw_note_t *note, int next_note_index)
 {
     if (note->instrument != seq->programs[note->channel]) {
@@ -85,11 +126,14 @@ static void play_note(ysw_seq_t *seq, ysw_note_t *note, int next_note_index)
     }
 
     if (next_note_index != -1) {
-        seq->config.on_note_on(note);
+        if (note->channel == YSW_MIDI_STATUS_CHANNEL) {
+            fire_note_status(seq, note);
+        } else {
+            seq->config.on_note_on(note);
+        }
         seq->active_notes[next_note_index].channel = note->channel;
         seq->active_notes[next_note_index].midi_note = note->midi_note;
-        // Limit duration to avoid issues with VS1053b sustained polyphony
-        seq->active_notes[next_note_index].end_time = t2ms(seq, note->start) + min(t2ms(seq, note->duration), 1000);
+        seq->active_notes[next_note_index].end_time = t2ms(seq, note->start) + t2ms(seq, note->duration);
     } else {
         ESP_LOGE(TAG, "Maximum polyphony exceeded, active_count=%d", seq->active_count);
     }
@@ -305,9 +349,7 @@ static TickType_t process_notes(ysw_seq_t *seq)
             uint32_t delay_millis = next_note_to_end->end_time - playback_millis;
             ticks_to_wait = to_ticks(delay_millis);
         } else if (seq->loop) {
-            if (seq->config.on_control_change) {
-                seq->config.on_control_change(YSW_SEQ_LOOP_DONE);
-            }
+            fire_loop_done(seq);
             seq->next_note = 0;
             loop_next(seq);
             ticks_to_wait = 0;
@@ -319,9 +361,7 @@ static TickType_t process_notes(ysw_seq_t *seq)
             seq->next_note = 0;
             seq->start_millis = 0;
             ESP_LOGD(TAG, "playback complete, nothing more to do");
-            if (seq->config.on_control_change) {
-                seq->config.on_control_change(YSW_SEQ_PLAY_DONE);
-            }
+            fire_play_done(seq);
         }
     }
 
@@ -337,10 +377,8 @@ static void run_task(ysw_seq_t *seq)
             ticks_to_wait = process_notes(seq);
         }
         if (ticks_to_wait == portMAX_DELAY) {
-            if (seq->config.on_control_change) {
-                ESP_LOGD(TAG, "run_task NOT_PLAYING");
-                seq->config.on_control_change(YSW_SEQ_IDLE);
-            }
+            ESP_LOGD(TAG, "sequencer idle");
+            fire_idle(seq);
         }
         ysw_seq_message_t message;
         BaseType_t is_message = xQueueReceive(seq->input_queue, &message, ticks_to_wait);

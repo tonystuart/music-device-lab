@@ -114,8 +114,8 @@ ysw_note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
         while (metronome_tick <= sn->start) {
             note_p->start = metronome_tick;
             note_p->duration = 0;
-            note_p->channel = YSW_CS_META_CHANNEL;
-            note_p->midi_note = YSW_CS_METRO;
+            note_p->channel = YSW_MIDI_STATUS_CHANNEL;
+            note_p->midi_note = YSW_MIDI_STATUS_NOTE;
             note_p->velocity = 0;
             note_p->instrument = 0;
             note_p++;
@@ -135,8 +135,8 @@ ysw_note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
     if (fill_to_measure) {
         note_p->start = end_time;
         note_p->duration = fill_to_measure;
-        note_p->channel = YSW_CS_META_CHANNEL;
-        note_p->midi_note = YSW_CS_META_FILL;
+        note_p->channel = YSW_CS_MUSIC_CHANNEL;
+        note_p->midi_note = 0;
         note_p->velocity = 0;
         note_p->instrument = 0;
         note_p++;

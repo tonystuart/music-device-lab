@@ -37,6 +37,16 @@
 
 typedef void (*ps_visitor_t)(hpc_t *hpc, ysw_ps_t *ps);
 
+// NB: invoked by sequencer task
+static void on_sequencer_status(hpc_t *hpc, ysw_seq_status_message_t *message)
+{
+    if (message->type == YSW_SEQ_IDLE) {
+        ysw_lv_hpe_on_metro(hpc->hpe, NULL);
+    } else if (message->type == YSW_SEQ_NOTE) {
+        ysw_lv_hpe_on_metro(hpc->hpe, message->note);
+    }
+}
+
 static void send_notes(hpc_t *hpc, ysw_seq_message_type_t type)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
@@ -50,6 +60,8 @@ static void send_notes(hpc_t *hpc, ysw_seq_message_type_t type)
         .stage.notes = notes,
         .stage.note_count = note_count,
         .stage.tempo = hp->tempo,
+        .stage.on_status = (void *)on_sequencer_status,
+        .stage.on_status_context = hpc,
     };
 
     seq_send(&message);
@@ -469,10 +481,5 @@ void hpc_set_close_cb(hpc_t *hpc, hpc_close_cb_t cb, void *context)
 {
     hpc->close_cb = cb;
     hpc->close_cb_context = context;
-}
-
-void hpc_on_metro(hpc_t *hpc, ysw_note_t *metro_note)
-{
-    ysw_lv_hpe_on_metro(hpc->hpe, metro_note);
 }
 

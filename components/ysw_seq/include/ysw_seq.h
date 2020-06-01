@@ -19,18 +19,25 @@ typedef enum {
     YSW_SEQ_LOOP_DONE,
     YSW_SEQ_PLAY_DONE,
     YSW_SEQ_IDLE,
-} ysw_seq_state_t;
+    YSW_SEQ_NOTE,
+} ysw_seq_status_type_t;
+
+typedef struct {
+    ysw_seq_status_type_t type;
+    union {
+        ysw_note_t *note;
+    };
+} ysw_seq_status_message_t;
 
 typedef void (*ysw_seq_note_on_cb_t)(ysw_note_t *note);
 typedef void (*ysw_seq_note_off_cb_t)(uint8_t channel, uint8_t midi_note);
 typedef void (*ysw_seq_program_change_cb_t)(uint8_t channel, uint8_t program);
-typedef void (*ysw_seq_control_cb_t)(ysw_seq_state_t state);
+typedef void (*ysw_seq_status_cb_t)(void *context, const ysw_seq_status_message_t *message);
 
 typedef struct {
     ysw_seq_note_on_cb_t on_note_on;
     ysw_seq_note_off_cb_t on_note_off;
     ysw_seq_program_change_cb_t on_program_change;
-    ysw_seq_control_cb_t on_control_change;
 } ysw_seq_config_t;
 
 typedef enum {
@@ -47,6 +54,8 @@ typedef struct {
     ysw_note_t *notes; // must remain accessible for duration of playback
     uint32_t note_count;
     uint8_t tempo;
+    ysw_seq_status_cb_t on_status;
+    void *on_status_context;
 } ysw_seq_clip_t;
 
 typedef struct {

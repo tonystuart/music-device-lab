@@ -15,8 +15,6 @@
 
 #define YSW_PS_NEW_MEASURE 0x01
 
-#define YSW_HP_METRO (YSW_CS_METRO + 1)
-
 typedef struct {
     ysw_degree_t degree;
     ysw_cs_t *cs;

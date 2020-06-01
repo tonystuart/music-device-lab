@@ -66,24 +66,6 @@ static void create_dashboard(void)
     lv_obj_set_event_cb(list_btn, event_handler);
 }
 
-static void on_seq_cb(seq_cb_message_t *message)
-{
-    if (message->type == META_NOTE) {
-        if (csc && message->meta_note->midi_note == YSW_CS_METRO) {
-            csc_on_metro(csc, message->meta_note);
-        } else if (hpc && message->meta_note->midi_note == YSW_HP_METRO) {
-            hpc_on_metro(hpc, message->meta_note);
-        }
-    } else if (message->type == NOT_PLAYING) {
-        if (csc) {
-            csc_on_metro(csc, NULL);
-        } // not else
-        if (hpc) {
-            hpc_on_metro(hpc, NULL);
-        }
-    }
-}
-
 void app_main()
 {
     ESP_LOGD(TAG, "sizeof(ysw_cs_t)=%d", sizeof(ysw_cs_t));
@@ -97,7 +79,7 @@ void app_main()
     display_initialize();
     spiffs_initialize(YSW_MUSIC_PARTITION);
     synthesizer_initialize();
-    seq_initialize(on_seq_cb);
+    seq_initialize();
 
     ysw_lv_styles_initialize();
 

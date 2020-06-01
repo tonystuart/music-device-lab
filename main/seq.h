@@ -11,20 +11,6 @@
 
 #include "ysw_seq.h"
 
-typedef enum {
-    META_NOTE,
-    NOT_PLAYING,
-} seq_cb_type_t;
-
-typedef struct {
-    seq_cb_type_t type;
-    union {
-        ysw_note_t *meta_note;
-    };
-} seq_cb_message_t;
-
-typedef void (*seq_cb_t)(seq_cb_message_t *seq_cb_message);
-
 void seq_send(ysw_seq_message_t *message);
-void seq_initialize(seq_cb_t seq_cb);
+void seq_initialize();
 

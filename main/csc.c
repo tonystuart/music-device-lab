@@ -36,6 +36,16 @@
 
 typedef void (*sn_visitor_t)(csc_t *csc, ysw_sn_t *sn);
 
+// NB: invoked by sequencer task
+static void on_sequencer_status(csc_t *csc, ysw_seq_status_message_t *message)
+{
+    if (message->type == YSW_SEQ_IDLE) {
+        ysw_lv_cse_on_metro(csc->cse, NULL);
+    } else if (message->type == YSW_SEQ_NOTE) {
+        ysw_lv_cse_on_metro(csc->cse, message->note);
+    }
+}
+
 static void send_notes(csc_t *csc, ysw_seq_message_type_t type)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
@@ -49,6 +59,8 @@ static void send_notes(csc_t *csc, ysw_seq_message_type_t type)
         .stage.notes = notes,
         .stage.note_count = note_count,
         .stage.tempo = cs->tempo,
+        .stage.on_status = (void *)on_sequencer_status,
+        .stage.on_status_context = csc,
     };
 
     seq_send(&message);
@@ -430,10 +442,5 @@ void csc_set_close_cb(csc_t *csc, void *cb, void *context)
 {
     csc->close_cb = cb;
     csc->close_cb_context = context;
-}
-
-void csc_on_metro(csc_t *csc, ysw_note_t *metro_note)
-{
-    ysw_lv_cse_on_metro(csc->cse, metro_note);
 }
 

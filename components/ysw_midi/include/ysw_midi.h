@@ -17,6 +17,9 @@
 #define YSW_MIDI_DRUM_CHANNEL 9
 #define YSW_MIDI_MAX_CHANNELS 16
 
+#define YSW_MIDI_STATUS_NOTE 0
+#define YSW_MIDI_STATUS_CHANNEL (YSW_MIDI_MAX_CHANNELS - 1)
+
 #define YSW_MIDI_UNPO 7 // 7 Unique Notes per Octave
 #define YSW_MIDI_USPO 12 // 12 Unique Semitones per Octave
 

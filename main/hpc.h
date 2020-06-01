@@ -31,5 +31,4 @@ typedef struct hpc_s {
 
 hpc_t *hpc_create(ysw_music_t *new_music, uint32_t new_cs_index);
 void hpc_set_close_cb(hpc_t *hpc, hpc_close_cb_t cb, void *context);
-void hpc_on_metro(hpc_t *hpc, ysw_note_t *metro_note);
 

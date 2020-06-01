@@ -213,8 +213,8 @@ ysw_note_t *ysw_hp_get_notes(ysw_hp_t *hp, uint32_t *note_count)
 
         note_p->start = cs_time;
         note_p->duration = 0;
-        note_p->channel = YSW_CS_META_CHANNEL;
-        note_p->midi_note = YSW_HP_METRO;
+        note_p->channel = YSW_MIDI_STATUS_CHANNEL;
+        note_p->midi_note = YSW_MIDI_STATUS_NOTE;
         note_p->velocity = i; // TODO: find a legit way to pass this to those who need it
         note_p->instrument = 0;
         note_p++;
