@@ -30,7 +30,7 @@ typedef struct {
     ysw_seq_note_on_cb_t on_note_on;
     ysw_seq_note_off_cb_t on_note_off;
     ysw_seq_program_change_cb_t on_program_change;
-    ysw_seq_control_cb_t on_state_change;
+    ysw_seq_control_cb_t on_control_change;
 } ysw_seq_config_t;
 
 typedef enum {

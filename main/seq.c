@@ -63,7 +63,7 @@ static void on_program_change(uint8_t channel, uint8_t program)
     synthesizer_send(&message);
 }
 
-static void on_state_change(ysw_seq_state_t new_state)
+static void on_control_change(ysw_seq_state_t new_state)
 {
     if (new_state == YSW_SEQ_IDLE) {
         if (seq_cb) {
@@ -90,7 +90,7 @@ void seq_initialize(seq_cb_t new_seq_cb)
         .on_note_on = on_note_on,
         .on_note_off = on_note_off,
         .on_program_change = on_program_change,
-        .on_state_change = on_state_change,
+        .on_control_change = on_control_change,
     };
 
     seq_queue = ysw_seq_create_task(&config);
