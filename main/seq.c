@@ -17,6 +17,9 @@
 
 #include "esp_log.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
+
 #define TAG "SEQ"
 
 static QueueHandle_t seq_queue;
@@ -56,6 +59,23 @@ void seq_send(ysw_seq_message_t *message)
 {
     if (seq_queue) {
         ysw_message_send(seq_queue, message);
+    }
+}
+
+void seq_rendezvous(ysw_seq_message_t *message)
+{
+    if (seq_queue) {
+        message->rendezvous = xEventGroupCreate();
+        if (!message->rendezvous) {
+            ESP_LOGE(TAG, "xEventGroupCreate failed");
+            abort();
+        }
+        ESP_LOGD(TAG, "seq_rendezvous sending message");
+        ysw_message_send(seq_queue, message);
+        ESP_LOGD(TAG, "seq_rendezvous waiting for notification");
+        xEventGroupWaitBits(message->rendezvous, 1, false, true, portMAX_DELAY);
+        ESP_LOGD(TAG, "seq_rendezvous deleting event group");
+        vEventGroupDelete(message->rendezvous);
     }
 }
 

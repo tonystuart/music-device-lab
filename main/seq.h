@@ -11,6 +11,7 @@
 
 #include "ysw_seq.h"
 
-void seq_send(ysw_seq_message_t *message);
 void seq_initialize();
+void seq_send(ysw_seq_message_t *message);
+void seq_rendezvous(ysw_seq_message_t *message);
 

@@ -82,7 +82,7 @@ static void stage(hpc_t *hpc)
 static void stop()
 {
     ysw_seq_message_t message = {
-        .type = YSW_SEQ_PAUSE,
+        .type = YSW_SEQ_STOP,
     };
 
     seq_send(&message);
@@ -254,6 +254,10 @@ static void on_prev(hpc_t *hpc, lv_obj_t *btn)
 static void on_close(hpc_t *hpc, lv_obj_t *btn)
 {
     ESP_LOGD(TAG, "on_close hpc->close_cb=%p", hpc->close_cb);
+    ysw_seq_message_t message = {
+        .type = YSW_SEQ_STOP,
+    };
+    seq_rendezvous(&message);
     if (hpc->close_cb) {
         hpc->close_cb(hpc->close_cb_context, hpc);
     }

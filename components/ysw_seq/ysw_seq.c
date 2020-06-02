@@ -214,6 +214,17 @@ static void pause_clip(ysw_seq_t *seq)
     seq->start_millis = 0;
 }
 
+static void stop_clip(ysw_seq_t *seq)
+{
+    ESP_LOGD(TAG, "stop_clip start_millis=%d, next_note=%d, note_count=%d", seq->start_millis, seq->next_note, seq->active.note_count);
+    if (clip_playing(seq)) {
+        release_all_notes(seq);
+    }
+    seq->next_note = 0;
+    seq->start_millis = 0;
+    free_clip(&seq->active);
+}
+
 static void resume_clip(ysw_seq_t *seq)
 {
     ESP_LOGD(TAG, "resume_clip next_note=%d, note_count=%d", seq->next_note, seq->active.note_count);
@@ -262,6 +273,9 @@ static void process_message(ysw_seq_t *seq, ysw_seq_message_t *message)
             break;
         case YSW_SEQ_RESUME:
             resume_clip(seq);
+            break;
+        case YSW_SEQ_STOP:
+            stop_clip(seq);
             break;
         case YSW_SEQ_TEMPO:
             set_tempo(seq, message->tempo.qnpm);
@@ -371,6 +385,8 @@ static TickType_t process_notes(ysw_seq_t *seq)
 static void run_task(ysw_seq_t *seq)
 {
     ESP_LOGD(TAG, "run_task core=%d", xPortGetCoreID());
+    BaseType_t is_message = false;
+    ysw_seq_message_t message = (ysw_seq_message_t){};
     for (;;) {
         TickType_t ticks_to_wait = portMAX_DELAY;
         if (clip_playing(seq)) {
@@ -380,8 +396,11 @@ static void run_task(ysw_seq_t *seq)
             ESP_LOGD(TAG, "sequencer idle");
             fire_idle(seq);
         }
-        ysw_seq_message_t message;
-        BaseType_t is_message = xQueueReceive(seq->input_queue, &message, ticks_to_wait);
+        if (is_message && message.rendezvous) {
+            ESP_LOGD(TAG, "notifying sender");
+            xEventGroupSetBits(message.rendezvous, 1);
+        }
+        is_message = xQueueReceive(seq->input_queue, &message, ticks_to_wait);
         if (is_message) {
             process_message(seq, &message);
         }

@@ -81,7 +81,7 @@ static void stage(csc_t *csc)
 static void stop()
 {
     ysw_seq_message_t message = {
-        .type = YSW_SEQ_PAUSE,
+        .type = YSW_SEQ_STOP,
     };
 
     seq_send(&message);
@@ -278,10 +278,17 @@ static void on_prev(csc_t *csc, lv_obj_t * btn, lv_event_t event)
 
 static void on_close(csc_t *csc, lv_obj_t * btn, lv_event_t event)
 {
+    ESP_LOGD(TAG, "on_close csc->close_cb=%p", csc->close_cb);
+    ysw_seq_message_t message = {
+        .type = YSW_SEQ_STOP,
+    };
+    seq_rendezvous(&message);
     if (csc->close_cb) {
         csc->close_cb(csc->close_cb_context, csc);
     }
+    ESP_LOGD(TAG, "on_close deleting csc->frame");
     ysw_frame_del(csc->frame); // deletes contents
+    ESP_LOGD(TAG, "on_close freeing csc");
     ysw_heap_free(csc);
 }
 

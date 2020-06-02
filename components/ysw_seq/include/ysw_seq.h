@@ -9,9 +9,10 @@
 
 #pragma once
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
 #include "ysw_note.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
+#include "freertos/queue.h"
 
 #define YSW_SEQ_SPEED_DEFAULT 100
 
@@ -44,6 +45,7 @@ typedef enum {
     YSW_SEQ_PLAY,
     YSW_SEQ_PAUSE,
     YSW_SEQ_RESUME,
+    YSW_SEQ_STOP,
     YSW_SEQ_TEMPO,
     YSW_SEQ_LOOP,
     YSW_SEQ_STAGE,
@@ -72,6 +74,7 @@ typedef struct {
 
 typedef struct {
     ysw_seq_message_type_t type;
+    EventGroupHandle_t rendezvous;
     union {
         ysw_seq_clip_t play;
         ysw_seq_tempo_t tempo;
