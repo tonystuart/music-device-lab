@@ -24,17 +24,24 @@
 #include "stdio.h"
 
 #define TAG "YSW_LV_CSE"
-
 #define LV_OBJX_NAME "ysw_lv_cse"
+#define MINIMUM_DRAG 5
+#define MINIMUM_DURATION 10
+#define ROW_COUNT YSW_MIDI_UNPO
 
 ysw_lv_cse_gs_t ysw_lv_cse_gs = {
     .auto_play = true,
 };
 
+typedef struct {
+    lv_coord_t cse_left;
+    lv_coord_t cse_top;
+    lv_coord_t cse_height;
+    lv_coord_t cse_width;
+} metrics_t;
+    
 static lv_design_cb_t super_design_cb;
 static lv_signal_cb_t super_signal_cb;
-
-// Note that rows are drawn top down in reverse logical order
 
 static char *key_labels[] =
 {
@@ -47,43 +54,36 @@ static char *key_labels[] =
     "1st",
 };
 
-#define ROW_COUNT YSW_MIDI_UNPO
+static void get_metrics(lv_obj_t *cse, metrics_t *m)
+{
+    m->cse_left = cse->coords.x1;
+    m->cse_top = cse->coords.y1;
 
-#define MINIMUM_DRAG 5
+    m->cse_height = lv_obj_get_height(cse);
+    m->cse_width = lv_obj_get_width(cse);
+}
 
-#define MINIMUM_DURATION 10
-
-static void get_sn_info(
-        lv_obj_t *cse,
-        ysw_sn_t *sn,
-        lv_area_t *ret_area,
-        uint8_t *ret_degree,
-        int8_t *ret_octave)
+static void get_sn_info(lv_obj_t *cse, ysw_sn_t *sn, lv_area_t *ret_area, uint8_t *ret_degree, int8_t *ret_octave)
 {
     uint8_t degree;
     int8_t octave;
 
+    metrics_t m;
+    get_metrics(cse, &m);
+
     ysw_degree_normalize(sn->degree, &degree, &octave);
+    lv_coord_t delta_y = -ysw_sn_get_accidental(sn) * ((m.cse_height / ROW_COUNT) / 2);
 
-    lv_coord_t h = lv_obj_get_height(cse);
-    lv_coord_t w = lv_obj_get_width(cse);
-
-    lv_coord_t x = cse->coords.x1;
-    lv_coord_t y = cse->coords.y1;
-
-    lv_coord_t delta_y = -ysw_sn_get_accidental(sn) * ((h / ROW_COUNT) / 2);
-
-    lv_coord_t x1 = x + (sn->start * w) / YSW_CS_DURATION;
-    lv_coord_t x2 = x + ((sn->start + sn->duration) * w) / YSW_CS_DURATION;
-
-    lv_coord_t y1 = y + (((YSW_MIDI_UNPO - degree) * h) / ROW_COUNT) + delta_y;
-    lv_coord_t y2 = y + ((((YSW_MIDI_UNPO - degree) + 1) * h) / ROW_COUNT) + delta_y;
+    lv_coord_t left = m.cse_left + (sn->start * m.cse_width) / YSW_CS_DURATION;
+    lv_coord_t right = m.cse_left + ((sn->start + sn->duration) * m.cse_width) / YSW_CS_DURATION;
+    lv_coord_t top = m.cse_top + (((YSW_MIDI_UNPO - degree) * m.cse_height) / ROW_COUNT) + delta_y;
+    lv_coord_t bottom = m.cse_top + ((((YSW_MIDI_UNPO - degree) + 1) * m.cse_height) / ROW_COUNT) + delta_y;
 
     lv_area_t area = {
-        .x1 = x1,
-        .y1 = y1 + 4,
-        .x2 = x2,
-        .y2 = y2 - 4
+        .x1 = left,
+        .y1 = top + 4,
+        .x2 = right,
+        .y2 = bottom - 4
     };
 
     if (ret_area) {
@@ -109,19 +109,16 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         return;
     }
 
-    lv_coord_t h = lv_obj_get_height(cse);
-    lv_coord_t w = lv_obj_get_width(cse);
-
-    lv_coord_t x = cse->coords.x1;
-    lv_coord_t y = cse->coords.y1;
+    metrics_t m;
+    get_metrics(cse, &m);
 
     for (lv_coord_t i = 0; i < ROW_COUNT; i++) {
 
         lv_area_t row_area = {
-            .x1 = x,
-            .y1 = y + ((i * h) / ROW_COUNT),
-            .x2 = x + w,
-            .y2 = y + (((i + 1) * h) / ROW_COUNT)
+            .x1 = m.cse_left,
+            .y1 = m.cse_top + ((i * m.cse_height) / ROW_COUNT),
+            .x2 = m.cse_left + m.cse_width,
+            .y2 = m.cse_top + (((i + 1) * m.cse_height) / ROW_COUNT)
         };
 
         lv_area_t row_mask;
@@ -159,7 +156,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                     .y = row_area.y1
                 };
                 lv_point_t point2 = {
-                    .x = row_area.x1 + w,
+                    .x = row_area.x1 + m.cse_width,
                     .y = row_area.y1
                 };
                 if (i & 0x01) {
@@ -173,12 +170,12 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
 
     for (int i = 0; i < ext->cs->divisions; i++) {
         lv_point_t point1 = {
-            .x = x + ((i * w) / ext->cs->divisions),
-            .y = y
+            .x = m.cse_left + ((i * m.cse_width) / ext->cs->divisions),
+            .y = m.cse_top
         };
         lv_point_t point2 = {
-            .x = x + ((i * w) / ext->cs->divisions),
-            .y = y + h
+            .x = m.cse_left + ((i * m.cse_width) / ext->cs->divisions),
+            .y = m.cse_top + m.cse_height
         };
         lv_draw_line(&point1, &point2, mask, ext->ei_style, ext->ei_style->body.border.opa);
     }
@@ -263,12 +260,12 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
 
     if (ext->metro_marker != -1) {
         lv_point_t top = {
-            .x = x + ((w * ext->metro_marker) / YSW_CS_DURATION),
-            .y = y,
+            .x = m.cse_left + ((m.cse_width * ext->metro_marker) / YSW_CS_DURATION),
+            .y = m.cse_top,
         };
         lv_point_t bottom = {
-            .x = x + ((w * ext->metro_marker) / YSW_CS_DURATION),
-            .y = y + h,
+            .x = m.cse_left + ((m.cse_width * ext->metro_marker) / YSW_CS_DURATION),
+            .y = m.cse_top + m.cse_height,
         };
         lv_draw_line(&top, &bottom, mask, ext->mn_style, ext->mn_style->body.border.opa);
     }
@@ -332,12 +329,12 @@ static void fire_drag_end(lv_obj_t *cse)
 
 static void prepare_create(lv_obj_t *cse, lv_point_t *point)
 {
-    lv_coord_t w = lv_obj_get_width(cse);
-    lv_coord_t h = lv_obj_get_height(cse);
+    metrics_t m;
+    get_metrics(cse, &m);
     lv_coord_t x_offset = point->x - cse->coords.x1;
     lv_coord_t y_offset = point->y - cse->coords.y1;
-    double pixels_per_tick = (double)w / YSW_CS_DURATION;
-    double pixels_per_degree = (double)h / ROW_COUNT;
+    double pixels_per_tick = (double)m.cse_width / YSW_CS_DURATION;
+    double pixels_per_degree = (double)m.cse_height / ROW_COUNT;
     lv_coord_t tick_index = x_offset / pixels_per_tick;
     lv_coord_t row_index = y_offset / pixels_per_degree;
     fire_create(cse, tick_index, YSW_MIDI_UNPO - row_index);
@@ -383,13 +380,14 @@ static void deselect_all(lv_obj_t *cse)
 
 static void drag_horizontally(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_sn, lv_coord_t x)
 {
+    metrics_t m;
+    get_metrics(cse, &m);
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
 
-    lv_coord_t w = lv_obj_get_width(cse);
-    double ticks_per_pixel = (double)YSW_CS_DURATION / w;
+    double ticks_per_pixel = (double)YSW_CS_DURATION / m.cse_width;
     lv_coord_t delta_ticks = x * ticks_per_pixel;
 
-    //ESP_LOGD(TAG, "drag_horizontally w=%d", w);
+    //ESP_LOGD(TAG, "drag_horizontally m.cse_width=%d", m.cse_width);
     //ESP_LOGD(TAG, "drag_horizontally drag.x=%d", x);
     //ESP_LOGD(TAG, "drag_horizontally ticks_per_pixel=%g", ticks_per_pixel);
     //ESP_LOGD(TAG, "drag_horizontally delta_ticks=%d", delta_ticks);
@@ -447,11 +445,12 @@ static void drag_horizontally(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_
 
 static void drag_vertically(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_sn, lv_coord_t y)
 {
-    lv_coord_t h = lv_obj_get_height(cse);
-    double pixels_per_half_degree = ((double)h / ROW_COUNT) / 2;
+    metrics_t m;
+    get_metrics(cse, &m);
+    double pixels_per_half_degree = ((double)m.cse_height / ROW_COUNT) / 2;
     lv_coord_t delta_half_degrees = round(y / pixels_per_half_degree);
 
-    //ESP_LOGD(TAG, "drag_vertically h=%d", h);
+    //ESP_LOGD(TAG, "drag_vertically m.cse_height=%d", m.cse_height);
     //ESP_LOGD(TAG, "drag_vertically drag.y=%d", y);
     //ESP_LOGD(TAG, "drag_vertically pixels_per_half_degree=%g", pixels_per_half_degree);
     //ESP_LOGD(TAG, "drag_vertically delta_half_degrees=%d", delta_half_degrees);
@@ -498,6 +497,25 @@ static void drag_vertically(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_sn
     }
 }
 
+static void capture_drag(lv_obj_t *cse, lv_coord_t x, lv_coord_t y)
+{
+    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (!ext->dragging && ext->clicked_sn) {
+        bool drag_x = abs(x) > MINIMUM_DRAG;
+        bool drag_y = abs(y) > MINIMUM_DRAG;
+        ext->dragging = drag_x || drag_y;
+        if (ext->dragging) {
+            if (!ysw_sn_is_selected(ext->clicked_sn)) {
+                if (count_selected_sn(cse)) {
+                    deselect_all(cse);
+                }
+                select_sn(cse, ext->clicked_sn);
+            }
+            ext->drag_start_cs = ysw_cs_copy(ext->cs);
+        }
+    }
+}
+
 static void capture_click(lv_obj_t *cse, lv_point_t *point)
 {
     ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
@@ -517,25 +535,6 @@ static void capture_click(lv_obj_t *cse, lv_point_t *point)
                 // return on first selected sn, otherwise pick last one
                 return;
             }
-        }
-    }
-}
-
-static void capture_drag(lv_obj_t *cse, lv_coord_t x, lv_coord_t y)
-{
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    if (!ext->dragging && ext->clicked_sn) {
-        bool drag_x = abs(x) > MINIMUM_DRAG;
-        bool drag_y = abs(y) > MINIMUM_DRAG;
-        ext->dragging = drag_x || drag_y;
-        if (ext->dragging) {
-            if (!ysw_sn_is_selected(ext->clicked_sn)) {
-                if (count_selected_sn(cse)) {
-                    deselect_all(cse);
-                }
-                select_sn(cse, ext->clicked_sn);
-            }
-            ext->drag_start_cs = ysw_cs_copy(ext->cs);
         }
     }
 }

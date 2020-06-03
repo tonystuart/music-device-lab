@@ -21,9 +21,7 @@
 #include "stdio.h"
 
 #define TAG "YSW_LV_HPE"
-
 #define LV_OBJX_NAME "ysw_lv_hpe"
-
 #define MINIMUM_DRAG 10
 
 ysw_lv_hpe_gs_t ysw_lv_hpe_gs = {
@@ -82,6 +80,29 @@ static void get_metrics(lv_obj_t *hpe, metrics_t *m)
     m->hp_height = m->hpe_height - (2 * m->row_height);
 
     m->min_scroll_left = m->hpe_width - m->hp_width;
+}
+
+static void get_ps_info(lv_obj_t *hpe, uint32_t ps_index, lv_area_t *ret_area)
+{
+    metrics_t m;
+    get_metrics(hpe, &m);
+
+    ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
+    ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, ps_index);
+
+    lv_coord_t left = m.hp_left + (ps_index * m.col_width);
+    lv_coord_t cell_top = m.hp_top + ((YSW_MIDI_UNPO - ps->degree) * m.row_height);
+
+    lv_area_t cell_area = {
+        .x1 = left,
+        .y1 = cell_top,
+        .x2 = left + m.col_width,
+        .y2 = cell_top + m.row_height,
+    };
+
+    if (ret_area) {
+        *ret_area = cell_area;
+    }
 }
 
 static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mode)
@@ -382,39 +403,6 @@ static void deselect_all(lv_obj_t *hpe)
     }
 }
 
-static void get_ps_area(lv_obj_t *hpe, uint32_t ps_index, lv_area_t *ret_area)
-{
-    metrics_t m;
-    get_metrics(hpe, &m);
-
-    ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
-    ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, ps_index);
-
-    lv_coord_t left = m.hp_left + (ps_index * m.col_width);
-    lv_coord_t cell_top = m.hp_top + ((YSW_MIDI_UNPO - ps->degree) * m.row_height);
-
-    lv_area_t cell_area = {
-        .x1 = left,
-        .y1 = cell_top,
-        .x2 = left + m.col_width,
-        .y2 = cell_top + m.row_height,
-    };
-
-    if (ret_area) {
-        *ret_area = cell_area;
-    }
-}
-
-static void drag_vertically(lv_obj_t *hpe, ysw_ps_t *ps, ysw_ps_t *drag_start_ps, lv_coord_t y)
-{
-    metrics_t m;
-    get_metrics(hpe, &m);
-    uint8_t new_degree = drag_start_ps->degree - (y / m.row_height);
-    if (new_degree >= 1 && new_degree <= YSW_MIDI_UNPO) {
-        ps->degree = new_degree;
-    }
-}
-
 static void scroll_horizontally(lv_obj_t *hpe, lv_coord_t x)
 {
     ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
@@ -428,6 +416,16 @@ static void scroll_horizontally(lv_obj_t *hpe, lv_coord_t x)
         new_scroll_left = 0;
     }
     ext->scroll_left = new_scroll_left;
+}
+
+static void drag_vertically(lv_obj_t *hpe, ysw_ps_t *ps, ysw_ps_t *drag_start_ps, lv_coord_t y)
+{
+    metrics_t m;
+    get_metrics(hpe, &m);
+    uint8_t new_degree = drag_start_ps->degree - (y / m.row_height);
+    if (new_degree >= 1 && new_degree <= YSW_MIDI_UNPO) {
+        ps->degree = new_degree;
+    }
 }
 
 static void capture_drag(lv_obj_t *hpe, lv_coord_t x, lv_coord_t y)
@@ -465,7 +463,7 @@ static void capture_click(lv_obj_t *hpe, lv_point_t *point)
     for (uint8_t i = 0; i < ps_count; i++) {
         lv_area_t ps_area;
         ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
-        get_ps_area(hpe, i, &ps_area);
+        get_ps_info(hpe, i, &ps_area);
         if ((ps_area.x1 <= point->x && point->x <= ps_area.x2) &&
             (ps_area.y1 <= point->y && point->y <= ps_area.y2)) {
                 ext->clicked_ps = ps;
