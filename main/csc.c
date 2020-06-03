@@ -227,7 +227,7 @@ static void on_division_change(csc_t *csc, uint8_t new_division_index)
     stage(csc);
 }
 
-static void on_next(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_next(csc_t *csc, lv_obj_t * btn)
 {
     uint32_t cs_count = ysw_music_get_cs_count(csc->music);
     if (++(csc->cs_index) >= cs_count) {
@@ -236,17 +236,17 @@ static void on_next(csc_t *csc, lv_obj_t * btn, lv_event_t event)
     update_frame(csc);
 }
 
-static void on_play(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_play(csc_t *csc, lv_obj_t * btn)
 {
     play(csc);
 }
 
-static void on_stop(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_stop(csc_t *csc, lv_obj_t * btn)
 {
     stop();
 }
 
-static void on_loop(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_loop(csc_t *csc, lv_obj_t * btn)
 {
     if (!lv_btn_get_toggle(btn)) {
         // first press
@@ -267,7 +267,7 @@ static void on_loop(csc_t *csc, lv_obj_t * btn, lv_event_t event)
     }
 }
 
-static void on_prev(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_prev(csc_t *csc, lv_obj_t * btn)
 {
     uint32_t cs_count = ysw_music_get_cs_count(csc->music);
     if (--(csc->cs_index) >= cs_count) {
@@ -276,7 +276,7 @@ static void on_prev(csc_t *csc, lv_obj_t * btn, lv_event_t event)
     update_frame(csc);
 }
 
-static void on_close(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_close(csc_t *csc, lv_obj_t * btn)
 {
     ESP_LOGD(TAG, "on_close csc->close_cb=%p", csc->close_cb);
     ysw_seq_message_t message = {
@@ -292,7 +292,7 @@ static void on_close(csc_t *csc, lv_obj_t * btn, lv_event_t event)
     ysw_heap_free(csc);
 }
 
-static void on_settings(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_settings(csc_t *csc, lv_obj_t * btn)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
     uint8_t trans_index = ysw_transposition_to_index(cs->transposition);
@@ -308,17 +308,17 @@ static void on_settings(csc_t *csc, lv_obj_t * btn, lv_event_t event)
     ysw_sdb_add_choice(sdb, "Divisions", division_index, ysw_division, on_division_change);
 }
 
-static void on_save(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_save(csc_t *csc, lv_obj_t * btn)
 {
     ysw_mfw_write(csc->music);
 }
 
-static void on_new(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_new(csc_t *csc, lv_obj_t * btn)
 {
     create_cs(csc, csc->cs_index + 1);
 }
 
-static void on_copy(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_copy(csc_t *csc, lv_obj_t * btn)
 {
     if (csc->clipboard) {
         uint32_t old_sn_count = ysw_array_get_count(csc->clipboard);
@@ -333,7 +333,7 @@ static void on_copy(csc_t *csc, lv_obj_t * btn, lv_event_t event)
     visit_sn(csc, copy_to_clipboard);
 }
 
-static void on_paste(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_paste(csc_t *csc, lv_obj_t * btn)
 {
     if (csc->clipboard) {
         ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
@@ -350,7 +350,7 @@ static void on_paste(csc_t *csc, lv_obj_t * btn, lv_event_t event)
     }
 }
 
-static void on_trash(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_trash(csc_t *csc, lv_obj_t * btn)
 {
     uint32_t target = 0;
     uint32_t changes = 0;
@@ -377,7 +377,7 @@ static void on_volume_mid(csc_t *csc, lv_obj_t * btn)
     visit_sn(csc, decrease_volume);
 }
 
-static void on_volume_max(csc_t *csc, lv_obj_t * btn, lv_event_t event)
+static void on_volume_max(csc_t *csc, lv_obj_t * btn)
 {
     visit_sn(csc, increase_volume);
 }

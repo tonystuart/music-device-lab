@@ -15,6 +15,7 @@
 #include "spiffs.h"
 #include "synthesizer.h"
 
+#include "ysw_csl.h"
 #include "ysw_music.h"
 #include "ysw_mfr.h"
 #include "ysw_lv_styles.h"
@@ -25,22 +26,17 @@
 
 #define TAG "MAIN"
 
-// TODO: Move to dynamic structure
-
 static ysw_music_t *music;
-static hpc_t *hpc;
-static csc_t *csc;
 
 static void event_handler(lv_obj_t *btn, lv_event_t event)
 {
     if (event == LV_EVENT_CLICKED) {
         const char *text = lv_list_get_btn_text(btn);
         if (strcmp(text, "Chords") == 0) {
-            // TODO: add close cb and clear csc
-            csc = csc_create(music, 0);
+            //csc_create(music, 0);
+            ysw_csl_create(music);
         } else if (strcmp(text, "Progressions") == 0) {
-            // TODO: add close cb and clear hpc
-            hpc = hpc_create(music, 0);
+            hpc_create(music, 0);
         } else if (strcmp(text, "Globals") == 0) {
             gsc_create(music);
         }
