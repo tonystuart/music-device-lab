@@ -27,6 +27,7 @@ typedef struct {
 uint32_t ysw_music_get_cs_count(ysw_music_t *music);
 ysw_cs_t *ysw_music_get_cs(ysw_music_t *music, uint32_t index);
 int32_t ysw_music_get_cs_index(ysw_music_t *music, ysw_cs_t *cs);
+void ysw_music_remove_cs(ysw_music_t *music, uint32_t index);
 uint32_t ysw_music_get_hp_count(ysw_music_t *music);
 ysw_hp_t *ysw_music_get_hp(ysw_music_t *music, uint32_t index);
 void ysw_music_insert_cs(ysw_music_t *music, uint32_t index, ysw_cs_t *cs);

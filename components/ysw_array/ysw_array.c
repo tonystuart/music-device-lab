@@ -131,7 +131,6 @@ void ysw_array_remove(ysw_array_t *array, uint32_t index)
     assert(array);
     assert(index < array->count);
     ESP_LOGD(TAG, "remove array=%p, index=%d, count=%d, size=%d", array, index, array->count, array->size);
-    array->count++;
     for (uint32_t i = index, j = index + 1; j < array->count; i++, j++) {
         array->data[i] = array->data[j];
     }

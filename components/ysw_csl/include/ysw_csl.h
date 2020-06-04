@@ -16,16 +16,19 @@
 #include "ysw_frame.h"
 #include "ysw_music.h"
 
-typedef struct {
-    int16_t row;
-    int16_t cs_index;
-} selection_t;
+typedef struct ysw_csl_s ysw_csl_t;
 
-typedef struct {
+typedef void (*csl_close_cb_t)(void *context, ysw_csl_t *csl);
+
+typedef struct ysw_csl_s {
     ysw_music_t *music;
+    uint32_t cs_index;
     ysw_frame_t *frame;
     lv_obj_t *table;
-    selection_t selection;
+    csl_close_cb_t close_cb;
+    void *close_cb_context;
+    lv_point_t click_point;
+    bool dragged;
 } ysw_csl_t;
 
 ysw_csl_t *ysw_csl_create(ysw_music_t *music);

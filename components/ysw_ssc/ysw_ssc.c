@@ -63,11 +63,11 @@ static void on_edit_style(ssc_t *ssc)
     csc_create(ssc->music, cs_index);
 }
 
-static void on_new_style_close(ssc_t *ssc, csc_t *csc)
+static void on_csc_close(ssc_t *ssc, csc_t *csc)
 {
     uint32_t cs_index = 0;
     char *chord_styles = get_chord_styles(ssc, &cs_index);
-    ESP_LOGD(TAG, "on_new_style_close chord_styles=%s", chord_styles);
+    ESP_LOGD(TAG, "on_csc_close chord_styles=%s", chord_styles);
     lv_ddlist_set_options(ssc->styles, chord_styles);
     lv_ddlist_set_selected(ssc->styles, cs_index);
     ysw_heap_free(chord_styles);
@@ -77,7 +77,7 @@ static void on_create_style(ssc_t *ssc)
 {
     uint32_t cs_index = ysw_music_get_cs_index(ssc->music, ssc->ps->cs);
     csc_t *csc = csc_create_new(ssc->music, cs_index);
-    csc_set_close_cb(csc, on_new_style_close, ssc);
+    csc_set_close_cb(csc, on_csc_close, ssc);
     ssc->ps->cs = ysw_music_get_cs(ssc->music, cs_index + 1);
 }
 
