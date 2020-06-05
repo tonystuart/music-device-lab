@@ -11,7 +11,7 @@
 
 #include "lvgl/lvgl.h"
 
-extern lv_style_t ysw_style_plain_color_tight;
+extern lv_style_t ysw_style_none;
 extern lv_style_t ysw_style_pretty_color_tight;
 extern lv_style_t ysw_style_sdb_content;
 
@@ -21,12 +21,14 @@ extern lv_style_t ysw_style_rn; // cse regular note
 extern lv_style_t ysw_style_sn; // cse selected note
 extern lv_style_t ysw_style_mn; // cse metro note
 
-extern lv_style_t ysw_style_gray_cell;
+extern lv_style_t ysw_style_table_bg;
 extern lv_style_t ysw_style_white_cell;
+extern lv_style_t ysw_style_gray_cell;
 extern lv_style_t ysw_style_yellow_cell;
-extern lv_style_t ysw_style_red_cell;
 
 extern lv_style_t ysw_style_btn_rel;
 extern lv_style_t ysw_style_btn_pr;
+
+extern lv_style_t ysw_style_red_test;
 
 void ysw_lv_styles_initialize();

@@ -103,10 +103,13 @@ static void update_footer(csc_t *csc)
 
 static void update_frame(csc_t *csc)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
-    ysw_lv_cse_set_cs(csc->cse, cs);
-    update_header(csc);
-    update_footer(csc);
+    uint32_t cs_count = ysw_music_get_cs_count(csc->music);
+    if (csc->cs_index < cs_count) {
+        ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+        ysw_lv_cse_set_cs(csc->cse, cs);
+        update_header(csc);
+        update_footer(csc);
+    }
 }
 
 static void refresh(csc_t *csc)
@@ -115,19 +118,40 @@ static void refresh(csc_t *csc)
     stage(csc);
 }
 
-static ysw_cs_t *create_cs(csc_t *csc, uint32_t new_index)
+static ysw_cs_t *create_cs(csc_t *csc)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
-
     char name[64];
     ysw_name_create(name, sizeof(name));
-    ysw_cs_t *new_cs = ysw_cs_create(name,
-            cs->instrument,
-            cs->octave,
-            cs->mode,
-            cs->transposition,
-            cs->tempo,
-            cs->divisions);
+
+    ysw_cs_t *new_cs;
+    uint32_t new_index;
+
+    uint32_t cs_count = ysw_music_get_cs_count(csc->music);
+
+    ESP_LOGD(TAG, "cs_count=%d, csc->cs_index=%d", cs_count, csc->cs_index);
+
+    if (csc->cs_index < cs_count) {
+        ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+        new_cs = ysw_cs_create(name,
+                cs->instrument,
+                cs->octave,
+                cs->mode,
+                cs->transposition,
+                cs->tempo,
+                cs->divisions);
+        new_index = csc->cs_index + 1;
+    } else {
+        new_cs = ysw_cs_create(name,
+                0,
+                4,
+                0,
+                0,
+                120,
+                4);
+        new_index = 0;
+    }
+
+    ESP_LOGD(TAG, "new_index=%d", new_index);
 
     ysw_music_insert_cs(csc->music, new_index, new_cs);
     csc->cs_index = new_index;
@@ -315,7 +339,7 @@ static void on_save(csc_t *csc, lv_obj_t * btn)
 
 static void on_new(csc_t *csc, lv_obj_t * btn)
 {
-    create_cs(csc, csc->cs_index + 1);
+    create_cs(csc);
 }
 
 static void on_copy(csc_t *csc, lv_obj_t * btn)
@@ -437,11 +461,10 @@ csc_t *csc_create(ysw_music_t *music, uint32_t cs_index)
     return csc;
 }
 
-csc_t *csc_create_new(ysw_music_t *music, uint32_t old_cs_index)
+csc_t *csc_create_new(ysw_music_t *music, uint32_t cs_index)
 {
-    csc_t *csc = csc_create(music, old_cs_index);
-    create_cs(csc, old_cs_index + 1);
-    update_frame(csc);
+    csc_t *csc = csc_create(music, cs_index);
+    create_cs(csc);
     return csc;
 }
 

@@ -42,9 +42,9 @@ typedef struct {
 } headings_t;
 
 static const headings_t headings[] = {
-    { "Chord Style", 158 },
-    { "Divisions", 79 },
-    { "Notes", 79 },
+    { "Chord Style", 159 },
+    { "Divisions", 80 },
+    { "Notes", 80 },
 };
 
 #define COLUMN_COUNT (sizeof(headings) / sizeof(headings_t))
@@ -92,8 +92,6 @@ static void ensure_visible(ysw_csl_t *csl, uint32_t row)
     lv_coord_t visible_top = -scrl_top;
     lv_coord_t visible_bottom = visible_top + viewport_height;
 
-    ESP_LOGD(TAG, "row_top=%d, row_bottom=%d, scrl_top=%d, visible_top=%d, visible_bottom=%d", row_top, row_bottom, scrl_top, visible_top, visible_bottom);
-
     if (row_top < visible_top) {
         scrl_top = -row_top;
         ESP_LOGD(TAG, "setting scrl_top=%d", scrl_top);
@@ -111,12 +109,11 @@ static void select_cs(ysw_csl_t *csl, uint32_t cs_index)
     uint32_t cs_count = ysw_music_get_cs_count(csl->music);
     if (csl->cs_index < cs_count) {
         uint32_t row = cs_index + 1; // +1 for headings
-        uint32_t row_count = lv_table_get_row_cnt(csl->table);
         for (uint32_t i = 0; i < COLUMN_COUNT; i++) {
             lv_table_set_cell_type(csl->table, row, i, YSW_CSL_YELLOW);
         }
         char buf[64];
-        snprintf(buf, sizeof(buf), "%d of %d", row, row_count);
+        snprintf(buf, sizeof(buf), "%d of %d", row, cs_count);
         ysw_frame_set_footer_text(csl->frame, buf);
         lv_obj_refresh_style(csl->table);
         ensure_visible(csl, row);
@@ -133,7 +130,6 @@ static void display_rows(ysw_csl_t *csl)
         for (uint32_t i = 0; i < cs_count; i++) {
             char buffer[16];
             int row = i + 1; // +1 for headings
-            ESP_LOGD(TAG, "cs_index=%d, row=%d", i, row);
             ysw_cs_t *cs = ysw_music_get_cs(csl->music, i);
             uint32_t sn_count = ysw_cs_get_sn_count(cs);
             lv_table_set_cell_crop(csl->table, row, 0, true);
@@ -348,7 +344,7 @@ ysw_csl_t *ysw_csl_create(ysw_music_t *music)
 
     lv_obj_align(csl->table, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-    lv_table_set_style(csl->table, LV_TABLE_STYLE_BG, &ysw_style_plain_color_tight);
+    lv_table_set_style(csl->table, LV_TABLE_STYLE_BG, &ysw_style_table_bg);
     lv_table_set_style(csl->table, YSW_CSL_GRAY, &ysw_style_gray_cell);
     lv_table_set_style(csl->table, YSW_CSL_WHITE, &ysw_style_white_cell);
     lv_table_set_style(csl->table, YSW_CSL_YELLOW, &ysw_style_yellow_cell);
@@ -357,7 +353,6 @@ ysw_csl_t *ysw_csl_create(ysw_music_t *music)
     lv_table_set_col_cnt(csl->table, COLUMN_COUNT);
 
     for (int i = 0; i < COLUMN_COUNT; i++) {
-        ESP_LOGD(TAG, "setting column attributes");
         lv_table_set_cell_type(csl->table, 0, i, YSW_CSL_GRAY);
         lv_table_set_cell_align(csl->table, 0, i, LV_LABEL_ALIGN_CENTER);
         lv_table_set_cell_value(csl->table, 0, i, headings[i].name);
