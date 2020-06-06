@@ -10,12 +10,9 @@
 #include "ysw_csl.h"
 
 #include "ysw_cs.h"
-<<<<<<< HEAD
 #include "ysw_mb.h"
 #include "ysw_mfw.h"
 #include "ysw_name.h"
-=======
->>>>>>> parent of a2f2b32... Split ysw_db into separate component
 #include "ysw_sn.h"
 #include "ysw_heap.h"
 #include "ysw_lv_styles.h"
@@ -238,7 +235,6 @@ static void on_copy(ysw_csl_t *csl, lv_obj_t * btn)
     }
 }
 
-<<<<<<< HEAD
 static void calculate_insert_index(ysw_csl_t *csl)
 {
     uint32_t cn_count = ysw_music_get_cs_count(csl->music);
@@ -262,46 +258,6 @@ static void on_paste(ysw_csl_t *csl, lv_obj_t * btn)
     } else {
         ysw_mb_clipboard_empty();
     }
-=======
-// TODO: move to new module
-
-#define YSW_DB_OK "OK"
-#define YSW_DB_CANCEL "Cancel"
-
-typedef void (*ysw_db_cb_t)(void *context);
-
-typedef struct {
-    void *context;
-    ysw_db_cb_t cb;
-} ysw_db_t;
-
-static void ysw_db_event_cb(lv_obj_t *mbox, lv_event_t event)
-{
-    if (event == LV_EVENT_VALUE_CHANGED) {
-        const char *text = lv_mbox_get_active_btn_text(mbox);
-        if (strcmp(text, YSW_DB_OK) == 0) {
-            ysw_db_t *ysw_db = lv_obj_get_user_data(mbox);
-            ysw_db->cb(ysw_db->context);
-            ysw_heap_free(ysw_db);
-            lv_mbox_start_auto_close(mbox, 0);
-        }
-    }
-}
-
-void ysw_db_conf_create(const char* text, void *cb, void *context)
-{
-    static const char *btns[] = { YSW_DB_CANCEL, YSW_DB_OK, "" };
-    lv_obj_t *mbox = lv_mbox_create(lv_scr_act(), NULL);
-    lv_mbox_set_text(mbox, text);
-    lv_mbox_add_btns(mbox, btns);
-    lv_obj_set_width(mbox, 300);
-    lv_obj_set_event_cb(mbox, ysw_db_event_cb);
-    lv_obj_align(mbox, NULL, LV_ALIGN_CENTER, 0, 0);
-    ysw_db_t *ysw_db = ysw_heap_allocate(sizeof(ysw_db_t));
-    ysw_db->context = context;
-    ysw_db->cb = cb;
-    lv_obj_set_user_data(mbox, ysw_db);
->>>>>>> parent of a2f2b32... Split ysw_db into separate component
 }
 
 static void on_trash_confirm(ysw_csl_t *csl)
