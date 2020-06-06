@@ -120,7 +120,7 @@ static void create_hp(hpc_t *hpc, uint32_t new_index)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
 
-    char name[64];
+    char name[HP_NAME_SZ];
     ysw_name_create(name, sizeof(name));
     ysw_hp_t *new_hp = ysw_hp_create(name,
             hp->instrument,

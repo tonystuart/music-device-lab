@@ -21,6 +21,8 @@
 
 #define YSW_CS_MUSIC_CHANNEL 0
 
+#define CS_NAME_SZ 64
+
 // See Miller (2nd edition), pp 38-42
 // https://en.wikipedia.org/wiki/Mode_(music)
 

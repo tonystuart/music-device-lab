@@ -9,5 +9,8 @@
 
 #pragma once
 
-void ysw_db_conf_create(const char* text, void *cb, void *context);
+void ysw_mb_create_confirm(const char* text, void *cb, void *context);
+void ysw_mb_create_okay(const char *text);
+void ysw_mb_nothing_selected();
+void ysw_mb_clipboard_empty();
 

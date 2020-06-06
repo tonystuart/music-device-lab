@@ -15,6 +15,8 @@
 
 #define YSW_PS_NEW_MEASURE 0x01
 
+#define HP_NAME_SZ 64
+
 typedef struct {
     ysw_degree_t degree;
     ysw_cs_t *cs;

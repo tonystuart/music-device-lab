@@ -10,7 +10,12 @@
 #include "ysw_csl.h"
 
 #include "ysw_cs.h"
-#include "ysw_db.h"
+<<<<<<< HEAD
+#include "ysw_mb.h"
+#include "ysw_mfw.h"
+#include "ysw_name.h"
+=======
+>>>>>>> parent of a2f2b32... Split ysw_db into separate component
 #include "ysw_sn.h"
 #include "ysw_heap.h"
 #include "ysw_lv_styles.h"
@@ -50,34 +55,6 @@ static const headings_t headings[] = {
 
 #define COLUMN_COUNT (sizeof(headings) / sizeof(headings_t))
 
-uint32_t normalize_cs_index(ysw_csl_t *csl)
-{
-    uint32_t cs_count = ysw_music_get_cs_count(csl->music);
-    if (cs_count) {
-        if (csl->cs_index >= cs_count) {
-            csl->cs_index = cs_count - 1;
-        }
-    } else {
-        csl->cs_index = 0;
-    }
-    return csl->cs_index;
-}
-
-static void clear_highlight(ysw_csl_t *csl)
-{
-    ysw_frame_set_footer_text(csl->frame, "");
-    uint32_t cs_count = ysw_music_get_cs_count(csl->music);
-    if (csl->cs_index < cs_count) {
-        uint32_t row = csl->cs_index + 1; // +1 for headings
-        if (row < lv_table_get_row_cnt(csl->table)) {
-            for (int i = 0; i < COLUMN_COUNT; i++) {
-                lv_table_set_cell_type(csl->table, row, i, YSW_CSL_WHITE); // +1 for heading
-            }
-            lv_obj_refresh_style(csl->table);
-        }
-    }
-}
-
 static void ensure_visible(ysw_csl_t *csl, uint32_t row)
 {
     lv_obj_t *page = lv_win_get_content(csl->frame->win);
@@ -104,51 +81,73 @@ static void ensure_visible(ysw_csl_t *csl, uint32_t row)
     }
 }
 
-static void select_cs(ysw_csl_t *csl, uint32_t cs_index)
+static void hide_selected_cs(ysw_csl_t *csl)
 {
-    clear_highlight(csl);
+    uint32_t row = csl->cs_index + 1; // +1 for headings
+    for (int i = 0; i < COLUMN_COUNT; i++) {
+        lv_table_set_cell_type(csl->table, row, i, YSW_CSL_WHITE);
+    }
+    ysw_frame_set_footer_text(csl->frame, "");
+    lv_obj_refresh_style(csl->table);
+}
+
+static void show_selected_cs(ysw_csl_t *csl)
+{
+    uint32_t row = csl->cs_index + 1; // +1 for headings
+    for (uint32_t i = 0; i < COLUMN_COUNT; i++) {
+        lv_table_set_cell_type(csl->table, row, i, YSW_CSL_YELLOW);
+    }
+    char buf[64];
     uint32_t cs_count = ysw_music_get_cs_count(csl->music);
-    if (csl->cs_index < cs_count) {
-        uint32_t row = cs_index + 1; // +1 for headings
-        for (uint32_t i = 0; i < COLUMN_COUNT; i++) {
-            lv_table_set_cell_type(csl->table, row, i, YSW_CSL_YELLOW);
-        }
-        char buf[64];
-        snprintf(buf, sizeof(buf), "%d of %d", row, cs_count);
-        ysw_frame_set_footer_text(csl->frame, buf);
-        lv_obj_refresh_style(csl->table);
-        ensure_visible(csl, row);
-        csl->cs_index = cs_index;
+    snprintf(buf, sizeof(buf), "%d of %d", row, cs_count);
+    ysw_frame_set_footer_text(csl->frame, buf);
+    lv_obj_refresh_style(csl->table);
+    ensure_visible(csl, row);
+}
+
+static void move_selection(ysw_csl_t *csl, uint32_t cs_index)
+{
+    hide_selected_cs(csl);
+    csl->cs_index = cs_index;
+    show_selected_cs(csl);
+}
+
+static void display_row(ysw_csl_t *csl, uint32_t i)
+{
+    char buffer[16];
+    int row = i + 1; // +1 for headings
+    ysw_cs_t *cs = ysw_music_get_cs(csl->music, i);
+    uint32_t sn_count = ysw_cs_get_sn_count(cs);
+    lv_table_set_cell_crop(csl->table, row, 0, true);
+    lv_table_set_cell_value(csl->table, row, 0, cs->name);
+    lv_table_set_cell_value(csl->table, row, 1, ysw_itoa(cs->divisions, buffer, sizeof(buffer)));
+    lv_table_set_cell_value(csl->table, row, 2, ysw_itoa(sn_count, buffer, sizeof(buffer)));
+    for (int j = 0; j < COLUMN_COUNT; j++) {
+        lv_table_set_cell_align(csl->table, row, j, LV_LABEL_ALIGN_CENTER);
+        lv_table_set_cell_type(csl->table, row, j, YSW_CSL_WHITE);
     }
 }
 
 static void display_rows(ysw_csl_t *csl)
 {
-    clear_highlight(csl);
+    ysw_frame_set_footer_text(csl->frame, "");
     uint32_t cs_count = ysw_music_get_cs_count(csl->music);
     lv_table_set_row_cnt(csl->table, cs_count + 1); // +1 for headings
     if (cs_count) {
         for (uint32_t i = 0; i < cs_count; i++) {
-            char buffer[16];
-            int row = i + 1; // +1 for headings
-            ysw_cs_t *cs = ysw_music_get_cs(csl->music, i);
-            uint32_t sn_count = ysw_cs_get_sn_count(cs);
-            lv_table_set_cell_crop(csl->table, row, 0, true);
-            lv_table_set_cell_value(csl->table, row, 0, cs->name);
-            lv_table_set_cell_value(csl->table, row, 1, ysw_itoa(cs->divisions, buffer, sizeof(buffer)));
-            lv_table_set_cell_value(csl->table, row, 2, ysw_itoa(sn_count, buffer, sizeof(buffer)));
-            for (int j = 0; j < COLUMN_COUNT; j++) {
-                lv_table_set_cell_align(csl->table, row, j, LV_LABEL_ALIGN_CENTER);
-            }
+            display_row(csl, i);
         }
-        normalize_cs_index(csl);
-        select_cs(csl, csl->cs_index);
+        if (csl->cs_index >= cs_count) {
+            csl->cs_index = cs_count - 1;
+        }
+        show_selected_cs(csl);
+    } else {
+        csl->cs_index = 0;
     }
 }
 
 static void on_csc_close(ysw_csl_t *csl, csc_t *csc)
 {
-    clear_highlight(csl);
     csl->cs_index = csc->cs_index;
     display_rows(csl);
 }
@@ -190,7 +189,7 @@ static lv_res_t scrl_signal_cb(lv_obj_t *scrl, lv_signal_t signal, void *param)
         if (!csl->dragged) {
             uint16_t row = get_row(scrl, param);
             if (row) {
-                select_cs(csl, row - 1); // -1 for headings;
+                move_selection(csl, row - 1); // -1 for headings;
             }
         }
     } else if (signal == LV_SIGNAL_LONG_PRESS) {
@@ -214,16 +213,96 @@ static lv_res_t scrl_signal_cb(lv_obj_t *scrl, lv_signal_t signal, void *param)
 }
 
 static void on_settings(ysw_csl_t *csl, lv_obj_t * btn) {}
-static void on_save(ysw_csl_t *csl, lv_obj_t * btn) {}
+
+static void on_save(ysw_csl_t *csl, lv_obj_t * btn)
+{
+    ysw_mfw_write(csl->music);
+}
 
 static void on_new(ysw_csl_t *csl, lv_obj_t * btn)
 {
-    create_cs(csl, normalize_cs_index(csl));
+    create_cs(csl, csl->cs_index);
 }
 
-static void on_copy(ysw_csl_t *csl, lv_obj_t * btn) {}
-static void on_paste(ysw_csl_t *csl, lv_obj_t * btn) {}
+static void on_copy(ysw_csl_t *csl, lv_obj_t * btn)
+{
+    uint32_t cn_count = ysw_music_get_cs_count(csl->music);
+    if (csl->cs_index < cn_count) {
+        if (csl->clipboard_cs) {
+            ysw_cs_free(csl->clipboard_cs);
+        }
+        ysw_cs_t *cs = ysw_music_get_cs(csl->music, csl->cs_index);
+        csl->clipboard_cs = ysw_cs_copy(cs);
+    } else {
+        ysw_mb_nothing_selected();
+    }
+}
 
+<<<<<<< HEAD
+static void calculate_insert_index(ysw_csl_t *csl)
+{
+    uint32_t cn_count = ysw_music_get_cs_count(csl->music);
+    if (csl->cs_index < cn_count) {
+        csl->cs_index++; // insert afterwards
+    } else {
+        csl->cs_index = cn_count; // insert at end (or beginning if empty)
+    }
+}
+
+static void on_paste(ysw_csl_t *csl, lv_obj_t * btn)
+{
+    if (csl->clipboard_cs) {
+        ysw_cs_t *cs = ysw_cs_copy(csl->clipboard_cs);
+        char name[CS_NAME_SZ];
+        ysw_name_create(name, sizeof(name));
+        ysw_cs_set_name(cs, name);
+        calculate_insert_index(csl);
+        ysw_music_insert_cs(csl->music, csl->cs_index, cs);
+        display_rows(csl);
+    } else {
+        ysw_mb_clipboard_empty();
+    }
+=======
+// TODO: move to new module
+
+#define YSW_DB_OK "OK"
+#define YSW_DB_CANCEL "Cancel"
+
+typedef void (*ysw_db_cb_t)(void *context);
+
+typedef struct {
+    void *context;
+    ysw_db_cb_t cb;
+} ysw_db_t;
+
+static void ysw_db_event_cb(lv_obj_t *mbox, lv_event_t event)
+{
+    if (event == LV_EVENT_VALUE_CHANGED) {
+        const char *text = lv_mbox_get_active_btn_text(mbox);
+        if (strcmp(text, YSW_DB_OK) == 0) {
+            ysw_db_t *ysw_db = lv_obj_get_user_data(mbox);
+            ysw_db->cb(ysw_db->context);
+            ysw_heap_free(ysw_db);
+            lv_mbox_start_auto_close(mbox, 0);
+        }
+    }
+}
+
+void ysw_db_conf_create(const char* text, void *cb, void *context)
+{
+    static const char *btns[] = { YSW_DB_CANCEL, YSW_DB_OK, "" };
+    lv_obj_t *mbox = lv_mbox_create(lv_scr_act(), NULL);
+    lv_mbox_set_text(mbox, text);
+    lv_mbox_add_btns(mbox, btns);
+    lv_obj_set_width(mbox, 300);
+    lv_obj_set_event_cb(mbox, ysw_db_event_cb);
+    lv_obj_align(mbox, NULL, LV_ALIGN_CENTER, 0, 0);
+    ysw_db_t *ysw_db = ysw_heap_allocate(sizeof(ysw_db_t));
+    ysw_db->context = context;
+    ysw_db->cb = cb;
+    lv_obj_set_user_data(mbox, ysw_db);
+>>>>>>> parent of a2f2b32... Split ysw_db into separate component
+}
 
 static void on_trash_confirm(ysw_csl_t *csl)
 {
@@ -238,7 +317,7 @@ static void on_trash(ysw_csl_t *csl, lv_obj_t * btn)
         ysw_cs_t *cs = ysw_music_get_cs(csl->music, csl->cs_index);
         char text[128];
         snprintf(text, sizeof(text), "Delete %s?", cs->name);
-        ysw_db_conf_create(text, on_trash_confirm, csl);
+        ysw_mb_create_confirm(text, on_trash_confirm, csl);
     }
 }
 
@@ -266,7 +345,14 @@ static void on_next(ysw_csl_t *csl, lv_obj_t * btn) {}
 static void on_loop(ysw_csl_t *csl, lv_obj_t * btn) {}
 static void on_stop(ysw_csl_t *csl, lv_obj_t * btn) {}
 static void on_play(ysw_csl_t *csl, lv_obj_t * btn) {}
-static void on_prev(ysw_csl_t *csl, lv_obj_t * btn) {}
+
+static void on_prev(ysw_csl_t *csl, lv_obj_t * btn)
+{
+    uint32_t cn_count = ysw_music_get_cs_count(csl->music);
+    if (cn_count) {
+        
+    }
+}
 
 static ysw_frame_t *create_frame(ysw_csl_t *csl)
 {   

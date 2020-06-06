@@ -23,6 +23,7 @@ typedef void (*csl_close_cb_t)(void *context, ysw_csl_t *csl);
 typedef struct ysw_csl_s {
     ysw_music_t *music;
     uint32_t cs_index;
+    ysw_cs_t *clipboard_cs;
     ysw_frame_t *frame;
     lv_obj_t *table;
     csl_close_cb_t close_cb;

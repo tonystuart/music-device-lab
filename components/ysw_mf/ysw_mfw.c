@@ -35,7 +35,7 @@ static void write_cs(ysw_mfw_t *ysw_mfw)
     uint32_t cs_count = ysw_music_get_cs_count(ysw_mfw->music);
     for (uint32_t i = 0; i < cs_count; i++) {
         ysw_cs_t *cs = ysw_music_get_cs(ysw_mfw->music, i);
-        char name[YSW_MF_MAX_NAME_LENGTH];
+        char name[CS_NAME_SZ];
         ysw_csv_escape(cs->name, name, sizeof(name));
         fprintf(ysw_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d\n",
                 YSW_MF_CHORD_STYLE,
@@ -91,7 +91,7 @@ static void write_hp(ysw_mfw_t *ysw_mfw)
     uint32_t hp_count = ysw_music_get_hp_count(ysw_mfw->music);
     for (uint32_t i = 0; i < hp_count; i++) {
         ysw_hp_t *hp = ysw_music_get_hp(ysw_mfw->music, i);
-        char name[YSW_MF_MAX_NAME_LENGTH];
+        char name[HP_NAME_SZ];
         ysw_csv_escape(hp->name, name, sizeof(name));
         fprintf(ysw_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d\n",
                 YSW_MF_HARMONIC_PROGRESSION,
