@@ -11,6 +11,7 @@
 
 #include "seq.h"
 
+#include "ysw_auto_play.h"
 #include "ysw_hp.h"
 #include "ysw_cs.h"
 #include "ysw_sn.h"
@@ -74,8 +75,15 @@ static void play(hpc_t *hpc)
 
 static void stage(hpc_t *hpc)
 {
-    if (ysw_lv_hpe_gs.auto_play) {
-        send_notes(hpc, YSW_SEQ_STAGE);
+    switch (ysw_lv_hpe_gs.auto_play) {
+        case YSW_AUTO_PLAY_OFF:
+            break;
+        case YSW_AUTO_PLAY_STAGE_ALL:
+            send_notes(hpc, YSW_SEQ_STAGE);
+            break;
+        default:
+            ESP_LOGE(TAG, "auto_play=%d not implemented", ysw_lv_hpe_gs.auto_play);
+            break;
     }
 }
 

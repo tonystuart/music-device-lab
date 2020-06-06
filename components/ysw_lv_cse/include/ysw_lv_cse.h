@@ -11,6 +11,7 @@
 
 #include "lvgl.h"
 #include "ysw_array.h"
+#include "ysw_auto_play.h"
 #include "ysw_sn.h"
 #include "ysw_cs.h"
 #include "ysw_bounds.h"
@@ -44,11 +45,10 @@ typedef struct {
     ysw_lv_cse_deselect_cb_t deselect_cb;
     ysw_lv_cse_drag_end_cb_t drag_end_cb;
     void *context;
-
 } ysw_lv_cse_ext_t;
 
 typedef struct {
-    bool auto_play;
+    ysw_auto_play_t auto_play;
 } ysw_lv_cse_gs_t;
 
 extern ysw_lv_cse_gs_t ysw_lv_cse_gs;

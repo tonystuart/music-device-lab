@@ -10,6 +10,7 @@
 #pragma once
 
 #include "lvgl.h"
+#include "ysw_auto_play.h"
 #include "ysw_hp.h"
 
 typedef void (*ysw_lv_hpe_create_cb_t)(void *context, uint32_t ps_index, uint8_t degree);
@@ -45,7 +46,7 @@ typedef struct {
 
 typedef struct {
     bool auto_scroll;
-    bool auto_play;
+    ysw_auto_play_t auto_play;
 } ysw_lv_hpe_gs_t;
 
 extern ysw_lv_hpe_gs_t ysw_lv_hpe_gs;

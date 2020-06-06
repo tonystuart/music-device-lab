@@ -26,7 +26,7 @@
 
 ysw_lv_hpe_gs_t ysw_lv_hpe_gs = {
     .auto_scroll = true,
-    .auto_play = false,
+    .auto_play = YSW_AUTO_PLAY_OFF,
 };
 
 typedef struct {

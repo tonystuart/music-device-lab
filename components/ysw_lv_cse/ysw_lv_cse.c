@@ -30,7 +30,7 @@
 #define ROW_COUNT YSW_MIDI_UNPO
 
 ysw_lv_cse_gs_t ysw_lv_cse_gs = {
-    .auto_play = true,
+    .auto_play = YSW_AUTO_PLAY_STAGE_ALL,
 };
 
 typedef struct {

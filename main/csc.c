@@ -11,6 +11,7 @@
 
 #include "seq.h"
 
+#include "ysw_auto_play.h"
 #include "ysw_cs.h"
 #include "ysw_sn.h"
 #include "ysw_division.h"
@@ -73,8 +74,15 @@ static void play(csc_t *csc)
 
 static void stage(csc_t *csc)
 {
-    if (ysw_lv_cse_gs.auto_play) {
-        send_notes(csc, YSW_SEQ_STAGE);
+    switch (ysw_lv_cse_gs.auto_play) {
+        case YSW_AUTO_PLAY_OFF:
+            break;
+        case YSW_AUTO_PLAY_STAGE_ALL:
+            send_notes(csc, YSW_SEQ_STAGE);
+            break;
+        default:
+            ESP_LOGE(TAG, "auto_play=%d not implemented", ysw_lv_cse_gs.auto_play);
+            break;
     }
 }
 

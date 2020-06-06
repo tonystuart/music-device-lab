@@ -9,10 +9,13 @@
 
 #include "ysw_csl.h"
 
+#include "ysw_auto_play.h"
 #include "ysw_cs.h"
+#include "ysw_lv_cse.h"
 #include "ysw_mb.h"
 #include "ysw_mfw.h"
 #include "ysw_name.h"
+#include "ysw_sdb.h"
 #include "ysw_sn.h"
 #include "ysw_heap.h"
 #include "ysw_lv_styles.h"
@@ -209,7 +212,16 @@ static lv_res_t scrl_signal_cb(lv_obj_t *scrl, lv_signal_t signal, void *param)
     return prev_scrl_signal_cb(scrl, signal, param);
 }
 
-static void on_settings(ysw_csl_t *csl, lv_obj_t * btn) {}
+static void on_auto_play(ysw_csl_t *csl, ysw_auto_play_t auto_play)
+{
+    ysw_lv_cse_gs.auto_play = auto_play;
+}
+
+static void on_settings(ysw_csl_t *csl, lv_obj_t * btn)
+{
+    ysw_sdb_t *sdb = ysw_sdb_create("Global Chord Style Settings", csl);
+    ysw_sdb_add_choice(sdb, "Auto Play", ysw_lv_cse_gs.auto_play, ysw_auto_play_options, on_auto_play);
+}
 
 static void on_save(ysw_csl_t *csl, lv_obj_t * btn)
 {
