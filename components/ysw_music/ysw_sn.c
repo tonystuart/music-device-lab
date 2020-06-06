@@ -80,7 +80,7 @@ int ysw_sn_compare(const void *left, const void *right)
 {
     const ysw_sn_t *left_sn = *(ysw_sn_t * const *)left;
     const ysw_sn_t *right_sn = *(ysw_sn_t * const *)right;
-    uint32_t delta = left_sn->start - right_sn->start;
+    int delta = left_sn->start - right_sn->start;
     if (!delta) {
         delta = left_sn->degree - right_sn->degree;
         if (!delta) {

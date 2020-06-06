@@ -69,3 +69,17 @@ void ysw_music_dump(ysw_music_t *music, char *tag)
         ysw_hp_dump(hp, tag);
     }
 }
+
+static int compare_cs_name(const void *left, const void *right)
+{
+    const ysw_cs_t *left_cs = *(ysw_cs_t * const *)left;
+    const ysw_cs_t *right_cs = *(ysw_cs_t * const *)right;
+    int delta = strcmp(left_cs->name, right_cs->name);
+    return delta;
+}
+
+void ysw_music_sort_cs_by_name(ysw_music_t *music)
+{
+    ysw_array_sort(music->cs_array, compare_cs_name);
+}
+

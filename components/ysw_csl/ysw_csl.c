@@ -223,8 +223,8 @@ static void on_new(ysw_csl_t *csl, lv_obj_t * btn)
 
 static void on_copy(ysw_csl_t *csl, lv_obj_t * btn)
 {
-    uint32_t cn_count = ysw_music_get_cs_count(csl->music);
-    if (csl->cs_index < cn_count) {
+    uint32_t cs_count = ysw_music_get_cs_count(csl->music);
+    if (csl->cs_index < cs_count) {
         if (csl->clipboard_cs) {
             ysw_cs_free(csl->clipboard_cs);
         }
@@ -237,11 +237,11 @@ static void on_copy(ysw_csl_t *csl, lv_obj_t * btn)
 
 static void calculate_insert_index(ysw_csl_t *csl)
 {
-    uint32_t cn_count = ysw_music_get_cs_count(csl->music);
-    if (csl->cs_index < cn_count) {
+    uint32_t cs_count = ysw_music_get_cs_count(csl->music);
+    if (csl->cs_index < cs_count) {
         csl->cs_index++; // insert afterwards
     } else {
-        csl->cs_index = cn_count; // insert at end (or beginning if empty)
+        csl->cs_index = cs_count; // insert at end (or beginning if empty)
     }
 }
 
@@ -268,8 +268,8 @@ static void on_trash_confirm(ysw_csl_t *csl)
 
 static void on_trash(ysw_csl_t *csl, lv_obj_t * btn)
 {
-    uint32_t cn_count = ysw_music_get_cs_count(csl->music);
-    if (csl->cs_index < cn_count) {
+    uint32_t cs_count = ysw_music_get_cs_count(csl->music);
+    if (csl->cs_index < cs_count) {
         ysw_cs_t *cs = ysw_music_get_cs(csl->music, csl->cs_index);
         char text[128];
         snprintf(text, sizeof(text), "Delete %s?", cs->name);
@@ -277,9 +277,33 @@ static void on_trash(ysw_csl_t *csl, lv_obj_t * btn)
     }
 }
 
-static void on_sort(ysw_csl_t *csl, lv_obj_t * btn) {}
-static void on_up(ysw_csl_t *csl, lv_obj_t * btn) {}
-static void on_down(ysw_csl_t *csl, lv_obj_t * btn) {}
+static void on_sort(ysw_csl_t *csl, lv_obj_t * btn)
+{
+    ysw_music_sort_cs_by_name(csl->music);
+    display_rows(csl);
+}
+
+static void on_up(ysw_csl_t *csl, lv_obj_t * btn)
+{
+    uint32_t cs_count = ysw_music_get_cs_count(csl->music);
+    uint32_t new_index = csl->cs_index - 1;
+    if (csl->cs_index < cs_count && new_index < cs_count) {
+        ysw_array_swap(csl->music->cs_array, csl->cs_index, new_index);
+        csl->cs_index = new_index;
+    }
+    display_rows(csl);
+}
+
+static void on_down(ysw_csl_t *csl, lv_obj_t * btn)
+{
+    uint32_t cs_count = ysw_music_get_cs_count(csl->music);
+    uint32_t new_index = csl->cs_index + 1;
+    if (new_index < cs_count) {
+        ysw_array_swap(csl->music->cs_array, csl->cs_index, new_index);
+        csl->cs_index = new_index;
+    }
+    display_rows(csl);
+}
 
 static void on_close(ysw_csl_t *csl, lv_obj_t * btn)
 {
@@ -297,17 +321,25 @@ static void on_close(ysw_csl_t *csl, lv_obj_t * btn)
     ysw_heap_free(csl);
 }
 
-static void on_next(ysw_csl_t *csl, lv_obj_t * btn) {}
+static void on_next(ysw_csl_t *csl, lv_obj_t * btn)
+{
+    uint32_t cs_count = ysw_music_get_cs_count(csl->music);
+    if (csl->cs_index < (cs_count - 1)) {
+        csl->cs_index++;
+    }
+    display_rows(csl);
+}
+
 static void on_loop(ysw_csl_t *csl, lv_obj_t * btn) {}
 static void on_stop(ysw_csl_t *csl, lv_obj_t * btn) {}
 static void on_play(ysw_csl_t *csl, lv_obj_t * btn) {}
 
 static void on_prev(ysw_csl_t *csl, lv_obj_t * btn)
 {
-    uint32_t cn_count = ysw_music_get_cs_count(csl->music);
-    if (cn_count) {
-        
+    if (csl->cs_index > 0) {
+        csl->cs_index--;
     }
+    display_rows(csl);
 }
 
 static ysw_frame_t *create_frame(ysw_csl_t *csl)

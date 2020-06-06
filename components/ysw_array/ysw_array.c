@@ -137,6 +137,16 @@ void ysw_array_remove(ysw_array_t *array, uint32_t index)
     array->count--;
 }
 
+void ysw_array_swap(ysw_array_t *array, uint32_t i, uint32_t j)
+{
+    assert(array);
+    assert(i < array->count);
+    assert(j < array->count);
+    void *p = array->data[i];
+    array->data[i] = array->data[j];
+    array->data[j] = p;
+}
+
 int32_t ysw_array_find(ysw_array_t *array, void *value)
 {
     for (uint32_t i = 0; i < array->count; i++) {
