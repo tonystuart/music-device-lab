@@ -240,3 +240,30 @@ ysw_note_t *ysw_hp_get_notes(ysw_hp_t *hp, uint32_t *note_count)
     return notes;
 }
 
+ysw_note_t *ysw_hp_get_step_notes(ysw_hp_t *hp, ysw_ps_t *ps, uint32_t *note_count)
+{
+    assert(hp);
+    assert(ps);
+    assert(note_count);
+
+    uint32_t sn_count = ysw_ps_get_sn_count(ps);
+    ysw_note_t *notes = ysw_heap_allocate(sizeof(ysw_note_t) * sn_count);
+    ysw_note_t *note_p = notes;
+
+    uint8_t tonic = (hp->octave * 12) + ysw_degree_intervals[0][hp->mode % 7];
+    uint8_t cs_root = ps->degree;
+
+    for (int j = 0; j < sn_count; j++) {
+        ysw_sn_t *sn = ysw_ps_get_sn(ps, j);
+        note_p->start = sn->start;
+        note_p->duration = sn->duration;
+        note_p->channel = YSW_CS_MUSIC_CHANNEL;
+        note_p->midi_note = ysw_sn_to_midi_note(sn, tonic, cs_root);
+        note_p->velocity = sn->velocity;
+        note_p->instrument = hp->instrument;
+        note_p++;
+    }
+    *note_count = note_p - notes;
+    return notes;
+}
+

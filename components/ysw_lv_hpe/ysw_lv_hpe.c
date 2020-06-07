@@ -26,7 +26,9 @@
 
 ysw_lv_hpe_gs_t ysw_lv_hpe_gs = {
     .auto_scroll = true,
-    .auto_play = YSW_AUTO_PLAY_OFF,
+    .auto_play_all = YSW_AUTO_PLAY_OFF,
+    .auto_play_last = YSW_AUTO_PLAY_PLAY,
+    .multiple_selection = false,
 };
 
 typedef struct {
@@ -346,25 +348,6 @@ static void fire_drag_end(lv_obj_t *hpe)
     }
 }
 
-static void prepare_create(lv_obj_t *hpe, lv_point_t *point)
-{
-    metrics_t m;
-    get_metrics(hpe, &m);
-    if (point->y < m.hp_top + m.hp_height) {
-        ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
-        lv_coord_t adj_x = (point->x - m.hp_left) + ext->scroll_left;
-        lv_coord_t adj_y = (point->y - m.hp_top);
-        uint32_t ps_index = adj_x / m.col_width;
-        uint32_t row_index = adj_y / m.row_height;
-        uint8_t degree = YSW_MIDI_UNPO - row_index;
-        bool insert_after = (adj_x % m.col_width) > (m.col_width / 2);
-        if (ysw_hp_get_ps_count(ext->hp) > 0 && insert_after) {
-            ps_index++;
-        }
-        fire_create(hpe, ps_index, degree);
-    }
-}
-
 static uint32_t count_selected_ps(lv_obj_t *hpe)
 {
     uint32_t count = 0;
@@ -400,6 +383,28 @@ static void deselect_all(lv_obj_t *hpe)
         if (ysw_ps_is_selected(ps)) {
             deselect_ps(hpe, ps);
         }
+    }
+}
+
+static void prepare_create(lv_obj_t *hpe, lv_point_t *point)
+{
+    metrics_t m;
+    get_metrics(hpe, &m);
+    if (point->y < m.hp_top + m.hp_height) {
+        ysw_lv_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
+        lv_coord_t adj_x = (point->x - m.hp_left) + ext->scroll_left;
+        lv_coord_t adj_y = (point->y - m.hp_top);
+        uint32_t ps_index = adj_x / m.col_width;
+        uint32_t row_index = adj_y / m.row_height;
+        uint8_t degree = YSW_MIDI_UNPO - row_index;
+        bool insert_after = (adj_x % m.col_width) > (m.col_width / 2);
+        if (ysw_hp_get_ps_count(ext->hp) > 0 && insert_after) {
+            ps_index++;
+        }
+        if (!ysw_lv_hpe_gs.multiple_selection) {
+            deselect_all(hpe);
+        }
+        fire_create(hpe, ps_index, degree);
     }
 }
 
@@ -536,6 +541,9 @@ static void on_signal_released(lv_obj_t *hpe, void *param)
         if (selected) {
             deselect_ps(hpe, ext->clicked_ps);
         } else {
+            if (!ysw_lv_hpe_gs.multiple_selection) {
+                deselect_all(hpe);
+            }
             select_ps(hpe, ext->clicked_ps);
         }
     } else {

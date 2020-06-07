@@ -48,7 +48,7 @@ static void on_sequencer_status(hpc_t *hpc, ysw_seq_status_message_t *message)
     }
 }
 
-static void send_notes(hpc_t *hpc, ysw_seq_message_type_t type)
+static void send_steps(hpc_t *hpc, ysw_seq_message_type_t type)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
     ysw_hp_sort_sn_array(hp);
@@ -68,21 +68,55 @@ static void send_notes(hpc_t *hpc, ysw_seq_message_type_t type)
     seq_send(&message);
 }
 
+static void send_step(hpc_t *hpc, ysw_ps_t *ps, ysw_seq_message_type_t type)
+{
+    ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
+    ysw_hp_sort_sn_array(hp);
+
+    uint32_t note_count = 0;
+    ysw_note_t *notes = ysw_hp_get_step_notes(hp, ps, &note_count);
+
+    ysw_seq_message_t message = {
+        .type = type,
+        .stage.notes = notes,
+        .stage.note_count = note_count,
+        .stage.tempo = hp->tempo,
+        .stage.on_status = (void *)on_sequencer_status,
+        .stage.on_status_context = hpc,
+    };
+
+    seq_send(&message);
+}
+
 static void play(hpc_t *hpc)
 {
-    send_notes(hpc, YSW_SEQ_PLAY);
+    send_steps(hpc, YSW_SEQ_PLAY);
 }
 
 static void auto_play_all(hpc_t *hpc)
 {
-    switch (ysw_lv_hpe_gs.auto_play) {
+    switch (ysw_lv_hpe_gs.auto_play_all) {
         case YSW_AUTO_PLAY_OFF:
             break;
         case YSW_AUTO_PLAY_STAGE:
-            send_notes(hpc, YSW_SEQ_STAGE);
+            send_steps(hpc, YSW_SEQ_STAGE);
             break;
-        default:
-            ESP_LOGE(TAG, "auto_play=%d not implemented", ysw_lv_hpe_gs.auto_play);
+        case YSW_AUTO_PLAY_PLAY:
+            send_steps(hpc, YSW_SEQ_PLAY);
+            break;
+    }
+}
+
+static void auto_play_last(hpc_t *hpc, ysw_ps_t *ps)
+{
+    switch (ysw_lv_hpe_gs.auto_play_last) {
+        case YSW_AUTO_PLAY_OFF:
+            break;
+        case YSW_AUTO_PLAY_STAGE:
+            send_step(hpc, ps, YSW_SEQ_STAGE);
+            break;
+        case YSW_AUTO_PLAY_PLAY:
+            send_step(hpc, ps, YSW_SEQ_PLAY);
             break;
     }
 }
@@ -437,6 +471,7 @@ static void on_create_ps(hpc_t *hpc, uint32_t ps_index, uint8_t degree)
         }
         ysw_hp_insert_ps(hp, hpc->ps_index, ps);
         ysw_ps_select(ps, true);
+        auto_play_last(hpc, ps);
         refresh(hpc);
     }
 }
@@ -454,6 +489,7 @@ static void on_select(hpc_t *hpc, ysw_ps_t *ps)
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
     hpc->ps_index = ysw_hp_get_ps_index(hp, ps);
     ESP_LOGD(TAG, "on_select ps_index=%d", hpc->ps_index);
+    auto_play_last(hpc, ps);
 }
 
 static void on_drag_end(hpc_t *hpc)

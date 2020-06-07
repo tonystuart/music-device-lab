@@ -40,6 +40,7 @@ void ysw_hp_set_name(ysw_hp_t *hp, const char* name);
 int32_t ysw_hp_get_ps_index(ysw_hp_t *hp, ysw_ps_t *target_ps);
 uint32_t ysw_hp_get_pss_in_measures(ysw_hp_t *hp, uint8_t measures[], uint32_t size);
 ysw_note_t *ysw_hp_get_notes(ysw_hp_t *hp, uint32_t *note_count);
+ysw_note_t *ysw_hp_get_step_notes(ysw_hp_t *hp, ysw_ps_t *ps, uint32_t *note_count);
 void ysw_hp_set_percent_tempo(ysw_hp_t *hp);
 void ysw_hp_set_instrument(ysw_hp_t *hp, uint8_t instrument);
 int ysw_hp_add_cs(ysw_hp_t *hp, uint8_t degree, ysw_cs_t *cs, uint8_t flags);

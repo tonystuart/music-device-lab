@@ -461,6 +461,7 @@ static void on_create_sn(csc_t *csc, uint32_t start, int8_t degree)
     ysw_sn_t *sn = ysw_sn_create(degree, 80, start_floor, duration, 0);
     ysw_sn_select(sn, true);
     ysw_cs_add_sn(cs, sn);
+    auto_play_last(csc, sn);
     refresh(csc);
 }
 

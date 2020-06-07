@@ -222,6 +222,8 @@ static void stop_clip(ysw_seq_t *seq)
     }
     seq->next_note = 0;
     seq->start_millis = 0;
+    seq->active.on_status = NULL; // callback may not be valid after stop
+    seq->active.on_status_context = NULL;
     free_clip(&seq->active);
 }
 
