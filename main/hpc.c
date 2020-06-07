@@ -73,12 +73,12 @@ static void play(hpc_t *hpc)
     send_notes(hpc, YSW_SEQ_PLAY);
 }
 
-static void stage(hpc_t *hpc)
+static void auto_play_all(hpc_t *hpc)
 {
     switch (ysw_lv_hpe_gs.auto_play) {
         case YSW_AUTO_PLAY_OFF:
             break;
-        case YSW_AUTO_PLAY_STAGE_ALL:
+        case YSW_AUTO_PLAY_STAGE:
             send_notes(hpc, YSW_SEQ_STAGE);
             break;
         default:
@@ -121,7 +121,7 @@ static void update_frame(hpc_t *hpc)
 static void refresh(hpc_t *hpc)
 {
     lv_obj_invalidate(hpc->hpe);
-    stage(hpc);
+    auto_play_all(hpc);
 }
 
 static void create_hp(hpc_t *hpc, uint32_t new_index)
@@ -145,7 +145,7 @@ static void create_hp(hpc_t *hpc, uint32_t new_index)
 static void copy_to_clipboard(hpc_t *hpc, ysw_ps_t *ps)
 {
     ysw_ps_t *new_ps = ysw_ps_copy(ps);
-    ysw_ps_select(ps, false);
+    //ysw_ps_select(ps, false);
     ysw_ps_select(new_ps, true);
     ysw_array_push(hpc->clipboard, new_ps);
 }
@@ -178,28 +178,28 @@ static void on_instrument_change(hpc_t *hpc, uint8_t new_instrument)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
     ysw_hp_set_instrument(hp, new_instrument);
-    stage(hpc);
+    auto_play_all(hpc);
 }
 
 static void on_octave_change(hpc_t *hpc, uint8_t new_octave)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
     hp->octave = new_octave;
-    stage(hpc);
+    auto_play_all(hpc);
 }
 
 static void on_mode_change(hpc_t *hpc, ysw_mode_t new_mode)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
     hp->mode = new_mode;
-    stage(hpc);
+    auto_play_all(hpc);
 }
 
 static void on_transposition_change(hpc_t *hpc, uint8_t new_transposition_index)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
     hp->transposition = ysw_transposition_from_index(new_transposition_index);
-    stage(hpc);
+    auto_play_all(hpc);
 }
 
 static void on_tempo_change(hpc_t *hpc, uint8_t new_tempo_index)
@@ -207,7 +207,7 @@ static void on_tempo_change(hpc_t *hpc, uint8_t new_tempo_index)
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
     hp->tempo = ysw_tempo_from_index(new_tempo_index);
     update_footer(hpc);
-    stage(hpc);
+    auto_play_all(hpc);
 }
 
 static void on_next(hpc_t *hpc, lv_obj_t *btn)
@@ -314,19 +314,26 @@ static void on_copy(hpc_t *hpc, lv_obj_t *btn)
     visit_pss(hpc, copy_to_clipboard);
 }
 
+static void deselect_all(hpc_t *hpc)
+{
+    ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
+    uint32_t ps_count = ysw_hp_get_ps_count(hp);
+    for (uint32_t i = 0; i < ps_count; i++) {
+        ysw_ps_t *ps = ysw_hp_get_ps(hp, i);
+        ysw_ps_select(ps, false);
+    }
+}
+
 static void on_paste(hpc_t *hpc, lv_obj_t *btn)
 {
     ESP_LOGD(TAG, "on_paste entered");
     if (hpc->clipboard) {
         uint32_t paste_count = ysw_array_get_count(hpc->clipboard);
         if (paste_count) {
+            deselect_all(hpc);
+            uint32_t insert_index;
             ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
             uint32_t ps_count = ysw_hp_get_ps_count(hp);
-            for (uint32_t i = 0; i < ps_count; i++) {
-                ysw_ps_t *ps = ysw_hp_get_ps(hp, i);
-                ysw_ps_select(ps, false);
-            }
-            uint32_t insert_index;
             if (hpc->ps_index < ps_count) {
                 // paste after most recently selected ps
                 insert_index = hpc->ps_index + 1;
@@ -449,6 +456,11 @@ static void on_select(hpc_t *hpc, ysw_ps_t *ps)
     ESP_LOGD(TAG, "on_select ps_index=%d", hpc->ps_index);
 }
 
+static void on_drag_end(hpc_t *hpc)
+{
+    auto_play_all(hpc);
+}
+
 static ysw_frame_t *create_frame(hpc_t *hpc)
 {
     ysw_frame_t *frame = ysw_frame_create(hpc);
@@ -483,7 +495,7 @@ hpc_t *hpc_create(ysw_music_t *music, uint32_t hp_index)
     ysw_lv_hpe_set_create_cb(hpc->hpe, on_create_ps);
     ysw_lv_hpe_set_edit_cb(hpc->hpe, on_edit_ps);
     ysw_lv_hpe_set_select_cb(hpc->hpe, on_select);
-    ysw_lv_hpe_set_drag_end_cb(hpc->hpe, stage);
+    ysw_lv_hpe_set_drag_end_cb(hpc->hpe, on_drag_end);
     ysw_frame_set_content(hpc->frame, hpc->hpe);
     update_frame(hpc);
     return hpc;

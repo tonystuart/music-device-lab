@@ -48,7 +48,9 @@ typedef struct {
 } ysw_lv_cse_ext_t;
 
 typedef struct {
-    ysw_auto_play_t auto_play;
+    ysw_auto_play_t auto_play_all;
+    ysw_auto_play_t auto_play_last;
+    bool multiple_selection;
 } ysw_lv_cse_gs_t;
 
 extern ysw_lv_cse_gs_t ysw_lv_cse_gs;

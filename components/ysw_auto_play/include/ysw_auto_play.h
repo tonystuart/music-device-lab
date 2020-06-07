@@ -11,10 +11,8 @@
 
 typedef enum {
     YSW_AUTO_PLAY_OFF,
-    YSW_AUTO_PLAY_STAGE_ALL,
-    YSW_AUTO_PLAY_PLAY_ALL,
-    YSW_AUTO_PLAY_STAGE_LAST,
-    YSW_AUTO_PLAY_PLAY_LAST,
+    YSW_AUTO_PLAY_STAGE,
+    YSW_AUTO_PLAY_PLAY,
 } ysw_auto_play_t;
 
 extern const char *ysw_auto_play_options;

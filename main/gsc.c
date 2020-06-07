@@ -33,9 +33,14 @@ static void on_ysw_lv_hpe_gs_play(void *context, ysw_auto_play_t auto_play)
     ysw_lv_hpe_gs.auto_play = auto_play;
 }
 
-static void on_ysw_lv_cse_gs_play(void *context, ysw_auto_play_t auto_play)
+static void on_ysw_lv_cse_gs_play_all(void *context, ysw_auto_play_t auto_play)
 {
-    ysw_lv_cse_gs.auto_play = auto_play;
+    ysw_lv_cse_gs.auto_play_all = auto_play;
+}
+
+static void on_ysw_lv_cse_gs_play_last(void *context, ysw_auto_play_t auto_play)
+{
+    ysw_lv_cse_gs.auto_play_last = auto_play;
 }
 
 void gsc_create(ysw_music_t *music)
@@ -45,6 +50,7 @@ void gsc_create(ysw_music_t *music)
     ysw_sdb_add_checkbox(sdb, "Auto Scroll", ysw_lv_hpe_gs.auto_scroll, on_ysw_lv_hpe_gs_scroll);
     ysw_sdb_add_choice(sdb, "Auto Play", ysw_lv_hpe_gs.auto_play, ysw_auto_play_options, on_ysw_lv_hpe_gs_play);
     ysw_sdb_add_separator(sdb, "Chord Style Settings");
-    ysw_sdb_add_choice(sdb, "Auto Play", ysw_lv_cse_gs.auto_play, ysw_auto_play_options, on_ysw_lv_cse_gs_play);
+    ysw_sdb_add_choice(sdb, "Auto Play\n(on Change)", ysw_lv_cse_gs.auto_play_all, ysw_auto_play_options, on_ysw_lv_cse_gs_play_all);
+    ysw_sdb_add_choice(sdb, "Auto Play\n(on Click)", ysw_lv_cse_gs.auto_play_last, ysw_auto_play_options, on_ysw_lv_cse_gs_play_last);
 }
 

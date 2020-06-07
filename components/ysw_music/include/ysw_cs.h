@@ -64,19 +64,12 @@ static inline ysw_sn_t *ysw_cs_get_sn(ysw_cs_t *cs, uint32_t index)
 }
 
 void ysw_cs_free(ysw_cs_t *cs);
-
 uint32_t ysw_cs_add_sn(ysw_cs_t *cs, ysw_sn_t *sn);
-
 void ysw_cs_sort_sn_array(ysw_cs_t *cs);
-
 void ysw_cs_set_name(ysw_cs_t *cs, const char *name);
-
 void ysw_cs_set_instrument(ysw_cs_t *cs, uint8_t instrument);
-
 const char *ysw_cs_get_name(ysw_cs_t *cs);
-
 uint8_t ysw_cs_get_instrument(ysw_cs_t *cs);
-
 ysw_note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count);
-
+ysw_note_t *ysw_cs_get_note(ysw_cs_t *cs, ysw_sn_t *sn);
 void ysw_cs_dump(ysw_cs_t *cs, char *tag);

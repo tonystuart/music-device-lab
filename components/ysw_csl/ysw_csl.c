@@ -212,15 +212,31 @@ static lv_res_t scrl_signal_cb(lv_obj_t *scrl, lv_signal_t signal, void *param)
     return prev_scrl_signal_cb(scrl, signal, param);
 }
 
-static void on_auto_play(ysw_csl_t *csl, ysw_auto_play_t auto_play)
+static void on_auto_play_all(ysw_csl_t *csl, ysw_auto_play_t auto_play)
 {
-    ysw_lv_cse_gs.auto_play = auto_play;
+    ysw_lv_cse_gs.auto_play_all = auto_play;
+}
+
+static void on_auto_play_last(ysw_csl_t *csl, ysw_auto_play_t auto_play)
+{
+    ysw_lv_cse_gs.auto_play_last = auto_play;
+}
+
+static void on_multiple_selection(ysw_csl_t *csl, bool multiple_selection)
+{
+    ysw_lv_cse_gs.multiple_selection = multiple_selection;
 }
 
 static void on_settings(ysw_csl_t *csl, lv_obj_t * btn)
 {
-    ysw_sdb_t *sdb = ysw_sdb_create("Global Chord Style Settings", csl);
-    ysw_sdb_add_choice(sdb, "Auto Play", ysw_lv_cse_gs.auto_play, ysw_auto_play_options, on_auto_play);
+    ysw_sdb_t *sdb = ysw_sdb_create("Chord Style Editor Settings", csl);
+    ysw_sdb_add_choice(sdb, "Multiple Selection",
+            ysw_lv_cse_gs.multiple_selection, "No\nYes", on_multiple_selection);
+    ysw_sdb_add_separator(sdb, "Auto Play Settings");
+    ysw_sdb_add_choice(sdb, "On Change",
+            ysw_lv_cse_gs.auto_play_all, ysw_auto_play_options, on_auto_play_all);
+    ysw_sdb_add_choice(sdb, "On Click",
+            ysw_lv_cse_gs.auto_play_last, ysw_auto_play_options, on_auto_play_last);
 }
 
 static void on_save(ysw_csl_t *csl, lv_obj_t * btn)

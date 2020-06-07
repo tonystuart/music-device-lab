@@ -10,8 +10,6 @@
 #include "ysw_auto_play.h"
 
 const char *ysw_auto_play_options =
-"Off\n"
-"Stage All\n"
-"Play All\n"
-"Stage Last Clicked\n"
-"Play Last Clicked";
+"Do Nothing\n"
+"Stage Notes\n"
+"Play Notes";

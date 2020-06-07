@@ -30,7 +30,9 @@
 #define ROW_COUNT YSW_MIDI_UNPO
 
 ysw_lv_cse_gs_t ysw_lv_cse_gs = {
-    .auto_play = YSW_AUTO_PLAY_STAGE_ALL,
+    .auto_play_all = YSW_AUTO_PLAY_OFF,
+    .auto_play_last = YSW_AUTO_PLAY_PLAY,
+    .multiple_selection = false,
 };
 
 typedef struct {
@@ -327,33 +329,6 @@ static void fire_drag_end(lv_obj_t *cse)
     }
 }
 
-static void prepare_create(lv_obj_t *cse, lv_point_t *point)
-{
-    metrics_t m;
-    get_metrics(cse, &m);
-    lv_coord_t x_offset = point->x - cse->coords.x1;
-    lv_coord_t y_offset = point->y - cse->coords.y1;
-    double pixels_per_tick = (double)m.cse_width / YSW_CS_DURATION;
-    double pixels_per_degree = (double)m.cse_height / ROW_COUNT;
-    lv_coord_t tick_index = x_offset / pixels_per_tick;
-    lv_coord_t row_index = y_offset / pixels_per_degree;
-    fire_create(cse, tick_index, YSW_MIDI_UNPO - row_index);
-}
-
-static uint32_t count_selected_sn(lv_obj_t *cse)
-{
-    uint32_t count = 0;
-    ysw_lv_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
-    for (int i = 0; i < sn_count; i++) {
-        ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
-        if (ysw_sn_is_selected(sn)) {
-            count++;
-        }
-    }
-    return count;
-}
-
 static void select_sn(lv_obj_t *cse, ysw_sn_t *sn)
 {
     ysw_sn_select(sn, true);
@@ -376,6 +351,22 @@ static void deselect_all(lv_obj_t *cse)
             deselect_sn(cse, sn);
         }
     }
+}
+
+static void prepare_create(lv_obj_t *cse, lv_point_t *point)
+{
+    metrics_t m;
+    get_metrics(cse, &m);
+    lv_coord_t x_offset = point->x - cse->coords.x1;
+    lv_coord_t y_offset = point->y - cse->coords.y1;
+    double pixels_per_tick = (double)m.cse_width / YSW_CS_DURATION;
+    double pixels_per_degree = (double)m.cse_height / ROW_COUNT;
+    lv_coord_t tick_index = x_offset / pixels_per_tick;
+    lv_coord_t row_index = y_offset / pixels_per_degree;
+    if (!ysw_lv_cse_gs.multiple_selection) {
+        deselect_all(cse);
+    }
+    fire_create(cse, tick_index, YSW_MIDI_UNPO - row_index);
 }
 
 static void drag_horizontally(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_sn, lv_coord_t x)
@@ -506,9 +497,7 @@ static void capture_drag(lv_obj_t *cse, lv_coord_t x, lv_coord_t y)
         ext->dragging = drag_x || drag_y;
         if (ext->dragging) {
             if (!ysw_sn_is_selected(ext->clicked_sn)) {
-                if (count_selected_sn(cse)) {
-                    deselect_all(cse);
-                }
+                deselect_all(cse);
                 select_sn(cse, ext->clicked_sn);
             }
             ext->drag_start_cs = ysw_cs_copy(ext->cs);
@@ -595,6 +584,9 @@ static void on_signal_released(lv_obj_t *cse, void *param)
         if (selected) {
             deselect_sn(cse, ext->clicked_sn);
         } else {
+            if (!ysw_lv_cse_gs.multiple_selection) {
+                deselect_all(cse);
+            }
             select_sn(cse, ext->clicked_sn);
         }
     } else {

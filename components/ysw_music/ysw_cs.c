@@ -104,9 +104,7 @@ ysw_note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
     ysw_note_t *notes = ysw_heap_allocate(sizeof(ysw_note_t) * max_note_count);
     ysw_note_t *note_p = notes;
     uint8_t tonic = cs->octave * 12;
-    uint8_t root = ysw_degree_intervals[0][cs->mode % 7];
-    // TODO: Revisit whether root should be 1-based, factor out a 0-based function
-    root++;
+    uint8_t root = ysw_degree_intervals[0][cs->mode % 7] + 1; // +1 because root is 1-based
     uint32_t ticks_per_division = YSW_CS_DURATION / cs->divisions;
     uint32_t metronome_tick = 0;
     for (int j = 0; j < sn_count; j++) {
@@ -142,6 +140,21 @@ ysw_note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
         note_p++;
     }
     *note_count = note_p - notes;
+    return notes;
+}
+
+ysw_note_t *ysw_cs_get_note(ysw_cs_t *cs, ysw_sn_t *sn)
+{
+    ysw_note_t *notes = ysw_heap_allocate(sizeof(ysw_note_t));
+    ysw_note_t *note_p = notes;
+    uint8_t tonic = cs->octave * 12;
+    uint8_t root = ysw_degree_intervals[0][cs->mode % 7] + 1; // +1 because root is 1-based
+    note_p->start = 0;
+    note_p->duration = sn->duration;
+    note_p->channel = YSW_CS_MUSIC_CHANNEL;
+    note_p->midi_note = ysw_sn_to_midi_note(sn, tonic, root) + cs->transposition;
+    note_p->velocity = sn->velocity;
+    note_p->instrument = cs->instrument;
     return notes;
 }
 
