@@ -14,6 +14,7 @@
 #include "ysw_sdb.h"
 #include "ysw_heap.h"
 #include "../../main/csc.h" // TODO: move csc to components or this to main
+#include "../../main/seq.h" // TODO: move seq to components or this to main
 #include "lvgl/lvgl.h"
 #include "esp_log.h"
 #include "stdio.h"
@@ -129,7 +130,7 @@ void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index)
 
     // TODO: Encapsulate properly within ysw_sdb
     lv_win_add_btn(sdb->win, LV_SYMBOL_NEXT);
-    lv_win_add_btn(sdb->win, LV_SYMBOL_LOOP);
+    seq_init_loop_btn(lv_win_add_btn(sdb->win, LV_SYMBOL_LOOP));
     lv_win_add_btn(sdb->win, LV_SYMBOL_STOP);
     lv_win_add_btn(sdb->win, LV_SYMBOL_PLAY);
     lv_win_add_btn(sdb->win, LV_SYMBOL_PREV);

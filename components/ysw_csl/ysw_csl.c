@@ -358,9 +358,44 @@ static void on_next(ysw_csl_t *csl, lv_obj_t * btn)
     display_rows(csl);
 }
 
-static void on_loop(ysw_csl_t *csl, lv_obj_t * btn) {}
-static void on_stop(ysw_csl_t *csl, lv_obj_t * btn) {}
-static void on_play(ysw_csl_t *csl, lv_obj_t * btn) {}
+static void on_play(ysw_csl_t *csl, lv_obj_t * btn)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(csl->music, csl->cs_index);
+    ysw_cs_sort_sn_array(cs);
+
+    uint32_t note_count = 0;
+    ysw_note_t *notes = ysw_cs_get_notes(cs, &note_count);
+
+    ysw_seq_message_t message = {
+        .type = YSW_SEQ_PLAY,
+        .stage.notes = notes,
+        .stage.note_count = note_count,
+        .stage.tempo = cs->tempo,
+    };
+
+    seq_send(&message);
+}
+
+static void on_stop(ysw_csl_t *csl, lv_obj_t * btn)
+{
+    ysw_seq_message_t message = {
+        .type = YSW_SEQ_STOP,
+    };
+
+    seq_send(&message);
+}
+
+static void on_loop(ysw_csl_t *csl, lv_obj_t * btn)
+{
+
+    ESP_LOGD(TAG, "on_loop btn state=%d", lv_btn_get_state(btn));
+    ysw_seq_message_t message = {
+        .type = YSW_SEQ_LOOP,
+        //.loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_REL,
+        .loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_TGL_REL,
+    };
+    seq_send(&message);
+}
 
 static void on_prev(ysw_csl_t *csl, lv_obj_t * btn)
 {
@@ -386,7 +421,7 @@ static ysw_frame_t *create_frame(ysw_csl_t *csl)
 
     ysw_frame_add_header_button(frame, LV_SYMBOL_CLOSE, on_close);
     ysw_frame_add_header_button(frame, LV_SYMBOL_NEXT, on_next);
-    ysw_frame_add_header_button(frame, LV_SYMBOL_LOOP, on_loop);
+    seq_init_loop_btn(ysw_frame_add_header_button(frame, LV_SYMBOL_LOOP, on_loop));
     ysw_frame_add_header_button(frame, LV_SYMBOL_STOP, on_stop);
     ysw_frame_add_header_button(frame, LV_SYMBOL_PLAY, on_play);
     ysw_frame_add_header_button(frame, LV_SYMBOL_PREV, on_prev);

@@ -22,6 +22,7 @@
 
 #define TAG "SEQ"
 
+static bool is_loop;
 static QueueHandle_t seq_queue;
 
 static void on_note_on(ysw_note_t *note)
@@ -57,6 +58,10 @@ static void on_program_change(uint8_t channel, uint8_t program)
 
 void seq_send(ysw_seq_message_t *message)
 {
+    if (message->type == YSW_SEQ_LOOP) {
+        is_loop = message->loop.loop;
+        ESP_LOGD(TAG, "seq_send loop=%d", is_loop);
+    }
     if (seq_queue) {
         ysw_message_send(seq_queue, message);
     }
@@ -88,5 +93,12 @@ void seq_initialize()
     };
 
     seq_queue = ysw_seq_create_task(&config);
+}
+
+void seq_init_loop_btn(lv_obj_t *btn)
+{
+    ESP_LOGD(TAG, "seq_init_loop_btn loop=%d", is_loop);
+    lv_btn_set_toggle(btn, true);
+    lv_btn_set_state(btn, is_loop ? LV_BTN_STATE_TGL_REL : LV_BTN_STATE_REL);
 }
 

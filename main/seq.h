@@ -10,8 +10,10 @@
 #pragma once
 
 #include "ysw_seq.h"
+#include "lvgl.h"
 
 void seq_initialize();
 void seq_send(ysw_seq_message_t *message);
 void seq_rendezvous(ysw_seq_message_t *message);
+void seq_init_loop_btn(lv_obj_t *btn);
 

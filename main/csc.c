@@ -309,23 +309,12 @@ static void on_stop(csc_t *csc, lv_obj_t * btn)
 
 static void on_loop(csc_t *csc, lv_obj_t * btn)
 {
-    if (!lv_btn_get_toggle(btn)) {
-        // first press
-        lv_btn_set_toggle(btn, true);
-    }
-    if (lv_btn_get_state(btn) == LV_BTN_STATE_TGL_PR) {
-        ysw_seq_message_t message = {
-            .type = YSW_SEQ_LOOP,
-            .loop.loop = false,
-        };
-        seq_send(&message);
-    } else {
-        ysw_seq_message_t message = {
-            .type = YSW_SEQ_LOOP,
-            .loop.loop = true,
-        };
-        seq_send(&message);
-    }
+    ysw_seq_message_t message = {
+        .type = YSW_SEQ_LOOP,
+        //.loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_REL,
+        .loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_TGL_REL,
+    };
+    seq_send(&message);
 }
 
 static void on_prev(csc_t *csc, lv_obj_t * btn)
@@ -495,7 +484,7 @@ static ysw_frame_t *create_frame(csc_t *csc)
 
     ysw_frame_add_header_button(frame, LV_SYMBOL_CLOSE, on_close);
     ysw_frame_add_header_button(frame, LV_SYMBOL_NEXT, on_next);
-    ysw_frame_add_header_button(frame, LV_SYMBOL_LOOP, on_loop);
+    seq_init_loop_btn(ysw_frame_add_header_button(frame, LV_SYMBOL_LOOP, on_loop));
     ysw_frame_add_header_button(frame, LV_SYMBOL_STOP, on_stop);
     ysw_frame_add_header_button(frame, LV_SYMBOL_PLAY, on_play);
     ysw_frame_add_header_button(frame, LV_SYMBOL_PREV, on_prev);
