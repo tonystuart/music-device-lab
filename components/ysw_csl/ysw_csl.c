@@ -47,10 +47,14 @@ typedef struct {
     uint8_t width;
 } headings_t;
 
+#define PROFILE_LEFT 219
+#define PROFILE_WIDTH 100 
+#define PROFILE_SN_SPACING 4
+#define PROFILE_SN_HEIGHT 3
+
 static const headings_t headings[] = {
-    { "Chord Style", 159 },
-    { "Divisions", 80 },
-    { "Notes", 80 },
+    { "Chord Style", 219 },
+    { "Profile", 100 },
 };
 
 #define COLUMN_COUNT (sizeof(headings) / sizeof(headings_t))
@@ -114,14 +118,10 @@ static void move_selection(ysw_csl_t *csl, uint32_t cs_index)
 
 static void display_row(ysw_csl_t *csl, uint32_t i)
 {
-    char buffer[16];
     int row = i + 1; // +1 for headings
     ysw_cs_t *cs = ysw_music_get_cs(csl->music, i);
-    uint32_t sn_count = ysw_cs_get_sn_count(cs);
     lv_table_set_cell_crop(csl->table, row, 0, true);
     lv_table_set_cell_value(csl->table, row, 0, cs->name);
-    lv_table_set_cell_value(csl->table, row, 1, ysw_itoa(cs->divisions, buffer, sizeof(buffer)));
-    lv_table_set_cell_value(csl->table, row, 2, ysw_itoa(sn_count, buffer, sizeof(buffer)));
     for (int j = 0; j < COLUMN_COUNT; j++) {
         lv_table_set_cell_align(csl->table, row, j, LV_LABEL_ALIGN_CENTER);
         lv_table_set_cell_type(csl->table, row, j, YSW_CSL_WHITE);
@@ -429,6 +429,72 @@ static ysw_frame_t *create_frame(ysw_csl_t *csl)
     return frame;
 }
 
+static void draw_profile(ysw_csl_t *csl, uint32_t row, const lv_area_t *mask, const lv_area_t *cell_area)
+{
+    if (row > 0) {
+        uint32_t cs_index = row - 1;
+        if (cs_index < ysw_music_get_cs_count(csl->music)) {
+            ysw_cs_t *cs = ysw_music_get_cs(csl->music, cs_index);
+            lv_coord_t w = cell_area->x2 - cell_area->x1 - 2; // -2 for padding
+            lv_coord_t h = cell_area->y2 - cell_area->y1 - 2; // -2 for padding
+            float pixels_per_tick = (float)w / YSW_CS_DURATION;
+            float pixels_per_degree = 3;
+            uint32_t sn_count = ysw_cs_get_sn_count(cs);
+            for (uint32_t i = 0; i < sn_count; i++) {
+                ysw_sn_t *sn = ysw_cs_get_sn(cs, i);
+                lv_coord_t sn_top = (PROFILE_SN_SPACING * (YSW_MIDI_UNPO - sn->degree)) + 1; // +1 for pad
+                lv_coord_t sn_bottom = sn_top + PROFILE_SN_HEIGHT;
+                lv_area_t sn_area = {
+                    .x1 = cell_area->x1 + (pixels_per_tick * sn->start) + 1, // +1 for pad
+                    .x2 = cell_area->x1 + (pixels_per_tick * (sn->start + sn->duration)) -1, // -1 for pad
+                    .y1 = cell_area->y1 + sn_top,
+                    .y2 = cell_area->y1 + sn_bottom,
+                };
+                //ESP_LOGI(TAG, "i=%d, w=%d, h=%d, ppt=%g, ppd=%g, x1=%d, x2=%d, y1=%d, y2=%d", i, w, h, pixels_per_tick, pixels_per_degree, sn_area.x1, sn_area.x2, sn_area.y1, sn_area.y2);
+                lv_draw_rect(&sn_area, mask, &ysw_style_red_test, ysw_style_red_test.body.opa);
+            }
+        }
+    }
+}
+
+static bool on_table_design(lv_obj_t *table, const lv_area_t *mask, lv_design_mode_t mode)
+{
+    ysw_csl_t *csl = lv_obj_get_user_data(table);
+    bool result = csl->table_design_cb(table, mask, mode);
+    if (mode == LV_DESIGN_DRAW_MAIN) {
+        const lv_style_t *bg_style = lv_obj_get_style(table);
+
+        lv_coord_t h_row = 30;
+        lv_coord_t client_abs_left = table->coords.x1 + bg_style->body.padding.left;
+        lv_coord_t draw_abs_left = mask->x1 - client_abs_left;
+        lv_coord_t draw_abs_right = mask->x2 - client_abs_left;
+
+        if (draw_abs_right >= PROFILE_LEFT && draw_abs_left <= (PROFILE_LEFT + PROFILE_WIDTH)) {
+            lv_coord_t client_abs_top = table->coords.y1 + bg_style->body.padding.top;
+            lv_coord_t draw_abs_top = mask->y1 - client_abs_top;
+            lv_coord_t draw_abs_bottom = mask->y2 - client_abs_top;
+
+            lv_coord_t top_row = draw_abs_top / h_row;
+            lv_coord_t bottom_row = (draw_abs_bottom + h_row - 1) / h_row;
+
+            for (uint32_t i = top_row; i <= bottom_row; i++) {
+                lv_coord_t x = client_abs_left + PROFILE_LEFT;
+                lv_coord_t y = client_abs_top + (i * h_row);
+                //ESP_LOGD(TAG, "row=%d, x=%d, y=%d", i, x, y);
+                lv_area_t cell_area = {
+                    .x1 = x,
+                    .x2 = x + PROFILE_WIDTH,
+                    .y1 = y,
+                    .y2 = y + h_row,
+                };
+                draw_profile(csl, i, mask, &cell_area);
+            }
+        }
+        result = true;
+    }
+    return result;
+}
+
 ysw_csl_t *ysw_csl_create(ysw_music_t *music)
 {
     ysw_csl_t *csl = ysw_heap_allocate(sizeof(ysw_csl_t)); // freed in on_close
@@ -440,6 +506,9 @@ ysw_csl_t *ysw_csl_create(ysw_music_t *music)
 
     csl->table = lv_table_create(csl->frame->win, NULL);
     lv_obj_set_user_data(csl->table, csl);
+
+    csl->table_design_cb = lv_obj_get_design_cb(csl->table);
+    lv_obj_set_design_cb(csl->table, on_table_design);
 
     lv_obj_align(csl->table, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
@@ -461,6 +530,7 @@ ysw_csl_t *ysw_csl_create(ysw_music_t *music)
     display_rows(csl);
 
     lv_obj_t *page = lv_win_get_content(csl->frame->win);
+    lv_page_set_sb_mode(page, LV_SB_MODE_OFF);
     lv_obj_t *scrl = lv_page_get_scrl(page);
     lv_obj_set_user_data(scrl, csl);
     if (!prev_scrl_signal_cb) {

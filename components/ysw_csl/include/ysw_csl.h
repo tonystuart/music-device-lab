@@ -26,6 +26,7 @@ typedef struct ysw_csl_s {
     ysw_cs_t *clipboard_cs;
     ysw_frame_t *frame;
     lv_obj_t *table;
+    lv_design_cb_t table_design_cb;
     csl_close_cb_t close_cb;
     void *close_cb_context;
     lv_point_t click_point;

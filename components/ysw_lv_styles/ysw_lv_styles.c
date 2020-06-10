@@ -172,6 +172,10 @@ void ysw_lv_styles_initialize()
     ysw_style_btn_pr.text.opa = LV_OPA_COVER;
 
     lv_style_copy(&ysw_style_red_test, &lv_style_plain);
+    ysw_style_red_test.body.radius = 1;
+    ysw_style_red_test.body.border.width = 1;
+    ysw_style_red_test.body.border.part = LV_BORDER_FULL;
+    ysw_style_red_test.body.border.color = LV_COLOR_BLACK;
     ysw_style_red_test.body.main_color = LV_COLOR_RED;
     ysw_style_red_test.body.grad_color = LV_COLOR_RED;
 }
