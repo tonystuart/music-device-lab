@@ -59,6 +59,32 @@ static const headings_t headings[] = {
 
 #define COLUMN_COUNT (sizeof(headings) / sizeof(headings_t))
 
+#define USE_HEADINGS 0
+
+#if USE_HEADINGS
+// +1 for headings
+static int32_t to_row(int32_t index)
+{
+    return index + 1;
+}
+
+// -1 for headings
+static int32_t to_cs_index(int32_t row)
+{
+    return row - 1;
+}
+#else
+static int32_t to_row(int32_t index)
+{
+    return index;
+}
+
+static int32_t to_cs_index(int32_t row)
+{
+    return row;
+}
+#endif
+
 static void ensure_visible(ysw_csl_t *csl, uint32_t row)
 {
     lv_obj_t *page = lv_win_get_content(csl->frame->win);
@@ -87,7 +113,7 @@ static void ensure_visible(ysw_csl_t *csl, uint32_t row)
 
 static void hide_selected_cs(ysw_csl_t *csl)
 {
-    uint32_t row = csl->cs_index + 1; // +1 for headings
+    uint32_t row = to_row(csl->cs_index);
     for (int i = 0; i < COLUMN_COUNT; i++) {
         lv_table_set_cell_type(csl->table, row, i, YSW_CSL_WHITE);
     }
@@ -97,7 +123,7 @@ static void hide_selected_cs(ysw_csl_t *csl)
 
 static void show_selected_cs(ysw_csl_t *csl)
 {
-    uint32_t row = csl->cs_index + 1; // +1 for headings
+    uint32_t row = to_row(csl->cs_index);
     for (uint32_t i = 0; i < COLUMN_COUNT; i++) {
         lv_table_set_cell_type(csl->table, row, i, YSW_CSL_YELLOW);
     }
@@ -118,7 +144,7 @@ static void move_selection(ysw_csl_t *csl, uint32_t cs_index)
 
 static void display_row(ysw_csl_t *csl, uint32_t i)
 {
-    int row = i + 1; // +1 for headings
+    int row = to_row(i);
     ysw_cs_t *cs = ysw_music_get_cs(csl->music, i);
     lv_table_set_cell_crop(csl->table, row, 0, true);
     lv_table_set_cell_value(csl->table, row, 0, cs->name);
@@ -132,7 +158,7 @@ static void display_rows(ysw_csl_t *csl)
 {
     ysw_frame_set_footer_text(csl->frame, "");
     uint32_t cs_count = ysw_music_get_cs_count(csl->music);
-    lv_table_set_row_cnt(csl->table, cs_count + 1); // +1 for headings
+    lv_table_set_row_cnt(csl->table, to_row(cs_count));
     if (cs_count) {
         for (uint32_t i = 0; i < cs_count; i++) {
             display_row(csl, i);
@@ -189,7 +215,7 @@ static lv_res_t scrl_signal_cb(lv_obj_t *scrl, lv_signal_t signal, void *param)
         if (!csl->dragged) {
             uint16_t row = get_row(scrl, param);
             if (row) {
-                move_selection(csl, row - 1); // -1 for headings;
+                move_selection(csl, to_cs_index(row));
             }
         }
     } else if (signal == LV_SIGNAL_LONG_PRESS) {
@@ -197,7 +223,7 @@ static lv_res_t scrl_signal_cb(lv_obj_t *scrl, lv_signal_t signal, void *param)
             lv_indev_wait_release((lv_indev_t *)param);
             uint16_t row = get_row(scrl, param);
             if (row) {
-                edit_cs(csl, row - 1); // -1 for headings;
+                edit_cs(csl, to_cs_index(row));
             }
         }
     } else if (signal == LV_SIGNAL_PRESSING) {
@@ -431,8 +457,8 @@ static ysw_frame_t *create_frame(ysw_csl_t *csl)
 
 static void draw_profile(ysw_csl_t *csl, uint32_t row, const lv_area_t *mask, const lv_area_t *cell_area)
 {
-    if (row > 0) {
-        uint32_t cs_index = row - 1;
+    uint32_t cs_index = to_cs_index(row);
+    if (cs_index >= 0) {
         if (cs_index < ysw_music_get_cs_count(csl->music)) {
             ysw_cs_t *cs = ysw_music_get_cs(csl->music, cs_index);
             lv_coord_t w = cell_area->x2 - cell_area->x1 - 2; // -2 for padding
@@ -517,13 +543,17 @@ ysw_csl_t *ysw_csl_create(ysw_music_t *music)
     lv_table_set_style(csl->table, YSW_CSL_WHITE, &ysw_style_white_cell);
     lv_table_set_style(csl->table, YSW_CSL_YELLOW, &ysw_style_yellow_cell);
 
+#if USE_HEADINGS
     lv_table_set_row_cnt(csl->table, 1); // just headings for now
+#endif
     lv_table_set_col_cnt(csl->table, COLUMN_COUNT);
 
     for (int i = 0; i < COLUMN_COUNT; i++) {
+#if USE_HEADINGS
         lv_table_set_cell_type(csl->table, 0, i, YSW_CSL_GRAY);
         lv_table_set_cell_align(csl->table, 0, i, LV_LABEL_ALIGN_CENTER);
         lv_table_set_cell_value(csl->table, 0, i, headings[i].name);
+#endif
         lv_table_set_col_width(csl->table, i, headings[i].width);
     }
 
