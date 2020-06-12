@@ -49,21 +49,28 @@ ysw_frame_t *ysw_frame_create(void *context)
     lv_coord_t footer_h = BUTTON_SIZE + BUTTON_PAD + BUTTON_PAD;
 
     frame->container = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_set_style(frame->container, &ysw_style_none);
+    //v7: lv_obj_set_style(frame->container, &ysw_style_none);
     lv_obj_set_size(frame->container, display_w, display_h);
 
     frame->win = lv_win_create(frame->container, NULL);
-    lv_win_set_style(frame->win, LV_WIN_STYLE_BG, &ysw_style_none);
+    //v7: lv_win_set_style(frame->win, LV_WIN_STYLE_BG, &ysw_style_none);
     // NB: LV_WIN_STYLE_CONTENT and LV_PAGE_STYLE_SCRL are equivalent
 
+    //afs: see if this works:
+    lv_obj_set_size(frame->win, display_w, display_h);
+
     lv_obj_t *page = lv_win_get_content(frame->win);
-    lv_page_set_style(page, LV_PAGE_STYLE_BG, &ysw_style_none);
-    lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &ysw_style_none); // e.g. scroll area below short table
+    //v7: lv_page_set_style(page, LV_PAGE_STYLE_BG, &ysw_style_none);
+    //v7: lv_page_set_style(page, LV_PAGE_STYLE_SCRL, &ysw_style_none); // e.g. scroll area below short table
 
     lv_win_set_title(frame->win, "");
-    lv_win_set_btn_size(frame->win, BUTTON_SIZE);
+    //v7: lv_win_set_btn_size(frame->win, BUTTON_SIZE);
     lv_obj_set_height(frame->win, display_h - footer_h);
     lv_win_ext_t *ext = lv_obj_get_ext_attr(frame->win);
+
+    //afs: see if this works:
+    lv_obj_set_height(ext->header, footer_h);
+
     lv_obj_set_user_data(ext->header, context);
 
     frame->footer = lv_obj_create(frame->container, NULL);
@@ -93,9 +100,10 @@ lv_obj_t *ysw_frame_add_footer_button(ysw_frame_t *frame, const void *img_src, v
 
     lv_obj_t *btn = lv_btn_create(frame->footer, NULL);
 
-    lv_btn_set_style(btn, LV_BTN_STYLE_REL, ext->style_btn_rel);
-    lv_btn_set_style(btn, LV_BTN_STYLE_PR, ext->style_btn_pr);
-    lv_obj_set_size(btn, ext->btn_size, ext->btn_size);
+    //v7: lv_btn_set_style(btn, LV_BTN_STYLE_REL, ext->style_btn_rel);
+    //v7: lv_btn_set_style(btn, LV_BTN_STYLE_PR, ext->style_btn_pr);
+    lv_coord_t btn_size = lv_obj_get_height_fit(ext->header); //v7
+    lv_obj_set_size(btn, btn_size, btn_size); //v7
 
     lv_obj_t *img = lv_img_create(btn, NULL);
     lv_obj_set_click(img, false);
@@ -118,8 +126,8 @@ void ysw_frame_set_content(ysw_frame_t *frame, lv_obj_t *object)
 {
     ESP_LOGD(TAG, "ysw_frame_set_content");
     lv_obj_t *page = lv_win_get_content(frame->win);
-    lv_coord_t w = lv_page_get_fit_width(page);
-    lv_coord_t h = lv_page_get_fit_height(page);
+    lv_coord_t w = lv_page_get_width_fit(page);
+    lv_coord_t h = lv_page_get_height_fit(page);
     lv_obj_set_size(object, w, h);
     lv_obj_align(object, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 }

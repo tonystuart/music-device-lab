@@ -84,8 +84,8 @@ void app_main()
     if (music && ysw_music_get_cs_count(music) > 0) {
         create_dashboard();
     } else {
-        lv_obj_t *mbox1 = lv_mbox_create(lv_scr_act(), NULL);
-        lv_mbox_set_text(mbox1, "The music partition is empty");
+        lv_obj_t *mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
+        lv_msgbox_set_text(mbox1, "The music partition is empty");
         lv_obj_set_width(mbox1, 200);
         lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0);
     }

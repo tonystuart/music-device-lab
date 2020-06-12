@@ -34,9 +34,9 @@
 
 #define ROW_HEIGHT 30 // TODO: calculate this
 
-#define YSW_CSL_WHITE LV_TABLE_STYLE_CELL1
-#define YSW_CSL_GRAY LV_TABLE_STYLE_CELL2
-#define YSW_CSL_YELLOW LV_TABLE_STYLE_CELL3
+#define YSW_CSL_WHITE 1
+#define YSW_CSL_GRAY 2
+#define YSW_CSL_YELLOW 3
 
 // See https://en.wikipedia.org/wiki/Chord_letters#Chord_quality
 
@@ -118,7 +118,7 @@ static void hide_selected_cs(ysw_csl_t *csl)
         lv_table_set_cell_type(csl->table, row, i, YSW_CSL_WHITE);
     }
     ysw_frame_set_footer_text(csl->frame, "");
-    lv_obj_refresh_style(csl->table);
+    //v7: lv_obj_refresh_style(csl->table);
 }
 
 static void show_selected_cs(ysw_csl_t *csl)
@@ -131,7 +131,7 @@ static void show_selected_cs(ysw_csl_t *csl)
     uint32_t cs_count = ysw_music_get_cs_count(csl->music);
     snprintf(buf, sizeof(buf), "%d of %d", row, cs_count);
     ysw_frame_set_footer_text(csl->frame, buf);
-    lv_obj_refresh_style(csl->table);
+    //v7: lv_obj_refresh_style(csl->table);
     ensure_visible(csl, row);
 }
 
@@ -417,8 +417,8 @@ static void on_loop(ysw_csl_t *csl, lv_obj_t * btn)
     ESP_LOGD(TAG, "on_loop btn state=%d", lv_btn_get_state(btn));
     ysw_seq_message_t message = {
         .type = YSW_SEQ_LOOP,
-        //.loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_REL,
-        .loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_TGL_REL,
+        //.loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_RELEASED,
+        .loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_CHECKED_RELEASED,
     };
     seq_send(&message);
 }
@@ -457,14 +457,14 @@ static ysw_frame_t *create_frame(ysw_csl_t *csl)
 
 static void draw_profile(ysw_csl_t *csl, uint32_t row, const lv_area_t *mask, const lv_area_t *cell_area)
 {
-    uint32_t cs_index = to_cs_index(row);
-    if (cs_index >= 0) {
+#if USE_HEADINGS
+    if (row > 0) {
+#endif
+        uint32_t cs_index = to_cs_index(row);
         if (cs_index < ysw_music_get_cs_count(csl->music)) {
             ysw_cs_t *cs = ysw_music_get_cs(csl->music, cs_index);
             lv_coord_t w = cell_area->x2 - cell_area->x1 - 2; // -2 for padding
-            lv_coord_t h = cell_area->y2 - cell_area->y1 - 2; // -2 for padding
             float pixels_per_tick = (float)w / YSW_CS_DURATION;
-            float pixels_per_degree = 3;
             uint32_t sn_count = ysw_cs_get_sn_count(cs);
             for (uint32_t i = 0; i < sn_count; i++) {
                 ysw_sn_t *sn = ysw_cs_get_sn(cs, i);
@@ -476,27 +476,28 @@ static void draw_profile(ysw_csl_t *csl, uint32_t row, const lv_area_t *mask, co
                     .y1 = cell_area->y1 + sn_top,
                     .y2 = cell_area->y1 + sn_bottom,
                 };
-                //ESP_LOGI(TAG, "i=%d, w=%d, h=%d, ppt=%g, ppd=%g, x1=%d, x2=%d, y1=%d, y2=%d", i, w, h, pixels_per_tick, pixels_per_degree, sn_area.x1, sn_area.x2, sn_area.y1, sn_area.y2);
-                lv_draw_rect(&sn_area, mask, &ysw_style_red_test, ysw_style_red_test.body.opa);
+                lv_draw_rect(&sn_area, mask, &rect_dsc);
             }
         }
+#if USE_HEADINGS
     }
+#endif
 }
 
-static bool on_table_design(lv_obj_t *table, const lv_area_t *mask, lv_design_mode_t mode)
+static lv_design_res_t on_table_design(lv_obj_t *table, const lv_area_t *mask, lv_design_mode_t mode)
 {
     ysw_csl_t *csl = lv_obj_get_user_data(table);
     bool result = csl->table_design_cb(table, mask, mode);
     if (mode == LV_DESIGN_DRAW_MAIN) {
-        const lv_style_t *bg_style = lv_obj_get_style(table);
+        //v7: const lv_style_t *bg_style = lv_obj_get_style(table);
 
         lv_coord_t h_row = 30;
-        lv_coord_t client_abs_left = table->coords.x1 + bg_style->body.padding.left;
+        lv_coord_t client_abs_left = table->coords.x1 + 0; //v7: bg_style->body.padding.left;
         lv_coord_t draw_abs_left = mask->x1 - client_abs_left;
         lv_coord_t draw_abs_right = mask->x2 - client_abs_left;
 
         if (draw_abs_right >= PROFILE_LEFT && draw_abs_left <= (PROFILE_LEFT + PROFILE_WIDTH)) {
-            lv_coord_t client_abs_top = table->coords.y1 + bg_style->body.padding.top;
+            lv_coord_t client_abs_top = table->coords.y1 + 0; //v7: bg_style->body.padding.top;
             lv_coord_t draw_abs_top = mask->y1 - client_abs_top;
             lv_coord_t draw_abs_bottom = mask->y2 - client_abs_top;
 
@@ -533,15 +534,15 @@ ysw_csl_t *ysw_csl_create(ysw_music_t *music)
     csl->table = lv_table_create(csl->frame->win, NULL);
     lv_obj_set_user_data(csl->table, csl);
 
-    csl->table_design_cb = lv_obj_get_design_cb(csl->table);
-    lv_obj_set_design_cb(csl->table, on_table_design);
+    //afs: csl->table_design_cb = lv_obj_get_design_cb(csl->table);
+    //afs: lv_obj_set_design_cb(csl->table, on_table_design);
 
     lv_obj_align(csl->table, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
 
-    lv_table_set_style(csl->table, LV_TABLE_STYLE_BG, &ysw_style_table_bg);
-    lv_table_set_style(csl->table, YSW_CSL_GRAY, &ysw_style_gray_cell);
-    lv_table_set_style(csl->table, YSW_CSL_WHITE, &ysw_style_white_cell);
-    lv_table_set_style(csl->table, YSW_CSL_YELLOW, &ysw_style_yellow_cell);
+    //v7: lv_table_set_style(csl->table, LV_TABLE_STYLE_BG, &ysw_style_table_bg);
+    //v7: lv_table_set_style(csl->table, YSW_CSL_GRAY, &ysw_style_gray_cell);
+    //v7: lv_table_set_style(csl->table, YSW_CSL_WHITE, &ysw_style_white_cell);
+    //v7: lv_table_set_style(csl->table, YSW_CSL_YELLOW, &ysw_style_yellow_cell);
 
 #if USE_HEADINGS
     lv_table_set_row_cnt(csl->table, 1); // just headings for now
@@ -560,13 +561,13 @@ ysw_csl_t *ysw_csl_create(ysw_music_t *music)
     display_rows(csl);
 
     lv_obj_t *page = lv_win_get_content(csl->frame->win);
-    lv_page_set_sb_mode(page, LV_SB_MODE_OFF);
+    lv_page_set_scrollbar_mode(page, LV_SCROLLBAR_MODE_OFF);
     lv_obj_t *scrl = lv_page_get_scrl(page);
     lv_obj_set_user_data(scrl, csl);
-    if (!prev_scrl_signal_cb) {
-        prev_scrl_signal_cb = lv_obj_get_signal_cb(scrl);
-    }
-    lv_obj_set_signal_cb(scrl, scrl_signal_cb);
+    //afs: if (!prev_scrl_signal_cb) {
+    //afs:     prev_scrl_signal_cb = lv_obj_get_signal_cb(scrl);
+    //afs: }
+    //afs: lv_obj_set_signal_cb(scrl, scrl_signal_cb);
 
     return csl;
 }

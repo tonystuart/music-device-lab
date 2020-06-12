@@ -69,8 +69,8 @@ static void on_csc_close(ssc_t *ssc, csc_t *csc)
     uint32_t cs_index = 0;
     char *chord_styles = get_chord_styles(ssc, &cs_index);
     ESP_LOGD(TAG, "on_csc_close chord_styles=%s", chord_styles);
-    lv_ddlist_set_options(ssc->styles, chord_styles);
-    lv_ddlist_set_selected(ssc->styles, cs_index);
+    lv_dropdown_set_options(ssc->styles, chord_styles);
+    lv_dropdown_set_selected(ssc->styles, cs_index);
     ysw_heap_free(chord_styles);
 }
 

@@ -267,8 +267,8 @@ static void on_loop(hpc_t *hpc, lv_obj_t *btn)
 {
     ysw_seq_message_t message = {
         .type = YSW_SEQ_LOOP,
-        //.loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_REL,
-        .loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_TGL_REL,
+        //.loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_RELEASED,
+        .loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_CHECKED_RELEASED,
     };
     seq_send(&message);
 }

@@ -96,7 +96,7 @@ static void IRAM_ATTR pre_cb(spi_transaction_t *transaction)
 static void IRAM_ATTR post_cb(spi_transaction_t *transaction)
 {
     if((uint32_t)transaction->user & FLUSH_READY) {
-        lv_disp_t *disp = lv_refr_get_disp_refreshing();
+        lv_disp_t *disp = _lv_refr_get_disp_refreshing();
         lv_disp_flush_ready(&disp->driver);
     }
 }

@@ -12,6 +12,7 @@
 
 #define TAG "YSW_LV_STYLES"
 
+#if 0
 lv_style_t ysw_style_none;
 lv_style_t ysw_style_pretty_color_tight;
 lv_style_t ysw_style_sdb_content;
@@ -31,9 +32,15 @@ lv_style_t ysw_style_btn_rel;
 lv_style_t ysw_style_btn_pr;
 
 lv_style_t ysw_style_red_test;
+#else
+lv_draw_rect_dsc_t rect_dsc;
+lv_draw_label_dsc_t label_dsc;
+lv_draw_line_dsc_t line_dsc;
+#endif
 
 void ysw_lv_styles_initialize()
 {
+#if 0
     lv_style_copy(&ysw_style_none, &lv_style_scr);
     ysw_style_none.body.padding.inner = 0;
     ysw_style_none.line.width = 0;
@@ -178,5 +185,15 @@ void ysw_lv_styles_initialize()
     ysw_style_red_test.body.border.color = LV_COLOR_BLACK;
     ysw_style_red_test.body.main_color = LV_COLOR_RED;
     ysw_style_red_test.body.grad_color = LV_COLOR_RED;
+#else
+    lv_draw_rect_dsc_init(&rect_dsc);
+    //lv_obj_init_draw_rect_dsc(table, 0, &rect_dsc);
+
+    lv_draw_label_dsc_init(&label_dsc);
+    //lv_obj_init_draw_label_dsc(table, 0, &label_dsc);
+
+    lv_draw_line_dsc_init(&line_dsc);
+    //lv_obj_init_draw_line_dsc(table, 0, &line_dsc);
+#endif
 }
 

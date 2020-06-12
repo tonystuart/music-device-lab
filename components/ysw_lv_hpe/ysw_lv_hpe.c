@@ -14,6 +14,7 @@
 #include "ysw_ticks.h"
 
 #include "lvgl.h"
+#include "lv_debug.h"
 
 #include "esp_log.h"
 
@@ -132,7 +133,7 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
         .y = m.hp_top,
     };
 
-    lv_draw_line(&top_left, &top_right, mask, ext->fg_style, ext->fg_style->body.border.opa);
+    lv_draw_line(&top_left, &top_right, mask, &line_dsc);
 
     lv_point_t bottom_left = {
         .x = m.hpe_left,
@@ -144,7 +145,7 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
         .y = m.hp_top + m.hp_height,
     };
 
-    lv_draw_line(&bottom_left, &bottom_right, mask, ext->fg_style, ext->fg_style->body.border.opa);
+    lv_draw_line(&bottom_left, &bottom_right, mask, &line_dsc);
 
     uint8_t pss_in_measures[ps_count];
 
@@ -171,25 +172,16 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
             measure++;
             lv_area_t heading_mask;
 
-            if (lv_area_intersect(&heading_mask, mask, &heading_area)) {
+            if (_lv_area_intersect(&heading_mask, mask, &heading_area)) {
                 lv_point_t offset = {
                     .x = 0,
-                    .y = ((heading_area.y2 - heading_area.y1) - ext->fg_style->text.font->line_height) / 2,
+                    .y = ((heading_area.y2 - heading_area.y1) - 20) / 2, //v7.1: ext->fg_style->text.font->line_height) / 2,
                 };
 
                 char buffer[32];
                 ysw_itoa(measure, buffer, sizeof(buffer));
 
-                lv_draw_label(&heading_area,
-                        &heading_mask,
-                        ext->fg_style,
-                        ext->fg_style->text.opa,
-                        buffer,
-                        LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
-                        &offset,
-                        NULL,
-                        NULL,
-                        LV_BIDI_DIR_LTR);
+                lv_draw_label(&heading_area, &heading_mask, &label_dsc, buffer, NULL);
             }
 
         }
@@ -204,7 +196,7 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
                 .x = left,
                 .y = m.hp_top + m.hp_height,
             };
-            lv_draw_line(&top, &bottom, mask, ext->fg_style, ext->fg_style->body.border.opa);
+            lv_draw_line(&top, &bottom, mask, &line_dsc);
         }
 
         lv_coord_t cell_top = m.hp_top + ((YSW_MIDI_UNPO - ps->degree) * m.row_height);
@@ -218,30 +210,21 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
 
         lv_area_t cell_mask;
 
-        if (lv_area_intersect(&cell_mask, mask, &cell_area)) {
+        if (_lv_area_intersect(&cell_mask, mask, &cell_area)) {
 
-              if (ysw_ps_is_selected(ps)) {
-                  lv_draw_rect(&cell_area, &cell_mask, ext->ss_style, ext->ss_style->body.opa);
-              } else {
-                  lv_draw_rect(&cell_area, &cell_mask, ext->rs_style, ext->rs_style->body.opa);
-              }
+            if (ysw_ps_is_selected(ps)) {
+                lv_draw_rect(&cell_area, &cell_mask, &rect_dsc);
+            } else {
+                lv_draw_rect(&cell_area, &cell_mask, &rect_dsc);
+            }
 
-        // vertically center the text
-        lv_point_t offset = {
-            .x = 0,
-            .y = ((cell_area.y2 - cell_area.y1) - ext->fg_style->text.font->line_height) / 2,
-        };
+            // vertically center the text
+            lv_point_t offset = {
+                .x = 0,
+                .y = ((cell_area.y2 - cell_area.y1) - 20) / 2, //v7.1: ext->fg_style->text.font->line_height) / 2,
+            };
 
-        lv_draw_label(&cell_area,
-                &cell_mask,
-                ext->fg_style,
-                ext->fg_style->text.opa,
-                key_labels[to_index(ps->degree)],
-                LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
-                &offset,
-                NULL,
-                NULL,
-                LV_BIDI_DIR_LTR);
+            lv_draw_label(&cell_area, &cell_mask, &label_dsc, key_labels[to_index(ps->degree)], NULL);
         }
 
         //if (ps == ext->clicked_ps) {
@@ -256,24 +239,15 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
 
             lv_area_t footer_mask;
 
-            if (lv_area_intersect(&footer_mask, mask, &footer_area)) {
+            if (_lv_area_intersect(&footer_mask, mask, &footer_area)) {
 
                 // vertically center the text
                 lv_point_t offset = {
                     .x = 0,
-                    .y = ((footer_area.y2 - footer_area.y1) - ext->fg_style->text.font->line_height) / 2
+                    .y = ((footer_area.y2 - footer_area.y1) - 20) / 2, //v7.1: ext->fg_style->text.font->line_height) / 2
                 };
 
-                lv_draw_label(&footer_area,
-                        &footer_mask,
-                        ext->fg_style,
-                        ext->fg_style->text.opa,
-                        ps->cs->name,
-                        LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
-                        &offset,
-                        NULL,
-                        NULL,
-                        LV_BIDI_DIR_LTR);
+                lv_draw_label(&footer_area, &footer_mask, &label_dsc, ps->cs->name, NULL);
             }
         }
 
@@ -288,11 +262,11 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mod
             .x = left,
             .y = m.hp_top + m.hp_height,
         };
-        lv_draw_line(&top, &bottom, mask, ext->ms_style, ext->ms_style->body.border.opa);
+        lv_draw_line(&top, &bottom, mask, &line_dsc);
     }
 }
 
-static bool design_cb(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mode)
+static lv_design_res_t design_cb(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mode)
 {
     bool result = true;
     switch (mode) {
@@ -638,15 +612,15 @@ lv_obj_t *ysw_lv_hpe_create(lv_obj_t *par, void *context)
 
     *ext = (ysw_lv_hpe_ext_t){
         .metro_marker = -1,
-        .bg_style = &lv_style_plain,
-        .fg_style = &ysw_style_ei,
-        .rs_style = &ysw_style_rn,
-        .ss_style = &ysw_style_sn,
-        .ms_style = &ysw_style_mn,
+        //v7: .bg_style = &lv_style_plain,
+        //v7: .fg_style = &ysw_style_ei,
+        //v7: .rs_style = &ysw_style_rn,
+        //v7: .ss_style = &ysw_style_sn,
+        //v7: .ms_style = &ysw_style_mn,
         .context = context,
     };
 
-    lv_obj_set_style(hpe, ext->bg_style);
+    //v7: lv_obj_set_style(hpe, ext->bg_style);
     lv_obj_set_signal_cb(hpe, signal_cb);
     lv_obj_set_design_cb(hpe, design_cb);
     lv_obj_set_click(hpe, true);

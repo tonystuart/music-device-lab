@@ -17,6 +17,7 @@
 #include "ysw_ticks.h"
 
 #include "lvgl.h"
+#include "lv_debug.h"
 
 #include "esp_log.h"
 
@@ -124,12 +125,12 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         };
 
         lv_area_t row_mask;
-        if (lv_area_intersect(&row_mask, mask, &row_area)) {
+        if (_lv_area_intersect(&row_mask, mask, &row_area)) {
 
             if (i & 0x01) {
-                lv_draw_rect(&row_area, &row_mask, ext->oi_style, ext->oi_style->body.opa);
+                lv_draw_rect(&row_area, &row_mask, &rect_dsc);
             } else {
-                lv_draw_rect(&row_area, &row_mask, ext->ei_style, ext->ei_style->body.opa);
+                lv_draw_rect(&row_area, &row_mask, &rect_dsc);
 
                 lv_area_t label_mask;
                 lv_area_t label_area = {
@@ -138,17 +139,8 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                     .x2 = row_area.x1 + 50,
                     .y2 = row_area.y1 + 15
                 };
-                if (lv_area_intersect(&label_mask, mask, &label_area)) {
-                    lv_draw_label(&label_area,
-                            &label_mask,
-                            ext->ei_style,
-                            ext->ei_style->text.opa,
-                            key_labels[i],
-                            LV_TXT_FLAG_EXPAND,
-                            NULL,
-                            NULL,
-                            NULL,
-                            LV_BIDI_DIR_LTR);
+                if (_lv_area_intersect(&label_mask, mask, &label_area)) {
+                    lv_draw_label(&label_area, &label_mask, &label_dsc, key_labels[i], NULL);
                 }
             }
 
@@ -162,9 +154,9 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                     .y = row_area.y1
                 };
                 if (i & 0x01) {
-                    lv_draw_line(&point1, &point2, mask, ext->oi_style, ext->oi_style->body.border.opa);
+                    lv_draw_line(&point1, &point2, mask, &line_dsc);
                 } else {
-                    lv_draw_line(&point1, &point2, mask, ext->ei_style, ext->ei_style->body.border.opa);
+                    lv_draw_line(&point1, &point2, mask, &line_dsc);
                 }
             }
         }
@@ -179,7 +171,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             .x = m.cse_left + ((i * m.cse_width) / ext->cs->divisions),
             .y = m.cse_top + m.cse_height
         };
-        lv_draw_line(&point1, &point2, mask, ext->ei_style, ext->ei_style->body.border.opa);
+        lv_draw_line(&point1, &point2, mask, &line_dsc);
     }
 
     uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
@@ -194,17 +186,17 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
 
         lv_area_t sn_mask;
 
-        if (lv_area_intersect(&sn_mask, mask, &sn_area)) {
+        if (_lv_area_intersect(&sn_mask, mask, &sn_area)) {
 
             if (ysw_sn_is_selected(sn)) {
                 // TODO: remove block if we don't use a separate style for dragging
                 if (ext->dragging) {
-                    lv_draw_rect(&sn_area, &sn_mask, ext->sn_style, ext->sn_style->body.opa);
+                    lv_draw_rect(&sn_area, &sn_mask, &rect_dsc);
                 } else {
-                    lv_draw_rect(&sn_area, &sn_mask, ext->sn_style, ext->sn_style->body.opa);
+                    lv_draw_rect(&sn_area, &sn_mask, &rect_dsc);
                 }
             } else {
-                lv_draw_rect(&sn_area, &sn_mask, ext->rn_style, ext->rn_style->body.opa);
+                lv_draw_rect(&sn_area, &sn_mask, &rect_dsc);
             }
 
             char buffer[32];
@@ -217,45 +209,18 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             // vertically center the text
             lv_point_t offset = {
                 .x = 0,
-                .y = ((sn_area.y2 - sn_area.y1) - ext->rn_style->text.font->line_height) / 2
+                .y = ((sn_area.y2 - sn_area.y1) - 20) / 2, //v7.1: ext->rn_style->text.font->line_height) / 2
             };
 
             if (ysw_sn_is_selected(sn)) {
                 // TODO: remove block if we don't use a separate style for dragging
                 if (ext->dragging) {
-                    lv_draw_label(&sn_area,
-                            &sn_mask,
-                            ext->sn_style,
-                            ext->sn_style->text.opa,
-                            buffer,
-                            LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
-                            &offset,
-                            NULL,
-                            NULL,
-                            LV_BIDI_DIR_LTR);
+                    lv_draw_label(&sn_area, &sn_mask, &label_dsc, buffer, NULL);
                 } else {
-                    lv_draw_label(&sn_area,
-                            &sn_mask,
-                            ext->sn_style,
-                            ext->sn_style->text.opa,
-                            buffer,
-                            LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
-                            &offset,
-                            NULL,
-                            NULL,
-                            LV_BIDI_DIR_LTR);
+                    lv_draw_label(&sn_area, &sn_mask, &label_dsc, buffer, NULL);
                 }
             } else {
-                lv_draw_label(&sn_area,
-                        &sn_mask,
-                        ext->rn_style,
-                        ext->rn_style->text.opa,
-                        buffer,
-                        LV_TXT_FLAG_EXPAND | LV_TXT_FLAG_CENTER,
-                        &offset,
-                        NULL,
-                        NULL,
-                        LV_BIDI_DIR_LTR);
+                lv_draw_label(&sn_area, &sn_mask, &label_dsc, buffer, NULL);
             }
         }
     }
@@ -269,11 +234,11 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             .x = m.cse_left + ((m.cse_width * ext->metro_marker) / YSW_CS_DURATION),
             .y = m.cse_top + m.cse_height,
         };
-        lv_draw_line(&top, &bottom, mask, ext->mn_style, ext->mn_style->body.border.opa);
+        lv_draw_line(&top, &bottom, mask, &line_dsc);
     }
 }
 
-static bool design_cb(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mode)
+static lv_design_res_t design_cb(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mode)
 {
     bool result = true;
     switch (mode) {
@@ -681,16 +646,16 @@ lv_obj_t *ysw_lv_cse_create(lv_obj_t *par, void *context)
 
     *ext = (ysw_lv_cse_ext_t){
         .metro_marker = -1,
-        .bg_style = &lv_style_plain,
-        .oi_style = &ysw_style_oi,
-        .ei_style = &ysw_style_ei,
-        .rn_style = &ysw_style_rn,
-        .sn_style = &ysw_style_sn,
-        .mn_style = &ysw_style_mn,
+        //v7: .bg_style = &lv_style_plain,
+        //v7: .oi_style = &ysw_style_oi,
+        //v7: .ei_style = &ysw_style_ei,
+        //v7: .rn_style = &ysw_style_rn,
+        //v7: .sn_style = &ysw_style_sn,
+        //v7: .mn_style = &ysw_style_mn,
         .context = context,
     };
 
-    lv_obj_set_style(cse, ext->bg_style);
+    //v7: lv_obj_set_style(cse, ext->bg_style);
     lv_obj_set_signal_cb(cse, signal_cb);
     lv_obj_set_design_cb(cse, design_cb);
     lv_obj_set_click(cse, true);

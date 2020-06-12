@@ -98,7 +98,7 @@ void seq_initialize()
 void seq_init_loop_btn(lv_obj_t *btn)
 {
     ESP_LOGD(TAG, "seq_init_loop_btn loop=%d", is_loop);
-    lv_btn_set_toggle(btn, true);
-    lv_btn_set_state(btn, is_loop ? LV_BTN_STATE_TGL_REL : LV_BTN_STATE_REL);
+    lv_btn_set_checkable(btn, true);
+    lv_btn_set_state(btn, is_loop ? LV_BTN_STATE_CHECKED_RELEASED : LV_BTN_STATE_RELEASED);
 }
 
