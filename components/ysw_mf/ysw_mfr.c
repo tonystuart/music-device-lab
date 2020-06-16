@@ -19,6 +19,7 @@
 #include "assert.h"
 #include "errno.h"
 #include "setjmp.h"
+#include "stdlib.h"
 
 #define TAG "YSW_MFR"
 

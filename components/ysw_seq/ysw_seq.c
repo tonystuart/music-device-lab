@@ -9,11 +9,12 @@
 
 #include "ysw_seq.h"
 
-#include "esp_log.h"
 #include "ysw_heap.h"
 #include "ysw_task.h"
 #include "ysw_midi.h"
 #include "ysw_ticks.h"
+#include "esp_log.h"
+#include "time.h"
 
 #define TAG "YSW_SEQ"
 
@@ -386,7 +387,6 @@ static TickType_t process_notes(ysw_seq_t *seq)
 
 static void run_task(ysw_seq_t *seq)
 {
-    ESP_LOGD(TAG, "run_task core=%d", xPortGetCoreID());
     BaseType_t is_message = false;
     ysw_seq_message_t message = (ysw_seq_message_t){};
     for (;;) {

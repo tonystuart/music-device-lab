@@ -7,18 +7,18 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "csc.h"
-#include "hpc.h"
-#include "display.h"
-#include "gsc.h"
-#include "seq.h"
-#include "spiffs.h"
-#include "synthesizer.h"
+#include "ysw_main_display.h"
 
+#include "ysw_csc.h"
 #include "ysw_csl.h"
+#include "ysw_gsc.h"
+#include "ysw_hpc.h"
 #include "ysw_music.h"
 #include "ysw_mfr.h"
-#include "ysw_lv_styles.h"
+#include "ysw_main_seq.h"
+#include "ysw_spiffs.h"
+#include "ysw_styles.h"
+#include "ysw_main_synth.h"
 
 #include "lvgl/lvgl.h"
 
@@ -33,12 +33,12 @@ static void event_handler(lv_obj_t *btn, lv_event_t event)
     if (event == LV_EVENT_CLICKED) {
         const char *text = lv_list_get_btn_text(btn);
         if (strcmp(text, "Chords") == 0) {
-            //csc_create(music, 0);
+            //ysw_csc_create(music, 0);
             ysw_csl_create(music);
         } else if (strcmp(text, "Progressions") == 0) {
-            hpc_create(music, 0);
+            ysw_hpc_create(music, 0);
         } else if (strcmp(text, "Globals") == 0) {
-            gsc_create(music);
+            ysw_gsc_create(music);
         }
     }
 }
@@ -72,17 +72,18 @@ void app_main()
     esp_log_level_set("YSW_HEAP", ESP_LOG_INFO);
     esp_log_level_set("YSW_ARRAY", ESP_LOG_INFO);
 
-    display_initialize();
-    spiffs_initialize(YSW_MUSIC_PARTITION);
-    synthesizer_initialize();
-    seq_initialize();
-
-    ysw_lv_styles_initialize();
+    ysw_spiffs_initialize(YSW_MUSIC_PARTITION);
+    ysw_main_display_initialize();
+    ysw_main_synth_initialize();
+    ysw_main_seq_initialize();
+    ysw_styles_initialize();
 
     music = ysw_mfr_read();
 
     if (music && ysw_music_get_cs_count(music) > 0) {
-        create_dashboard();
+        //create_dashboard();
+        extern int create_mockup();
+        create_mockup();
     } else {
         lv_obj_t *mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
         lv_msgbox_set_text(mbox1, "The music partition is empty");

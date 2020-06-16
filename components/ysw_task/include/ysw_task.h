@@ -10,11 +10,8 @@
 #pragma once
 
 #include "freertos/FreeRTOS.h"
-#include "freertos/FreeRTOSConfig.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
-#include "esp_log.h"
-#include "ysw_task.h"
 
 #define YSW_TASK_DEFAULT_PRIORITY (tskIDLE_PRIORITY + 1)
 

@@ -9,7 +9,7 @@
 
 #include "ysw_mb.h"
 #include "ysw_heap.h"
-#include "ysw_lv_styles.h"
+#include "ysw_styles.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include "stdio.h"

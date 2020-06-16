@@ -55,7 +55,7 @@
 /* Dot Per Inch: used to initialize default sizes.
  * E.g. a button with width = LV_DPI / 2 -> half inch wide
  * (Not so important, you can adjust it to modify default sizes and spaces)*/
-#define LV_DPI              60     /*[px]*/
+#define LV_DPI              50     /*[px]*/ //afs: bigger numbers increase padding
 
 /* The the real width of the display changes some default values:
  * default object sizes, layout of examples, etc.
@@ -122,7 +122,7 @@ typedef int16_t lv_coord_t;
 #define LV_INDEV_DEF_DRAG_LIMIT           10
 
 /* Drag throw slow-down in [%]. Greater value -> faster slow-down */
-#define LV_INDEV_DEF_DRAG_THROW           10
+#define LV_INDEV_DEF_DRAG_THROW           20
 
 /* Long press time in milliseconds.
  * Time to send `LV_EVENT_LONG_PRESSSED`) */
@@ -398,30 +398,30 @@ typedef void * lv_font_user_data_t;
 
 /* No theme, you can apply your styles as you need
  * No flags. Set LV_THEME_DEFAULT_FLAG 0 */
- #define LV_USE_THEME_EMPTY       1
+#define LV_USE_THEME_EMPTY       0
 
 /*Simple to the create your theme based on it
  * No flags. Set LV_THEME_DEFAULT_FLAG 0 */
- #define LV_USE_THEME_TEMPLATE    1
+#define LV_USE_THEME_TEMPLATE    0
 
 /* A fast and impressive theme.
  * Flags:
  * LV_THEME_MATERIAL_FLAG_LIGHT: light theme
  * LV_THEME_MATERIAL_FLAG_DARK: dark theme*/
- #define LV_USE_THEME_MATERIAL    1
+#define LV_USE_THEME_MATERIAL    0
 
 /* Mono-color theme for monochrome displays.
  * If LV_THEME_DEFAULT_COLOR_PRIMARY is LV_COLOR_BLACK the
  * texts and borders will be black and the background will be
  * white. Else the colors are inverted.
  * No flags. Set LV_THEME_DEFAULT_FLAG 0 */
- #define LV_USE_THEME_MONO        1
+#define LV_USE_THEME_MONO        1
 
 #define LV_THEME_DEFAULT_INCLUDE            <stdint.h>      /*Include a header for the init. function*/
-#define LV_THEME_DEFAULT_INIT               lv_theme_material_init
-#define LV_THEME_DEFAULT_COLOR_PRIMARY      LV_COLOR_RED
-#define LV_THEME_DEFAULT_COLOR_SECONDARY    LV_COLOR_BLUE
-#define LV_THEME_DEFAULT_FLAG               LV_THEME_MATERIAL_FLAG_DARK
+#define LV_THEME_DEFAULT_INIT               lv_theme_mono_init
+#define LV_THEME_DEFAULT_COLOR_PRIMARY      LV_COLOR_RED // strange logic in theme mono maps this to black
+#define LV_THEME_DEFAULT_COLOR_SECONDARY    LV_COLOR_WHITE // strange logic in theme mono ignores this
+#define LV_THEME_DEFAULT_FLAG               0
 #define LV_THEME_DEFAULT_FONT_SMALL         &lv_font_montserrat_12
 #define LV_THEME_DEFAULT_FONT_NORMAL        &lv_font_montserrat_16
 #define LV_THEME_DEFAULT_FONT_SUBTITLE      &lv_font_montserrat_16

@@ -9,9 +9,10 @@
 
 #include "ysw_array.h"
 
-#include "assert.h"
-#include "esp_log.h"
 #include "ysw_heap.h"
+#include "esp_log.h"
+#include "assert.h"
+#include "stdlib.h"
 
 #define TAG "YSW_ARRAY"
 

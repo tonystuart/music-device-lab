@@ -6,3 +6,5 @@ a.c*
 .*.swp
 tags
 spiffs.bin
+
+eclipse

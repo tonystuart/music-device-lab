@@ -8,6 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_task.h"
+#include "esp_log.h"
 
 #define TAG "YSW_TASK"
 

@@ -10,6 +10,7 @@
 #include "ysw_heap.h"
 #include "ysw_common.h"
 #include "esp_log.h"
+#include "stdlib.h"
 
 #define TAG "YSW_HEAP"
 

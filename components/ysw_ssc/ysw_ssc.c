@@ -9,12 +9,12 @@
 
 #include "ysw_ssc.h"
 #include "ysw_common.h"
+#include "ysw_csc.h"
 #include "ysw_degree.h"
+#include "ysw_heap.h"
 #include "ysw_hp.h"
 #include "ysw_sdb.h"
-#include "ysw_heap.h"
-#include "../../main/csc.h" // TODO: move csc to components or this to main
-#include "../../main/seq.h" // TODO: move seq to components or this to main
+#include "ysw_main_seq.h"
 #include "lvgl/lvgl.h"
 #include "esp_log.h"
 #include "stdio.h"
@@ -61,10 +61,10 @@ static void on_new_measure(ssc_t *ssc, uint8_t new_measure)
 static void on_edit_style(ssc_t *ssc)
 {
     uint32_t cs_index = ysw_music_get_cs_index(ssc->music, ssc->ps->cs);
-    csc_create(ssc->music, cs_index);
+    ysw_csc_create(ssc->music, cs_index);
 }
 
-static void on_csc_close(ssc_t *ssc, csc_t *csc)
+static void on_csc_close(ssc_t *ssc, ysw_csc_t *csc)
 {
     uint32_t cs_index = 0;
     char *chord_styles = get_chord_styles(ssc, &cs_index);
@@ -77,8 +77,8 @@ static void on_csc_close(ssc_t *ssc, csc_t *csc)
 static void on_create_style(ssc_t *ssc)
 {
     uint32_t cs_index = ysw_music_get_cs_index(ssc->music, ssc->ps->cs);
-    csc_t *csc = csc_create_new(ssc->music, cs_index);
-    csc_set_close_cb(csc, on_csc_close, ssc);
+    ysw_csc_t *csc = ysw_csc_create_new(ssc->music, cs_index);
+    ysw_csc_set_close_cb(csc, on_csc_close, ssc);
     ssc->ps->cs = ysw_music_get_cs(ssc->music, cs_index + 1);
 }
 
@@ -130,7 +130,7 @@ void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index)
 
     // TODO: Encapsulate properly within ysw_sdb
     lv_win_add_btn(sdb->win, LV_SYMBOL_NEXT);
-    seq_init_loop_btn(lv_win_add_btn(sdb->win, LV_SYMBOL_LOOP));
+    ysw_main_seq_init_loop_btn(lv_win_add_btn(sdb->win, LV_SYMBOL_LOOP));
     lv_win_add_btn(sdb->win, LV_SYMBOL_STOP);
     lv_win_add_btn(sdb->win, LV_SYMBOL_PLAY);
     lv_win_add_btn(sdb->win, LV_SYMBOL_PREV);

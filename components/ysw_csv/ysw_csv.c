@@ -65,7 +65,7 @@ int ysw_csv_parse(char *buffer, char *tokens[], int max_tokens)
     }
 
     *q = 0;
-    return tokens[token_index] ? token_index + 1 : token_index;
+    return *tokens[token_index] ? token_index + 1 : token_index;
 }
 
 #define ROOM_TO_EXPAND 2 // leave room for escape character and end-of-string

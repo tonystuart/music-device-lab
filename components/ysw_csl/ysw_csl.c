@@ -11,17 +11,16 @@
 
 #include "ysw_auto_play.h"
 #include "ysw_cs.h"
-#include "ysw_lv_cse.h"
+#include "ysw_csc.h"
+#include "ysw_cse.h"
 #include "ysw_mb.h"
 #include "ysw_mfw.h"
 #include "ysw_name.h"
 #include "ysw_sdb.h"
 #include "ysw_sn.h"
 #include "ysw_heap.h"
-#include "ysw_lv_styles.h"
-
-#include "../../main/csc.h" // TODO: move csc to components or this to main
-#include "../../main/seq.h"
+#include "ysw_main_seq.h"
+#include "ysw_styles.h"
 
 #include "lvgl.h"
 
@@ -172,7 +171,7 @@ static void display_rows(ysw_csl_t *csl)
     }
 }
 
-static void on_csc_close(ysw_csl_t *csl, csc_t *csc)
+static void on_csc_close(ysw_csl_t *csl, ysw_csc_t *csc)
 {
     csl->cs_index = csc->cs_index;
     display_rows(csl);
@@ -180,14 +179,14 @@ static void on_csc_close(ysw_csl_t *csl, csc_t *csc)
 
 static void edit_cs(ysw_csl_t *csl, uint32_t cs_index)
 {
-    csc_t *csc = csc_create(csl->music, cs_index);
-    csc_set_close_cb(csc, on_csc_close, csl);
+    ysw_csc_t *csc = ysw_csc_create(csl->music, cs_index);
+    ysw_csc_set_close_cb(csc, on_csc_close, csl);
 }
 
 static void create_cs(ysw_csl_t *csl, uint32_t cs_index)
 {
-    csc_t *csc = csc_create_new(csl->music, cs_index);
-    csc_set_close_cb(csc, on_csc_close, csl);
+    ysw_csc_t *csc = ysw_csc_create_new(csl->music, cs_index);
+    ysw_csc_set_close_cb(csc, on_csc_close, csl);
 }
 
 static uint32_t get_row(lv_obj_t *scrl, void *param)
@@ -240,29 +239,29 @@ static lv_res_t scrl_signal_cb(lv_obj_t *scrl, lv_signal_t signal, void *param)
 
 static void on_auto_play_all(ysw_csl_t *csl, ysw_auto_play_t auto_play)
 {
-    ysw_lv_cse_gs.auto_play_all = auto_play;
+    ysw_cse_gs.auto_play_all = auto_play;
 }
 
 static void on_auto_play_last(ysw_csl_t *csl, ysw_auto_play_t auto_play)
 {
-    ysw_lv_cse_gs.auto_play_last = auto_play;
+    ysw_cse_gs.auto_play_last = auto_play;
 }
 
 static void on_multiple_selection(ysw_csl_t *csl, bool multiple_selection)
 {
-    ysw_lv_cse_gs.multiple_selection = multiple_selection;
+    ysw_cse_gs.multiple_selection = multiple_selection;
 }
 
 static void on_settings(ysw_csl_t *csl, lv_obj_t * btn)
 {
     ysw_sdb_t *sdb = ysw_sdb_create("Chord Style Editor Settings", csl);
     ysw_sdb_add_choice(sdb, "Multiple Selection",
-            ysw_lv_cse_gs.multiple_selection, "No\nYes", on_multiple_selection);
+            ysw_cse_gs.multiple_selection, "No\nYes", on_multiple_selection);
     ysw_sdb_add_separator(sdb, "Auto Play Settings");
     ysw_sdb_add_choice(sdb, "On Change",
-            ysw_lv_cse_gs.auto_play_all, ysw_auto_play_options, on_auto_play_all);
+            ysw_cse_gs.auto_play_all, ysw_auto_play_options, on_auto_play_all);
     ysw_sdb_add_choice(sdb, "On Click",
-            ysw_lv_cse_gs.auto_play_last, ysw_auto_play_options, on_auto_play_last);
+            ysw_cse_gs.auto_play_last, ysw_auto_play_options, on_auto_play_last);
 }
 
 static void on_save(ysw_csl_t *csl, lv_obj_t * btn)
@@ -365,7 +364,7 @@ static void on_close(ysw_csl_t *csl, lv_obj_t * btn)
     ysw_seq_message_t message = {
         .type = YSW_SEQ_STOP,
     };
-    seq_rendezvous(&message);
+    ysw_main_seq_rendezvous(&message);
     if (csl->close_cb) {
         csl->close_cb(csl->close_cb_context, csl);
     }
@@ -399,7 +398,7 @@ static void on_play(ysw_csl_t *csl, lv_obj_t * btn)
         .stage.tempo = cs->tempo,
     };
 
-    seq_send(&message);
+    ysw_main_seq_send(&message);
 }
 
 static void on_stop(ysw_csl_t *csl, lv_obj_t * btn)
@@ -408,7 +407,7 @@ static void on_stop(ysw_csl_t *csl, lv_obj_t * btn)
         .type = YSW_SEQ_STOP,
     };
 
-    seq_send(&message);
+    ysw_main_seq_send(&message);
 }
 
 static void on_loop(ysw_csl_t *csl, lv_obj_t * btn)
@@ -420,7 +419,7 @@ static void on_loop(ysw_csl_t *csl, lv_obj_t * btn)
         //.loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_RELEASED,
         .loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_CHECKED_RELEASED,
     };
-    seq_send(&message);
+    ysw_main_seq_send(&message);
 }
 
 static void on_prev(ysw_csl_t *csl, lv_obj_t * btn)
@@ -447,7 +446,7 @@ static ysw_frame_t *create_frame(ysw_csl_t *csl)
 
     ysw_frame_add_header_button(frame, LV_SYMBOL_CLOSE, on_close);
     ysw_frame_add_header_button(frame, LV_SYMBOL_NEXT, on_next);
-    seq_init_loop_btn(ysw_frame_add_header_button(frame, LV_SYMBOL_LOOP, on_loop));
+    ysw_main_seq_init_loop_btn(ysw_frame_add_header_button(frame, LV_SYMBOL_LOOP, on_loop));
     ysw_frame_add_header_button(frame, LV_SYMBOL_STOP, on_stop);
     ysw_frame_add_header_button(frame, LV_SYMBOL_PLAY, on_play);
     ysw_frame_add_header_button(frame, LV_SYMBOL_PREV, on_prev);
