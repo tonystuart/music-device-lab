@@ -9,7 +9,8 @@
 
 #pragma once
 
-#include "ysw_music.h"
+#include "ysw_cs.h"
 #include "lvgl.h"
 
-void *ysw_csl_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index);
+lv_obj_t* ysw_csp_create(lv_obj_t *par);
+void ysw_csp_set_cs(lv_obj_t *csp, ysw_cs_t *cs);

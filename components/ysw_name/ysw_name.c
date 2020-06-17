@@ -12,6 +12,8 @@
 #include "esp_log.h"
 #include "esp_system.h"
 
+#include "stdio.h"
+
 #define TAG "YSW_NAME"
 
 static const char *adjectives[] = {

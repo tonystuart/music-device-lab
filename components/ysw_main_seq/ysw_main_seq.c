@@ -19,6 +19,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 
+#include "stdlib.h"
+
 #define TAG "YSW_MAIN_SEQ"
 
 static bool is_loop;

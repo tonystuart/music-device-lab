@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "ysw_music.h"
-#include "lvgl.h"
-
-void *ysw_csl_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index);
+void ysw_ui_distribute_extra_width(lv_obj_t *parent, lv_obj_t *obj);
+void ysw_ui_distribute_extra_height(lv_obj_t *parent, lv_obj_t *obj);
+void ysw_ui_lighten_background(lv_obj_t *obj);
+void ysw_ui_clear_border(lv_obj_t *obj);

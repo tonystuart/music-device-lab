@@ -34,7 +34,7 @@ static void event_handler(lv_obj_t *btn, lv_event_t event)
         const char *text = lv_list_get_btn_text(btn);
         if (strcmp(text, "Chords") == 0) {
             //ysw_csc_create(music, 0);
-            ysw_csl_create(music);
+            ysw_csl_create(lv_scr_act(), music, 0);
         } else if (strcmp(text, "Progressions") == 0) {
             ysw_hpc_create(music, 0);
         } else if (strcmp(text, "Globals") == 0) {
@@ -81,9 +81,7 @@ void app_main()
     music = ysw_mfr_read();
 
     if (music && ysw_music_get_cs_count(music) > 0) {
-        //create_dashboard();
-        extern int create_mockup();
-        create_mockup();
+        create_dashboard();
     } else {
         lv_obj_t *mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
         lv_msgbox_set_text(mbox1, "The music partition is empty");
