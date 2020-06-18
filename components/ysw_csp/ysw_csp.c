@@ -19,6 +19,7 @@
 #include "assert.h"
 
 #define LV_OBJX_NAME "YSW_CSP"
+#define TAG LV_OBJX_NAME
 
 static lv_design_cb_t ancestor_design;
 static lv_signal_cb_t ancestor_signal;
@@ -35,7 +36,7 @@ static lv_design_res_t draw_main(lv_obj_t *csp, const lv_area_t *clip_area)
         lv_draw_rect_dsc_init(&rect_dsc);
 
         // The draw_dsc is generally initialized using the the part and the theme:
-        //lv_obj_init_draw_rect_dsc(csp, LV_CSP_PART_NOTE, &rect_dsc);
+        //lv_obj_init_draw_rect_dsc(csp, YSW_CSP_PART_NOTE, &rect_dsc);
         rect_dsc.border_width = 0;
         rect_dsc.bg_color = LV_COLOR_MAKE(0xbb, 0x86, 0xfc);
         //rect_dsc.bg_color = LV_COLOR_PURPLE;
@@ -73,7 +74,7 @@ static lv_design_res_t draw_main(lv_obj_t *csp, const lv_area_t *clip_area)
     return LV_DESIGN_RES_OK;
 }
 
-static lv_design_res_t lv_csp_design(lv_obj_t *csp, const lv_area_t *clip_area, lv_design_mode_t mode)
+static lv_design_res_t ysw_csp_design(lv_obj_t *csp, const lv_area_t *clip_area, lv_design_mode_t mode)
 {
     lv_design_res_t res = ancestor_design(csp, clip_area, mode);
     if (mode == LV_DESIGN_DRAW_MAIN) {
@@ -84,7 +85,7 @@ static lv_design_res_t lv_csp_design(lv_obj_t *csp, const lv_area_t *clip_area, 
     return res;
 }
 
-static lv_res_t lv_csp_signal(lv_obj_t *csp, lv_signal_t sign, void *param)
+static lv_res_t ysw_csp_signal(lv_obj_t *csp, lv_signal_t sign, void *param)
 {
     lv_res_t res;
 
@@ -124,11 +125,12 @@ lv_obj_t* ysw_csp_create(lv_obj_t *par)
 
     ext->cs = NULL;
 
-    lv_obj_set_signal_cb(csp, lv_csp_signal);
-    lv_obj_set_design_cb(csp, lv_csp_design);
+    lv_obj_set_signal_cb(csp, ysw_csp_signal);
+    lv_obj_set_design_cb(csp, ysw_csp_design);
 
     lv_obj_set_size(csp, 60, 30);
     lv_theme_apply(csp, LV_THEME_OBJ);
+
     return csp;
 }
 

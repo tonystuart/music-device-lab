@@ -74,7 +74,7 @@ typedef struct {
     lv_obj_t *page;
 } body_t;
 
-typedef struct{
+typedef struct {
     ysw_music_t *music;
     uint32_t cs_index;
     ysw_cs_t *clipboard_cs;
@@ -82,7 +82,7 @@ typedef struct{
     void *close_cb_context;
 } ysw_csl_controller_t;
 
-typedef struct  ysw_csl_s {
+typedef struct ysw_csl_s {
     lv_obj_t *cont;
     header_t header;
     body_t body;
@@ -166,7 +166,84 @@ static lv_res_t scrl_signal_cb(lv_obj_t *scrl, lv_signal_t signal, void *param)
 }
 #endif
 
-static void display_rows(ysw_csl_t *csl)
+static void clear_selection_highlight(ysw_csl_t *csl)
+{
+    uint32_t cs_count = ysw_music_get_cs_count(csl->controller.music);
+    if (csl->controller.cs_index < cs_count) {
+        lv_obj_t *scrl = lv_page_get_scrl(csl->body.page);
+        lv_obj_t *child = ysw_ui_child_at_index(scrl, csl->controller.cs_index);
+        if (child) {
+            //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 0);
+            lv_obj_set_style_local_text_color(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+        }
+    }
+    lv_label_set_text(csl->footer.info.label, "");
+}
+
+static void display_selection_highlight(ysw_csl_t *csl)
+{
+    uint32_t cs_count = ysw_music_get_cs_count(csl->controller.music);
+    if (csl->controller.cs_index < cs_count) {
+        lv_obj_t *scrl = lv_page_get_scrl(csl->body.page);
+        lv_obj_t *child = ysw_ui_child_at_index(scrl, csl->controller.cs_index);
+        if (child) {
+            //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 1);
+            lv_obj_set_style_local_text_color(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_YELLOW);
+        }
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%d of %d", csl->controller.cs_index + 1, cs_count);
+        lv_label_set_text(csl->footer.info.label, buf);
+    }
+}
+
+static void on_chord_style_short_click(lv_obj_t *obj)
+{
+    ysw_csl_t *csl = lv_obj_get_user_data(obj);
+    if (csl) {
+        uint32_t cs_index = ysw_ui_get_index_of_child(obj);
+        if (cs_index != csl->controller.cs_index) {
+            clear_selection_highlight(csl);
+            csl->controller.cs_index = cs_index;
+            display_selection_highlight(csl);
+        }
+    }
+}
+
+static void on_row_event(lv_obj_t *obj, lv_event_t event)
+{
+    char type[128];
+    ysw_ui_get_obj_type(obj, type, sizeof(type));
+    switch (event) {
+        case LV_EVENT_PRESSED:
+            printf("Pressed, obj=%p, type=%s\n", obj, type);
+            break;
+
+        case LV_EVENT_SHORT_CLICKED:
+            printf("Short clicked, obj=%p, type=%s\n", obj, type);
+            on_chord_style_short_click(obj);
+            break;
+
+        case LV_EVENT_CLICKED:
+            printf("Clicked\n");
+            break;
+
+        case LV_EVENT_LONG_PRESSED:
+            printf("Long press\n");
+            break;
+
+        case LV_EVENT_LONG_PRESSED_REPEAT:
+            printf("Long press repeat\n");
+            break;
+
+        case LV_EVENT_RELEASED:
+            printf("Released\n");
+            break;
+    }
+
+    /*Etc.*/
+}
+
+static void display_chord_styles(ysw_csl_t *csl)
 {
     lv_label_set_text_static(csl->footer.info.label, "");
     uint32_t cs_count = ysw_music_get_cs_count(csl->controller.music);
@@ -179,22 +256,23 @@ static void display_rows(ysw_csl_t *csl)
             lv_obj_t *obj = lv_obj_create(csl->body.page, NULL);
             lv_obj_set_size(obj, 300, 34);
             adjust_styles(obj);
+            lv_obj_set_user_data(obj, csl);
             lv_obj_t *label = lv_label_create(obj, NULL);
             lv_obj_align(label, obj, LV_ALIGN_IN_LEFT_MID, 5, 0);
             lv_label_set_text_static(label, cs->name);
             lv_obj_t *csp = ysw_csp_create(obj);
             lv_obj_align(csp, obj, LV_ALIGN_IN_RIGHT_MID, -2, 0);
             ysw_csp_set_cs(csp, cs);
+            lv_obj_set_event_cb(obj, on_row_event);
         }
         lv_page_set_scrl_layout(csl->body.page, LV_LAYOUT_COLUMN_MID);
         if (csl->controller.cs_index >= cs_count) {
             csl->controller.cs_index = cs_count - 1;
         }
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%d of %d", csl->controller.cs_index + 1, cs_count);
-        lv_label_set_text(csl->footer.info.label, buf);
+        display_selection_highlight(csl);
     } else {
         csl->controller.cs_index = 0;
+        clear_selection_highlight(csl);
     }
 }
 
@@ -285,7 +363,7 @@ static void create_footer(lv_obj_t *parent, footer_t *footer)
 static void on_csc_close(ysw_csl_t *csl, ysw_csc_t *csc)
 {
     csl->controller.cs_index = csc->cs_index;
-    display_rows(csl);
+    display_chord_styles(csl);
 }
 
 static void edit_cs(ysw_csl_t *csl, uint32_t cs_index)
@@ -370,7 +448,7 @@ static void on_paste(ysw_csl_t *csl, lv_obj_t *btn)
         ysw_cs_set_name(cs, name);
         calculate_insert_index(csl);
         ysw_music_insert_cs(csl->controller.music, csl->controller.cs_index, cs);
-        display_rows(csl);
+        display_chord_styles(csl);
     } else {
         ysw_mb_clipboard_empty();
     }
@@ -379,7 +457,7 @@ static void on_paste(ysw_csl_t *csl, lv_obj_t *btn)
 static void on_trash_confirm(ysw_csl_t *csl)
 {
     ysw_music_remove_cs(csl->controller.music, csl->controller.cs_index);
-    display_rows(csl);
+    display_chord_styles(csl);
 }
 
 static void on_trash(ysw_csl_t *csl, lv_obj_t *btn)
@@ -396,7 +474,7 @@ static void on_trash(ysw_csl_t *csl, lv_obj_t *btn)
 static void on_sort(ysw_csl_t *csl, lv_obj_t *btn)
 {
     ysw_music_sort_cs_by_name(csl->controller.music);
-    display_rows(csl);
+    display_chord_styles(csl);
 }
 
 static void on_up(ysw_csl_t *csl, lv_obj_t *btn)
@@ -407,7 +485,7 @@ static void on_up(ysw_csl_t *csl, lv_obj_t *btn)
         ysw_array_swap(csl->controller.music->cs_array, csl->controller.cs_index, new_index);
         csl->controller.cs_index = new_index;
     }
-    display_rows(csl);
+    display_chord_styles(csl);
 }
 
 static void on_down(ysw_csl_t *csl, lv_obj_t *btn)
@@ -418,7 +496,7 @@ static void on_down(ysw_csl_t *csl, lv_obj_t *btn)
         ysw_array_swap(csl->controller.music->cs_array, csl->controller.cs_index, new_index);
         csl->controller.cs_index = new_index;
     }
-    display_rows(csl);
+    display_chord_styles(csl);
 }
 
 static void on_close(ysw_csl_t *csl, lv_obj_t *btn)
@@ -443,7 +521,7 @@ static void on_next(ysw_csl_t *csl, lv_obj_t *btn)
     if (csl->controller.cs_index < (cs_count - 1)) {
         csl->controller.cs_index++;
     }
-    display_rows(csl);
+    display_chord_styles(csl);
 }
 
 static void on_play(ysw_csl_t *csl, lv_obj_t *btn)
@@ -490,7 +568,7 @@ static void on_prev(ysw_csl_t *csl, lv_obj_t *btn)
     if (csl->controller.cs_index > 0) {
         csl->controller.cs_index--;
     }
-    display_rows(csl);
+    display_chord_styles(csl);
 }
 
 ysw_csl_t* ysw_csl_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index)
@@ -531,7 +609,7 @@ ysw_csl_t* ysw_csl_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_inde
 
     ysw_ui_distribute_extra_height(csl->cont, csl->body.page);
 
-    display_rows(csl);
+    display_chord_styles(csl);
 
     return csl;
 }

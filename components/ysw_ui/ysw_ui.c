@@ -12,7 +12,6 @@
 
 #define TAG "YSW_UI"
 
-
 void ysw_ui_distribute_extra_width(lv_obj_t *parent, lv_obj_t *obj)
 {
     lv_coord_t inner = lv_obj_get_style_pad_inner(parent, LV_CONT_PART_MAIN);
@@ -65,4 +64,68 @@ void ysw_ui_clear_border(lv_obj_t *obj)
 {
     lv_obj_set_style_local_border_width(obj, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 0);
 }
+
+void ysw_ui_get_obj_type(lv_obj_t *obj, char *buffer, uint32_t size)
+{
+    lv_obj_type_t types;
+    lv_obj_get_type(obj, &types);
+
+    char *t = buffer;
+    char *t_max = buffer + size - 1; // -1 for null terminator
+
+    uint8_t i;
+    bool done = false;
+    for (i = 0; i < LV_MAX_ANCESTOR_NUM && !done; i++) {
+        if (!types.type[i]) {
+            done = true;
+        } else {
+            if (t >= t_max) {
+                done = true;
+            } else {
+                *t++ = '/';
+            }
+            char *s = types.type[i];
+            while (*s && !done) {
+                if (t >= t_max) {
+                    done = true;
+                } else {
+                    *t++ = *s++;
+                }
+            }
+        }
+    }
+    *t = 0;
+}
+
+int32_t ysw_ui_get_index_of_child(lv_obj_t *obj)
+{
+    lv_obj_t *parent = lv_obj_get_parent(obj);
+    if (parent) {
+        int32_t index = 0;
+        lv_obj_t *child;
+        _LV_LL_READ_BACK(parent->child_ll, child)
+        {
+            if (child == obj) {
+                return index;
+            }
+            index++;
+        }
+    }
+    return -1;
+}
+
+lv_obj_t* ysw_ui_child_at_index(lv_obj_t *parent, uint32_t index)
+{
+    uint32_t current = 0;
+    lv_obj_t *child;
+    _LV_LL_READ_BACK(parent->child_ll, child)
+    {
+        if (current == index) {
+            return child;
+        }
+        current++;
+    }
+    return NULL;
+}
+
 
