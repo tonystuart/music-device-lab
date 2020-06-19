@@ -19,3 +19,4 @@ void ysw_ui_clear_border(lv_obj_t *obj);
 void ysw_ui_get_obj_type(lv_obj_t *obj, char *buffer, uint32_t size);
 int32_t ysw_ui_get_index_of_child(lv_obj_t *obj);
 lv_obj_t* ysw_ui_child_at_index(lv_obj_t *parent, uint32_t index);
+void ysw_ui_ensure_visible(lv_obj_t *child, bool do_center);

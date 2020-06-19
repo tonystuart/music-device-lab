@@ -84,7 +84,7 @@ void ysw_ui_get_obj_type(lv_obj_t *obj, char *buffer, uint32_t size)
             } else {
                 *t++ = '/';
             }
-            char *s = types.type[i];
+            const char *s = types.type[i];
             while (*s && !done) {
                 if (t >= t_max) {
                     done = true;
@@ -126,6 +126,38 @@ lv_obj_t* ysw_ui_child_at_index(lv_obj_t *parent, uint32_t index)
         current++;
     }
     return NULL;
+}
+
+void ysw_ui_ensure_visible(lv_obj_t *child, bool do_center)
+{
+    lv_obj_t *scrl = lv_obj_get_parent(child);
+    lv_coord_t scrl_top = lv_obj_get_y(scrl); // always <= 0
+
+    lv_obj_t *viewport = lv_obj_get_parent(scrl);
+    lv_coord_t viewport_height = lv_obj_get_height(viewport);
+
+    lv_coord_t child_height = lv_obj_get_height(child);
+    lv_coord_t child_top = lv_obj_get_y(child);
+    lv_coord_t child_bottom = child_top + child_height;
+
+    lv_coord_t visible_top = -scrl_top;
+    lv_coord_t visible_bottom = visible_top + viewport_height;
+
+    bool is_above = child_top < visible_top;
+    bool is_below = child_bottom > visible_bottom;
+
+    if (is_above || is_below) {
+        if (do_center || (is_above && is_below)) {
+            lv_coord_t center_offset = (viewport_height - child_height) / 2;
+            scrl_top = -child_top + center_offset;
+        } else if (is_above) {
+            scrl_top = -child_top;
+        } else if (is_below) {
+            lv_coord_t bottom_offset = (viewport_height - child_height);
+            scrl_top = -child_top + bottom_offset;
+        }
+        lv_obj_set_y(scrl, scrl_top);
+    }
 }
 
 

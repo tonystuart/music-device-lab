@@ -99,73 +99,6 @@ static void adjust_styles(lv_obj_t *obj)
     ysw_ui_clear_border(obj);
 }
 
-#if 0
-static void ensure_visible(ysw_csl_t *csl, uint32_t row)
-{
-    lv_obj_t *page = lv_win_get_content(csl->frame->win);
-    lv_obj_t *scrl = lv_page_get_scrl(page);
-
-    lv_coord_t row_top = row * ROW_HEIGHT;
-    lv_coord_t row_bottom = (row + 1) * ROW_HEIGHT;
-
-    lv_coord_t viewport_height = lv_obj_get_height(page);
-
-    lv_coord_t scrl_top = lv_obj_get_y(scrl); // always <= 0
-
-    lv_coord_t visible_top = -scrl_top;
-    lv_coord_t visible_bottom = visible_top + viewport_height;
-
-    if (row_top < visible_top) {
-        scrl_top = -row_top;
-        ESP_LOGD(TAG, "setting scrl_top=%d", scrl_top);
-        lv_obj_set_y(scrl, scrl_top);
-    } else if (row_bottom > visible_bottom) {
-        scrl_top = -row_top + (viewport_height - ROW_HEIGHT);
-        ESP_LOGD(TAG, "setting scrl_top=%d", scrl_top);
-        lv_obj_set_y(scrl, scrl_top);
-    }
-}
-#endif
-
-#if 0
-#define MINIMUM_DRAG 5
-
-static lv_res_t scrl_signal_cb(lv_obj_t *scrl, lv_signal_t signal, void *param)
-{
-    ysw_csl_t *csl = lv_obj_get_user_data(scrl);
-    if (signal == LV_SIGNAL_PRESSED) {
-        csl->dragged = false;
-        lv_indev_t *indev_act = (lv_indev_t*)param;
-        lv_indev_proc_t *proc = &indev_act->proc;
-        csl->click_point = proc->types.pointer.act_point;
-    } else if (signal == LV_SIGNAL_RELEASED) {
-        if (!csl->dragged) {
-            uint16_t row = get_row(scrl, param);
-            if (row) {
-                move_selection(csl, to_cs_index(row));
-            }
-        }
-    } else if (signal == LV_SIGNAL_LONG_PRESS) {
-        if (!csl->dragged) {
-            lv_indev_wait_release((lv_indev_t *)param);
-            uint16_t row = get_row(scrl, param);
-            if (row) {
-                edit_cs(csl, to_cs_index(row));
-            }
-        }
-    } else if (signal == LV_SIGNAL_PRESSING) {
-        if (!csl->dragged) {
-            lv_indev_t *indev_act = (lv_indev_t*)param;
-            lv_indev_proc_t *proc = &indev_act->proc;
-            lv_point_t *point = &proc->types.pointer.act_point;
-            lv_coord_t y = point->y - csl->click_point.y;
-            csl->dragged = abs(y) > MINIMUM_DRAG;
-        }
-    }
-    return prev_scrl_signal_cb(scrl, signal, param);
-}
-#endif
-
 static void clear_selection_highlight(ysw_csl_t *csl)
 {
     uint32_t cs_count = ysw_music_get_cs_count(csl->controller.music);
@@ -189,6 +122,7 @@ static void display_selection_highlight(ysw_csl_t *csl)
         if (child) {
             //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 1);
             lv_obj_set_style_local_text_color(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_YELLOW);
+            ysw_ui_ensure_visible(child, true);
         }
         char buf[32];
         snprintf(buf, sizeof(buf), "%d of %d", csl->controller.cs_index + 1, cs_count);
@@ -196,52 +130,7 @@ static void display_selection_highlight(ysw_csl_t *csl)
     }
 }
 
-static void on_chord_style_short_click(lv_obj_t *obj)
-{
-    ysw_csl_t *csl = lv_obj_get_user_data(obj);
-    if (csl) {
-        uint32_t cs_index = ysw_ui_get_index_of_child(obj);
-        if (cs_index != csl->controller.cs_index) {
-            clear_selection_highlight(csl);
-            csl->controller.cs_index = cs_index;
-            display_selection_highlight(csl);
-        }
-    }
-}
-
-static void on_row_event(lv_obj_t *obj, lv_event_t event)
-{
-    char type[128];
-    ysw_ui_get_obj_type(obj, type, sizeof(type));
-    switch (event) {
-        case LV_EVENT_PRESSED:
-            printf("Pressed, obj=%p, type=%s\n", obj, type);
-            break;
-
-        case LV_EVENT_SHORT_CLICKED:
-            printf("Short clicked, obj=%p, type=%s\n", obj, type);
-            on_chord_style_short_click(obj);
-            break;
-
-        case LV_EVENT_CLICKED:
-            printf("Clicked\n");
-            break;
-
-        case LV_EVENT_LONG_PRESSED:
-            printf("Long press\n");
-            break;
-
-        case LV_EVENT_LONG_PRESSED_REPEAT:
-            printf("Long press repeat\n");
-            break;
-
-        case LV_EVENT_RELEASED:
-            printf("Released\n");
-            break;
-    }
-
-    /*Etc.*/
-}
+static void on_row_event(lv_obj_t *obj, lv_event_t event);
 
 static void display_chord_styles(ysw_csl_t *csl)
 {
@@ -276,95 +165,7 @@ static void display_chord_styles(ysw_csl_t *csl)
     }
 }
 
-static void on_btn_event(lv_obj_t *btn, lv_event_t event)
-{
-    if (event == LV_EVENT_CLICKED) {
-        cbd_t *cbd = lv_obj_get_user_data(btn);
-        if (cbd) {
-            cbd->cb(cbd->context, btn);
-        }
-    }
-}
-
-void set_cbd(cbd_t *cbd, cb_t cb, void *context)
-{
-    cbd->cb = cb;
-    cbd->context = context;
-}
-
-void create_label(lv_obj_t *parent, label_t *label)
-{
-    label->label = lv_label_create(parent, NULL);
-    lv_obj_set_size(label->label, 0, 30);
-    lv_label_set_long_mode(label->label, LV_LABEL_LONG_CROP);
-}
-
-void create_button(lv_obj_t *parent, button_t *button, const void *img_src)
-{
-    button->btn = lv_btn_create(parent, NULL);
-    lv_obj_set_size(button->btn, 20, 20);
-    adjust_styles(button->btn);
-    lv_obj_t *img = lv_img_create(button->btn, NULL);
-    lv_obj_set_click(img, false);
-    lv_img_set_src(img, img_src);
-    lv_obj_set_user_data(button->btn, &button->cbd);
-    lv_obj_set_event_cb(button->btn, on_btn_event);
-}
-
-static void create_header(lv_obj_t *parent, header_t *header)
-{
-    header->cont = lv_cont_create(parent, NULL);
-    lv_obj_set_size(header->cont, 310, 30);
-    adjust_styles(header->cont);
-    lv_cont_set_layout(header->cont, LV_LAYOUT_ROW_MID); // TODO: move to bottom
-
-    create_label(header->cont, &header->title);
-    create_button(header->cont, &header->prev, LV_SYMBOL_PREV);
-    create_button(header->cont, &header->play, LV_SYMBOL_PLAY);
-    create_button(header->cont, &header->stop, LV_SYMBOL_STOP);
-    create_button(header->cont, &header->loop, LV_SYMBOL_LOOP);
-    create_button(header->cont, &header->next, LV_SYMBOL_NEXT);
-    create_button(header->cont, &header->close, LV_SYMBOL_CLOSE);
-
-    ysw_ui_distribute_extra_width(header->cont, header->title.label);
-}
-
-static void create_body(lv_obj_t *parent, body_t *body)
-{
-    body->page = lv_page_create(parent, NULL);
-    lv_obj_set_size(body->page, 310, 0);
-    adjust_styles(body->page);
-    adjust_styles(lv_page_get_scrl(body->page));
-    lv_page_set_scrl_layout(body->page, LV_LAYOUT_COLUMN_MID);
-}
-
-static void create_footer(lv_obj_t *parent, footer_t *footer)
-{
-    footer->cont = lv_cont_create(parent, NULL);
-    lv_obj_set_size(footer->cont, 310, 30);
-    adjust_styles(footer->cont);
-    lv_cont_set_layout(footer->cont, LV_LAYOUT_ROW_MID); // TODO: move to bottom
-
-    create_button(footer->cont, &footer->settings, LV_SYMBOL_SETTINGS);
-    create_button(footer->cont, &footer->save, LV_SYMBOL_SAVE);
-    create_button(footer->cont, &footer->new, LV_SYMBOL_AUDIO); // TODO: add NEW
-    create_button(footer->cont, &footer->copy, LV_SYMBOL_COPY);
-    create_button(footer->cont, &footer->paste, LV_SYMBOL_PASTE);
-    create_button(footer->cont, &footer->trash, LV_SYMBOL_TRASH);
-    create_button(footer->cont, &footer->sort, LV_SYMBOL_GPS); // TODO: add SORT
-    create_button(footer->cont, &footer->up, LV_SYMBOL_UP);
-    create_button(footer->cont, &footer->down, LV_SYMBOL_DOWN);
-    create_label(footer->cont, &footer->info);
-    lv_label_set_align(footer->info.label, LV_LABEL_ALIGN_RIGHT);
-
-    ysw_ui_distribute_extra_width(footer->cont, footer->info.label);
-}
-
-static void on_csc_close(ysw_csl_t *csl, ysw_csc_t *csc)
-{
-    csl->controller.cs_index = csc->cs_index;
-    display_chord_styles(csl);
-}
+static void on_csc_close(ysw_csl_t *csl, ysw_csc_t *csc);
 
 static void edit_cs(ysw_csl_t *csl, uint32_t cs_index)
 {
@@ -386,6 +187,81 @@ static void calculate_insert_index(ysw_csl_t *csl)
     } else {
         csl->controller.cs_index = cs_count; // insert at end (or beginning if empty)
     }
+}
+
+static void on_short_click(lv_obj_t *obj)
+{
+    ysw_csl_t *csl = lv_obj_get_user_data(obj);
+    if (csl) {
+        uint32_t cs_index = ysw_ui_get_index_of_child(obj);
+        if (cs_index != csl->controller.cs_index) {
+            clear_selection_highlight(csl);
+            csl->controller.cs_index = cs_index;
+            display_selection_highlight(csl);
+        }
+    }
+}
+
+static void on_long_press(lv_obj_t *obj)
+{
+    ysw_csl_t *csl = lv_obj_get_user_data(obj);
+    if (csl) {
+        uint32_t cs_index = ysw_ui_get_index_of_child(obj);
+        if (cs_index != -1) {
+            edit_cs(csl, cs_index);
+        }
+    }
+}
+
+static void on_row_event(lv_obj_t *obj, lv_event_t event)
+{
+    char type[128];
+    ysw_ui_get_obj_type(obj, type, sizeof(type));
+    switch (event) {
+        case LV_EVENT_PRESSED:
+            printf("Pressed, obj=%p, type=%s\n", obj, type);
+            break;
+
+        case LV_EVENT_SHORT_CLICKED:
+            printf("Short clicked, obj=%p, type=%s\n", obj, type);
+            on_short_click(obj);
+            break;
+
+        case LV_EVENT_CLICKED:
+            printf("Clicked\n");
+            break;
+
+        case LV_EVENT_LONG_PRESSED:
+            printf("Long press\n");
+            on_long_press(obj);
+            break;
+
+        case LV_EVENT_LONG_PRESSED_REPEAT:
+            printf("Long press repeat\n");
+            break;
+
+        case LV_EVENT_RELEASED:
+            printf("Released\n");
+            break;
+    }
+
+    /*Etc.*/
+}
+
+static void on_btn_event(lv_obj_t *btn, lv_event_t event)
+{
+    if (event == LV_EVENT_CLICKED) {
+        cbd_t *cbd = lv_obj_get_user_data(btn);
+        if (cbd) {
+            cbd->cb(cbd->context, btn);
+        }
+    }
+}
+
+static void on_csc_close(ysw_csl_t *csl, ysw_csc_t *csc)
+{
+    csl->controller.cs_index = csc->cs_index;
+    display_chord_styles(csl);
 }
 
 static void on_auto_play_all(ysw_csl_t *csl, ysw_auto_play_t auto_play)
@@ -473,7 +349,18 @@ static void on_trash(ysw_csl_t *csl, lv_obj_t *btn)
 
 static void on_sort(ysw_csl_t *csl, lv_obj_t *btn)
 {
+    ysw_cs_t *cs = NULL;
+    uint32_t cs_count = ysw_music_get_cs_count(csl->controller.music);
+    if (csl->controller.cs_index < cs_count) {
+        cs = ysw_music_get_cs(csl->controller.music, csl->controller.cs_index);
+    }
     ysw_music_sort_cs_by_name(csl->controller.music);
+    if (cs) {
+        int32_t cs_index = ysw_music_get_cs_index(csl->controller.music, cs);
+        if (cs_index != -1) {
+            csl->controller.cs_index = cs_index;
+        }
+    }
     display_chord_styles(csl);
 }
 
@@ -569,6 +456,80 @@ static void on_prev(ysw_csl_t *csl, lv_obj_t *btn)
         csl->controller.cs_index--;
     }
     display_chord_styles(csl);
+}
+
+static void set_cbd(cbd_t *cbd, cb_t cb, void *context)
+{
+    cbd->cb = cb;
+    cbd->context = context;
+}
+
+static void create_label(lv_obj_t *parent, label_t *label)
+{
+    label->label = lv_label_create(parent, NULL);
+    lv_obj_set_size(label->label, 0, 30);
+    lv_label_set_long_mode(label->label, LV_LABEL_LONG_CROP);
+}
+
+static void create_button(lv_obj_t *parent, button_t *button, const void *img_src)
+{
+    button->btn = lv_btn_create(parent, NULL);
+    lv_obj_set_size(button->btn, 20, 20);
+    adjust_styles(button->btn);
+    lv_obj_t *img = lv_img_create(button->btn, NULL);
+    lv_obj_set_click(img, false);
+    lv_img_set_src(img, img_src);
+    lv_obj_set_user_data(button->btn, &button->cbd);
+    lv_obj_set_event_cb(button->btn, on_btn_event);
+}
+
+static void create_header(lv_obj_t *parent, header_t *header)
+{
+    header->cont = lv_cont_create(parent, NULL);
+    lv_obj_set_size(header->cont, 310, 30);
+    adjust_styles(header->cont);
+    lv_cont_set_layout(header->cont, LV_LAYOUT_ROW_MID); // TODO: move to bottom
+
+    create_label(header->cont, &header->title);
+    create_button(header->cont, &header->prev, LV_SYMBOL_PREV);
+    create_button(header->cont, &header->play, LV_SYMBOL_PLAY);
+    create_button(header->cont, &header->stop, LV_SYMBOL_STOP);
+    create_button(header->cont, &header->loop, LV_SYMBOL_LOOP);
+    create_button(header->cont, &header->next, LV_SYMBOL_NEXT);
+    create_button(header->cont, &header->close, LV_SYMBOL_CLOSE);
+
+    ysw_ui_distribute_extra_width(header->cont, header->title.label);
+}
+
+static void create_body(lv_obj_t *parent, body_t *body)
+{
+    body->page = lv_page_create(parent, NULL);
+    lv_obj_set_size(body->page, 310, 0);
+    adjust_styles(body->page);
+    adjust_styles(lv_page_get_scrl(body->page));
+    lv_page_set_scrl_layout(body->page, LV_LAYOUT_COLUMN_MID);
+}
+
+static void create_footer(lv_obj_t *parent, footer_t *footer)
+{
+    footer->cont = lv_cont_create(parent, NULL);
+    lv_obj_set_size(footer->cont, 310, 30);
+    adjust_styles(footer->cont);
+    lv_cont_set_layout(footer->cont, LV_LAYOUT_ROW_MID); // TODO: move to bottom
+
+    create_button(footer->cont, &footer->settings, LV_SYMBOL_SETTINGS);
+    create_button(footer->cont, &footer->save, LV_SYMBOL_SAVE);
+    create_button(footer->cont, &footer->new, LV_SYMBOL_AUDIO); // TODO: add NEW
+    create_button(footer->cont, &footer->copy, LV_SYMBOL_COPY);
+    create_button(footer->cont, &footer->paste, LV_SYMBOL_PASTE);
+    create_button(footer->cont, &footer->trash, LV_SYMBOL_TRASH);
+    create_button(footer->cont, &footer->sort, LV_SYMBOL_GPS); // TODO: add SORT
+    create_button(footer->cont, &footer->up, LV_SYMBOL_UP);
+    create_button(footer->cont, &footer->down, LV_SYMBOL_DOWN);
+    create_label(footer->cont, &footer->info);
+    lv_label_set_align(footer->info.label, LV_LABEL_ALIGN_RIGHT);
+
+    ysw_ui_distribute_extra_width(footer->cont, footer->info.label);
 }
 
 ysw_csl_t* ysw_csl_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index)
