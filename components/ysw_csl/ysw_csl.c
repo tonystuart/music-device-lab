@@ -28,51 +28,7 @@
 #define TAG "YSW_CSL"
 
 typedef struct ysw_csl_s ysw_csl_t;
-typedef void (*cb_t)(ysw_csl_t *csl, lv_obj_t *btn);
 typedef void (*csl_close_cb_t)(void *context, ysw_csl_t *csl);
-
-typedef struct {
-    cb_t cb;
-    void *context;
-} cbd_t;
-
-typedef struct {
-    lv_obj_t *label;
-} label_t;
-
-typedef struct {
-    lv_obj_t *btn;
-    cbd_t cbd;
-} button_t;
-
-typedef struct {
-    lv_obj_t *cont;
-    label_t title;
-    button_t prev;
-    button_t play;
-    button_t stop;
-    button_t loop;
-    button_t next;
-    button_t close;
-} header_t;
-
-typedef struct {
-    lv_obj_t *cont;
-    button_t settings;
-    button_t save;
-    button_t new;
-    button_t copy;
-    button_t paste;
-    button_t trash;
-    button_t sort;
-    button_t up;
-    button_t down;
-    label_t info;
-} footer_t;
-
-typedef struct {
-    lv_obj_t *page;
-} body_t;
 
 typedef struct {
     ysw_music_t *music;
@@ -83,41 +39,29 @@ typedef struct {
 } ysw_csl_controller_t;
 
 typedef struct ysw_csl_s {
-    lv_obj_t *cont;
-    header_t header;
-    body_t body;
-    footer_t footer;
+    ysw_ui_panel_t panel;
     ysw_csl_controller_t controller;
 } ysw_csl_t;
-
-typedef struct {
-} config_t;
-
-static void adjust_styles(lv_obj_t *obj)
-{
-    ysw_ui_lighten_background(obj);
-    ysw_ui_clear_border(obj);
-}
 
 static void clear_selection_highlight(ysw_csl_t *csl)
 {
     uint32_t cs_count = ysw_music_get_cs_count(csl->controller.music);
     if (csl->controller.cs_index < cs_count) {
-        lv_obj_t *scrl = lv_page_get_scrl(csl->body.page);
+        lv_obj_t *scrl = lv_page_get_scrl(csl->panel.body.page);
         lv_obj_t *child = ysw_ui_child_at_index(scrl, csl->controller.cs_index);
         if (child) {
             //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 0);
             lv_obj_set_style_local_text_color(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_WHITE);
         }
     }
-    lv_label_set_text(csl->footer.info.label, "");
+    lv_label_set_text(csl->panel.footer.info.label, "");
 }
 
 static void display_selection_highlight(ysw_csl_t *csl)
 {
     uint32_t cs_count = ysw_music_get_cs_count(csl->controller.music);
     if (csl->controller.cs_index < cs_count) {
-        lv_obj_t *scrl = lv_page_get_scrl(csl->body.page);
+        lv_obj_t *scrl = lv_page_get_scrl(csl->panel.body.page);
         lv_obj_t *child = ysw_ui_child_at_index(scrl, csl->controller.cs_index);
         if (child) {
             //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 1);
@@ -126,7 +70,7 @@ static void display_selection_highlight(ysw_csl_t *csl)
         }
         char buf[32];
         snprintf(buf, sizeof(buf), "%d of %d", csl->controller.cs_index + 1, cs_count);
-        lv_label_set_text(csl->footer.info.label, buf);
+        lv_label_set_text(csl->panel.footer.info.label, buf);
     }
 }
 
@@ -134,17 +78,17 @@ static void on_row_event(lv_obj_t *obj, lv_event_t event);
 
 static void display_chord_styles(ysw_csl_t *csl)
 {
-    lv_label_set_text_static(csl->footer.info.label, "");
+    lv_label_set_text_static(csl->panel.footer.info.label, "");
     uint32_t cs_count = ysw_music_get_cs_count(csl->controller.music);
-    lv_page_clean(csl->body.page);
+    lv_page_clean(csl->panel.body.page);
     if (cs_count) {
-        lv_page_set_scrl_layout(csl->body.page, LV_LAYOUT_OFF);
+        lv_page_set_scrl_layout(csl->panel.body.page, LV_LAYOUT_OFF);
         for (uint32_t i = 0; i < cs_count; i++) {
             // TODO: consider factoring out function(s)
             ysw_cs_t *cs = ysw_music_get_cs(csl->controller.music, i);
-            lv_obj_t *obj = lv_obj_create(csl->body.page, NULL);
+            lv_obj_t *obj = lv_obj_create(csl->panel.body.page, NULL);
             lv_obj_set_size(obj, 300, 34);
-            adjust_styles(obj);
+            ysw_ui_adjust_styles(obj);
             lv_obj_set_user_data(obj, csl);
             lv_obj_t *label = lv_label_create(obj, NULL);
             lv_obj_align(label, obj, LV_ALIGN_IN_LEFT_MID, 5, 0);
@@ -154,7 +98,7 @@ static void display_chord_styles(ysw_csl_t *csl)
             ysw_csp_set_cs(csp, cs);
             lv_obj_set_event_cb(obj, on_row_event);
         }
-        lv_page_set_scrl_layout(csl->body.page, LV_LAYOUT_COLUMN_MID);
+        lv_page_set_scrl_layout(csl->panel.body.page, LV_LAYOUT_COLUMN_MID);
         if (csl->controller.cs_index >= cs_count) {
             csl->controller.cs_index = cs_count - 1;
         }
@@ -246,16 +190,6 @@ static void on_row_event(lv_obj_t *obj, lv_event_t event)
     }
 
     /*Etc.*/
-}
-
-static void on_btn_event(lv_obj_t *btn, lv_event_t event)
-{
-    if (event == LV_EVENT_CLICKED) {
-        cbd_t *cbd = lv_obj_get_user_data(btn);
-        if (cbd) {
-            cbd->cb(cbd->context, btn);
-        }
-    }
 }
 
 static void on_csc_close(ysw_csl_t *csl, ysw_csc_t *csc)
@@ -397,7 +331,7 @@ static void on_close(ysw_csl_t *csl, lv_obj_t *btn)
         csl->controller.close_cb(csl->controller.close_cb_context, csl);
     }
     ESP_LOGD(TAG, "on_close deleting csl->cont");
-    lv_obj_del(csl->cont); // deletes contents
+    lv_obj_del(csl->panel.container); // deletes contents
     ESP_LOGD(TAG, "on_close freeing csl");
     ysw_heap_free(csl);
 }
@@ -458,80 +392,6 @@ static void on_prev(ysw_csl_t *csl, lv_obj_t *btn)
     display_chord_styles(csl);
 }
 
-static void set_cbd(cbd_t *cbd, cb_t cb, void *context)
-{
-    cbd->cb = cb;
-    cbd->context = context;
-}
-
-static void create_label(lv_obj_t *parent, label_t *label)
-{
-    label->label = lv_label_create(parent, NULL);
-    lv_obj_set_size(label->label, 0, 30);
-    lv_label_set_long_mode(label->label, LV_LABEL_LONG_CROP);
-}
-
-static void create_button(lv_obj_t *parent, button_t *button, const void *img_src)
-{
-    button->btn = lv_btn_create(parent, NULL);
-    lv_obj_set_size(button->btn, 20, 20);
-    adjust_styles(button->btn);
-    lv_obj_t *img = lv_img_create(button->btn, NULL);
-    lv_obj_set_click(img, false);
-    lv_img_set_src(img, img_src);
-    lv_obj_set_user_data(button->btn, &button->cbd);
-    lv_obj_set_event_cb(button->btn, on_btn_event);
-}
-
-static void create_header(lv_obj_t *parent, header_t *header)
-{
-    header->cont = lv_cont_create(parent, NULL);
-    lv_obj_set_size(header->cont, 310, 30);
-    adjust_styles(header->cont);
-    lv_cont_set_layout(header->cont, LV_LAYOUT_ROW_MID); // TODO: move to bottom
-
-    create_label(header->cont, &header->title);
-    create_button(header->cont, &header->prev, LV_SYMBOL_PREV);
-    create_button(header->cont, &header->play, LV_SYMBOL_PLAY);
-    create_button(header->cont, &header->stop, LV_SYMBOL_STOP);
-    create_button(header->cont, &header->loop, LV_SYMBOL_LOOP);
-    create_button(header->cont, &header->next, LV_SYMBOL_NEXT);
-    create_button(header->cont, &header->close, LV_SYMBOL_CLOSE);
-
-    ysw_ui_distribute_extra_width(header->cont, header->title.label);
-}
-
-static void create_body(lv_obj_t *parent, body_t *body)
-{
-    body->page = lv_page_create(parent, NULL);
-    lv_obj_set_size(body->page, 310, 0);
-    adjust_styles(body->page);
-    adjust_styles(lv_page_get_scrl(body->page));
-    lv_page_set_scrl_layout(body->page, LV_LAYOUT_COLUMN_MID);
-}
-
-static void create_footer(lv_obj_t *parent, footer_t *footer)
-{
-    footer->cont = lv_cont_create(parent, NULL);
-    lv_obj_set_size(footer->cont, 310, 30);
-    adjust_styles(footer->cont);
-    lv_cont_set_layout(footer->cont, LV_LAYOUT_ROW_MID); // TODO: move to bottom
-
-    create_button(footer->cont, &footer->settings, LV_SYMBOL_SETTINGS);
-    create_button(footer->cont, &footer->save, LV_SYMBOL_SAVE);
-    create_button(footer->cont, &footer->new, LV_SYMBOL_AUDIO); // TODO: add NEW
-    create_button(footer->cont, &footer->copy, LV_SYMBOL_COPY);
-    create_button(footer->cont, &footer->paste, LV_SYMBOL_PASTE);
-    create_button(footer->cont, &footer->trash, LV_SYMBOL_TRASH);
-    create_button(footer->cont, &footer->sort, LV_SYMBOL_GPS); // TODO: add SORT
-    create_button(footer->cont, &footer->up, LV_SYMBOL_UP);
-    create_button(footer->cont, &footer->down, LV_SYMBOL_DOWN);
-    create_label(footer->cont, &footer->info);
-    lv_label_set_align(footer->info.label, LV_LABEL_ALIGN_RIGHT);
-
-    ysw_ui_distribute_extra_width(footer->cont, footer->info.label);
-}
-
 ysw_csl_t* ysw_csl_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index)
 {
     ysw_csl_t *csl = ysw_heap_allocate(sizeof(ysw_csl_t)); // freed in on_close
@@ -539,36 +399,35 @@ ysw_csl_t* ysw_csl_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_inde
     csl->controller.music = music;
     csl->controller.cs_index = cs_index;
 
-    set_cbd(&csl->header.prev.cbd, on_prev, csl);
-    set_cbd(&csl->header.play.cbd, on_play, csl);
-    set_cbd(&csl->header.stop.cbd, on_stop, csl);
-    set_cbd(&csl->header.loop.cbd, on_loop, csl);
-    set_cbd(&csl->header.next.cbd, on_next, csl);
-    set_cbd(&csl->header.close.cbd, on_close, csl);
-    set_cbd(&csl->footer.settings.cbd, on_settings, csl);
-    set_cbd(&csl->footer.save.cbd, on_save, csl);
-    set_cbd(&csl->footer.new.cbd, on_new, csl);
-    set_cbd(&csl->footer.copy.cbd, on_copy, csl);
-    set_cbd(&csl->footer.paste.cbd, on_paste, csl);
-    set_cbd(&csl->footer.trash.cbd, on_trash, csl);
-    set_cbd(&csl->footer.sort.cbd, on_sort, csl);
-    set_cbd(&csl->footer.up.cbd, on_up, csl);
-    set_cbd(&csl->footer.down.cbd, on_down, csl);
+    ysw_ui_set_cbd(&csl->panel.header.prev.cbd, on_prev, csl);
+    ysw_ui_set_cbd(&csl->panel.header.play.cbd, on_play, csl);
+    ysw_ui_set_cbd(&csl->panel.header.stop.cbd, on_stop, csl);
+    ysw_ui_set_cbd(&csl->panel.header.loop.cbd, on_loop, csl);
+    ysw_ui_set_cbd(&csl->panel.header.next.cbd, on_next, csl);
+    ysw_ui_set_cbd(&csl->panel.header.close.cbd, on_close, csl);
+    ysw_ui_set_cbd(&csl->panel.footer.settings.cbd, on_settings, csl);
+    ysw_ui_set_cbd(&csl->panel.footer.save.cbd, on_save, csl);
+    ysw_ui_set_cbd(&csl->panel.footer.new.cbd, on_new, csl);
+    ysw_ui_set_cbd(&csl->panel.footer.copy.cbd, on_copy, csl);
+    ysw_ui_set_cbd(&csl->panel.footer.paste.cbd, on_paste, csl);
+    ysw_ui_set_cbd(&csl->panel.footer.trash.cbd, on_trash, csl);
+    ysw_ui_set_cbd(&csl->panel.footer.sort.cbd, on_sort, csl);
+    ysw_ui_set_cbd(&csl->panel.footer.up.cbd, on_up, csl);
+    ysw_ui_set_cbd(&csl->panel.footer.down.cbd, on_down, csl);
 
-    csl->cont = lv_cont_create(parent, NULL);
-    lv_obj_set_size(csl->cont, 320, 240);
-    adjust_styles(csl->cont);
-    lv_obj_align_origo(csl->cont, parent, LV_ALIGN_CENTER, 0, 0);
-    lv_cont_set_layout(csl->cont, LV_LAYOUT_COLUMN_MID);
+    csl->panel.container = lv_cont_create(parent, NULL);
+    lv_obj_set_size(csl->panel.container, 320, 240);
+    ysw_ui_adjust_styles(csl->panel.container);
+    lv_obj_align_origo(csl->panel.container, parent, LV_ALIGN_CENTER, 0, 0);
+    lv_cont_set_layout(csl->panel.container, LV_LAYOUT_COLUMN_MID);
 
-    create_header(csl->cont, &csl->header);
-    create_body(csl->cont, &csl->body);
-    create_footer(csl->cont, &csl->footer);
+    ysw_ui_create_header(csl->panel.container, &csl->panel.header);
+    ysw_ui_create_body(csl->panel.container, &csl->panel.body);
+    ysw_ui_create_footer(csl->panel.container, &csl->panel.footer);
 
-    lv_label_set_text_static(csl->header.title.label, "Chord Styles");
-    lv_label_set_text_static(csl->footer.info.label, "");
+    lv_label_set_text_static(csl->panel.footer.info.label, "");
 
-    ysw_ui_distribute_extra_height(csl->cont, csl->body.page);
+    ysw_ui_distribute_extra_height(csl->panel.container, csl->panel.body.page);
 
     display_chord_styles(csl);
 

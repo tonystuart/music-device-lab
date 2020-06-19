@@ -7,6 +7,8 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
+#include "ysw_ui.h"
+
 #include "lvgl.h"
 #include "esp_log.h"
 
@@ -63,6 +65,12 @@ void ysw_ui_lighten_background(lv_obj_t *obj)
 void ysw_ui_clear_border(lv_obj_t *obj)
 {
     lv_obj_set_style_local_border_width(obj, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 0);
+}
+
+void ysw_ui_adjust_styles(lv_obj_t *obj)
+{
+    ysw_ui_lighten_background(obj);
+    ysw_ui_clear_border(obj);
 }
 
 void ysw_ui_get_obj_type(lv_obj_t *obj, char *buffer, uint32_t size)
@@ -158,6 +166,90 @@ void ysw_ui_ensure_visible(lv_obj_t *child, bool do_center)
         }
         lv_obj_set_y(scrl, scrl_top);
     }
+}
+
+void ysw_ui_set_cbd(ysw_ui_cbd_t *cbd, void *cb, void *context)
+{
+    cbd->cb = cb;
+    cbd->context = context;
+}
+
+void ysw_ui_create_label(lv_obj_t *parent, ysw_ui_label_t *label)
+{
+    label->label = lv_label_create(parent, NULL);
+    lv_obj_set_size(label->label, 0, 30);
+    lv_label_set_long_mode(label->label, LV_LABEL_LONG_CROP);
+}
+
+void ysw_ui_on_btn_event(lv_obj_t *btn, lv_event_t event)
+{
+    if (event == LV_EVENT_CLICKED) {
+        ysw_ui_cbd_t *cbd = lv_obj_get_user_data(btn);
+        if (cbd) {
+            cbd->cb(cbd->context, btn);
+        }
+    }
+}
+
+void ysw_ui_create_button(lv_obj_t *parent, ysw_ui_button_t *button, const void *img_src)
+{
+    button->btn = lv_btn_create(parent, NULL);
+    lv_obj_set_size(button->btn, 20, 20);
+    ysw_ui_adjust_styles(button->btn);
+    lv_obj_t *img = lv_img_create(button->btn, NULL);
+    lv_obj_set_click(img, false);
+    lv_img_set_src(img, img_src);
+    lv_obj_set_user_data(button->btn, &button->cbd);
+    lv_obj_set_event_cb(button->btn, ysw_ui_on_btn_event);
+}
+
+void ysw_ui_create_header(lv_obj_t *parent, ysw_ui_header_t *header)
+{
+    header->container = lv_cont_create(parent, NULL);
+    lv_obj_set_size(header->container, 310, 30);
+    ysw_ui_adjust_styles(header->container);
+    lv_cont_set_layout(header->container, LV_LAYOUT_ROW_MID); // TODO: move to bottom
+
+    ysw_ui_create_label(header->container, &header->title);
+    ysw_ui_create_button(header->container, &header->prev, LV_SYMBOL_PREV);
+    ysw_ui_create_button(header->container, &header->play, LV_SYMBOL_PLAY);
+    ysw_ui_create_button(header->container, &header->stop, LV_SYMBOL_STOP);
+    ysw_ui_create_button(header->container, &header->loop, LV_SYMBOL_LOOP);
+    ysw_ui_create_button(header->container, &header->next, LV_SYMBOL_NEXT);
+    ysw_ui_create_button(header->container, &header->close, LV_SYMBOL_CLOSE);
+
+    ysw_ui_distribute_extra_width(header->container, header->title.label);
+}
+
+void ysw_ui_create_body(lv_obj_t *parent, ysw_ui_body_t *body)
+{
+    body->page = lv_page_create(parent, NULL);
+    lv_obj_set_size(body->page, 310, 0);
+    ysw_ui_adjust_styles(body->page);
+    ysw_ui_adjust_styles(lv_page_get_scrl(body->page));
+    lv_page_set_scrl_layout(body->page, LV_LAYOUT_COLUMN_MID);
+}
+
+void ysw_ui_create_footer(lv_obj_t *parent, ysw_ui_footer_t *footer)
+{
+    footer->container = lv_cont_create(parent, NULL);
+    lv_obj_set_size(footer->container, 310, 30);
+    ysw_ui_adjust_styles(footer->container);
+    lv_cont_set_layout(footer->container, LV_LAYOUT_ROW_MID); // TODO: move to bottom
+
+    ysw_ui_create_button(footer->container, &footer->settings, LV_SYMBOL_SETTINGS);
+    ysw_ui_create_button(footer->container, &footer->save, LV_SYMBOL_SAVE);
+    ysw_ui_create_button(footer->container, &footer->new, LV_SYMBOL_AUDIO); // TODO: add NEW
+    ysw_ui_create_button(footer->container, &footer->copy, LV_SYMBOL_COPY);
+    ysw_ui_create_button(footer->container, &footer->paste, LV_SYMBOL_PASTE);
+    ysw_ui_create_button(footer->container, &footer->trash, LV_SYMBOL_TRASH);
+    ysw_ui_create_button(footer->container, &footer->sort, LV_SYMBOL_GPS); // TODO: add SORT
+    ysw_ui_create_button(footer->container, &footer->up, LV_SYMBOL_UP);
+    ysw_ui_create_button(footer->container, &footer->down, LV_SYMBOL_DOWN);
+    ysw_ui_create_label(footer->container, &footer->info);
+    lv_label_set_align(footer->info.label, LV_LABEL_ALIGN_RIGHT);
+
+    ysw_ui_distribute_extra_width(footer->container, footer->info.label);
 }
 
 
