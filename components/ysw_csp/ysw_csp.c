@@ -21,8 +21,8 @@
 #define LV_OBJX_NAME "YSW_CSP"
 #define TAG LV_OBJX_NAME
 
-static lv_design_cb_t ancestor_design;
-static lv_signal_cb_t ancestor_signal;
+static lv_design_cb_t base_design;
+static lv_signal_cb_t base_signal;
 
 typedef struct {
     ysw_cs_t *cs;
@@ -76,7 +76,7 @@ static lv_design_res_t draw_main(lv_obj_t *csp, const lv_area_t *clip_area)
 
 static lv_design_res_t ysw_csp_design(lv_obj_t *csp, const lv_area_t *clip_area, lv_design_mode_t mode)
 {
-    lv_design_res_t res = ancestor_design(csp, clip_area, mode);
+    lv_design_res_t res = base_design(csp, clip_area, mode);
     if (mode == LV_DESIGN_DRAW_MAIN) {
         if (res == LV_DESIGN_RES_OK) {
             res = draw_main(csp, clip_area);
@@ -89,7 +89,7 @@ static lv_res_t ysw_csp_signal(lv_obj_t *csp, lv_signal_t sign, void *param)
 {
     lv_res_t res;
 
-    res = ancestor_signal(csp, sign, param);
+    res = base_signal(csp, sign, param);
     if (res != LV_RES_OK) {
         return res;
     }
@@ -112,12 +112,12 @@ lv_obj_t* ysw_csp_create(lv_obj_t *par)
     lv_obj_t *csp = lv_obj_create(par, NULL);
     assert(csp);
 
-    if (!ancestor_signal) {
-        ancestor_signal = lv_obj_get_signal_cb(csp);
+    if (!base_signal) {
+        base_signal = lv_obj_get_signal_cb(csp);
     }
 
-    if (!ancestor_design) {
-        ancestor_design = lv_obj_get_design_cb(csp);
+    if (!base_design) {
+        base_design = lv_obj_get_design_cb(csp);
     }
 
     ysw_csp_ext_t *ext = lv_obj_allocate_ext_attr(csp, sizeof(ysw_csp_ext_t));

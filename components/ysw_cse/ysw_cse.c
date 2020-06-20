@@ -43,10 +43,10 @@ typedef struct {
     lv_coord_t cse_width;
 } metrics_t;
     
-static lv_design_cb_t super_design_cb;
-static lv_signal_cb_t super_signal_cb;
+static lv_design_cb_t base_design_cb;
+static lv_signal_cb_t base_signal_cb;
 
-static char *key_labels[] =
+static const char *key_labels[] =
 {
     "7th",
     NULL,
@@ -104,7 +104,7 @@ static void get_sn_info(lv_obj_t *cse, ysw_sn_t *sn, lv_area_t *ret_area, uint8_
 
 static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mode)
 {
-    super_design_cb(cse, mask, mode);
+    base_design_cb(cse, mask, mode);
 
     ysw_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
 
@@ -243,7 +243,7 @@ static lv_design_res_t design_cb(lv_obj_t *cse, const lv_area_t *mask, lv_design
     bool result = true;
     switch (mode) {
         case LV_DESIGN_COVER_CHK:
-            result = super_design_cb(cse, mask, mode);
+            result = base_design_cb(cse, mask, mode);
             break;
         case LV_DESIGN_DRAW_MAIN:
             draw_main(cse, mask, mode);
@@ -591,7 +591,7 @@ static void on_signal_long_press(lv_obj_t *cse, void *param)
 
 static lv_res_t signal_cb(lv_obj_t *cse, lv_signal_t signal, void *param)
 {
-    lv_res_t res = super_signal_cb(cse, signal, param);
+    lv_res_t res = base_signal_cb(cse, signal, param);
     //ESP_LOGD(TAG, "signal_cb signal=%d", signal);
     if (res == LV_RES_OK) {
         switch (signal) {
@@ -630,12 +630,12 @@ lv_obj_t *ysw_cse_create(lv_obj_t *par, void *context)
         return NULL;
     }
 
-    if (super_signal_cb == NULL) {
-        super_signal_cb = lv_obj_get_signal_cb(cse);
+    if (base_signal_cb == NULL) {
+        base_signal_cb = lv_obj_get_signal_cb(cse);
     }
 
-    if (super_design_cb == NULL) {
-        super_design_cb = lv_obj_get_design_cb(cse);
+    if (base_design_cb == NULL) {
+        base_design_cb = lv_obj_get_design_cb(cse);
     }
 
     ysw_cse_ext_t *ext = lv_obj_allocate_ext_attr(cse, sizeof(ysw_cse_ext_t));
@@ -656,9 +656,12 @@ lv_obj_t *ysw_cse_create(lv_obj_t *par, void *context)
     };
 
     //v7: lv_obj_set_style(cse, ext->bg_style);
+
     lv_obj_set_signal_cb(cse, signal_cb);
     lv_obj_set_design_cb(cse, design_cb);
+
     lv_obj_set_click(cse, true);
+    lv_theme_apply(cse, LV_THEME_OBJ);
 
     return cse;
 }

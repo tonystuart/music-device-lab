@@ -8,6 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_ui.h"
+#include "ysw_main_seq.h"
 
 #include "lvgl.h"
 #include "esp_log.h"
@@ -168,19 +169,6 @@ void ysw_ui_ensure_visible(lv_obj_t *child, bool do_center)
     }
 }
 
-void ysw_ui_set_cbd(ysw_ui_cbd_t *cbd, void *cb, void *context)
-{
-    cbd->cb = cb;
-    cbd->context = context;
-}
-
-void ysw_ui_create_label(lv_obj_t *parent, ysw_ui_label_t *label)
-{
-    label->label = lv_label_create(parent, NULL);
-    lv_obj_set_size(label->label, 0, 30);
-    lv_label_set_long_mode(label->label, LV_LABEL_LONG_CROP);
-}
-
 void ysw_ui_on_btn_event(lv_obj_t *btn, lv_event_t event)
 {
     if (event == LV_EVENT_CLICKED) {
@@ -191,16 +179,45 @@ void ysw_ui_on_btn_event(lv_obj_t *btn, lv_event_t event)
     }
 }
 
-void ysw_ui_create_button(lv_obj_t *parent, ysw_ui_button_t *button, const void *img_src)
+void ysw_ui_init_cbd(ysw_ui_cbd_t *cbd, void *cb, void *context)
+{
+    cbd->cb = cb;
+    cbd->context = context;
+}
+
+void ysw_ui_init_button(ysw_ui_button_t *button, void *img_src, ysw_ui_btn_cb_t cb, void *context)
+{
+    button->img_src = img_src;
+    ysw_ui_init_cbd(&button->cbd, cb, context);
+}
+
+void ysw_ui_init_buttons(ysw_ui_button_t buttons[], const ysw_ui_btn_def_t defs[], void *context)
+{
+    for (uint32_t i = 0; defs[i].img_src && i < YSW_UI_BUTTONS; i++) {
+        ysw_ui_init_button(&buttons[i], defs[i].img_src, defs[i].btn_cb, context);
+    }
+}
+
+void ysw_ui_create_label(lv_obj_t *parent, ysw_ui_label_t *label)
+{
+    label->label = lv_label_create(parent, NULL);
+    lv_obj_set_size(label->label, 0, 30);
+    lv_label_set_long_mode(label->label, LV_LABEL_LONG_CROP);
+}
+
+void ysw_ui_create_button(lv_obj_t *parent, ysw_ui_button_t *button)
 {
     button->btn = lv_btn_create(parent, NULL);
     lv_obj_set_size(button->btn, 20, 20);
     ysw_ui_adjust_styles(button->btn);
     lv_obj_t *img = lv_img_create(button->btn, NULL);
     lv_obj_set_click(img, false);
-    lv_img_set_src(img, img_src);
+    lv_img_set_src(img, button->img_src);
     lv_obj_set_user_data(button->btn, &button->cbd);
     lv_obj_set_event_cb(button->btn, ysw_ui_on_btn_event);
+    if (button->img_src == LV_SYMBOL_LOOP) {
+        ysw_main_seq_init_loop_btn(button->btn);
+    }
 }
 
 void ysw_ui_create_header(lv_obj_t *parent, ysw_ui_header_t *header)
@@ -208,17 +225,21 @@ void ysw_ui_create_header(lv_obj_t *parent, ysw_ui_header_t *header)
     header->container = lv_cont_create(parent, NULL);
     lv_obj_set_size(header->container, 310, 30);
     ysw_ui_adjust_styles(header->container);
-    lv_cont_set_layout(header->container, LV_LAYOUT_ROW_MID); // TODO: move to bottom
-
     ysw_ui_create_label(header->container, &header->title);
-    ysw_ui_create_button(header->container, &header->prev, LV_SYMBOL_PREV);
-    ysw_ui_create_button(header->container, &header->play, LV_SYMBOL_PLAY);
-    ysw_ui_create_button(header->container, &header->stop, LV_SYMBOL_STOP);
-    ysw_ui_create_button(header->container, &header->loop, LV_SYMBOL_LOOP);
-    ysw_ui_create_button(header->container, &header->next, LV_SYMBOL_NEXT);
-    ysw_ui_create_button(header->container, &header->close, LV_SYMBOL_CLOSE);
+
+    for (uint32_t i = 0; i < YSW_UI_BUTTONS; i++) {
+        if (header->buttons[i].img_src) {
+            ysw_ui_create_button(header->container, &header->buttons[i]);
+        }
+    }
 
     ysw_ui_distribute_extra_width(header->container, header->title.label);
+    lv_cont_set_layout(header->container, LV_LAYOUT_ROW_MID);
+}
+
+void ysw_ui_set_header_text(ysw_ui_header_t *header, const char *text)
+{
+    lv_label_set_text(header->title.label, text);
 }
 
 void ysw_ui_create_body(lv_obj_t *parent, ysw_ui_body_t *body)
@@ -235,21 +256,41 @@ void ysw_ui_create_footer(lv_obj_t *parent, ysw_ui_footer_t *footer)
     footer->container = lv_cont_create(parent, NULL);
     lv_obj_set_size(footer->container, 310, 30);
     ysw_ui_adjust_styles(footer->container);
-    lv_cont_set_layout(footer->container, LV_LAYOUT_ROW_MID); // TODO: move to bottom
 
-    ysw_ui_create_button(footer->container, &footer->settings, LV_SYMBOL_SETTINGS);
-    ysw_ui_create_button(footer->container, &footer->save, LV_SYMBOL_SAVE);
-    ysw_ui_create_button(footer->container, &footer->new, LV_SYMBOL_AUDIO); // TODO: add NEW
-    ysw_ui_create_button(footer->container, &footer->copy, LV_SYMBOL_COPY);
-    ysw_ui_create_button(footer->container, &footer->paste, LV_SYMBOL_PASTE);
-    ysw_ui_create_button(footer->container, &footer->trash, LV_SYMBOL_TRASH);
-    ysw_ui_create_button(footer->container, &footer->sort, LV_SYMBOL_GPS); // TODO: add SORT
-    ysw_ui_create_button(footer->container, &footer->up, LV_SYMBOL_UP);
-    ysw_ui_create_button(footer->container, &footer->down, LV_SYMBOL_DOWN);
+    for (uint32_t i = 0; i < YSW_UI_BUTTONS; i++) {
+        if (footer->buttons[i].img_src) {
+            ysw_ui_create_button(footer->container, &footer->buttons[i]);
+        }
+    }
+
     ysw_ui_create_label(footer->container, &footer->info);
     lv_label_set_align(footer->info.label, LV_LABEL_ALIGN_RIGHT);
 
     ysw_ui_distribute_extra_width(footer->container, footer->info.label);
+    lv_cont_set_layout(footer->container, LV_LAYOUT_ROW_MID);
 }
 
+void ysw_ui_set_footer_text(ysw_ui_footer_t *footer, const char *text)
+{
+    lv_label_set_text(footer->info.label, text);
+}
 
+void ysw_ui_create_frame(ysw_ui_frame_t *frame, lv_obj_t *parent)
+{
+    frame->container = lv_cont_create(parent, NULL);
+    lv_obj_set_size(frame->container, 320, 240);
+    ysw_ui_adjust_styles(frame->container);
+    lv_obj_align_origo(frame->container, parent, LV_ALIGN_CENTER, 0, 0);
+
+    ysw_ui_create_header(frame->container, &frame->header);
+    ysw_ui_create_body(frame->container, &frame->body);
+    ysw_ui_create_footer(frame->container, &frame->footer);
+
+    ysw_ui_distribute_extra_height(frame->container, frame->body.page);
+    lv_cont_set_layout(frame->container, LV_LAYOUT_COLUMN_MID);
+}
+
+void ysw_ui_close_frame(ysw_ui_frame_t *frame)
+{
+    lv_obj_del(frame->container);
+}

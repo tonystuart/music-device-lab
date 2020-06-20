@@ -187,12 +187,15 @@ void ysw_styles_initialize()
     ysw_style_red_test.body.grad_color = LV_COLOR_RED;
 #else
     lv_draw_rect_dsc_init(&rect_dsc);
+    //rect_dsc.border_color = LV_COLOR_RED;
     //lv_obj_init_draw_rect_dsc(table, 0, &rect_dsc);
 
     lv_draw_label_dsc_init(&label_dsc);
+    //label_dsc.color = LV_COLOR_YELLOW;
     //lv_obj_init_draw_label_dsc(table, 0, &label_dsc);
 
     lv_draw_line_dsc_init(&line_dsc);
+    //line_dsc.color = LV_COLOR_CYAN;
     //lv_obj_init_draw_line_dsc(table, 0, &line_dsc);
 #endif
 }

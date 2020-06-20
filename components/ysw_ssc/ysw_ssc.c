@@ -61,7 +61,7 @@ static void on_new_measure(ssc_t *ssc, uint8_t new_measure)
 static void on_edit_style(ssc_t *ssc)
 {
     uint32_t cs_index = ysw_music_get_cs_index(ssc->music, ssc->ps->cs);
-    ysw_csc_create(ssc->music, cs_index);
+    ysw_csc_create(lv_scr_act(), ssc->music, cs_index);
 }
 
 static void on_csc_close(ssc_t *ssc, ysw_csc_t *csc)
@@ -77,7 +77,7 @@ static void on_csc_close(ssc_t *ssc, ysw_csc_t *csc)
 static void on_create_style(ssc_t *ssc)
 {
     uint32_t cs_index = ysw_music_get_cs_index(ssc->music, ssc->ps->cs);
-    ysw_csc_t *csc = ysw_csc_create_new(ssc->music, cs_index);
+    ysw_csc_t *csc = ysw_csc_create_new(lv_scr_act(), ssc->music, cs_index);
     ysw_csc_set_close_cb(csc, on_csc_close, ssc);
     ssc->ps->cs = ysw_music_get_cs(ssc->music, cs_index + 1);
 }

@@ -7,6 +7,8 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
+#include "ysw_csl.h"
+
 #include "ysw_auto_play.h"
 #include "ysw_cs.h"
 #include "ysw_csc.h"
@@ -27,41 +29,28 @@
 
 #define TAG "YSW_CSL"
 
-typedef struct ysw_csl_s ysw_csl_t;
-typedef void (*csl_close_cb_t)(void *context, ysw_csl_t *csl);
-
-typedef struct {
-    ysw_music_t *music;
-    uint32_t cs_index;
-    ysw_cs_t *clipboard_cs;
-    csl_close_cb_t close_cb;
-    void *close_cb_context;
-} ysw_csl_controller_t;
-
-typedef struct ysw_csl_s {
-    ysw_ui_panel_t panel;
-    ysw_csl_controller_t controller;
-} ysw_csl_t;
+static void on_row_event(lv_obj_t *obj, lv_event_t event);
+static void on_csc_close(ysw_csl_t *csl, ysw_csc_t *csc);
 
 static void clear_selection_highlight(ysw_csl_t *csl)
 {
     uint32_t cs_count = ysw_music_get_cs_count(csl->controller.music);
     if (csl->controller.cs_index < cs_count) {
-        lv_obj_t *scrl = lv_page_get_scrl(csl->panel.body.page);
+        lv_obj_t *scrl = lv_page_get_scrl(csl->frame.body.page);
         lv_obj_t *child = ysw_ui_child_at_index(scrl, csl->controller.cs_index);
         if (child) {
             //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 0);
             lv_obj_set_style_local_text_color(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_WHITE);
         }
     }
-    lv_label_set_text(csl->panel.footer.info.label, "");
+    ysw_ui_set_footer_text(&csl->frame.footer, "");
 }
 
 static void display_selection_highlight(ysw_csl_t *csl)
 {
     uint32_t cs_count = ysw_music_get_cs_count(csl->controller.music);
     if (csl->controller.cs_index < cs_count) {
-        lv_obj_t *scrl = lv_page_get_scrl(csl->panel.body.page);
+        lv_obj_t *scrl = lv_page_get_scrl(csl->frame.body.page);
         lv_obj_t *child = ysw_ui_child_at_index(scrl, csl->controller.cs_index);
         if (child) {
             //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 1);
@@ -70,23 +59,21 @@ static void display_selection_highlight(ysw_csl_t *csl)
         }
         char buf[32];
         snprintf(buf, sizeof(buf), "%d of %d", csl->controller.cs_index + 1, cs_count);
-        lv_label_set_text(csl->panel.footer.info.label, buf);
+        ysw_ui_set_footer_text(&csl->frame.footer, buf);
     }
 }
 
-static void on_row_event(lv_obj_t *obj, lv_event_t event);
-
 static void display_chord_styles(ysw_csl_t *csl)
 {
-    lv_label_set_text_static(csl->panel.footer.info.label, "");
+    lv_label_set_text_static(csl->frame.footer.info.label, "");
     uint32_t cs_count = ysw_music_get_cs_count(csl->controller.music);
-    lv_page_clean(csl->panel.body.page);
+    lv_page_clean(csl->frame.body.page);
     if (cs_count) {
-        lv_page_set_scrl_layout(csl->panel.body.page, LV_LAYOUT_OFF);
+        lv_page_set_scrl_layout(csl->frame.body.page, LV_LAYOUT_OFF);
         for (uint32_t i = 0; i < cs_count; i++) {
             // TODO: consider factoring out function(s)
             ysw_cs_t *cs = ysw_music_get_cs(csl->controller.music, i);
-            lv_obj_t *obj = lv_obj_create(csl->panel.body.page, NULL);
+            lv_obj_t *obj = lv_obj_create(csl->frame.body.page, NULL);
             lv_obj_set_size(obj, 300, 34);
             ysw_ui_adjust_styles(obj);
             lv_obj_set_user_data(obj, csl);
@@ -98,7 +85,7 @@ static void display_chord_styles(ysw_csl_t *csl)
             ysw_csp_set_cs(csp, cs);
             lv_obj_set_event_cb(obj, on_row_event);
         }
-        lv_page_set_scrl_layout(csl->panel.body.page, LV_LAYOUT_COLUMN_MID);
+        lv_page_set_scrl_layout(csl->frame.body.page, LV_LAYOUT_COLUMN_MID);
         if (csl->controller.cs_index >= cs_count) {
             csl->controller.cs_index = cs_count - 1;
         }
@@ -109,17 +96,15 @@ static void display_chord_styles(ysw_csl_t *csl)
     }
 }
 
-static void on_csc_close(ysw_csl_t *csl, ysw_csc_t *csc);
-
 static void edit_cs(ysw_csl_t *csl, uint32_t cs_index)
 {
-    ysw_csc_t *csc = ysw_csc_create(csl->controller.music, cs_index);
+    ysw_csc_t *csc = ysw_csc_create(lv_scr_act(), csl->controller.music, cs_index);
     ysw_csc_set_close_cb(csc, on_csc_close, csl);
 }
 
 static void create_cs(ysw_csl_t *csl, uint32_t cs_index)
 {
-    ysw_csc_t *csc = ysw_csc_create_new(csl->controller.music, cs_index);
+    ysw_csc_t *csc = ysw_csc_create_new(lv_scr_act(), csl->controller.music, cs_index);
     ysw_csc_set_close_cb(csc, on_csc_close, csl);
 }
 
@@ -194,7 +179,7 @@ static void on_row_event(lv_obj_t *obj, lv_event_t event)
 
 static void on_csc_close(ysw_csl_t *csl, ysw_csc_t *csc)
 {
-    csl->controller.cs_index = csc->cs_index;
+    csl->controller.cs_index = csc->controller.cs_index;
     display_chord_styles(csl);
 }
 
@@ -331,7 +316,7 @@ static void on_close(ysw_csl_t *csl, lv_obj_t *btn)
         csl->controller.close_cb(csl->controller.close_cb_context, csl);
     }
     ESP_LOGD(TAG, "on_close deleting csl->cont");
-    lv_obj_del(csl->panel.container); // deletes contents
+    lv_obj_del(csl->frame.container); // deletes contents
     ESP_LOGD(TAG, "on_close freeing csl");
     ysw_heap_free(csl);
 }
@@ -363,27 +348,6 @@ static void on_play(ysw_csl_t *csl, lv_obj_t *btn)
     ysw_main_seq_send(&message);
 }
 
-static void on_stop(ysw_csl_t *csl, lv_obj_t *btn)
-{
-    ysw_seq_message_t message = {
-            .type = YSW_SEQ_STOP,
-    };
-
-    ysw_main_seq_send(&message);
-}
-
-static void on_loop(ysw_csl_t *csl, lv_obj_t *btn)
-{
-
-    ESP_LOGD(TAG, "on_loop btn state=%d", lv_btn_get_state(btn));
-    ysw_seq_message_t message = {
-            .type = YSW_SEQ_LOOP,
-            //.loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_RELEASED,
-            .loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_CHECKED_RELEASED,
-    };
-    ysw_main_seq_send(&message);
-}
-
 static void on_prev(ysw_csl_t *csl, lv_obj_t *btn)
 {
     if (csl->controller.cs_index > 0) {
@@ -392,42 +356,42 @@ static void on_prev(ysw_csl_t *csl, lv_obj_t *btn)
     display_chord_styles(csl);
 }
 
-ysw_csl_t* ysw_csl_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index)
+static const ysw_ui_btn_def_t header_buttons[] = {
+        { LV_SYMBOL_PREV, on_prev },
+        { LV_SYMBOL_PLAY, on_play },
+        { LV_SYMBOL_STOP, ysw_main_seq_on_stop },
+        { LV_SYMBOL_LOOP, ysw_main_seq_on_loop },
+        { LV_SYMBOL_NEXT, on_next },
+        { LV_SYMBOL_CLOSE, on_close },
+        { NULL, NULL },
+};
+
+static const ysw_ui_btn_def_t footer_buttons[] = {
+        { LV_SYMBOL_SETTINGS, on_settings },
+        { LV_SYMBOL_SAVE, on_save },
+        { LV_SYMBOL_AUDIO, on_new }, // TODO: add NEW button
+        { LV_SYMBOL_COPY, on_copy },
+        { LV_SYMBOL_PASTE, on_paste },
+        { LV_SYMBOL_TRASH, on_trash },
+        { LV_SYMBOL_GPS, on_sort }, // TODO: add SORT button
+        { LV_SYMBOL_UP, on_up },
+        { LV_SYMBOL_DOWN, on_down },
+        { NULL, NULL },
+};
+
+ysw_csl_t *ysw_csl_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index)
 {
     ysw_csl_t *csl = ysw_heap_allocate(sizeof(ysw_csl_t)); // freed in on_close
 
     csl->controller.music = music;
     csl->controller.cs_index = cs_index;
 
-    ysw_ui_set_cbd(&csl->panel.header.prev.cbd, on_prev, csl);
-    ysw_ui_set_cbd(&csl->panel.header.play.cbd, on_play, csl);
-    ysw_ui_set_cbd(&csl->panel.header.stop.cbd, on_stop, csl);
-    ysw_ui_set_cbd(&csl->panel.header.loop.cbd, on_loop, csl);
-    ysw_ui_set_cbd(&csl->panel.header.next.cbd, on_next, csl);
-    ysw_ui_set_cbd(&csl->panel.header.close.cbd, on_close, csl);
-    ysw_ui_set_cbd(&csl->panel.footer.settings.cbd, on_settings, csl);
-    ysw_ui_set_cbd(&csl->panel.footer.save.cbd, on_save, csl);
-    ysw_ui_set_cbd(&csl->panel.footer.new.cbd, on_new, csl);
-    ysw_ui_set_cbd(&csl->panel.footer.copy.cbd, on_copy, csl);
-    ysw_ui_set_cbd(&csl->panel.footer.paste.cbd, on_paste, csl);
-    ysw_ui_set_cbd(&csl->panel.footer.trash.cbd, on_trash, csl);
-    ysw_ui_set_cbd(&csl->panel.footer.sort.cbd, on_sort, csl);
-    ysw_ui_set_cbd(&csl->panel.footer.up.cbd, on_up, csl);
-    ysw_ui_set_cbd(&csl->panel.footer.down.cbd, on_down, csl);
+    ysw_ui_init_buttons(csl->frame.header.buttons, header_buttons, csl);
+    ysw_ui_init_buttons(csl->frame.footer.buttons, footer_buttons, csl);
 
-    csl->panel.container = lv_cont_create(parent, NULL);
-    lv_obj_set_size(csl->panel.container, 320, 240);
-    ysw_ui_adjust_styles(csl->panel.container);
-    lv_obj_align_origo(csl->panel.container, parent, LV_ALIGN_CENTER, 0, 0);
-    lv_cont_set_layout(csl->panel.container, LV_LAYOUT_COLUMN_MID);
+    ysw_ui_create_frame(&csl->frame, parent);
 
-    ysw_ui_create_header(csl->panel.container, &csl->panel.header);
-    ysw_ui_create_body(csl->panel.container, &csl->panel.body);
-    ysw_ui_create_footer(csl->panel.container, &csl->panel.footer);
-
-    lv_label_set_text_static(csl->panel.footer.info.label, "");
-
-    ysw_ui_distribute_extra_height(csl->panel.container, csl->panel.body.page);
+    ysw_ui_set_header_text(&csl->frame.header, "Chord Styles");
 
     display_chord_styles(csl);
 

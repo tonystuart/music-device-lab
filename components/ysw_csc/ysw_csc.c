@@ -27,6 +27,7 @@
 #include "ysw_synth.h"
 #include "ysw_tempo.h"
 #include "ysw_transposition.h"
+#include "ysw_ui.h"
 
 #include "lvgl/lvgl.h"
 
@@ -40,15 +41,15 @@ typedef void (*sn_visitor_t)(ysw_csc_t *csc, ysw_sn_t *sn);
 static void on_sequencer_status(ysw_csc_t *csc, ysw_seq_status_message_t *message)
 {
     if (message->type == YSW_SEQ_IDLE) {
-        ysw_cse_on_metro(csc->cse, NULL);
+        ysw_cse_on_metro(csc->controller.cse, NULL);
     } else if (message->type == YSW_SEQ_NOTE) {
-        ysw_cse_on_metro(csc->cse, message->note);
+        ysw_cse_on_metro(csc->controller.cse, message->note);
     }
 }
 
 static void send_notes(ysw_csc_t *csc, ysw_seq_message_type_t type)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     ysw_cs_sort_sn_array(cs);
 
     uint32_t note_count = 0;
@@ -68,7 +69,7 @@ static void send_notes(ysw_csc_t *csc, ysw_seq_message_type_t type)
 
 static void send_note(ysw_csc_t *csc, ysw_sn_t *sn, ysw_seq_message_type_t type)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     ysw_note_t *note = ysw_cs_get_note(cs, sn);
 
     ysw_seq_message_t message = {
@@ -125,24 +126,24 @@ static void stop()
 
 static void update_header(ysw_csc_t *csc)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
-    ysw_frame_set_header_text(csc->frame, cs->name);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
+    ysw_ui_set_header_text(&csc->frame.header, cs->name);
 }
 
 static void update_footer(ysw_csc_t *csc)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     char buf[64];
     snprintf(buf, sizeof(buf), "%d BPM %s", cs->tempo, ysw_division_to_tick(cs->divisions));
-    ysw_frame_set_footer_text(csc->frame, buf);
+    ysw_ui_set_footer_text(&csc->frame.footer, buf);
 }
 
 static void update_frame(ysw_csc_t *csc)
 {
-    uint32_t cs_count = ysw_music_get_cs_count(csc->music);
-    if (csc->cs_index < cs_count) {
-        ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
-        ysw_cse_set_cs(csc->cse, cs);
+    uint32_t cs_count = ysw_music_get_cs_count(csc->controller.music);
+    if (csc->controller.cs_index < cs_count) {
+        ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
+        ysw_cse_set_cs(csc->controller.cse, cs);
         update_header(csc);
         update_footer(csc);
     }
@@ -150,7 +151,7 @@ static void update_frame(ysw_csc_t *csc)
 
 static void refresh(ysw_csc_t *csc)
 {
-    lv_obj_invalidate(csc->cse);
+    lv_obj_invalidate(csc->controller.cse);
     auto_play_all(csc);
 }
 
@@ -162,12 +163,12 @@ static ysw_cs_t *create_cs(ysw_csc_t *csc)
     ysw_cs_t *new_cs;
     uint32_t new_index;
 
-    uint32_t cs_count = ysw_music_get_cs_count(csc->music);
+    uint32_t cs_count = ysw_music_get_cs_count(csc->controller.music);
 
-    ESP_LOGD(TAG, "cs_count=%d, csc->cs_index=%d", cs_count, csc->cs_index);
+    ESP_LOGD(TAG, "cs_count=%d, csc->controller.cs_index=%d", cs_count, csc->controller.cs_index);
 
-    if (csc->cs_index < cs_count) {
-        ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    if (csc->controller.cs_index < cs_count) {
+        ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
         new_cs = ysw_cs_create(name,
                 cs->instrument,
                 cs->octave,
@@ -175,7 +176,7 @@ static ysw_cs_t *create_cs(ysw_csc_t *csc)
                 cs->transposition,
                 cs->tempo,
                 cs->divisions);
-        new_index = csc->cs_index + 1;
+        new_index = csc->controller.cs_index + 1;
     } else {
         new_cs = ysw_cs_create(name,
                 0,
@@ -189,8 +190,8 @@ static ysw_cs_t *create_cs(ysw_csc_t *csc)
 
     ESP_LOGD(TAG, "new_index=%d", new_index);
 
-    ysw_music_insert_cs(csc->music, new_index, new_cs);
-    csc->cs_index = new_index;
+    ysw_music_insert_cs(csc->controller.music, new_index, new_cs);
+    csc->controller.cs_index = new_index;
     update_frame(csc);
     return new_cs;
 }
@@ -200,7 +201,7 @@ static void copy_to_clipboard(ysw_csc_t *csc, ysw_sn_t *sn)
     ysw_sn_t *new_sn = ysw_sn_copy(sn);
     //ysw_sn_select(sn, false);
     ysw_sn_select(new_sn, true);
-    ysw_array_push(csc->clipboard, new_sn);
+    ysw_array_push(csc->controller.clipboard, new_sn);
 }
 
 static void decrease_volume(ysw_csc_t *csc, ysw_sn_t *sn)
@@ -222,7 +223,7 @@ static void increase_volume(ysw_csc_t *csc, ysw_sn_t *sn)
 static void visit_sn(ysw_csc_t *csc, sn_visitor_t visitor)
 {
     uint32_t visitor_count = 0;
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     uint32_t sn_count = ysw_cs_get_sn_count(cs);
     for (uint32_t i = 0; i < sn_count; i++) {
         ysw_sn_t *sn = ysw_cs_get_sn(cs, i);
@@ -232,48 +233,48 @@ static void visit_sn(ysw_csc_t *csc, sn_visitor_t visitor)
         }
     }
     if (visitor_count) {
-        lv_obj_invalidate(csc->cse);
+        lv_obj_invalidate(csc->controller.cse);
     }
 }
 
 static void on_name_change(ysw_csc_t *csc, const char *new_name)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     ysw_cs_set_name(cs, new_name);
     update_header(csc);
 }
 
 static void on_instrument_change(ysw_csc_t *csc, uint8_t new_instrument)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     ysw_cs_set_instrument(cs, new_instrument);
     auto_play_all(csc);
 }
 
 static void on_octave_change(ysw_csc_t *csc, uint8_t new_octave)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     cs->octave = new_octave;
     auto_play_all(csc);
 }
 
 static void on_mode_change(ysw_csc_t *csc, ysw_mode_t new_mode)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     cs->mode = new_mode;
     auto_play_all(csc);
 }
 
 static void on_transposition_change(ysw_csc_t *csc, uint8_t new_transposition_index)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     cs->transposition = ysw_transposition_from_index(new_transposition_index);
     auto_play_all(csc);
 }
 
 static void on_tempo_change(ysw_csc_t *csc, uint8_t new_tempo_index)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     cs->tempo = ysw_tempo_from_index(new_tempo_index);
     update_footer(csc);
     auto_play_all(csc);
@@ -281,7 +282,7 @@ static void on_tempo_change(ysw_csc_t *csc, uint8_t new_tempo_index)
 
 static void on_division_change(ysw_csc_t *csc, uint8_t new_division_index)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     cs->divisions = ysw_division_from_index(new_division_index);
     update_footer(csc);
     auto_play_all(csc);
@@ -289,9 +290,9 @@ static void on_division_change(ysw_csc_t *csc, uint8_t new_division_index)
 
 static void on_next(ysw_csc_t *csc, lv_obj_t * btn)
 {
-    uint32_t cs_count = ysw_music_get_cs_count(csc->music);
-    if (++(csc->cs_index) >= cs_count) {
-        csc->cs_index = 0;
+    uint32_t cs_count = ysw_music_get_cs_count(csc->controller.music);
+    if (++(csc->controller.cs_index) >= cs_count) {
+        csc->controller.cs_index = 0;
     }
     update_frame(csc);
 }
@@ -301,49 +302,34 @@ static void on_play(ysw_csc_t *csc, lv_obj_t * btn)
     play(csc);
 }
 
-static void on_stop(ysw_csc_t *csc, lv_obj_t * btn)
-{
-    stop();
-}
-
-static void on_loop(ysw_csc_t *csc, lv_obj_t * btn)
-{
-    ysw_seq_message_t message = {
-        .type = YSW_SEQ_LOOP,
-        //.loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_RELEASED,
-        .loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_CHECKED_RELEASED,
-    };
-    ysw_main_seq_send(&message);
-}
-
 static void on_prev(ysw_csc_t *csc, lv_obj_t * btn)
 {
-    uint32_t cs_count = ysw_music_get_cs_count(csc->music);
-    if (--(csc->cs_index) >= cs_count) {
-        csc->cs_index = cs_count - 1;
+    uint32_t cs_count = ysw_music_get_cs_count(csc->controller.music);
+    if (--(csc->controller.cs_index) >= cs_count) {
+        csc->controller.cs_index = cs_count - 1;
     }
     update_frame(csc);
 }
 
 static void on_close(ysw_csc_t *csc, lv_obj_t * btn)
 {
-    ESP_LOGD(TAG, "on_close csc->close_cb=%p", csc->close_cb);
+    ESP_LOGD(TAG, "on_close csc->controller.close_cb=%p", csc->controller.close_cb);
     ysw_seq_message_t message = {
         .type = YSW_SEQ_STOP,
     };
     ysw_main_seq_rendezvous(&message);
-    if (csc->close_cb) {
-        csc->close_cb(csc->close_cb_context, csc);
+    if (csc->controller.close_cb) {
+        csc->controller.close_cb(csc->controller.close_cb_context, csc);
     }
     ESP_LOGD(TAG, "on_close deleting csc->frame");
-    ysw_frame_del(csc->frame); // deletes contents
+    ysw_ui_close_frame(&csc->frame); // deletes contents
     ESP_LOGD(TAG, "on_close freeing csc");
     ysw_heap_free(csc);
 }
 
 static void on_settings(ysw_csc_t *csc, lv_obj_t * btn)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     uint8_t trans_index = ysw_transposition_to_index(cs->transposition);
     uint8_t tempo_index = ysw_tempo_to_index(cs->tempo);
     uint8_t division_index = ysw_division_to_index(cs->divisions);
@@ -359,7 +345,7 @@ static void on_settings(ysw_csc_t *csc, lv_obj_t * btn)
 
 static void on_save(ysw_csc_t *csc, lv_obj_t * btn)
 {
-    ysw_mfw_write(csc->music);
+    ysw_mfw_write(csc->controller.music);
 }
 
 static void on_new(ysw_csc_t *csc, lv_obj_t * btn)
@@ -369,22 +355,22 @@ static void on_new(ysw_csc_t *csc, lv_obj_t * btn)
 
 static void on_copy(ysw_csc_t *csc, lv_obj_t * btn)
 {
-    if (csc->clipboard) {
-        uint32_t old_sn_count = ysw_array_get_count(csc->clipboard);
+    if (csc->controller.clipboard) {
+        uint32_t old_sn_count = ysw_array_get_count(csc->controller.clipboard);
         for (int i = 0; i < old_sn_count; i++) {
-            ysw_sn_t *old_sn = ysw_array_get(csc->clipboard, i);
+            ysw_sn_t *old_sn = ysw_array_get(csc->controller.clipboard, i);
             ysw_sn_free(old_sn);
         }
-        ysw_array_truncate(csc->clipboard, 0);
+        ysw_array_truncate(csc->controller.clipboard, 0);
     } else {
-        csc->clipboard = ysw_array_create(10);
+        csc->controller.clipboard = ysw_array_create(10);
     }
     visit_sn(csc, copy_to_clipboard);
 }
 
 static void deselect_all(ysw_csc_t *csc)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     uint32_t sn_count = ysw_cs_get_sn_count(cs);
     for (uint32_t i = 0; i < sn_count; i++) {
         ysw_sn_t *sn = ysw_cs_get_sn(cs, i);
@@ -394,12 +380,12 @@ static void deselect_all(ysw_csc_t *csc)
 
 static void on_paste(ysw_csc_t *csc, lv_obj_t * btn)
 {
-    if (csc->clipboard) {
+    if (csc->controller.clipboard) {
         deselect_all(csc);
-        ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
-        uint32_t sn_count = ysw_array_get_count(csc->clipboard);
+        ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
+        uint32_t sn_count = ysw_array_get_count(csc->controller.clipboard);
         for (uint32_t i = 0; i < sn_count; i++) {
-            ysw_sn_t *sn = ysw_array_get(csc->clipboard, i);
+            ysw_sn_t *sn = ysw_array_get(csc->controller.clipboard, i);
             ysw_sn_t *new_sn = ysw_sn_copy(sn);
             new_sn->state = sn->state;
             ysw_cs_add_sn(cs, new_sn);
@@ -412,7 +398,7 @@ static void on_trash(ysw_csc_t *csc, lv_obj_t * btn)
 {
     uint32_t target = 0;
     uint32_t changes = 0;
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     uint32_t sn_count = ysw_cs_get_sn_count(cs);
     for (uint32_t source = 0; source < sn_count; source++) {
         ysw_sn_t *sn = ysw_array_get(cs->sn_array, source);
@@ -442,7 +428,7 @@ static void on_volume_max(ysw_csc_t *csc, lv_obj_t * btn)
 
 static void on_create_sn(ysw_csc_t *csc, uint32_t start, int8_t degree)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->music, csc->cs_index);
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     uint32_t division_duration = YSW_CS_DURATION / cs->divisions;
     uint32_t start_floor = (start / division_duration) * division_duration;
     uint32_t duration = division_duration - 5;
@@ -468,55 +454,70 @@ static void on_drag_end(ysw_csc_t *csc)
     auto_play_all(csc);
 }
 
-static ysw_frame_t *create_frame(ysw_csc_t *csc)
+static const ysw_ui_btn_def_t header_buttons[] = {
+        { LV_SYMBOL_PREV, on_prev },
+        { LV_SYMBOL_PLAY, on_play },
+        { LV_SYMBOL_STOP, ysw_main_seq_on_stop },
+        { LV_SYMBOL_LOOP, ysw_main_seq_on_loop },
+        { LV_SYMBOL_NEXT, on_next },
+        { LV_SYMBOL_CLOSE, on_close },
+        { NULL, NULL },
+};
+
+static const ysw_ui_btn_def_t footer_buttons[] = {
+        { LV_SYMBOL_SETTINGS, on_settings },
+        { LV_SYMBOL_SAVE, on_save },
+        { LV_SYMBOL_AUDIO, on_new }, // TODO: add NEW button
+        { LV_SYMBOL_COPY, on_copy },
+        { LV_SYMBOL_PASTE, on_paste },
+        { LV_SYMBOL_TRASH, on_trash },
+        { LV_SYMBOL_VOLUME_MID, on_volume_mid },
+        { LV_SYMBOL_VOLUME_MAX, on_volume_max },
+        { NULL, NULL },
+};
+
+static void create_chord_style_editor(ysw_csc_t *csc)
 {
-    ysw_frame_t *frame = ysw_frame_create(csc);
-
-    ysw_frame_add_footer_button(frame, LV_SYMBOL_SETTINGS, on_settings);
-    ysw_frame_add_footer_button(frame, LV_SYMBOL_SAVE, on_save);
-    ysw_frame_add_footer_button(frame, LV_SYMBOL_AUDIO, on_new);
-    ysw_frame_add_footer_button(frame, LV_SYMBOL_COPY, on_copy);
-    ysw_frame_add_footer_button(frame, LV_SYMBOL_PASTE, on_paste);
-    ysw_frame_add_footer_button(frame, LV_SYMBOL_TRASH, on_trash);
-    ysw_frame_add_footer_button(frame, LV_SYMBOL_VOLUME_MID, on_volume_mid);
-    ysw_frame_add_footer_button(frame, LV_SYMBOL_VOLUME_MAX, on_volume_max);
-
-    ysw_frame_add_header_button(frame, LV_SYMBOL_CLOSE, on_close);
-    ysw_frame_add_header_button(frame, LV_SYMBOL_NEXT, on_next);
-    ysw_main_seq_init_loop_btn(ysw_frame_add_header_button(frame, LV_SYMBOL_LOOP, on_loop));
-    ysw_frame_add_header_button(frame, LV_SYMBOL_STOP, on_stop);
-    ysw_frame_add_header_button(frame, LV_SYMBOL_PLAY, on_play);
-    ysw_frame_add_header_button(frame, LV_SYMBOL_PREV, on_prev);
-
-    return frame;
+    csc->controller.cse = ysw_cse_create(csc->frame.body.page, csc);
+    lv_coord_t w = lv_page_get_width_fit(csc->frame.body.page);
+    lv_coord_t h = lv_page_get_height_fit(csc->frame.body.page);
+    lv_obj_set_size(csc->controller.cse, w, h);
+    ysw_ui_adjust_styles(csc->controller.cse);
+    ysw_cse_set_create_cb(csc->controller.cse, on_create_sn);
+    ysw_cse_set_edit_cb(csc->controller.cse, on_edit_sn);
+    ysw_cse_set_select_cb(csc->controller.cse, on_select);
+    ysw_cse_set_drag_end_cb(csc->controller.cse, on_drag_end);
 }
 
-ysw_csc_t *ysw_csc_create(ysw_music_t *music, uint32_t cs_index)
+ysw_csc_t *ysw_csc_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index)
 {
     ysw_csc_t *csc = ysw_heap_allocate(sizeof(ysw_csc_t)); // freed in on_close
-    csc->music = music;
-    csc->cs_index = cs_index;
-    csc->frame = create_frame(csc);
-    csc->cse = ysw_cse_create(csc->frame->win, csc);
-    ysw_cse_set_create_cb(csc->cse, on_create_sn);
-    ysw_cse_set_edit_cb(csc->cse, on_edit_sn);
-    ysw_cse_set_select_cb(csc->cse, on_select);
-    ysw_cse_set_drag_end_cb(csc->cse, on_drag_end);
-    ysw_frame_set_content(csc->frame, csc->cse);
+
+    csc->controller.music = music;
+    csc->controller.cs_index = cs_index;
+
+    ysw_ui_init_buttons(csc->frame.header.buttons, header_buttons, csc);
+    ysw_ui_init_buttons(csc->frame.footer.buttons, footer_buttons, csc);
+
+    ysw_ui_create_frame(&csc->frame, parent);
+
+    create_chord_style_editor(csc);
+
     update_frame(csc);
+
     return csc;
 }
 
-ysw_csc_t *ysw_csc_create_new(ysw_music_t *music, uint32_t cs_index)
+ysw_csc_t *ysw_csc_create_new(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index)
 {
-    ysw_csc_t *csc = ysw_csc_create(music, cs_index);
+    ysw_csc_t *csc = ysw_csc_create(parent, music, cs_index);
     create_cs(csc);
     return csc;
 }
 
 void ysw_csc_set_close_cb(ysw_csc_t *csc, void *cb, void *context)
 {
-    csc->close_cb = cb;
-    csc->close_cb_context = context;
+    csc->controller.close_cb = cb;
+    csc->controller.close_cb_context = context;
 }
 

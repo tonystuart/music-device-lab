@@ -103,3 +103,22 @@ void ysw_main_seq_init_loop_btn(lv_obj_t *btn)
     lv_btn_set_state(btn, is_loop ? LV_BTN_STATE_CHECKED_RELEASED : LV_BTN_STATE_RELEASED);
 }
 
+void ysw_main_seq_on_stop(void *context, lv_obj_t *btn)
+{
+    ysw_seq_message_t message = {
+            .type = YSW_SEQ_STOP,
+    };
+
+    ysw_main_seq_send(&message);
+}
+
+void ysw_main_seq_on_loop(void *context, lv_obj_t *btn)
+{
+    ysw_seq_message_t message = {
+            .type = YSW_SEQ_LOOP,
+            //.loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_RELEASED,
+            .loop.loop = lv_btn_get_state(btn) == LV_BTN_STATE_CHECKED_RELEASED,
+    };
+    ysw_main_seq_send(&message);
+}
+

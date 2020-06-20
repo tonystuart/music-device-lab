@@ -16,4 +16,5 @@ void ysw_main_seq_initialize();
 void ysw_main_seq_send(ysw_seq_message_t *message);
 void ysw_main_seq_rendezvous(ysw_seq_message_t *message);
 void ysw_main_seq_init_loop_btn(lv_obj_t *btn);
-
+void ysw_main_seq_on_stop(void *context, lv_obj_t *btn);
+void ysw_main_seq_on_loop(void *context, lv_obj_t *btn);
