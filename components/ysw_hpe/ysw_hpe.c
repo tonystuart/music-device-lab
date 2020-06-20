@@ -10,7 +10,7 @@
 #include "ysw_hpe.h"
 
 #include "ysw_hp.h"
-#include "ysw_styles.h"
+#include "ysw_style.h"
 #include "ysw_ticks.h"
 
 #include "lvgl.h"

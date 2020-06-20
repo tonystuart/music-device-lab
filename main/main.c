@@ -17,7 +17,7 @@
 #include "ysw_mfr.h"
 #include "ysw_main_seq.h"
 #include "ysw_spiffs.h"
-#include "ysw_styles.h"
+#include "ysw_style.h"
 #include "ysw_main_synth.h"
 
 #include "lvgl/lvgl.h"
@@ -76,7 +76,7 @@ void app_main()
     ysw_main_display_initialize();
     ysw_main_synth_initialize();
     ysw_main_seq_initialize();
-    ysw_styles_initialize();
+    ysw_style_initialize();
 
     music = ysw_mfr_read();
 

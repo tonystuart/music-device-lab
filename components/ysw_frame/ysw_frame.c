@@ -10,7 +10,7 @@
 #include "ysw_frame.h"
 
 #include "ysw_heap.h"
-#include "ysw_styles.h"
+#include "ysw_style.h"
 
 #include "lvgl/lvgl.h"
 

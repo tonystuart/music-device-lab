@@ -12,7 +12,7 @@
 #include "ysw_sn.h"
 #include "ysw_cs.h"
 #include "ysw_ticks.h"
-#include "ysw_styles.h"
+#include "ysw_style.h"
 
 #include "stdio.h"
 #include "esp_log.h"

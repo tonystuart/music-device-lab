@@ -13,7 +13,7 @@
 
 #include "ysw_cs.h"
 #include "ysw_sn.h"
-#include "ysw_styles.h"
+#include "ysw_style.h"
 #include "ysw_ticks.h"
 
 #include "lvgl.h"
@@ -128,9 +128,9 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         if (_lv_area_intersect(&row_mask, mask, &row_area)) {
 
             if (i & 0x01) {
-                lv_draw_rect(&row_area, &row_mask, &rect_dsc);
+                lv_draw_rect(&row_area, &row_mask, &odd_rect_dsc);
             } else {
-                lv_draw_rect(&row_area, &row_mask, &rect_dsc);
+                lv_draw_rect(&row_area, &row_mask, &even_rect_dsc);
 
                 lv_area_t label_mask;
                 lv_area_t label_area = {
@@ -140,7 +140,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                     .y2 = row_area.y1 + 15
                 };
                 if (_lv_area_intersect(&label_mask, mask, &label_area)) {
-                    lv_draw_label(&label_area, &label_mask, &label_dsc, key_labels[i], NULL);
+                    lv_draw_label(&label_area, &label_mask, &degree_label_dsc, key_labels[i], NULL);
                 }
             }
 
@@ -154,15 +154,15 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                     .y = row_area.y1
                 };
                 if (i & 0x01) {
-                    lv_draw_line(&point1, &point2, mask, &line_dsc);
+                    lv_draw_line(&point1, &point2, mask, &odd_line_dsc);
                 } else {
-                    lv_draw_line(&point1, &point2, mask, &line_dsc);
+                    lv_draw_line(&point1, &point2, mask, &even_line_dsc);
                 }
             }
         }
     }
 
-    for (int i = 0; i < ext->cs->divisions; i++) {
+    for (int i = 1; i < ext->cs->divisions; i++) {
         lv_point_t point1 = {
             .x = m.cse_left + ((i * m.cse_width) / ext->cs->divisions),
             .y = m.cse_top
@@ -171,7 +171,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             .x = m.cse_left + ((i * m.cse_width) / ext->cs->divisions),
             .y = m.cse_top + m.cse_height
         };
-        lv_draw_line(&point1, &point2, mask, &line_dsc);
+        lv_draw_line(&point1, &point2, mask, &div_line_dsc);
     }
 
     uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
@@ -189,14 +189,13 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         if (_lv_area_intersect(&sn_mask, mask, &sn_area)) {
 
             if (ysw_sn_is_selected(sn)) {
-                // TODO: remove block if we don't use a separate style for dragging
                 if (ext->dragging) {
-                    lv_draw_rect(&sn_area, &sn_mask, &rect_dsc);
+                    lv_draw_rect(&sn_area, &sn_mask, &drag_sn_rect_dsc);
                 } else {
-                    lv_draw_rect(&sn_area, &sn_mask, &rect_dsc);
+                    lv_draw_rect(&sn_area, &sn_mask, &sel_sn_rect_dsc);
                 }
             } else {
-                lv_draw_rect(&sn_area, &sn_mask, &rect_dsc);
+                lv_draw_rect(&sn_area, &sn_mask, &sn_rect_dsc);
             }
 
             char buffer[32];
@@ -209,18 +208,17 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             // vertically center the text
             lv_point_t offset = {
                 .x = 0,
-                .y = ((sn_area.y2 - sn_area.y1) - 20) / 2, //v7.1: ext->rn_style->text.font->line_height) / 2
+                .y = ((sn_area.y2 - sn_area.y1) - sn_label_dsc.font->line_height) / 2,
             };
 
             if (ysw_sn_is_selected(sn)) {
-                // TODO: remove block if we don't use a separate style for dragging
                 if (ext->dragging) {
-                    lv_draw_label(&sn_area, &sn_mask, &label_dsc, buffer, NULL);
+                    lv_draw_label(&sn_area, &sn_mask, &drag_sn_label_dsc, buffer, NULL);
                 } else {
-                    lv_draw_label(&sn_area, &sn_mask, &label_dsc, buffer, NULL);
+                    lv_draw_label(&sn_area, &sn_mask, &sel_sn_label_dsc, buffer, NULL);
                 }
             } else {
-                lv_draw_label(&sn_area, &sn_mask, &label_dsc, buffer, NULL);
+                lv_draw_label(&sn_area, &sn_mask, &sn_label_dsc, buffer, NULL);
             }
         }
     }
@@ -234,7 +232,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             .x = m.cse_left + ((m.cse_width * ext->metro_marker) / YSW_CS_DURATION),
             .y = m.cse_top + m.cse_height,
         };
-        lv_draw_line(&top, &bottom, mask, &line_dsc);
+        lv_draw_line(&top, &bottom, mask, &metro_line_dsc);
     }
 }
 
