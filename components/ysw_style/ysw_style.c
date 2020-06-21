@@ -27,7 +27,6 @@ lv_draw_rect_dsc_t sn_rect_dsc;
 lv_draw_rect_dsc_t sel_sn_rect_dsc;
 lv_draw_rect_dsc_t drag_sn_rect_dsc;
 
-lv_draw_label_dsc_t degree_label_dsc;
 lv_draw_label_dsc_t sn_label_dsc;
 lv_draw_label_dsc_t sel_sn_label_dsc;
 lv_draw_label_dsc_t drag_sn_label_dsc;
@@ -52,8 +51,8 @@ void ysw_style_initialize()
     div_line_dsc = (lv_draw_line_dsc_t ) {
                     .color = LV_COLOR_BLACK,
                     .width = 1,
-                    .dash_width = 1,
-                    .dash_gap = 1,
+                    .dash_width = 2,
+                    .dash_gap = 2,
                     .opa = LV_OPA_COVER,
             };
 
@@ -97,13 +96,6 @@ void ysw_style_initialize()
                     .border_opa = LV_OPA_COVER,
                     .border_width = 1,
                     .border_side = LV_BORDER_SIDE_FULL,
-            };
-
-    degree_label_dsc = (lv_draw_label_dsc_t ) {
-                    .color = LV_COLOR_RED,
-                    .opa = LV_OPA_COVER,
-                    .font = &lv_font_montserrat_12,
-                    .flag = LV_TXT_FLAG_CENTER,
             };
 
     sn_label_dsc = (lv_draw_label_dsc_t ) {

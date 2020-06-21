@@ -23,6 +23,7 @@
 
 #include "math.h"
 #include "stdio.h"
+#include "stdlib.h"
 
 #define TAG "YSW_CSE"
 #define LV_OBJX_NAME "ysw_cse"
@@ -42,19 +43,24 @@ typedef struct {
     lv_coord_t cse_height;
     lv_coord_t cse_width;
 } metrics_t;
-    
+
 static lv_design_cb_t base_design_cb;
 static lv_signal_cb_t base_signal_cb;
 
-static const char *key_labels[] =
-{
-    "7th",
-    NULL,
-    "5th",
-    NULL,
-    "3rd",
-    NULL,
+static const char *degrees[] = {
     "1st",
+    "2nd",
+    "3rd",
+    "4th",
+    "5th",
+    "6th",
+    "7th",
+};
+
+static const char *accidentals[] = {
+    "b",
+    "",
+    "#",
 };
 
 static void get_metrics(lv_obj_t *cse, metrics_t *m)
@@ -102,26 +108,28 @@ static void get_sn_info(lv_obj_t *cse, ysw_sn_t *sn, lv_area_t *ret_area, uint8_
     }
 }
 
-static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mode)
+static void get_style_note_label(char *label, uint32_t size, ysw_sn_t *sn, int8_t octave)
 {
-    base_design_cb(cse, mask, mode);
+    ysw_accidental_t accidental = ysw_sn_get_accidental(sn);
+    const char *modifier = accidentals[accidental + 1]; // +1 because accidentals are -1 based
+    const char *degree = degrees[sn->degree - 1]; // -1 because degrees are 1 based
 
-    ysw_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-
-    if (!ext->cs) {
-        return;
+    if (octave) {
+        snprintf(label, size, "%s%s%+d %d", modifier, degree, octave, sn->velocity);
+    } else {
+        snprintf(label, size, "%s%s %d", modifier, degree, sn->velocity);
     }
+}
 
-    metrics_t m;
-    get_metrics(cse, &m);
-
+static void draw_rows(metrics_t *m, const lv_area_t *mask)
+{
     for (lv_coord_t i = 0; i < ROW_COUNT; i++) {
 
         lv_area_t row_area = {
-            .x1 = m.cse_left,
-            .y1 = m.cse_top + ((i * m.cse_height) / ROW_COUNT),
-            .x2 = m.cse_left + m.cse_width,
-            .y2 = m.cse_top + (((i + 1) * m.cse_height) / ROW_COUNT)
+            .x1 = m->cse_left,
+            .y1 = m->cse_top + ((i * m->cse_height) / ROW_COUNT),
+            .x2 = m->cse_left + m->cse_width,
+            .y2 = m->cse_top + (((i + 1) * m->cse_height) / ROW_COUNT)
         };
 
         lv_area_t row_mask;
@@ -131,17 +139,6 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                 lv_draw_rect(&row_area, &row_mask, &odd_rect_dsc);
             } else {
                 lv_draw_rect(&row_area, &row_mask, &even_rect_dsc);
-
-                lv_area_t label_mask;
-                lv_area_t label_area = {
-                    .x1 = row_area.x1,
-                    .y1 = row_area.y1,
-                    .x2 = row_area.x1 + 50,
-                    .y2 = row_area.y1 + 15
-                };
-                if (_lv_area_intersect(&label_mask, mask, &label_area)) {
-                    lv_draw_label(&label_area, &label_mask, &degree_label_dsc, key_labels[i], NULL);
-                }
             }
 
             if (i) {
@@ -150,7 +147,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
                     .y = row_area.y1
                 };
                 lv_point_t point2 = {
-                    .x = row_area.x1 + m.cse_width,
+                    .x = row_area.x1 + m->cse_width,
                     .y = row_area.y1
                 };
                 if (i & 0x01) {
@@ -161,19 +158,26 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             }
         }
     }
+}
 
-    for (int i = 1; i < ext->cs->divisions; i++) {
+static void draw_divisions(uint32_t divisions, metrics_t *m, const lv_area_t *mask)
+{
+    for (int i = 1; i < divisions; i++) {
         lv_point_t point1 = {
-            .x = m.cse_left + ((i * m.cse_width) / ext->cs->divisions),
-            .y = m.cse_top
+            .x = m->cse_left + ((i * m->cse_width) / divisions),
+            .y = m->cse_top
         };
         lv_point_t point2 = {
-            .x = m.cse_left + ((i * m.cse_width) / ext->cs->divisions),
-            .y = m.cse_top + m.cse_height
+            .x = m->cse_left + ((i * m->cse_width) / divisions),
+            .y = m->cse_top + m->cse_height
         };
         lv_draw_line(&point1, &point2, mask, &div_line_dsc);
     }
+}
 
+static void draw_style_notes(lv_obj_t *cse, const lv_area_t *mask)
+{
+    ysw_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
 
     for (int i = 0; i < sn_count; i++) {
@@ -181,7 +185,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
         ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
 
         int8_t octave = 0;
-        lv_area_t sn_area = {};
+        lv_area_t sn_area = { };
         get_sn_info(cse, sn, &sn_area, NULL, &octave);
 
         lv_area_t sn_mask;
@@ -197,19 +201,8 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             } else {
                 lv_draw_rect(&sn_area, &sn_mask, &sn_rect_dsc);
             }
-
             char buffer[32];
-            if (octave) {
-                snprintf(buffer, sizeof(buffer), "%d/%+d", sn->velocity, octave);
-            } else {
-                snprintf(buffer, sizeof(buffer), "%d", sn->velocity);
-            }
-
-            // vertically center the text
-            lv_point_t offset = {
-                .x = 0,
-                .y = ((sn_area.y2 - sn_area.y1) - sn_label_dsc.font->line_height) / 2,
-            };
+            get_style_note_label(buffer, sizeof(buffer), sn, octave);
 
             if (ysw_sn_is_selected(sn)) {
                 if (ext->dragging) {
@@ -222,17 +215,34 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mod
             }
         }
     }
+}
 
-    if (ext->metro_marker != -1) {
+static void draw_metro_marker(int32_t metro_marker, metrics_t *m, const lv_area_t *mask)
+{
+    if (metro_marker != -1) {
         lv_point_t top = {
-            .x = m.cse_left + ((m.cse_width * ext->metro_marker) / YSW_CS_DURATION),
-            .y = m.cse_top,
+            .x = m->cse_left + ((m->cse_width * metro_marker) / YSW_CS_DURATION),
+            .y = m->cse_top,
         };
         lv_point_t bottom = {
-            .x = m.cse_left + ((m.cse_width * ext->metro_marker) / YSW_CS_DURATION),
-            .y = m.cse_top + m.cse_height,
+            .x = m->cse_left + ((m->cse_width * metro_marker) / YSW_CS_DURATION),
+            .y = m->cse_top + m->cse_height,
         };
         lv_draw_line(&top, &bottom, mask, &metro_line_dsc);
+    }
+}
+
+static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mode)
+{
+    base_design_cb(cse, mask, mode);
+    ysw_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
+    if (ext->cs) {
+        metrics_t m;
+        get_metrics(cse, &m);
+        draw_rows(&m, mask);
+        draw_divisions(ext->cs->divisions, &m, mask);
+        draw_style_notes(cse, mask);
+        draw_metro_marker(ext->metro_marker, &m, mask);
     }
 }
 
@@ -620,7 +630,7 @@ static lv_res_t signal_cb(lv_obj_t *cse, lv_signal_t signal, void *param)
     return res;
 }
 
-lv_obj_t *ysw_cse_create(lv_obj_t *par, void *context)
+lv_obj_t* ysw_cse_create(lv_obj_t *par, void *context)
 {
     lv_obj_t *cse = lv_obj_create(par, NULL);
     LV_ASSERT_MEM(cse);
@@ -642,18 +652,18 @@ lv_obj_t *ysw_cse_create(lv_obj_t *par, void *context)
         return NULL;
     }
 
-    *ext = (ysw_cse_ext_t){
-        .metro_marker = -1,
-        //v7: .bg_style = &lv_style_plain,
-        //v7: .oi_style = &ysw_style_oi,
-        //v7: .ei_style = &ysw_style_ei,
-        //v7: .rn_style = &ysw_style_rn,
-        //v7: .sn_style = &ysw_style_sn,
-        //v7: .mn_style = &ysw_style_mn,
-        .context = context,
-    };
+    *ext = (ysw_cse_ext_t ) {
+                .metro_marker = -1,
+                //v7: .bg_style = &lv_style_plain,
+                //v7: .oi_style = &ysw_style_oi,
+                //v7: .ei_style = &ysw_style_ei,
+                //v7: .rn_style = &ysw_style_rn,
+                //v7: .sn_style = &ysw_style_sn,
+                //v7: .mn_style = &ysw_style_mn,
+                .context = context,
+            };
 
-    //v7: lv_obj_set_style(cse, ext->bg_style);
+//v7: lv_obj_set_style(cse, ext->bg_style);
 
     lv_obj_set_signal_cb(cse, signal_cb);
     lv_obj_set_design_cb(cse, design_cb);

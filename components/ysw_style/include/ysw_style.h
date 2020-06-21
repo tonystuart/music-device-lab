@@ -26,7 +26,6 @@ extern lv_draw_rect_dsc_t sn_rect_dsc;
 extern lv_draw_rect_dsc_t sel_sn_rect_dsc;
 extern lv_draw_rect_dsc_t drag_sn_rect_dsc;
 
-extern lv_draw_label_dsc_t degree_label_dsc;
 extern lv_draw_label_dsc_t sn_label_dsc;
 extern lv_draw_label_dsc_t sel_sn_label_dsc;
 extern lv_draw_label_dsc_t drag_sn_label_dsc;

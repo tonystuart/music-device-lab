@@ -215,7 +215,7 @@ void ysw_ui_create_button(lv_obj_t *parent, ysw_ui_button_t *button)
     lv_img_set_src(img, button->img_src);
     lv_obj_set_user_data(button->btn, &button->cbd);
     lv_obj_set_event_cb(button->btn, ysw_ui_on_btn_event);
-    if (button->img_src == LV_SYMBOL_LOOP) {
+    if (strcmp(button->img_src, LV_SYMBOL_LOOP) == 0) {
         ysw_main_seq_init_loop_btn(button->btn);
     }
 }
