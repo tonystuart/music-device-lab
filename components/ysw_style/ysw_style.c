@@ -116,3 +116,58 @@ void ysw_style_initialize()
 
     drag_sn_label_dsc = sel_sn_label_dsc;
 }
+
+void ysw_style_lighten_background(lv_obj_t *obj)
+{
+    lv_color_t parent_bg = LV_COLOR_BLACK;
+    lv_obj_t *parent = lv_obj_get_parent(obj);
+    if (parent) {
+        parent_bg = lv_obj_get_style_bg_color(parent, LV_OBJ_PART_MAIN);
+    }
+    lv_color_t child_bg = lv_color_lighten(parent_bg, LV_OPA_20);
+    lv_obj_set_style_local_bg_color(obj, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, child_bg);
+}
+
+void ysw_style_clear_border(lv_obj_t *obj)
+{
+    lv_obj_set_style_local_border_width(obj, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 0);
+}
+
+void ysw_style_adjust_obj(lv_obj_t *obj)
+{
+    ysw_style_lighten_background(obj);
+    ysw_style_clear_border(obj);
+}
+
+void ysw_style_adjust_keyboard(lv_obj_t *kb)
+{
+    lv_color_t parent_bg = LV_COLOR_BLACK;
+    lv_obj_t *parent = lv_obj_get_parent(kb);
+    if (parent) {
+        parent_bg = lv_obj_get_style_bg_color(parent, LV_OBJ_PART_MAIN);
+    }
+    lv_color_t child_bg = lv_color_lighten(parent_bg, LV_OPA_20);
+    lv_color_t btn_bg = lv_color_lighten(child_bg, LV_OPA_20);
+    lv_obj_set_style_local_bg_color(kb, LV_KEYBOARD_PART_BG, LV_STATE_DEFAULT, child_bg);
+    lv_obj_set_style_local_bg_color(kb, LV_KEYBOARD_PART_BTN, LV_STATE_DEFAULT, btn_bg);
+    lv_obj_set_style_local_border_width(kb, LV_KEYBOARD_PART_BG, LV_STATE_DEFAULT, 0);
+    lv_obj_set_style_local_border_width(kb, LV_KEYBOARD_PART_BTN, LV_STATE_DEFAULT, 0);
+    lv_obj_set_style_local_pad_left(kb, LV_KEYBOARD_PART_BG, LV_STATE_DEFAULT, 10);
+}
+
+void ysw_style_adjust_ddlist(lv_obj_t *ddlist)
+{
+    lv_color_t parent_bg = LV_COLOR_BLACK;
+    lv_obj_t *parent = lv_obj_get_parent(ddlist);
+    if (parent) {
+        parent_bg = lv_obj_get_style_bg_color(parent, LV_OBJ_PART_MAIN);
+    }
+    lv_color_t child_bg = lv_color_lighten(parent_bg, LV_OPA_20);
+    lv_color_t btn_bg = lv_color_lighten(child_bg, LV_OPA_20);
+    lv_obj_set_style_local_bg_color(ddlist, LV_PAGE_PART_BG, LV_STATE_DEFAULT, child_bg);
+    lv_obj_set_style_local_bg_color(ddlist, LV_PAGE_PART_SCROLLABLE, LV_STATE_DEFAULT, btn_bg);
+    lv_obj_set_style_local_border_width(ddlist, LV_PAGE_PART_BG, LV_STATE_DEFAULT, 0);
+    lv_obj_set_style_local_border_color(ddlist, LV_PAGE_PART_SCROLLABLE, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+}
+
+

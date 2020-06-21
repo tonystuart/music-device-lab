@@ -333,14 +333,14 @@ static void on_settings(ysw_csc_t *csc, lv_obj_t * btn)
     uint8_t trans_index = ysw_transposition_to_index(cs->transposition);
     uint8_t tempo_index = ysw_tempo_to_index(cs->tempo);
     uint8_t division_index = ysw_division_to_index(cs->divisions);
-    ysw_sdb_t *sdb = ysw_sdb_create("Chord Style Settings", csc);
-    ysw_sdb_add_string(sdb, "Name", cs->name, on_name_change);
-    ysw_sdb_add_choice(sdb, "Instrument", cs->instrument, ysw_instruments, on_instrument_change);
-    ysw_sdb_add_choice(sdb, "Octave", cs->octave, ysw_octaves, on_octave_change);
-    ysw_sdb_add_choice(sdb, "Mode", cs->mode, ysw_modes, on_mode_change);
-    ysw_sdb_add_choice(sdb, "Transposition", trans_index, ysw_transposition, on_transposition_change);
-    ysw_sdb_add_choice(sdb, "Tempo", tempo_index, ysw_tempo, on_tempo_change);
-    ysw_sdb_add_choice(sdb, "Divisions", division_index, ysw_division, on_division_change);
+    ysw_sdb_t *sdb = ysw_sdb_create(lv_scr_act(), "Chord Style Settings", csc);
+    ysw_sdb_add_string(sdb, "Name:", cs->name, on_name_change);
+    ysw_sdb_add_choice(sdb, "Instrument:", cs->instrument, ysw_instruments, on_instrument_change);
+    ysw_sdb_add_choice(sdb, "Octave:", cs->octave, ysw_octaves, on_octave_change);
+    ysw_sdb_add_choice(sdb, "Mode:", cs->mode, ysw_modes, on_mode_change);
+    ysw_sdb_add_choice(sdb, "Transposition:", trans_index, ysw_transposition, on_transposition_change);
+    ysw_sdb_add_choice(sdb, "Tempo:", tempo_index, ysw_tempo, on_tempo_change);
+    ysw_sdb_add_choice(sdb, "Divisions:", division_index, ysw_division, on_division_change);
 }
 
 static void on_save(ysw_csc_t *csc, lv_obj_t * btn)
@@ -482,7 +482,7 @@ static void create_chord_style_editor(ysw_csc_t *csc)
     lv_coord_t w = lv_page_get_width_fit(csc->frame.body.page);
     lv_coord_t h = lv_page_get_height_fit(csc->frame.body.page);
     lv_obj_set_size(csc->controller.cse, w, h);
-    ysw_ui_adjust_styles(csc->controller.cse);
+    ysw_style_adjust_obj(csc->controller.cse);
     ysw_cse_set_create_cb(csc->controller.cse, on_create_sn);
     ysw_cse_set_edit_cb(csc->controller.cse, on_edit_sn);
     ysw_cse_set_select_cb(csc->controller.cse, on_select);

@@ -53,27 +53,6 @@ void ysw_ui_distribute_extra_height(lv_obj_t *parent, lv_obj_t *obj)
     lv_obj_set_height(obj, lv_obj_get_height(obj) + extra_height);
 }
 
-void ysw_ui_lighten_background(lv_obj_t *obj)
-{
-    lv_obj_t *parent = lv_obj_get_parent(obj);
-    if (parent) {
-        lv_color_t parent_bg = lv_obj_get_style_bg_color(parent, LV_OBJ_PART_MAIN);
-        lv_color_t child_bg = lv_color_lighten(parent_bg, LV_OPA_20);
-        lv_obj_set_style_local_bg_color(obj, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, child_bg);
-    }
-}
-
-void ysw_ui_clear_border(lv_obj_t *obj)
-{
-    lv_obj_set_style_local_border_width(obj, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 0);
-}
-
-void ysw_ui_adjust_styles(lv_obj_t *obj)
-{
-    ysw_ui_lighten_background(obj);
-    ysw_ui_clear_border(obj);
-}
-
 void ysw_ui_get_obj_type(lv_obj_t *obj, char *buffer, uint32_t size)
 {
     lv_obj_type_t types;
@@ -209,7 +188,7 @@ void ysw_ui_create_button(lv_obj_t *parent, ysw_ui_button_t *button)
 {
     button->btn = lv_btn_create(parent, NULL);
     lv_obj_set_size(button->btn, 20, 20);
-    ysw_ui_adjust_styles(button->btn);
+    ysw_style_adjust_obj(button->btn);
     lv_obj_t *img = lv_img_create(button->btn, NULL);
     lv_obj_set_click(img, false);
     lv_img_set_src(img, button->img_src);
@@ -224,7 +203,7 @@ void ysw_ui_create_header(lv_obj_t *parent, ysw_ui_header_t *header)
 {
     header->container = lv_cont_create(parent, NULL);
     lv_obj_set_size(header->container, 310, 30);
-    ysw_ui_adjust_styles(header->container);
+    ysw_style_adjust_obj(header->container);
     ysw_ui_create_label(header->container, &header->title);
 
     for (uint32_t i = 0; i < YSW_UI_BUTTONS; i++) {
@@ -246,8 +225,8 @@ void ysw_ui_create_body(lv_obj_t *parent, ysw_ui_body_t *body)
 {
     body->page = lv_page_create(parent, NULL);
     lv_obj_set_size(body->page, 310, 0);
-    ysw_ui_adjust_styles(body->page);
-    ysw_ui_adjust_styles(lv_page_get_scrl(body->page));
+    ysw_style_adjust_obj(body->page);
+    ysw_style_adjust_obj(lv_page_get_scrl(body->page));
     lv_page_set_scrl_layout(body->page, LV_LAYOUT_COLUMN_MID);
 }
 
@@ -255,7 +234,7 @@ void ysw_ui_create_footer(lv_obj_t *parent, ysw_ui_footer_t *footer)
 {
     footer->container = lv_cont_create(parent, NULL);
     lv_obj_set_size(footer->container, 310, 30);
-    ysw_ui_adjust_styles(footer->container);
+    ysw_style_adjust_obj(footer->container);
 
     for (uint32_t i = 0; i < YSW_UI_BUTTONS; i++) {
         if (footer->buttons[i].img_src) {
@@ -279,12 +258,15 @@ void ysw_ui_create_frame(ysw_ui_frame_t *frame, lv_obj_t *parent)
 {
     frame->container = lv_cont_create(parent, NULL);
     lv_obj_set_size(frame->container, 320, 240);
-    ysw_ui_adjust_styles(frame->container);
+    ysw_style_adjust_obj(frame->container);
     lv_obj_align_origo(frame->container, parent, LV_ALIGN_CENTER, 0, 0);
 
     ysw_ui_create_header(frame->container, &frame->header);
     ysw_ui_create_body(frame->container, &frame->body);
-    ysw_ui_create_footer(frame->container, &frame->footer);
+
+    if (frame->footer.buttons[0].img_src) {
+        ysw_ui_create_footer(frame->container, &frame->footer);
+    }
 
     ysw_ui_distribute_extra_height(frame->container, frame->body.page);
     lv_cont_set_layout(frame->container, LV_LAYOUT_COLUMN_MID);

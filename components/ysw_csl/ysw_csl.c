@@ -75,7 +75,7 @@ static void display_chord_styles(ysw_csl_t *csl)
             ysw_cs_t *cs = ysw_music_get_cs(csl->controller.music, i);
             lv_obj_t *obj = lv_obj_create(csl->frame.body.page, NULL);
             lv_obj_set_size(obj, 300, 34);
-            ysw_ui_adjust_styles(obj);
+            ysw_style_adjust_obj(obj);
             lv_obj_set_user_data(obj, csl);
             lv_obj_t *label = lv_label_create(obj, NULL);
             lv_obj_align(label, obj, LV_ALIGN_IN_LEFT_MID, 5, 0);
@@ -200,13 +200,15 @@ static void on_multiple_selection(ysw_csl_t *csl, bool multiple_selection)
 
 static void on_settings(ysw_csl_t *csl, lv_obj_t *btn)
 {
-    ysw_sdb_t *sdb = ysw_sdb_create("Chord Style Editor Settings", csl);
-    ysw_sdb_add_choice(sdb, "Multiple Selection",
+    ysw_sdb_t *sdb = ysw_sdb_create(lv_scr_act(), "Chord Style Editor Settings", csl);
+
+    ysw_sdb_add_choice(sdb, "Multiple Selection:",
             ysw_cse_gs.multiple_selection, "No\nYes", on_multiple_selection);
-    ysw_sdb_add_separator(sdb, "Auto Play Settings");
-    ysw_sdb_add_choice(sdb, "On Change",
+
+    ysw_sdb_add_choice(sdb, "Auto Play - On Change:",
             ysw_cse_gs.auto_play_all, ysw_auto_play_options, on_auto_play_all);
-    ysw_sdb_add_choice(sdb, "On Click",
+
+    ysw_sdb_add_choice(sdb, "Auto Play - On Click:",
             ysw_cse_gs.auto_play_last, ysw_auto_play_options, on_auto_play_last);
 }
 

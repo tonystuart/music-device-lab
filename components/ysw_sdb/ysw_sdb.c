@@ -22,27 +22,15 @@
 
 // Key to SDB context management:
 // We stash the context in the sdb
-// We stash the sdb in the win's user data
+// We stash the sdb in the body's page's scrollable user data
 // We stash the callback in each widget's user data
 // We fetch the context via the sdb using the parent relationship
 
-static lv_signal_cb_t ddlist_signal_cb;
-
 static ysw_sdb_t *get_sdb(lv_obj_t *field)
 {
-    lv_obj_t *container = lv_obj_get_parent(field);
-    lv_obj_t *page = lv_obj_get_parent(container);
-    lv_obj_t *win = lv_obj_get_parent(page);
-    ysw_sdb_t *sdb = lv_obj_get_user_data(win);
+    lv_obj_t *scrl = lv_obj_get_parent(field);
+    ysw_sdb_t *sdb = lv_obj_get_user_data(scrl);
     return sdb;
-}
-
-static void on_sdb_event(lv_obj_t *win, lv_event_t event)
-{
-    if (event == LV_EVENT_DELETE) {
-        ysw_sdb_t *sdb = lv_obj_get_user_data(win);
-        ysw_heap_free(sdb);
-    }
 }
 
 static void on_kb_event(lv_obj_t *keyboard, lv_event_t event)
@@ -54,8 +42,8 @@ static void on_kb_event(lv_obj_t *keyboard, lv_event_t event)
         if (ta) {
             //v7.1: lv_textarea_set_cursor_type(ta, LV_CURSOR_LINE|LV_CURSOR_HIDDEN);
             ysw_sdb_t *sdb = get_sdb(ta);
-            lv_obj_del(sdb->kb);
-            sdb->kb = NULL;
+            lv_obj_del(sdb->controller.kb);
+            sdb->controller.kb = NULL;
         }
     }
 }
@@ -64,32 +52,31 @@ static void on_ta_event(lv_obj_t *ta, lv_event_t event)
 {
     if (event == LV_EVENT_CLICKED) {
         ysw_sdb_t *sdb = get_sdb(ta);
-        lv_obj_t *win = sdb->win;
-        lv_obj_t *page = lv_win_get_content(win);
-        lv_obj_t *container = lv_page_get_scrl(page);
+        lv_obj_t *container = lv_page_get_scrl(sdb->frame.body.page);
         lv_cont_set_layout(container, LV_LAYOUT_OFF);
-        if (!sdb->kb) {
-            sdb->kb = lv_keyboard_create(win, NULL);
-            lv_obj_set_width(sdb->kb, 290);
-            lv_obj_set_event_cb(sdb->kb, on_kb_event);
-            lv_keyboard_set_cursor_manage(sdb->kb, true);
+        if (!sdb->controller.kb) {
+            sdb->controller.kb = lv_keyboard_create(sdb->frame.body.page, NULL);
+            lv_obj_set_size(sdb->controller.kb, 280, 100);
+            ysw_style_adjust_keyboard(sdb->controller.kb);
+            lv_obj_set_event_cb(sdb->controller.kb, on_kb_event);
+            lv_keyboard_set_cursor_manage(sdb->controller.kb, true);
         }
-        if (lv_keyboard_get_textarea(sdb->kb) == ta) {
+        if (lv_keyboard_get_textarea(sdb->controller.kb) == ta) {
             // click again in same field - hide the kb
             //v7.1: lv_textarea_set_cursor_type(ta, LV_CURSOR_LINE|LV_CURSOR_HIDDEN);
-            lv_obj_del(sdb->kb);
-            sdb->kb = NULL;
+            lv_obj_del(sdb->controller.kb);
+            sdb->controller.kb = NULL;
         } else {
-            lv_keyboard_set_textarea(sdb->kb, ta);
-            _lv_ll_move_before(&container->child_ll, sdb->kb, ta);
+            lv_keyboard_set_textarea(sdb->controller.kb, ta);
+            _lv_ll_move_before(&container->child_ll, sdb->controller.kb, ta);
         }
-        lv_cont_set_layout(container, LV_LAYOUT_PRETTY_MID);
+        lv_cont_set_layout(container, LV_LAYOUT_COLUMN_LEFT);
     }
     if (event == LV_EVENT_VALUE_CHANGED) {
         const char *new_value = lv_textarea_get_text(ta);
         ysw_sdb_string_cb_t cb = lv_obj_get_user_data(ta);
         if (cb) {
-            cb(get_sdb(ta)->context, new_value);
+            cb(get_sdb(ta)->controller.context, new_value);
         }
     }
 }
@@ -100,7 +87,7 @@ static void on_ddlist_event(lv_obj_t *ddlist, lv_event_t event)
         uint8_t new_value = lv_dropdown_get_selected(ddlist);
         ysw_sdb_choice_cb_t cb = lv_obj_get_user_data(ddlist);
         if (cb) {
-            cb(get_sdb(ddlist)->context, new_value);
+            cb(get_sdb(ddlist)->controller.context, new_value);
         }
     }
 }
@@ -111,7 +98,7 @@ static void on_sw_event(lv_obj_t *sw, lv_event_t event)
         bool new_value = lv_switch_get_state(sw);
         ysw_sdb_switch_cb_t cb = lv_obj_get_user_data(sw);
         if (cb) {
-            cb(get_sdb(sw)->context, new_value);
+            cb(get_sdb(sw)->controller.context, new_value);
         }
     }
 }
@@ -122,7 +109,7 @@ static void on_cb_event(lv_obj_t *cb, lv_event_t event)
         bool new_value = lv_checkbox_is_checked(cb);
         ysw_sdb_checkbox_cb_t callback = lv_obj_get_user_data(cb);
         if (callback) {
-            callback(get_sdb(cb)->context, new_value);
+            callback(get_sdb(cb)->controller.context, new_value);
         }
     }
 }
@@ -132,70 +119,50 @@ static void on_btn_event(lv_obj_t *btn, lv_event_t event)
     if (event == LV_EVENT_CLICKED) {
         ysw_sdb_button_cb_t cb = lv_obj_get_user_data(btn);
         if (cb) {
-            cb(get_sdb(btn)->context);
+            cb(get_sdb(btn)->controller.context);
         }
     }
 }
 
-static lv_res_t on_ddlist_signal(lv_obj_t *ddlist, lv_signal_t signal, void *param)
+static void on_close(ysw_sdb_t *sdb, lv_obj_t *btn)
 {
-    //v7: TODO: Consider whether this is necessary with new dropdown
-    lv_res_t res = ddlist_signal_cb(ddlist, signal, param);
-    //ESP_LOGD(TAG, "on_ddlist_signal signal=%d", signal);
-    if (res == LV_RES_OK && signal == LV_SIGNAL_COORD_CHG) {
-        lv_area_t *original = (lv_area_t*)param;
-        if (lv_area_get_height(original) != lv_area_get_height(&ddlist->coords)) {
-            lv_obj_t *scrl = lv_obj_get_parent(ddlist);
-            lv_obj_t *page = lv_obj_get_parent(scrl);
-            lv_coord_t viewport_h = page->coords.y2 - page->coords.y1;
-            lv_coord_t scroll_top = scrl->coords.y1 - page->coords.y1;
-            lv_coord_t last_visible_y = viewport_h - scroll_top; // minus a minus
-            lv_coord_t dist = ddlist->coords.y2 - last_visible_y;
-            if (dist > 0) {
-                lv_page_scroll_ver(page, -dist);
-            }
-        }
-    }
-    return res;
+    lv_obj_del(sdb->frame.container); // deletes contents
+    ysw_heap_free(sdb);
 }
 
 static void create_field_name(ysw_sdb_t *sdb, const char *name)
 {
-    lv_obj_t *label = lv_label_create(sdb->win, NULL);
-    lv_label_set_long_mode(label, LV_LABEL_LONG_BREAK);
+    lv_obj_t *label = lv_label_create(sdb->frame.body.page, NULL);
     lv_label_set_text(label, name);
-    lv_label_set_align(label, LV_LABEL_ALIGN_RIGHT);
-    lv_obj_set_width(label, 100);
+    lv_obj_set_style_local_pad_top(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 10);
+    lv_obj_set_style_local_pad_bottom(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 2);
 }
 
-ysw_sdb_t *ysw_sdb_create(const char *title, void *context)
+static const ysw_ui_btn_def_t header_buttons[] = {
+        { LV_SYMBOL_CLOSE, on_close },
+        { NULL, NULL },
+};
+
+ysw_sdb_t *ysw_sdb_create(lv_obj_t *parent, const char *title, void *context)
 {
-    ysw_sdb_t *sdb = ysw_heap_allocate(sizeof(ysw_sdb_t));
-    sdb->win = lv_win_create(lv_scr_act(), NULL);
-    sdb->context = context;
-    lv_obj_set_user_data(sdb->win, sdb);
-
-    lv_obj_align(sdb->win, NULL, LV_ALIGN_CENTER, 0, 0);
-    //v7: lv_win_set_style(sdb->win, LV_WIN_STYLE_BG, &lv_style_pretty);
-    //v7: lv_win_set_style(sdb->win, LV_WIN_STYLE_CONTENT, &ysw_style_sdb_content);
-    lv_win_set_title(sdb->win, title);
-    lv_win_set_layout(sdb->win, LV_LAYOUT_PRETTY_MID);
-
-    lv_obj_t *close_btn = lv_win_add_btn(sdb->win, LV_SYMBOL_CLOSE);
-    lv_obj_set_event_cb(close_btn, lv_win_close_event_cb);
-
-    //v7: lv_win_set_btn_size(sdb->win, 20);
-    lv_obj_set_event_cb(sdb->win, on_sdb_event);
-
+    ysw_sdb_t *sdb = ysw_heap_allocate(sizeof(ysw_sdb_t)); // freed in on_close
+    sdb->controller.context = context;
+    ysw_ui_init_buttons(sdb->frame.header.buttons, header_buttons, sdb);
+    ysw_ui_create_frame(&sdb->frame, parent);
+    ysw_ui_set_header_text(&sdb->frame.header, title);
+    lv_obj_set_user_data(lv_page_get_scrl(sdb->frame.body.page), sdb);
+    lv_page_set_scrl_layout(sdb->frame.body.page, LV_LAYOUT_COLUMN_LEFT);
     return sdb;
 }
 
 lv_obj_t *ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name)
 {
-    lv_obj_t *label = lv_label_create(sdb->win, NULL);
-    lv_label_set_text(label, name);
+    lv_obj_t *label = lv_label_create(sdb->frame.body.page, NULL);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_CROP);
+    lv_obj_set_size(label, lv_page_get_width_fit(sdb->frame.body.page), 30);
+    lv_obj_set_style_local_pad_top(label, LV_LABEL_PART_MAIN, LV_STATE_DEFAULT, 10);
     lv_label_set_align(label, LV_LABEL_ALIGN_CENTER);
-    lv_obj_add_protect(label, LV_PROTECT_FOLLOW);
+    lv_label_set_text(label, name);
     return label;
 }
 
@@ -203,13 +170,11 @@ lv_obj_t *ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value
 {
     create_field_name(sdb, name);
 
-    lv_obj_t *ta = lv_textarea_create(sdb->win, NULL);
+    lv_obj_t *ta = lv_textarea_create(sdb->frame.body.page, NULL);
+    lv_obj_set_width(ta, lv_page_get_width_fit(sdb->frame.body.page));
+    ysw_style_adjust_obj(ta);
     lv_obj_set_user_data(ta, cb);
-    lv_obj_set_width(ta, 200);
-    lv_obj_add_protect(ta, LV_PROTECT_FOLLOW);
-    //v7: lv_textarea_set_style(ta, LV_TA_STYLE_BG, &ysw_style_white_cell);
     lv_textarea_set_one_line(ta, true);
-    //v7.1: lv_textarea_set_cursor_type(ta, LV_CURSOR_LINE|LV_CURSOR_HIDDEN);
     lv_textarea_set_text(ta, value);
     lv_obj_set_event_cb(ta, on_ta_event);
     return ta;
@@ -219,28 +184,16 @@ lv_obj_t *ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, co
 {
     create_field_name(sdb, name);
 
-    lv_obj_t *ddlist = lv_dropdown_create(sdb->win, NULL);
+    lv_obj_t *ddlist = lv_dropdown_create(sdb->frame.body.page, NULL);
+    ysw_style_adjust_ddlist(ddlist);
     lv_obj_set_user_data(ddlist, cb);
-    //v7: lv_dropdown_set_anim_time(ddlist, 0);
-    lv_dropdown_set_draw_arrow(ddlist, true);
     lv_dropdown_set_options(ddlist, options);
-    //v7: lv_dropdown_ext_t *lv_dropdown_ext = lv_obj_get_ext_attr(ddlist);
-    //v7: lv_coord_t height = lv_obj_get_height(lv_dropdown_ext->label);
-    //v7: TODO: See if this is necessary with new max_height
-    //v7: if (height > 100) {
-    //v7:     lv_dropdown_set_max_height(ddlist, 100);
-    //v7: }
-    //v7: lv_dropdown_set_fix_width(ddlist, 200);
-    lv_obj_set_width(ddlist, 200);
-    //v7: lv_dropdown_set_style(ddlist, LV_DDLIST_STYLE_BG, &ysw_style_white_cell);
-    //v7: lv_dropdown_set_align(ddlist, LV_LABEL_ALIGN_LEFT);
+    lv_coord_t w = lv_page_get_width_fit(sdb->frame.body.page);
+    lv_obj_set_width(ddlist, w);
+    lv_dropdown_set_max_height(ddlist, 100);
     lv_dropdown_set_selected(ddlist, value);
-    lv_obj_add_protect(ddlist, LV_PROTECT_FOLLOW);
+    lv_dropdown_set_draw_arrow(ddlist, true); // forces left align
     lv_obj_set_event_cb(ddlist, on_ddlist_event);
-    if (!ddlist_signal_cb) {
-        ddlist_signal_cb = lv_obj_get_signal_cb(ddlist);
-    }
-    lv_obj_set_signal_cb(ddlist, on_ddlist_signal);
     return ddlist;
 }
 
@@ -248,7 +201,7 @@ lv_obj_t *ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, void 
 {
     create_field_name(sdb, name);
 
-    lv_obj_t *sw = lv_switch_create(sdb->win, NULL);
+    lv_obj_t *sw = lv_switch_create(sdb->frame.body.page, NULL);
     lv_obj_set_user_data(sw, cb);
     lv_obj_set_width(sw, 80);
     lv_obj_add_protect(sw, LV_PROTECT_FOLLOW);
@@ -263,7 +216,7 @@ lv_obj_t *ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, void 
 
 lv_obj_t *ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, void *callback)
 {
-    lv_obj_t *cb = lv_checkbox_create(sdb->win, NULL);
+    lv_obj_t *cb = lv_checkbox_create(sdb->frame.body.page, NULL);
     lv_checkbox_set_text(cb, name);
     lv_obj_set_user_data(cb, callback);
     lv_obj_add_protect(cb, LV_PROTECT_FOLLOW);
@@ -274,7 +227,7 @@ lv_obj_t *ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, voi
 
 lv_obj_t *ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, void *callback)
 {
-    lv_obj_t *btn = lv_btn_create(sdb->win, NULL);
+    lv_obj_t *btn = lv_btn_create(sdb->frame.body.page, NULL);
     //v7: lv_btn_set_style(btn, LV_BTN_STYLE_REL, &ysw_style_btn_rel);
     //v7: lv_btn_set_style(btn, LV_BTN_STYLE_PR, &ysw_style_btn_pr);
     lv_obj_set_width(btn, 140);
@@ -287,8 +240,4 @@ lv_obj_t *ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, void *callback)
     return btn;
 }
 
-void ysw_sdb_close(ysw_sdb_t *sdb)
-{
-    lv_obj_del(sdb->win); // on_sdb_event will free sdb
-}
 

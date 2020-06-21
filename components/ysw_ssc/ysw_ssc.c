@@ -126,14 +126,16 @@ void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index)
     uint32_t ps_count = ysw_hp_get_ps_count(hp);
     snprintf(title, sizeof(title), "Step %d of %d", ps_index + 1, ps_count);
 
-    ysw_sdb_t *sdb = ysw_sdb_create(title, ssc);
+    ysw_sdb_t *sdb = ysw_sdb_create(lv_scr_act(), title, ssc);
 
+#if 0
     // TODO: Encapsulate properly within ysw_sdb
     lv_win_add_btn(sdb->win, LV_SYMBOL_NEXT);
     ysw_main_seq_init_loop_btn(lv_win_add_btn(sdb->win, LV_SYMBOL_LOOP));
     lv_win_add_btn(sdb->win, LV_SYMBOL_STOP);
     lv_win_add_btn(sdb->win, LV_SYMBOL_PLAY);
     lv_win_add_btn(sdb->win, LV_SYMBOL_PREV);
+#endif
 
     ysw_sdb_add_separator(sdb, hp->name);
     ysw_sdb_add_choice(sdb, "Degree", ysw_degree_to_index(ssc->ps->degree), ysw_degree, on_degree);

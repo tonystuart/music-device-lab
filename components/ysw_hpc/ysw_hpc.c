@@ -302,7 +302,7 @@ static void on_settings(ysw_hpc_t *hpc, lv_obj_t *btn)
     ysw_hp_t *hp = ysw_music_get_hp(hpc->music, hpc->hp_index);
     uint8_t trans_index = ysw_transposition_to_index(hp->transposition);
     uint8_t tempo_index = ysw_tempo_to_index(hp->tempo);
-    ysw_sdb_t *sdb = ysw_sdb_create("Chord Progression Settings", hpc);
+    ysw_sdb_t *sdb = ysw_sdb_create(lv_scr_act(), "Chord Progression Settings", hpc);
     ysw_sdb_add_string(sdb, "Name", hp->name, on_name_change);
     ysw_sdb_add_choice(sdb, "Instrument", hp->instrument, ysw_instruments, on_instrument_change);
     ysw_sdb_add_choice(sdb, "Octave", hp->octave, ysw_octaves, on_octave_change);

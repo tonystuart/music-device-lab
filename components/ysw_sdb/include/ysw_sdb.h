@@ -9,9 +9,8 @@
 
 #pragma once
 
+#include "ysw_ui.h"
 #include "lvgl.h"
-#include "ysw_sn.h"
-#include "ysw_cs.h"
 
 typedef void (*ysw_sdb_string_cb_t)(void *context, const char *new_value);
 typedef void (*ysw_sdb_choice_cb_t)(void *context, uint8_t new_index);
@@ -20,16 +19,19 @@ typedef void (*ysw_sdb_checkbox_cb_t)(void *context, bool new_value);
 typedef void (*ysw_sdb_button_cb_t)(void *context);
 
 typedef struct {
-    lv_obj_t *win;
     lv_obj_t *kb; // shared across ta's
     void *context;
+} ysw_sdb_controller_t;
+
+typedef struct ysw_sdb_t {
+        ysw_ui_frame_t frame;
+        ysw_sdb_controller_t controller;
 } ysw_sdb_t;
 
-ysw_sdb_t *ysw_sdb_create(const char *title, void *context);
+ysw_sdb_t *ysw_sdb_create(lv_obj_t *parent, const char *title, void *context);
 lv_obj_t *ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name);
 lv_obj_t *ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value, void *cb);
 lv_obj_t *ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const char *options, void *cb);
 lv_obj_t *ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, void *cb);
 lv_obj_t *ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, void *cb);
 lv_obj_t *ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, void *cb);
-void ysw_sdb_close(ysw_sdb_t *sdb);

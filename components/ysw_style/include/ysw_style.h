@@ -31,3 +31,8 @@ extern lv_draw_label_dsc_t sel_sn_label_dsc;
 extern lv_draw_label_dsc_t drag_sn_label_dsc;
 
 void ysw_style_initialize();
+void ysw_style_lighten_background(lv_obj_t *obj);
+void ysw_style_clear_border(lv_obj_t *obj);
+void ysw_style_adjust_obj(lv_obj_t *obj);
+void ysw_style_adjust_keyboard(lv_obj_t *kb);
+void ysw_style_adjust_ddlist(lv_obj_t *ddlist);
