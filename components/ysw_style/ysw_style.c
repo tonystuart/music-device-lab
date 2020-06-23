@@ -12,6 +12,9 @@
 
 #define TAG "YSW_STYLE"
 
+// See https://material.io/design/color/the-color-system.html
+// See https://material.io/resources/color/
+
 lv_draw_line_dsc_t line_dsc;
 lv_draw_rect_dsc_t rect_dsc;
 lv_draw_label_dsc_t label_dsc;
@@ -30,6 +33,14 @@ lv_draw_rect_dsc_t drag_sn_rect_dsc;
 lv_draw_label_dsc_t sn_label_dsc;
 lv_draw_label_dsc_t sel_sn_label_dsc;
 lv_draw_label_dsc_t drag_sn_label_dsc;
+
+lv_draw_rect_dsc_t hp_rect_dsc;
+lv_draw_rect_dsc_t sel_hp_rect_dsc;
+lv_draw_rect_dsc_t drag_hp_rect_dsc;
+
+lv_draw_label_dsc_t hp_label_dsc;
+lv_draw_label_dsc_t sel_hp_label_dsc;
+lv_draw_label_dsc_t drag_hp_label_dsc;
 
 void ysw_style_initialize()
 {
@@ -56,7 +67,11 @@ void ysw_style_initialize()
                 .opa = LV_OPA_COVER,
             };
 
-    metro_line_dsc = line_dsc;
+    metro_line_dsc = (lv_draw_line_dsc_t ) {
+                .color = LV_COLOR_RED,
+                .width = 1,
+                .opa = LV_OPA_COVER,
+            };
 
     odd_rect_dsc = (lv_draw_rect_dsc_t ) {
                 .bg_color = LV_COLOR_MAKE(0x80, 0x8d, 0x94),
@@ -67,6 +82,8 @@ void ysw_style_initialize()
                 .bg_color = LV_COLOR_MAKE(0xe1, 0xef, 0xf7),
                 .bg_opa = LV_OPA_COVER,
             };
+
+    // Chord Styles
 
     sn_rect_dsc = (lv_draw_rect_dsc_t ) {
                 .radius = 4,
@@ -115,6 +132,57 @@ void ysw_style_initialize()
             };
 
     drag_sn_label_dsc = sel_sn_label_dsc;
+
+    // Progressions
+
+    hp_rect_dsc = (lv_draw_rect_dsc_t ) {
+                .radius = 4,
+                .bg_color = YSW_STYLE_COLOR(0xff9a02),
+                .bg_opa = LV_OPA_COVER,
+                .border_color = YSW_STYLE_COLOR(0xe65300),
+                .border_opa = LV_OPA_COVER,
+                .border_width = 1,
+                .border_side = LV_BORDER_SIDE_FULL,
+            };
+
+    sel_hp_rect_dsc = (lv_draw_rect_dsc_t ) {
+                .radius = 4,
+                .bg_color = YSW_STYLE_COLOR(0x0267ff),
+                .bg_opa = LV_OPA_COVER,
+                .border_color = YSW_STYLE_COLOR(0x2342e0),
+                .border_opa = LV_OPA_COVER,
+                .border_width = 1,
+                .border_side = LV_BORDER_SIDE_FULL,
+            };
+
+    drag_hp_rect_dsc = (lv_draw_rect_dsc_t ) {
+                .radius = 4,
+                .bg_color = YSW_STYLE_COLOR(0x88d1ff),
+                .bg_opa = LV_OPA_COVER,
+                .border_color = YSW_STYLE_COLOR(0x009eff),
+                .border_opa = LV_OPA_COVER,
+                .border_width = 1,
+                .border_side = LV_BORDER_SIDE_FULL,
+            };
+
+    hp_label_dsc = (lv_draw_label_dsc_t ) {
+                .color = LV_COLOR_BLACK,
+                .opa = LV_OPA_COVER,
+                .font = &lv_font_montserrat_12,
+                .flag = LV_TXT_FLAG_CENTER,
+
+            };
+
+    sel_hp_label_dsc = (lv_draw_label_dsc_t ) {
+                .color = LV_COLOR_WHITE,
+                .opa = LV_OPA_COVER,
+                .font = &lv_font_montserrat_12,
+                .flag = LV_TXT_FLAG_CENTER,
+
+            };
+
+    drag_hp_label_dsc = hp_label_dsc;
+
 }
 
 void ysw_style_lighten_background(lv_obj_t *obj)

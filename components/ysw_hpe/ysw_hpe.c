@@ -217,11 +217,16 @@ static void draw_ps(dc_t *dc)
     lv_area_t cell_mask;
     if (_lv_area_intersect(&cell_mask, dc->mask, &cell_area)) {
         if (ysw_ps_is_selected(dc->ps)) {
-            lv_draw_rect(&cell_area, &cell_mask, &sel_sn_rect_dsc);
-            lv_draw_label(&cell_area, &cell_mask, &sel_sn_label_dsc, key_labels[to_index(dc->ps->degree)], NULL);
+            if (dc->ext->dragging) {
+                lv_draw_rect(&cell_area, &cell_mask, &drag_hp_rect_dsc);
+                lv_draw_label(&cell_area, &cell_mask, &drag_hp_label_dsc, key_labels[to_index(dc->ps->degree)], NULL);
+            } else {
+                lv_draw_rect(&cell_area, &cell_mask, &sel_hp_rect_dsc);
+                lv_draw_label(&cell_area, &cell_mask, &sel_hp_label_dsc, key_labels[to_index(dc->ps->degree)], NULL);
+            }
         } else {
-            lv_draw_rect(&cell_area, &cell_mask, &sn_rect_dsc);
-            lv_draw_label(&cell_area, &cell_mask, &sn_label_dsc, key_labels[to_index(dc->ps->degree)], NULL);
+            lv_draw_rect(&cell_area, &cell_mask, &hp_rect_dsc);
+            lv_draw_label(&cell_area, &cell_mask, &hp_label_dsc, key_labels[to_index(dc->ps->degree)], NULL);
         }
     }
 }

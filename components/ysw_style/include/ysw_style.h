@@ -11,6 +11,8 @@
 
 #include "lvgl/lvgl.h"
 
+#define YSW_STYLE_COLOR(c) LV_COLOR_MAKE((c >> 16) & 0xff, ((c >> 8) & 0xff), c & 0xff)
+
 extern lv_draw_rect_dsc_t rect_dsc;
 extern lv_draw_label_dsc_t label_dsc;
 extern lv_draw_line_dsc_t line_dsc;
@@ -22,6 +24,9 @@ extern lv_draw_line_dsc_t metro_line_dsc;
 
 extern lv_draw_rect_dsc_t odd_rect_dsc;
 extern lv_draw_rect_dsc_t even_rect_dsc;
+
+// Chord Styles
+
 extern lv_draw_rect_dsc_t sn_rect_dsc;
 extern lv_draw_rect_dsc_t sel_sn_rect_dsc;
 extern lv_draw_rect_dsc_t drag_sn_rect_dsc;
@@ -29,6 +34,16 @@ extern lv_draw_rect_dsc_t drag_sn_rect_dsc;
 extern lv_draw_label_dsc_t sn_label_dsc;
 extern lv_draw_label_dsc_t sel_sn_label_dsc;
 extern lv_draw_label_dsc_t drag_sn_label_dsc;
+
+// Progressions
+
+extern lv_draw_rect_dsc_t hp_rect_dsc;
+extern lv_draw_rect_dsc_t sel_hp_rect_dsc;
+extern lv_draw_rect_dsc_t drag_hp_rect_dsc;
+
+extern lv_draw_label_dsc_t hp_label_dsc;
+extern lv_draw_label_dsc_t sel_hp_label_dsc;
+extern lv_draw_label_dsc_t drag_hp_label_dsc;
 
 void ysw_style_initialize();
 void ysw_style_lighten_background(lv_obj_t *obj);

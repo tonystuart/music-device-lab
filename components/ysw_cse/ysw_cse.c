@@ -175,7 +175,7 @@ static void draw_divisions(uint32_t divisions, metrics_t *m, const lv_area_t *ma
     }
 }
 
-static void draw_style_notes(lv_obj_t *cse, const lv_area_t *mask)
+static void draw_sn(lv_obj_t *cse, const lv_area_t *mask)
 {
     ysw_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
@@ -192,25 +192,18 @@ static void draw_style_notes(lv_obj_t *cse, const lv_area_t *mask)
 
         if (_lv_area_intersect(&sn_mask, mask, &sn_area)) {
 
+            char buffer[32];
+            get_style_note_label(buffer, sizeof(buffer), sn, octave);
             if (ysw_sn_is_selected(sn)) {
                 if (ext->dragging) {
                     lv_draw_rect(&sn_area, &sn_mask, &drag_sn_rect_dsc);
-                } else {
-                    lv_draw_rect(&sn_area, &sn_mask, &sel_sn_rect_dsc);
-                }
-            } else {
-                lv_draw_rect(&sn_area, &sn_mask, &sn_rect_dsc);
-            }
-            char buffer[32];
-            get_style_note_label(buffer, sizeof(buffer), sn, octave);
-
-            if (ysw_sn_is_selected(sn)) {
-                if (ext->dragging) {
                     lv_draw_label(&sn_area, &sn_mask, &drag_sn_label_dsc, buffer, NULL);
                 } else {
+                    lv_draw_rect(&sn_area, &sn_mask, &sel_sn_rect_dsc);
                     lv_draw_label(&sn_area, &sn_mask, &sel_sn_label_dsc, buffer, NULL);
                 }
             } else {
+                lv_draw_rect(&sn_area, &sn_mask, &sn_rect_dsc);
                 lv_draw_label(&sn_area, &sn_mask, &sn_label_dsc, buffer, NULL);
             }
         }
@@ -240,7 +233,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask)
         get_metrics(cse, &m);
         draw_rows(&m, mask);
         draw_divisions(ext->cs->divisions, &m, mask);
-        draw_style_notes(cse, mask);
+        draw_sn(cse, mask);
         draw_metro_marker(ext->metro_marker, &m, mask);
     }
 }

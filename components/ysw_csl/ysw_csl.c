@@ -134,6 +134,7 @@ static void on_short_click(lv_obj_t *obj)
 
 static void on_long_press(lv_obj_t *obj)
 {
+    lv_indev_wait_release(lv_indev_get_act());
     ysw_csl_t *csl = lv_obj_get_user_data(obj);
     if (csl) {
         uint32_t cs_index = ysw_ui_get_index_of_child(obj);
