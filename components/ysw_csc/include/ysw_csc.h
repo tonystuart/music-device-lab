@@ -10,7 +10,6 @@
 #pragma once
 
 #include "ysw_array.h"
-#include "ysw_frame.h"
 #include "ysw_music.h"
 #include "ysw_ui.h"
 #include "stdint.h"

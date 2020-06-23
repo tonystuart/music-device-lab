@@ -22,6 +22,7 @@
 #include "ysw_name.h"
 #include "ysw_sdb.h"
 #include "ysw_sn.h"
+#include "ysw_style.h"
 #include "ysw_ui.h"
 
 #include "lvgl.h"

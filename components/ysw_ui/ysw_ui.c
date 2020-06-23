@@ -9,6 +9,7 @@
 
 #include "ysw_ui.h"
 #include "ysw_main_seq.h"
+#include "ysw_style.h"
 
 #include "lvgl.h"
 #include "esp_log.h"

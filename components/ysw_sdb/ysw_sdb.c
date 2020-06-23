@@ -134,8 +134,7 @@ static void create_field_name(ysw_sdb_t *sdb, const char *name)
 {
     lv_obj_t *label = lv_label_create(sdb->frame.body.page, NULL);
     lv_label_set_text(label, name);
-    lv_obj_set_style_local_pad_top(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 10);
-    lv_obj_set_style_local_pad_bottom(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 2);
+    ysw_style_adjust_field_name(label);
 }
 
 static const ysw_ui_btn_def_t header_buttons[] = {
@@ -188,8 +187,7 @@ lv_obj_t *ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, co
     ysw_style_adjust_ddlist(ddlist);
     lv_obj_set_user_data(ddlist, cb);
     lv_dropdown_set_options(ddlist, options);
-    lv_coord_t w = lv_page_get_width_fit(sdb->frame.body.page);
-    lv_obj_set_width(ddlist, w);
+    lv_obj_set_width(ddlist, lv_page_get_width_fit(sdb->frame.body.page));
     lv_dropdown_set_max_height(ddlist, 100);
     lv_dropdown_set_selected(ddlist, value);
     lv_dropdown_set_draw_arrow(ddlist, true); // forces left align
@@ -228,13 +226,11 @@ lv_obj_t *ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, voi
 lv_obj_t *ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, void *callback)
 {
     lv_obj_t *btn = lv_btn_create(sdb->frame.body.page, NULL);
-    //v7: lv_btn_set_style(btn, LV_BTN_STYLE_REL, &ysw_style_btn_rel);
-    //v7: lv_btn_set_style(btn, LV_BTN_STYLE_PR, &ysw_style_btn_pr);
-    lv_obj_set_width(btn, 140);
+    ysw_style_adjust_btn(btn);
+    lv_obj_set_width(btn, lv_page_get_width_fit(sdb->frame.body.page));
     lv_btn_set_fit2(btn, LV_FIT_NONE, LV_FIT_TIGHT);
     lv_obj_set_user_data(btn, callback);
     lv_obj_set_event_cb(btn, on_btn_event);
-
     lv_obj_t *label = lv_label_create(btn, NULL);
     lv_label_set_text(label, name);
     return btn;

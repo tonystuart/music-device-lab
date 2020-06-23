@@ -34,5 +34,7 @@ void ysw_style_initialize();
 void ysw_style_lighten_background(lv_obj_t *obj);
 void ysw_style_clear_border(lv_obj_t *obj);
 void ysw_style_adjust_obj(lv_obj_t *obj);
+void ysw_style_adjust_field_name(lv_obj_t *label);
 void ysw_style_adjust_keyboard(lv_obj_t *kb);
 void ysw_style_adjust_ddlist(lv_obj_t *ddlist);
+void ysw_style_adjust_btn(lv_obj_t *btn);

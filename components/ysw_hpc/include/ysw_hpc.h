@@ -10,25 +10,29 @@
 #pragma once
 
 #include "ysw_array.h"
-#include "ysw_frame.h"
 #include "ysw_music.h"
+#include "ysw_ui.h"
 #include "stdint.h"
 
 typedef struct hpc_s ysw_hpc_t;
 
 typedef void (*hpc_close_cb_t)(void *context, ysw_hpc_t *hpc);
 
-typedef struct hpc_s {
-    ysw_frame_t *frame;
-    lv_obj_t *hpe;
+typedef struct {
     ysw_music_t *music;
-    ysw_array_t *clipboard;
     uint32_t hp_index;
     uint32_t ps_index;
+    ysw_array_t *clipboard;
     hpc_close_cb_t close_cb;
     void *close_cb_context;
+    lv_obj_t *hpe;
+} ysw_hpc_controller_t;
+
+typedef struct hpc_s {
+    ysw_ui_frame_t frame;
+    ysw_hpc_controller_t controller;
 } ysw_hpc_t;
 
-ysw_hpc_t *ysw_hpc_create(ysw_music_t *new_music, uint32_t new_cs_index);
+ysw_hpc_t* ysw_hpc_create(lv_obj_t *parent, ysw_music_t *new_music, uint32_t new_cs_index);
 void ysw_hpc_set_close_cb(ysw_hpc_t *hpc, hpc_close_cb_t cb, void *context);
 

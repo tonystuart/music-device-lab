@@ -49,68 +49,68 @@ void ysw_style_initialize()
     even_line_dsc = line_dsc;
 
     div_line_dsc = (lv_draw_line_dsc_t ) {
-                    .color = LV_COLOR_BLACK,
-                    .width = 1,
-                    .dash_width = 2,
-                    .dash_gap = 2,
-                    .opa = LV_OPA_COVER,
+                .color = LV_COLOR_BLACK,
+                .width = 1,
+                .dash_width = 2,
+                .dash_gap = 2,
+                .opa = LV_OPA_COVER,
             };
 
     metro_line_dsc = line_dsc;
 
     odd_rect_dsc = (lv_draw_rect_dsc_t ) {
-                    .bg_color = LV_COLOR_MAKE(0x80, 0x8d, 0x94),
-                    .bg_opa = LV_OPA_COVER,
+                .bg_color = LV_COLOR_MAKE(0x80, 0x8d, 0x94),
+                .bg_opa = LV_OPA_COVER,
             };
 
     even_rect_dsc = (lv_draw_rect_dsc_t ) {
-                    .bg_color = LV_COLOR_MAKE(0xe1, 0xef, 0xf7),
-                    .bg_opa = LV_OPA_COVER,
+                .bg_color = LV_COLOR_MAKE(0xe1, 0xef, 0xf7),
+                .bg_opa = LV_OPA_COVER,
             };
 
     sn_rect_dsc = (lv_draw_rect_dsc_t ) {
-                    .radius = 4,
-                    .bg_color = LV_COLOR_PURPLE,
-                    .bg_opa = LV_OPA_50,
-                    .border_color = LV_COLOR_PURPLE,
-                    .border_opa = LV_OPA_COVER,
-                    .border_width = 1,
-                    .border_side = LV_BORDER_SIDE_FULL,
+                .radius = 4,
+                .bg_color = LV_COLOR_PURPLE,
+                .bg_opa = LV_OPA_50,
+                .border_color = LV_COLOR_PURPLE,
+                .border_opa = LV_OPA_COVER,
+                .border_width = 1,
+                .border_side = LV_BORDER_SIDE_FULL,
             };
 
     sel_sn_rect_dsc = (lv_draw_rect_dsc_t ) {
-                    .radius = 4,
-                    .bg_color = LV_COLOR_LIME,
-                    .bg_opa = LV_OPA_70,
-                    .border_color = LV_COLOR_GREEN,
-                    .border_opa = LV_OPA_COVER,
-                    .border_width = 1,
-                    .border_side = LV_BORDER_SIDE_FULL,
+                .radius = 4,
+                .bg_color = LV_COLOR_LIME,
+                .bg_opa = LV_OPA_70,
+                .border_color = LV_COLOR_GREEN,
+                .border_opa = LV_OPA_COVER,
+                .border_width = 1,
+                .border_side = LV_BORDER_SIDE_FULL,
             };
 
     drag_sn_rect_dsc = (lv_draw_rect_dsc_t ) {
-                    .radius = 4,
-                    .bg_color = LV_COLOR_LIME,
-                    .bg_opa = LV_OPA_50,
-                    .border_color = LV_COLOR_LIME,
-                    .border_opa = LV_OPA_COVER,
-                    .border_width = 1,
-                    .border_side = LV_BORDER_SIDE_FULL,
+                .radius = 4,
+                .bg_color = LV_COLOR_LIME,
+                .bg_opa = LV_OPA_50,
+                .border_color = LV_COLOR_LIME,
+                .border_opa = LV_OPA_COVER,
+                .border_width = 1,
+                .border_side = LV_BORDER_SIDE_FULL,
             };
 
     sn_label_dsc = (lv_draw_label_dsc_t ) {
-                    .color = LV_COLOR_WHITE,
-                    .opa = LV_OPA_COVER,
-                    .font = &lv_font_montserrat_12,
-                    .flag = LV_TXT_FLAG_CENTER,
+                .color = LV_COLOR_WHITE,
+                .opa = LV_OPA_COVER,
+                .font = &lv_font_montserrat_12,
+                .flag = LV_TXT_FLAG_CENTER,
 
             };
 
     sel_sn_label_dsc = (lv_draw_label_dsc_t ) {
-                    .color = LV_COLOR_BLACK,
-                    .opa = LV_OPA_COVER,
-                    .font = &lv_font_montserrat_12,
-                    .flag = LV_TXT_FLAG_CENTER,
+                .color = LV_COLOR_BLACK,
+                .opa = LV_OPA_COVER,
+                .font = &lv_font_montserrat_12,
+                .flag = LV_TXT_FLAG_CENTER,
 
             };
 
@@ -137,6 +137,12 @@ void ysw_style_adjust_obj(lv_obj_t *obj)
 {
     ysw_style_lighten_background(obj);
     ysw_style_clear_border(obj);
+}
+
+void ysw_style_adjust_field_name(lv_obj_t *label)
+{
+    lv_obj_set_style_local_pad_top(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 10);
+    lv_obj_set_style_local_pad_bottom(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 2);
 }
 
 void ysw_style_adjust_keyboard(lv_obj_t *kb)
@@ -170,4 +176,10 @@ void ysw_style_adjust_ddlist(lv_obj_t *ddlist)
     lv_obj_set_style_local_border_color(ddlist, LV_PAGE_PART_SCROLLABLE, LV_STATE_DEFAULT, LV_COLOR_BLACK);
 }
 
+void ysw_style_adjust_btn(lv_obj_t *btn)
+{
+    ysw_style_lighten_background(btn);
+    lv_obj_set_style_local_margin_top(btn, LV_BTN_PART_MAIN, LV_STATE_DEFAULT, 5);
+    lv_obj_set_style_local_margin_bottom(btn, LV_BTN_PART_MAIN, LV_STATE_DEFAULT, 5);
+}
 

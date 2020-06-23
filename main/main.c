@@ -36,7 +36,7 @@ static void event_handler(lv_obj_t *btn, lv_event_t event)
             //ysw_csc_create(music, 0);
             ysw_csl_create(lv_scr_act(), music, 0);
         } else if (strcmp(text, "Progressions") == 0) {
-            ysw_hpc_create(music, 0);
+            ysw_hpc_create(lv_scr_act(), music, 0);
         } else if (strcmp(text, "Globals") == 0) {
             ysw_gsc_create(music);
         }

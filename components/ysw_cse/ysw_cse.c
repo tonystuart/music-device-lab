@@ -232,9 +232,8 @@ static void draw_metro_marker(int32_t metro_marker, metrics_t *m, const lv_area_
     }
 }
 
-static void draw_main(lv_obj_t *cse, const lv_area_t *mask, lv_design_mode_t mode)
+static void draw_main(lv_obj_t *cse, const lv_area_t *mask)
 {
-    base_design_cb(cse, mask, mode);
     ysw_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->cs) {
         metrics_t m;
@@ -254,7 +253,8 @@ static lv_design_res_t design_cb(lv_obj_t *cse, const lv_area_t *mask, lv_design
             result = base_design_cb(cse, mask, mode);
             break;
         case LV_DESIGN_DRAW_MAIN:
-            draw_main(cse, mask, mode);
+            base_design_cb(cse, mask, mode);
+            draw_main(cse, mask);
             break;
         case LV_DESIGN_DRAW_POST:
             break;
@@ -654,16 +654,8 @@ lv_obj_t* ysw_cse_create(lv_obj_t *par, void *context)
 
     *ext = (ysw_cse_ext_t ) {
                 .metro_marker = -1,
-                //v7: .bg_style = &lv_style_plain,
-                //v7: .oi_style = &ysw_style_oi,
-                //v7: .ei_style = &ysw_style_ei,
-                //v7: .rn_style = &ysw_style_rn,
-                //v7: .sn_style = &ysw_style_sn,
-                //v7: .mn_style = &ysw_style_mn,
                 .context = context,
             };
-
-//v7: lv_obj_set_style(cse, ext->bg_style);
 
     lv_obj_set_signal_cb(cse, signal_cb);
     lv_obj_set_design_cb(cse, design_cb);

@@ -138,13 +138,13 @@ void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index)
 #endif
 
     ysw_sdb_add_separator(sdb, hp->name);
-    ysw_sdb_add_choice(sdb, "Degree", ysw_degree_to_index(ssc->ps->degree), ysw_degree, on_degree);
-    ysw_sdb_add_choice(sdb, "New Measure", ysw_ps_is_new_measure(ssc->ps), "No\nYes", on_new_measure);
-    ssc->styles = ysw_sdb_add_choice(sdb, "Chord Style", cs_index, chord_styles, on_chord_style);
-    ysw_sdb_add_button(sdb, "Edit Style", on_edit_style);
-    ysw_sdb_add_button(sdb, "Create Style", on_create_style);
-    ysw_sdb_add_button(sdb, "Apply to All", on_apply_all);
-    ysw_sdb_add_button(sdb, "Apply Selected", on_apply_selected);
+    ysw_sdb_add_choice(sdb, "Degree:", ysw_degree_to_index(ssc->ps->degree), ysw_degree, on_degree);
+    ysw_sdb_add_choice(sdb, "New Measure:", ysw_ps_is_new_measure(ssc->ps), "No\nYes", on_new_measure);
+    ssc->styles = ysw_sdb_add_choice(sdb, "Chord Style:", cs_index, chord_styles, on_chord_style);
+    ysw_sdb_add_button(sdb, "Edit Chord Style", on_edit_style);
+    ysw_sdb_add_button(sdb, "Create Chord Style", on_create_style);
+    ysw_sdb_add_button(sdb, "Apply Chord Style to All Steps", on_apply_all);
+    ysw_sdb_add_button(sdb, "Apply Style to Selected Steps", on_apply_selected);
 
     ysw_heap_free(chord_styles); // choice uses ddlist, which uses label, which allocs space
 }

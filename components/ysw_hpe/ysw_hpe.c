@@ -20,6 +20,7 @@
 
 #include "math.h"
 #include "stdio.h"
+#include "stdlib.h"
 
 #define TAG "YSW_HPE"
 #define LV_OBJX_NAME "ysw_hpe"
@@ -47,19 +48,32 @@ typedef struct {
     lv_coord_t min_scroll_left;
 } metrics_t;
 
+typedef struct {
+    metrics_t m;
+    ysw_hpe_ext_t *ext;
+    ysw_ps_t *ps;
+    uint32_t ps_index;
+    uint32_t ps_count;
+    uint32_t measure;
+    uint8_t *spm;
+    bool cs_displayed;
+    lv_coord_t left;
+    const lv_area_t *mask;
+} dc_t;
+
 static lv_design_cb_t super_design_cb;
 static lv_signal_cb_t super_signal_cb;
 
 static char *key_labels[] =
-{
-    "I",
-    "II",
-    "III",
-    "IV",
-    "V",
-    "VI",
-    "VII",
-};
+        {
+            "I",
+            "II",
+            "III",
+            "IV",
+            "V",
+            "VI",
+            "VII",
+        };
 
 static void get_metrics(lv_obj_t *hpe, metrics_t *m)
 {
@@ -108,161 +122,174 @@ static void get_ps_info(lv_obj_t *hpe, uint32_t ps_index, lv_area_t *ret_area)
     }
 }
 
-static void draw_main(lv_obj_t *hpe, const lv_area_t *mask, lv_design_mode_t mode)
+static void draw_horizontals(dc_t *dc)
 {
-    super_design_cb(hpe, mask, mode);
-
-    ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
-
-    if (ext->metro_marker != -1 && ysw_hpe_gs.auto_scroll) {
-        ysw_hpe_ensure_visible(hpe, ext->metro_marker, ext->metro_marker);
-    }
-
-    metrics_t m;
-    get_metrics(hpe, &m);
-
-    uint32_t ps_count = ysw_hp_get_ps_count(ext->hp);
-
     lv_point_t top_left = {
-        .x = m.hpe_left,
-        .y = m.hp_top,
+        .x = dc->m.hpe_left,
+        .y = dc->m.hp_top,
     };
-
     lv_point_t top_right = {
-        .x = m.hpe_left + m.hpe_width,
-        .y = m.hp_top,
+        .x = dc->m.hpe_left + dc->m.hpe_width,
+        .y = dc->m.hp_top,
     };
-
-    lv_draw_line(&top_left, &top_right, mask, &line_dsc);
+    lv_draw_line(&top_left, &top_right, dc->mask, &line_dsc);
 
     lv_point_t bottom_left = {
-        .x = m.hpe_left,
-        .y = m.hp_top + m.hp_height,
+        .x = dc->m.hpe_left,
+        .y = dc->m.hp_top + dc->m.hp_height,
     };
-
     lv_point_t bottom_right = {
-        .x = m.hpe_left + m.hpe_width,
-        .y = m.hp_top + m.hp_height,
+        .x = dc->m.hpe_left + dc->m.hpe_width,
+        .y = dc->m.hp_top + dc->m.hp_height,
     };
+    lv_draw_line(&bottom_left, &bottom_right, dc->mask, &line_dsc);
+    lv_area_t background_area = {
+        .x1 = dc->m.hpe_left,
+        .y1 = dc->m.hp_top + 1,
+        .x2 = dc->m.hpe_left + dc->m.hpe_width,
+        .y2 = dc->m.hp_top + dc->m.hp_height - 1,
+    };
+    lv_draw_rect(&background_area, dc->mask, &even_rect_dsc);
+}
 
-    lv_draw_line(&bottom_left, &bottom_right, mask, &line_dsc);
-
-    uint8_t pss_in_measures[ps_count];
-
-    ysw_hp_get_pss_in_measures(ext->hp, pss_in_measures, ps_count);
-
-    uint32_t measure = 0;
-
-    ysw_ps_t *first_clicked_ps = NULL;
-
-    for (uint32_t i = 0; i < ps_count; i++) {
-        ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
-
-        lv_coord_t left = m.hp_left + (i * m.col_width);
-
-        if (!i || ysw_ps_is_new_measure(ps)) {
-
-            lv_area_t heading_area = {
-                .x1 = left,
-                .y1 = m.hpe_top,
-                .x2 = left + (pss_in_measures[measure] * m.col_width),
-                .y2 = m.hp_top,
-            };
-
-            measure++;
-            lv_area_t heading_mask;
-
-            if (_lv_area_intersect(&heading_mask, mask, &heading_area)) {
-                lv_point_t offset = {
-                    .x = 0,
-                    .y = ((heading_area.y2 - heading_area.y1) - 20) / 2, //v7.1: ext->fg_style->text.font->line_height) / 2,
-                };
-
-                char buffer[32];
-                ysw_itoa(measure, buffer, sizeof(buffer));
-
-                lv_draw_label(&heading_area, &heading_mask, &label_dsc, buffer, NULL);
-            }
-
-        }
-
-        if (i) {
-            lv_coord_t col_top = ysw_ps_is_new_measure(ps) ? m.hpe_top : m.hp_top;
-            lv_point_t top = {
-                .x = left,
-                .y = col_top,
-            };
-            lv_point_t bottom = {
-                .x = left,
-                .y = m.hp_top + m.hp_height,
-            };
-            lv_draw_line(&top, &bottom, mask, &line_dsc);
-        }
-
-        lv_coord_t cell_top = m.hp_top + ((YSW_MIDI_UNPO - ps->degree) * m.row_height);
-
-        lv_area_t cell_area = {
-            .x1 = left,
-            .y1 = cell_top,
-            .x2 = left + m.col_width,
-            .y2 = cell_top + m.row_height,
-        };
-
-        lv_area_t cell_mask;
-
-        if (_lv_area_intersect(&cell_mask, mask, &cell_area)) {
-
-            if (ysw_ps_is_selected(ps)) {
-                lv_draw_rect(&cell_area, &cell_mask, &rect_dsc);
-            } else {
-                lv_draw_rect(&cell_area, &cell_mask, &rect_dsc);
-            }
-
-            // vertically center the text
-            lv_point_t offset = {
-                .x = 0,
-                .y = ((cell_area.y2 - cell_area.y1) - 20) / 2, //v7.1: ext->fg_style->text.font->line_height) / 2,
-            };
-
-            lv_draw_label(&cell_area, &cell_mask, &label_dsc, key_labels[to_index(ps->degree)], NULL);
-        }
-
-        //if (ps == ext->clicked_ps) {
-        if (!first_clicked_ps && ysw_ps_is_selected(ps)) {
-            first_clicked_ps = ps;
-            lv_area_t footer_area = {
-                .x1 = m.hpe_left,
-                .y1 = m.hp_top + m.hp_height,
-                .x2 = m.hpe_left + m.hpe_width,
-                .y2 = m.hp_top + m.hp_height + m.row_height,
-            };
-
-            lv_area_t footer_mask;
-
-            if (_lv_area_intersect(&footer_mask, mask, &footer_area)) {
-
-                // vertically center the text
-                lv_point_t offset = {
-                    .x = 0,
-                    .y = ((footer_area.y2 - footer_area.y1) - 20) / 2, //v7.1: ext->fg_style->text.font->line_height) / 2
-                };
-
-                lv_draw_label(&footer_area, &footer_mask, &label_dsc, ps->cs->name, NULL);
-            }
-        }
-
-    }
-    if (ext->metro_marker != -1) {
-        lv_coord_t left = m.hp_left + (ext->metro_marker * m.col_width);
+static void draw_column_line(dc_t *dc)
+{
+    if (dc->ps_index) {
+        lv_coord_t col_top = ysw_ps_is_new_measure(dc->ps) ? dc->m.hpe_top : dc->m.hp_top;
         lv_point_t top = {
-            .x = left,
-            .y = m.hp_top,
+            .x = dc->left,
+            .y = col_top,
         };
         lv_point_t bottom = {
-            .x = left,
-            .y = m.hp_top + m.hp_height,
+            .x = dc->left,
+            .y = dc->m.hp_top + dc->m.hp_height,
         };
-        lv_draw_line(&top, &bottom, mask, &line_dsc);
+        lv_draw_line(&top, &bottom, dc->mask, &line_dsc);
+    }
+}
+
+#if 0
+static void draw_column_background(dc_t *dc)
+{
+    if (!dc->ps_index || ysw_ps_is_new_measure(dc->ps)) {
+        lv_area_t background_area = {
+            .x1 = dc->left,
+            .y1 = dc->m.hp_top + 1,
+            .x2 = dc->left + (dc->spm[dc->measure] * dc->m.col_width),
+            .y2 = dc->m.hp_top + dc->m.hp_height - 1,
+        };
+        if (dc->even) {
+            lv_draw_rect(&background_area, dc->mask, &even_rect_dsc);
+        }
+        dc->even = !dc->even;
+    }
+}
+#endif
+
+static void draw_column_heading(dc_t *dc)
+{
+    if (!dc->ps_index || ysw_ps_is_new_measure(dc->ps)) {
+        lv_area_t heading_area = {
+            .x1 = dc->left,
+            .y1 = dc->m.hpe_top,
+            .x2 = dc->left + (dc->spm[dc->measure] * dc->m.col_width),
+            .y2 = dc->m.hp_top,
+        };
+        dc->measure++;
+        lv_area_t heading_mask;
+        if (_lv_area_intersect(&heading_mask, dc->mask, &heading_area)) {
+            char buffer[32];
+            ysw_itoa(dc->measure, buffer, sizeof(buffer));
+            lv_draw_label(&heading_area, &heading_mask, &sn_label_dsc, buffer, NULL);
+        }
+    }
+}
+
+static void draw_ps(dc_t *dc)
+{
+    lv_coord_t cell_top = dc->m.hp_top + ((YSW_MIDI_UNPO - dc->ps->degree) * dc->m.row_height);
+    lv_area_t cell_area = {
+        .x1 = dc->left,
+        .y1 = cell_top,
+        .x2 = dc->left + dc->m.col_width,
+        .y2 = cell_top + dc->m.row_height,
+    };
+    lv_area_t cell_mask;
+    if (_lv_area_intersect(&cell_mask, dc->mask, &cell_area)) {
+        if (ysw_ps_is_selected(dc->ps)) {
+            lv_draw_rect(&cell_area, &cell_mask, &sel_sn_rect_dsc);
+            lv_draw_label(&cell_area, &cell_mask, &sel_sn_label_dsc, key_labels[to_index(dc->ps->degree)], NULL);
+        } else {
+            lv_draw_rect(&cell_area, &cell_mask, &sn_rect_dsc);
+            lv_draw_label(&cell_area, &cell_mask, &sn_label_dsc, key_labels[to_index(dc->ps->degree)], NULL);
+        }
+    }
+}
+
+static void draw_cs(dc_t *dc)
+{
+    lv_area_t footer_area = {
+        .x1 = dc->m.hpe_left,
+        .y1 = dc->m.hp_top + dc->m.hp_height,
+        .x2 = dc->m.hpe_left + dc->m.hpe_width,
+        .y2 = dc->m.hp_top + dc->m.hp_height + dc->m.row_height,
+    };
+    lv_area_t footer_mask;
+    if (_lv_area_intersect(&footer_mask, dc->mask, &footer_area)) {
+        lv_draw_label(&footer_area, &footer_mask, &sn_label_dsc, dc->ps->cs->name, NULL);
+    }
+}
+
+static void draw_metro_marker(dc_t *dc)
+{
+    lv_coord_t left = dc->m.hp_left + (dc->ext->metro_marker * dc->m.col_width);
+    lv_point_t top = {
+        .x = left,
+        .y = dc->m.hp_top,
+    };
+    lv_point_t bottom = {
+        .x = left,
+        .y = dc->m.hp_top + dc->m.hp_height,
+    };
+    lv_draw_line(&top, &bottom, dc->mask, &line_dsc);
+}
+
+static void draw_main(lv_obj_t *hpe, const lv_area_t *mask)
+{
+    ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
+    uint32_t ps_count = ysw_hp_get_ps_count(ext->hp);
+    uint8_t spm[ps_count];
+
+    dc_t *dc = &(dc_t ) {
+                .ext = ext,
+                .ps_count = ps_count,
+                .spm = spm,
+                .mask = mask,
+            };
+
+    get_metrics(hpe, &dc->m);
+    ysw_hp_get_pss_in_measures(dc->ext->hp, dc->spm, dc->ps_count); // TODO: rename ysw_hp_get_spm
+
+    if (dc->ext->metro_marker != -1 && ysw_hpe_gs.auto_scroll) {
+        ysw_hpe_ensure_visible(hpe, dc->ext->metro_marker, dc->ext->metro_marker);
+    }
+
+    draw_horizontals(dc);
+
+    for (dc->ps_index = 0; dc->ps_index < dc->ps_count; dc->ps_index++) {
+        dc->ps = ysw_hp_get_ps(dc->ext->hp, dc->ps_index);
+        dc->left = dc->m.hp_left + (dc->ps_index * dc->m.col_width);
+        draw_column_line(dc);
+        draw_column_heading(dc);
+        draw_ps(dc);
+        if (!dc->cs_displayed && ysw_ps_is_selected(dc->ps)) {
+            draw_cs(dc);
+            dc->cs_displayed = true;
+        }
+    }
+
+    if (dc->ext->metro_marker != -1) {
+        draw_metro_marker(dc);
     }
 }
 
@@ -274,7 +301,8 @@ static lv_design_res_t design_cb(lv_obj_t *hpe, const lv_area_t *mask, lv_design
             result = super_design_cb(hpe, mask, mode);
             break;
         case LV_DESIGN_DRAW_MAIN:
-            draw_main(hpe, mask, mode);
+            super_design_cb(hpe, mask, mode);
+            draw_main(hpe, mask);
             break;
         case LV_DESIGN_DRAW_POST:
             break;
@@ -444,13 +472,13 @@ static void capture_click(lv_obj_t *hpe, lv_point_t *point)
         ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
         get_ps_info(hpe, i, &ps_area);
         if ((ps_area.x1 <= point->x && point->x <= ps_area.x2) &&
-            (ps_area.y1 <= point->y && point->y <= ps_area.y2)) {
-                ext->clicked_ps = ps;
-                if (ysw_ps_is_selected(ps)) {
-                    // return on first selected ps, otherwise pick last one
-                    return;
-                }
+                (ps_area.y1 <= point->y && point->y <= ps_area.y2)) {
+            ext->clicked_ps = ps;
+            if (ysw_ps_is_selected(ps)) {
+                // return on first selected ps, otherwise pick last one
+                return;
             }
+        }
     }
 }
 
@@ -558,7 +586,7 @@ static void on_signal_long_press(lv_obj_t *hpe, void *param)
 static lv_res_t signal_cb(lv_obj_t *hpe, lv_signal_t signal, void *param)
 {
     lv_res_t res = super_signal_cb(hpe, signal, param);
-    //ESP_LOGD(TAG, "signal_cb signal=%d", signal);
+//ESP_LOGD(TAG, "signal_cb signal=%d", signal);
     if (res == LV_RES_OK) {
         switch (signal) {
             case LV_SIGNAL_GET_TYPE:
@@ -588,7 +616,7 @@ static lv_res_t signal_cb(lv_obj_t *hpe, lv_signal_t signal, void *param)
     return res;
 }
 
-lv_obj_t *ysw_hpe_create(lv_obj_t *par, void *context)
+lv_obj_t* ysw_hpe_create(lv_obj_t *par, void *context)
 {
     lv_obj_t *hpe = lv_obj_create(par, NULL);
     LV_ASSERT_MEM(hpe);
@@ -610,17 +638,17 @@ lv_obj_t *ysw_hpe_create(lv_obj_t *par, void *context)
         return NULL;
     }
 
-    *ext = (ysw_hpe_ext_t){
-        .metro_marker = -1,
-        //v7: .bg_style = &lv_style_plain,
-        //v7: .fg_style = &ysw_style_ei,
-        //v7: .rs_style = &ysw_style_rn,
-        //v7: .ss_style = &ysw_style_sn,
-        //v7: .ms_style = &ysw_style_mn,
-        .context = context,
-    };
+    *ext = (ysw_hpe_ext_t ) {
+                .metro_marker = -1,
+                //v7: .bg_style = &lv_style_plain,
+                //v7: .fg_style = &ysw_style_ei,
+                //v7: .rs_style = &ysw_style_rn,
+                //v7: .ss_style = &ysw_style_sn,
+                //v7: .ms_style = &ysw_style_mn,
+                .context = context,
+            };
 
-    //v7: lv_obj_set_style(hpe, ext->bg_style);
+//v7: lv_obj_set_style(hpe, ext->bg_style);
     lv_obj_set_signal_cb(hpe, signal_cb);
     lv_obj_set_design_cb(hpe, design_cb);
     lv_obj_set_click(hpe, true);
@@ -637,7 +665,7 @@ void ysw_hpe_set_hp(lv_obj_t *hpe, ysw_hp_t *hp)
     }
     ext->hp = hp;
     ext->scroll_left = 0;
-    // TODO: reinitialize rest of ext
+// TODO: reinitialize rest of ext
     lv_obj_invalidate(hpe);
 }
 
@@ -685,18 +713,18 @@ void ysw_hpe_on_metro(lv_obj_t *hpe, ysw_note_t *metro_note)
 
 void ysw_hpe_ensure_visible(lv_obj_t *hpe, uint32_t first_ps_index, uint32_t last_ps_index)
 {
-    // NB: scroll_left is always <= 0
+// NB: scroll_left is always <= 0
     ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
     metrics_t m;
     get_metrics(hpe, &m);
     lv_coord_t left = first_ps_index * m.col_width;
     lv_coord_t right = (last_ps_index + 1) * m.col_width;
-    //ESP_LOGD(TAG, "first=%d, last=%d, col_width=%d, scroll_left=%d, left=%d, right=%d", first_ps_index, last_ps_index, m.col_width, ext->scroll_left, left, right);
+//ESP_LOGD(TAG, "first=%d, last=%d, col_width=%d, scroll_left=%d, left=%d, right=%d", first_ps_index, last_ps_index, m.col_width, ext->scroll_left, left, right);
     if (left < -ext->scroll_left) {
         ext->scroll_left = -left;
     } else if (right > -ext->scroll_left + m.hpe_width) {
         ext->scroll_left = m.hpe_width - right;
     }
-    //ESP_LOGD(TAG, "new scroll_left=%d", ext->scroll_left);
+//ESP_LOGD(TAG, "new scroll_left=%d", ext->scroll_left);
 }
 
