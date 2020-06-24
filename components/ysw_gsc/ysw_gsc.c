@@ -47,7 +47,7 @@ void ysw_gsc_create(ysw_music_t *music)
 {
     ysw_sdb_t *sdb = ysw_sdb_create(lv_scr_act(), "Global Settings", NULL);
     ysw_sdb_add_separator(sdb, "Chord Progression Settings");
-    ysw_sdb_add_checkbox(sdb, "Auto Scroll",
+    ysw_sdb_add_checkbox(sdb, "Auto Scroll", "",
             ysw_hpe_gs.auto_scroll, on_ysw_hpe_gs_scroll);
     ysw_sdb_add_choice(sdb, "Auto Play\n(on Change)",
             ysw_hpe_gs.auto_play_all, ysw_auto_play_options, on_ysw_hpe_gs_play_all);

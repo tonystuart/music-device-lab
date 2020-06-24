@@ -26,7 +26,12 @@
 // We stash the callback in each widget's user data
 // We fetch the context via the sdb using the parent relationship
 
-static ysw_sdb_t *get_sdb(lv_obj_t *field)
+static const ysw_ui_btn_def_t header_buttons[] = {
+    { LV_SYMBOL_CLOSE, ysw_sdb_on_close },
+    { NULL, NULL },
+};
+
+static ysw_sdb_t* get_sdb(lv_obj_t *field)
 {
     lv_obj_t *scrl = lv_obj_get_parent(field);
     ysw_sdb_t *sdb = lv_obj_get_user_data(scrl);
@@ -124,12 +129,6 @@ static void on_btn_event(lv_obj_t *btn, lv_event_t event)
     }
 }
 
-static void on_close(ysw_sdb_t *sdb, lv_obj_t *btn)
-{
-    lv_obj_del(sdb->frame.container); // deletes contents
-    ysw_heap_free(sdb);
-}
-
 static void create_field_name(ysw_sdb_t *sdb, const char *name)
 {
     lv_obj_t *label = lv_label_create(sdb->frame.body.page, NULL);
@@ -137,16 +136,17 @@ static void create_field_name(ysw_sdb_t *sdb, const char *name)
     ysw_style_adjust_field_name(label);
 }
 
-static const ysw_ui_btn_def_t header_buttons[] = {
-        { LV_SYMBOL_CLOSE, on_close },
-        { NULL, NULL },
-};
+void ysw_sdb_on_close(ysw_sdb_t *sdb, lv_obj_t *btn)
+{
+    lv_obj_del(sdb->frame.container); // deletes contents
+    ysw_heap_free(sdb);
+}
 
-ysw_sdb_t *ysw_sdb_create(lv_obj_t *parent, const char *title, void *context)
+ysw_sdb_t* ysw_sdb_create_custom(lv_obj_t *parent, const char *title, const ysw_ui_btn_def_t buttons[], void *context)
 {
     ysw_sdb_t *sdb = ysw_heap_allocate(sizeof(ysw_sdb_t)); // freed in on_close
     sdb->controller.context = context;
-    ysw_ui_init_buttons(sdb->frame.header.buttons, header_buttons, sdb);
+    ysw_ui_init_buttons(sdb->frame.header.buttons, buttons, sdb);
     ysw_ui_create_frame(&sdb->frame, parent);
     ysw_ui_set_header_text(&sdb->frame.header, title);
     lv_obj_set_user_data(lv_page_get_scrl(sdb->frame.body.page), sdb);
@@ -154,7 +154,12 @@ ysw_sdb_t *ysw_sdb_create(lv_obj_t *parent, const char *title, void *context)
     return sdb;
 }
 
-lv_obj_t *ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name)
+ysw_sdb_t* ysw_sdb_create(lv_obj_t *parent, const char *title, void *context)
+{
+    return ysw_sdb_create_custom(parent, title, header_buttons, context);
+}
+
+lv_obj_t* ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name)
 {
     lv_obj_t *label = lv_label_create(sdb->frame.body.page, NULL);
     lv_label_set_long_mode(label, LV_LABEL_LONG_CROP);
@@ -165,7 +170,7 @@ lv_obj_t *ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name)
     return label;
 }
 
-lv_obj_t *ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value, void *cb)
+lv_obj_t* ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value, void *cb)
 {
     create_field_name(sdb, name);
 
@@ -179,7 +184,7 @@ lv_obj_t *ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value
     return ta;
 }
 
-lv_obj_t *ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const char *options, void *cb)
+lv_obj_t* ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const char *options, void *cb)
 {
     create_field_name(sdb, name);
 
@@ -195,7 +200,7 @@ lv_obj_t *ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, co
     return ddlist;
 }
 
-lv_obj_t *ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, void *cb)
+lv_obj_t* ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, void *cb)
 {
     create_field_name(sdb, name);
 
@@ -212,23 +217,26 @@ lv_obj_t *ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, void 
     return sw;
 }
 
-lv_obj_t *ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, void *callback)
+lv_obj_t* ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, const char *text, bool value, void *callback)
 {
+    create_field_name(sdb, name);
+
     lv_obj_t *cb = lv_checkbox_create(sdb->frame.body.page, NULL);
-    lv_checkbox_set_text(cb, name);
+    lv_checkbox_set_text(cb, text);
     lv_obj_set_user_data(cb, callback);
     lv_obj_add_protect(cb, LV_PROTECT_FOLLOW);
     lv_checkbox_set_checked(cb, value);
     lv_obj_set_event_cb(cb, on_cb_event);
+    ysw_style_adjust_checkbox(cb);
     return cb;
 }
 
-lv_obj_t *ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, void *callback)
+lv_obj_t* ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, void *callback)
 {
     lv_obj_t *btn = lv_btn_create(sdb->frame.body.page, NULL);
     ysw_style_adjust_btn(btn);
-    lv_obj_set_width(btn, lv_page_get_width_fit(sdb->frame.body.page));
-    lv_btn_set_fit2(btn, LV_FIT_NONE, LV_FIT_TIGHT);
+    //lv_obj_set_width(btn, lv_page_get_width_fit(sdb->frame.body.page));
+    lv_btn_set_fit2(btn, LV_FIT_TIGHT, LV_FIT_TIGHT);
     lv_obj_set_user_data(btn, callback);
     lv_obj_set_event_cb(btn, on_btn_event);
     lv_obj_t *label = lv_label_create(btn, NULL);
@@ -236,4 +244,13 @@ lv_obj_t *ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, void *callback)
     return btn;
 }
 
-
+lv_obj_t* ysw_sdb_add_button_bar(ysw_sdb_t *sdb, const char *name, const char *map[], void *callback)
+{
+    create_field_name(sdb, name);
+    lv_obj_t *bar = lv_btnmatrix_create(sdb->frame.body.page, NULL);
+    ysw_style_adjust_button_bar(bar);
+    lv_btnmatrix_set_map(bar, map);
+    lv_obj_set_size(bar, lv_page_get_width_fit(sdb->frame.body.page), 40);
+    lv_obj_set_user_data(bar, callback);
+    return bar;
+}

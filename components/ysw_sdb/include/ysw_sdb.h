@@ -29,9 +29,12 @@ typedef struct ysw_sdb_t {
 } ysw_sdb_t;
 
 ysw_sdb_t *ysw_sdb_create(lv_obj_t *parent, const char *title, void *context);
+ysw_sdb_t* ysw_sdb_create_custom(lv_obj_t *parent, const char *title, const ysw_ui_btn_def_t buttons[], void *context);
 lv_obj_t *ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name);
 lv_obj_t *ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value, void *cb);
 lv_obj_t *ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const char *options, void *cb);
 lv_obj_t *ysw_sdb_add_switch(ysw_sdb_t *sdb, const char *name, bool value, void *cb);
-lv_obj_t *ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, bool value, void *cb);
+lv_obj_t *ysw_sdb_add_checkbox(ysw_sdb_t *sdb, const char *name, const char *text, bool value, void *cb);
 lv_obj_t *ysw_sdb_add_button(ysw_sdb_t *sdb, const char *name, void *cb);
+lv_obj_t *ysw_sdb_add_button_bar(ysw_sdb_t *sdb, const char *name, const char *map[], void *callback);
+void ysw_sdb_on_close(ysw_sdb_t *sdb, lv_obj_t *btn);

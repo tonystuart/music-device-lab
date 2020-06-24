@@ -46,10 +46,13 @@ extern lv_draw_label_dsc_t sel_hp_label_dsc;
 extern lv_draw_label_dsc_t drag_hp_label_dsc;
 
 void ysw_style_initialize();
-void ysw_style_lighten_background(lv_obj_t *obj);
 void ysw_style_clear_border(lv_obj_t *obj);
-void ysw_style_adjust_obj(lv_obj_t *obj);
+lv_color_t ysw_style_get_child_background(lv_obj_t *obj);
+lv_color_t ysw_style_lighten_background(lv_obj_t *obj);
+lv_color_t ysw_style_adjust_obj(lv_obj_t *obj);
 void ysw_style_adjust_field_name(lv_obj_t *label);
 void ysw_style_adjust_keyboard(lv_obj_t *kb);
 void ysw_style_adjust_ddlist(lv_obj_t *ddlist);
 void ysw_style_adjust_btn(lv_obj_t *btn);
+void ysw_style_adjust_button_bar(lv_obj_t *btn);
+void ysw_style_adjust_checkbox(lv_obj_t *cb);

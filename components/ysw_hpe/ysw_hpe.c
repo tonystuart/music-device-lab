@@ -399,13 +399,13 @@ static void prepare_create(lv_obj_t *hpe, lv_point_t *point)
     get_metrics(hpe, &m);
     if (point->y < m.hp_top + m.hp_height) {
         ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
-        lv_coord_t adj_x = (point->x - m.hp_left) + ext->scroll_left;
-        lv_coord_t adj_y = (point->y - m.hp_top);
+        lv_coord_t adj_x = point->x - m.hp_left; // hp_left includes scroll_left
+        lv_coord_t adj_y = point->y - m.hp_top;
         uint32_t ps_index = adj_x / m.col_width;
         uint32_t row_index = adj_y / m.row_height;
         uint8_t degree = YSW_MIDI_UNPO - row_index;
         bool insert_after = (adj_x % m.col_width) > (m.col_width / 2);
-        if (ysw_hp_get_ps_count(ext->hp) > 0 && insert_after) {
+        if (insert_after && (ps_index < ysw_hp_get_ps_count(ext->hp))) {
             ps_index++;
         }
         if (!ysw_hpe_gs.multiple_selection) {

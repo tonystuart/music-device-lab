@@ -112,6 +112,30 @@ static void on_chord_style(ssc_t *ssc, uint8_t new_index)
     ssc->ps->cs = ysw_music_get_cs(ssc->music, new_index);
 }
 
+static void on_prev(ssc_t *hpc, lv_obj_t *btn)
+{
+}
+
+static void on_play(ssc_t *hpc, lv_obj_t *btn)
+{
+}
+
+static void on_next(ssc_t *hpc, lv_obj_t *btn)
+{
+}
+
+static const ysw_ui_btn_def_t header_buttons[] = {
+    { LV_SYMBOL_PREV, on_prev },
+    { LV_SYMBOL_PLAY, on_play },
+    { LV_SYMBOL_STOP, ysw_main_seq_on_stop },
+    { LV_SYMBOL_LOOP, ysw_main_seq_on_loop },
+    { LV_SYMBOL_NEXT, on_next },
+    { LV_SYMBOL_CLOSE, ysw_sdb_on_close },
+    { NULL, NULL },
+};
+
+static const char *map[] = { "Edit", "Create", "Apply All", "" };
+
 void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index)
 {
     ssc_t *ssc = ysw_heap_allocate(sizeof(ssc_t)); // TODO: make sure this gets freed
@@ -122,30 +146,16 @@ void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index)
     uint32_t cs_index = 0;
     char *chord_styles = get_chord_styles(ssc, &cs_index);
 
-    char title[64];
+    char text[64];
     uint32_t ps_count = ysw_hp_get_ps_count(hp);
-    snprintf(title, sizeof(title), "Step %d of %d", ps_index + 1, ps_count);
+    snprintf(text, sizeof(text), "  Step %d of %d", ps_index + 1, ps_count);
 
-    ysw_sdb_t *sdb = ysw_sdb_create(lv_scr_act(), title, ssc);
-
-#if 0
-    // TODO: Encapsulate properly within ysw_sdb
-    lv_win_add_btn(sdb->win, LV_SYMBOL_NEXT);
-    ysw_main_seq_init_loop_btn(lv_win_add_btn(sdb->win, LV_SYMBOL_LOOP));
-    lv_win_add_btn(sdb->win, LV_SYMBOL_STOP);
-    lv_win_add_btn(sdb->win, LV_SYMBOL_PLAY);
-    lv_win_add_btn(sdb->win, LV_SYMBOL_PREV);
-#endif
-
-    ysw_sdb_add_separator(sdb, hp->name);
+    ysw_sdb_t *sdb = ysw_sdb_create_custom(lv_scr_act(), hp->name, header_buttons, ssc);
+    ysw_sdb_add_checkbox(sdb, "Start of Measure:", text, ysw_ps_is_new_measure(ssc->ps), on_new_measure);
     ysw_sdb_add_choice(sdb, "Degree:", ysw_degree_to_index(ssc->ps->degree), ysw_degree, on_degree);
-    ysw_sdb_add_choice(sdb, "New Measure:", ysw_ps_is_new_measure(ssc->ps), "No\nYes", on_new_measure);
     ssc->styles = ysw_sdb_add_choice(sdb, "Chord Style:", cs_index, chord_styles, on_chord_style);
-    ysw_sdb_add_button(sdb, "Edit Chord Style", on_edit_style);
-    ysw_sdb_add_button(sdb, "Create Chord Style", on_create_style);
-    ysw_sdb_add_button(sdb, "Apply Chord Style to All Steps", on_apply_all);
-    ysw_sdb_add_button(sdb, "Apply Style to Selected Steps", on_apply_selected);
+    ysw_sdb_add_button_bar(sdb, "Chord Style Actions:", map, NULL);
 
-    ysw_heap_free(chord_styles); // choice uses ddlist, which uses label, which allocs space
+    ysw_heap_free(chord_styles);
 }
 

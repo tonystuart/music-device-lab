@@ -438,6 +438,9 @@ static void on_create_ps(ysw_hpc_t *hpc, uint32_t ps_index, uint8_t degree)
         ysw_ps_select(ps, true);
         auto_play_last(hpc, ps);
         refresh(hpc);
+        uint32_t first = ps_index > 0 ? ps_index - 1 : 0;
+        uint32_t last = ps_index < ps_count - 1 ? ps_index + 1 : ps_index;
+        ysw_hpe_ensure_visible(hpc->controller.hpe, first, last);
     }
 }
 
