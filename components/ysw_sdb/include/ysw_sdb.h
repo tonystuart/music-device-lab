@@ -29,7 +29,7 @@ typedef struct ysw_sdb_t {
         ysw_sdb_controller_t controller;
 } ysw_sdb_t;
 
-ysw_sdb_t *ysw_sdb_create(lv_obj_t *parent, const char *title, void *context);
+ysw_sdb_t *ysw_sdb_create_standard(lv_obj_t *parent, const char *title, void *context);
 ysw_sdb_t* ysw_sdb_create_custom(lv_obj_t *parent, const char *title, const ysw_ui_btn_def_t buttons[], void *context);
 lv_obj_t *ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name);
 lv_obj_t *ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value, void *cb);

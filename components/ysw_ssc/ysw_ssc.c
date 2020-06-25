@@ -157,10 +157,9 @@ static void update_settings(ysw_ssc_t *ssc, uint32_t ps_index)
     lv_obj_invalidate(ssc->view.styles);
 }
 
-static void on_prev(ysw_sdb_t *sdb, lv_obj_t *btn)
+static void on_prev(ysw_ssc_t *ssc, lv_obj_t *btn)
 {
     // TODO: if multiple selection, move amongst selection, otherwise move selection
-    ysw_ssc_t *ssc = sdb->controller.context; // TODO: figure out whether SDB should take care of this
     uint32_t ps_count = ysw_hp_get_ps_count(ssc->model.hp);
     if (ps_count) {
         uint32_t ps_index = ysw_hp_get_ps_index(ssc->model.hp, ssc->model.ps);
@@ -176,10 +175,9 @@ static void on_play(ysw_ssc_t *ssc, lv_obj_t *btn)
 {
 }
 
-static void on_next(ysw_sdb_t *sdb, lv_obj_t *btn)
+static void on_next(ysw_ssc_t *ssc, lv_obj_t *btn)
 {
     // TODO: if multiple selection, move amongst selection, otherwise move selection
-    ysw_ssc_t *ssc = sdb->controller.context; // TODO: figure out whether SDB should take care of this
     uint32_t ps_count = ysw_hp_get_ps_count(ssc->model.hp);
     if (ps_count) {
         uint32_t ps_index = ysw_hp_get_ps_index(ssc->model.hp, ssc->model.ps);
@@ -191,9 +189,8 @@ static void on_next(ysw_sdb_t *sdb, lv_obj_t *btn)
     }
 }
 
-static void on_close(ysw_sdb_t *sdb, lv_obj_t *btn)
+static void on_close(ysw_ssc_t *ssc, lv_obj_t *btn)
 {
-    ysw_ssc_t *ssc = sdb->controller.context; // TODO: figure out whether SDB should take care of this
     ysw_ssc_close(ssc);
 }
 

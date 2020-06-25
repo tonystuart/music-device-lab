@@ -154,11 +154,11 @@ void ysw_sdb_on_close(ysw_sdb_t *sdb, lv_obj_t *btn)
     ysw_heap_free(sdb);
 }
 
-ysw_sdb_t* ysw_sdb_create_custom(lv_obj_t *parent, const char *title, const ysw_ui_btn_def_t buttons[], void *context)
+ysw_sdb_t* ysw_sdb_create(lv_obj_t *parent, const char *title, const ysw_ui_btn_def_t buttons[], bool sdb_button_context, void *context)
 {
     ysw_sdb_t *sdb = ysw_heap_allocate(sizeof(ysw_sdb_t)); // freed in on_close
     sdb->controller.context = context;
-    ysw_ui_init_buttons(sdb->frame.header.buttons, buttons, sdb);
+    ysw_ui_init_buttons(sdb->frame.header.buttons, buttons, sdb_button_context ? sdb : context);
     ysw_ui_create_frame(&sdb->frame, parent);
     ysw_ui_set_header_text(&sdb->frame.header, title);
     lv_obj_set_user_data(lv_page_get_scrl(sdb->frame.body.page), sdb);
@@ -166,9 +166,14 @@ ysw_sdb_t* ysw_sdb_create_custom(lv_obj_t *parent, const char *title, const ysw_
     return sdb;
 }
 
-ysw_sdb_t* ysw_sdb_create(lv_obj_t *parent, const char *title, void *context)
+ysw_sdb_t* ysw_sdb_create_custom(lv_obj_t *parent, const char *title, const ysw_ui_btn_def_t buttons[], void *context)
 {
-    return ysw_sdb_create_custom(parent, title, header_buttons, context);
+    return ysw_sdb_create(parent, title, buttons, false, context);
+}
+
+ysw_sdb_t* ysw_sdb_create_standard(lv_obj_t *parent, const char *title, void *context)
+{
+    return ysw_sdb_create(parent, title, header_buttons, true, context);
 }
 
 lv_obj_t* ysw_sdb_add_separator(ysw_sdb_t *sdb, const char *name)

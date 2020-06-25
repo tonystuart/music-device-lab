@@ -31,7 +31,7 @@
 #define TAG "YSW_CSL"
 
 static void on_row_event(lv_obj_t *obj, lv_event_t event);
-static void on_csc_close(ysw_csl_t *csl, ysw_csc_t *csc);
+static void on_csc_close(ysw_csl_t *csl, uint32_t cs_index);
 
 static void clear_selection_highlight(ysw_csl_t *csl)
 {
@@ -179,9 +179,9 @@ static void on_row_event(lv_obj_t *obj, lv_event_t event)
     /*Etc.*/
 }
 
-static void on_csc_close(ysw_csl_t *csl, ysw_csc_t *csc)
+static void on_csc_close(ysw_csl_t *csl, uint32_t cs_index)
 {
-    csl->controller.cs_index = csc->controller.cs_index;
+    csl->controller.cs_index = cs_index;
     display_chord_styles(csl);
 }
 
@@ -202,7 +202,7 @@ static void on_multiple_selection(ysw_csl_t *csl, bool multiple_selection)
 
 static void on_settings(ysw_csl_t *csl, lv_obj_t *btn)
 {
-    ysw_sdb_t *sdb = ysw_sdb_create(lv_scr_act(), "Chord Style Editor Settings", csl);
+    ysw_sdb_t *sdb = ysw_sdb_create_standard(lv_scr_act(), "Chord Style Editor Settings", csl);
 
     ysw_sdb_add_choice(sdb, "Multiple Selection:",
             ysw_cse_gs.multiple_selection, "No\nYes", on_multiple_selection);
