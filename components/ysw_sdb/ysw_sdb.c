@@ -129,11 +129,23 @@ static void on_btn_event(lv_obj_t *btn, lv_event_t event)
     }
 }
 
+static void on_bar_event(lv_obj_t *bar, lv_event_t event)
+{
+    if (event == LV_EVENT_CLICKED) {
+        ysw_sdb_button_bar_cb_t cb = lv_obj_get_user_data(bar);
+        if (cb) {
+            cb(get_sdb(bar)->controller.context, lv_btnmatrix_get_active_btn_text(bar));
+        }
+    }
+}
+
 static void create_field_name(ysw_sdb_t *sdb, const char *name)
 {
-    lv_obj_t *label = lv_label_create(sdb->frame.body.page, NULL);
-    lv_label_set_text(label, name);
-    ysw_style_adjust_field_name(label);
+    if (name && *name) {
+        lv_obj_t *label = lv_label_create(sdb->frame.body.page, NULL);
+        lv_label_set_text(label, name);
+        ysw_style_adjust_field_name(label);
+    }
 }
 
 void ysw_sdb_on_close(ysw_sdb_t *sdb, lv_obj_t *btn)
@@ -252,5 +264,6 @@ lv_obj_t* ysw_sdb_add_button_bar(ysw_sdb_t *sdb, const char *name, const char *m
     lv_btnmatrix_set_map(bar, map);
     lv_obj_set_size(bar, lv_page_get_width_fit(sdb->frame.body.page), 40);
     lv_obj_set_user_data(bar, callback);
+    lv_obj_set_event_cb(bar, on_bar_event);
     return bar;
 }

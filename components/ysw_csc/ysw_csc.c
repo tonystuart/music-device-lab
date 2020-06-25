@@ -196,6 +196,28 @@ static void copy_to_clipboard(ysw_csc_t *csc, ysw_sn_t *sn)
     ysw_array_push(csc->controller.clipboard, new_sn);
 }
 
+static void free_clipboard_contents(ysw_csc_t *csc)
+{
+    uint32_t old_sn_count = ysw_array_get_count(csc->controller.clipboard);
+    for (int i = 0; i < old_sn_count; i++) {
+        ysw_sn_t *old_sn = ysw_array_get(csc->controller.clipboard, i);
+        ysw_sn_free(old_sn);
+    }
+}
+
+static void free_clipboard(ysw_csc_t *csc)
+{
+    free_clipboard_contents(csc);
+    ysw_heap_free(csc->controller.clipboard);
+    csc->controller.clipboard = NULL;
+}
+
+static void truncate_clipboard(ysw_csc_t *csc)
+{
+    free_clipboard_contents(csc);
+    ysw_array_truncate(csc->controller.clipboard, 0);
+}
+
 static void decrease_volume(ysw_csc_t *csc, ysw_sn_t *sn)
 {
     int new_velocity = ((sn->velocity - 1) / 10) * 10;
@@ -310,12 +332,14 @@ static void on_close(ysw_csc_t *csc, lv_obj_t *btn)
         .type = YSW_SEQ_STOP,
     };
     ysw_main_seq_rendezvous(&message);
-    if (csc->controller.close_cb) {
-        csc->controller.close_cb(csc->controller.close_cb_context, csc);
+    if (csc->controller.clipboard) {
+        // TODO: be sure that ysw_hpc also frees clipboard
+        free_clipboard(csc);
     }
-    ESP_LOGD(TAG, "on_close deleting csc->frame");
-    ysw_ui_close_frame(&csc->frame); // deletes contents
-    ESP_LOGD(TAG, "on_close freeing csc");
+    ysw_ui_close_frame(&csc->frame);
+    if (csc->controller.close_cb) {
+        csc->controller.close_cb(csc->controller.close_cb_context, csc->controller.cs_index);
+    }
     ysw_heap_free(csc);
 }
 
@@ -348,12 +372,7 @@ static void on_new(ysw_csc_t *csc, lv_obj_t *btn)
 static void on_copy(ysw_csc_t *csc, lv_obj_t *btn)
 {
     if (csc->controller.clipboard) {
-        uint32_t old_sn_count = ysw_array_get_count(csc->controller.clipboard);
-        for (int i = 0; i < old_sn_count; i++) {
-            ysw_sn_t *old_sn = ysw_array_get(csc->controller.clipboard, i);
-            ysw_sn_free(old_sn);
-        }
-        ysw_array_truncate(csc->controller.clipboard, 0);
+        truncate_clipboard(csc);
     } else {
         csc->controller.clipboard = ysw_array_create(10);
     }

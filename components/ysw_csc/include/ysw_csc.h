@@ -16,7 +16,7 @@
 
 typedef struct csc_s ysw_csc_t;
 
-typedef void (*csc_close_cb_t)(void *context, ysw_csc_t *csc);
+typedef void (*csc_close_cb_t)(void *context, uint32_t cs_index);
 
 typedef struct {
     ysw_music_t *music;

@@ -17,6 +17,7 @@ typedef void (*ysw_sdb_choice_cb_t)(void *context, uint8_t new_index);
 typedef void (*ysw_sdb_switch_cb_t)(void *context, bool new_value);
 typedef void (*ysw_sdb_checkbox_cb_t)(void *context, bool new_value);
 typedef void (*ysw_sdb_button_cb_t)(void *context);
+typedef void (*ysw_sdb_button_bar_cb_t)(void *context, const char *button);
 
 typedef struct {
     lv_obj_t *kb; // shared across ta's

@@ -11,6 +11,7 @@
 
 #include "ysw_hp.h"
 #include "ysw_music.h"
+#include "ysw_sdb.h"
 #include "lvgl.h"
 #include "stdint.h"
 
@@ -18,8 +19,19 @@ typedef struct {
     ysw_music_t *music;
     ysw_hp_t *hp;
     ysw_ps_t *ps;
+} ysw_ssc_model_t;
+
+typedef struct {
+    ysw_sdb_t *sdb;
+    lv_obj_t *som;
+    lv_obj_t *degree;
     lv_obj_t *styles;
-} ssc_t;
+} ysw_ssc_view_t;
+
+typedef struct {
+    ysw_ssc_model_t model;
+    ysw_ssc_view_t view;
+} ysw_ssc_t;
 
 void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index);
-
+void ysw_ssc_close(ysw_ssc_t *ssc);

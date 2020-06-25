@@ -217,8 +217,8 @@ lv_color_t ysw_style_adjust_obj(lv_obj_t *obj)
 
 void ysw_style_adjust_field_name(lv_obj_t *label)
 {
-    lv_obj_set_style_local_pad_top(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 10);
-    lv_obj_set_style_local_pad_bottom(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 2);
+    lv_obj_set_style_local_pad_top(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 5);
+    lv_obj_set_style_local_pad_bottom(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 1);
     lv_obj_set_style_local_text_font(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, &lv_font_montserrat_12);
 }
 
@@ -271,6 +271,8 @@ void ysw_style_adjust_button_bar(lv_obj_t *bar)
 void ysw_style_adjust_checkbox(lv_obj_t *cb)
 {
     lv_color_t child_bg = ysw_style_lighten_background(cb);
+    lv_obj_set_style_local_text_font(cb, LV_CHECKBOX_PART_BG, LV_STATE_DEFAULT, &lv_font_montserrat_12);
+    lv_obj_set_style_local_pad_left(cb, LV_CHECKBOX_PART_BG, LV_STATE_DEFAULT, 0);
     lv_obj_set_style_local_border_width(cb, LV_CHECKBOX_PART_BULLET, LV_STATE_DEFAULT, 0);
     lv_obj_set_style_local_bg_color(cb, LV_CHECKBOX_PART_BULLET, LV_STATE_DEFAULT, child_bg);
     lv_obj_set_style_local_bg_color(cb, LV_CHECKBOX_PART_BULLET, LV_STATE_CHECKED, child_bg);
