@@ -267,3 +267,54 @@ ysw_note_t *ysw_hp_get_step_notes(ysw_hp_t *hp, ysw_ps_t *ps, uint32_t *note_cou
     return notes;
 }
 
+uint32_t ysw_hp_get_selection_count(ysw_hp_t *hp)
+{
+    uint32_t selection_count = 0;
+    uint32_t ps_count = ysw_hp_get_ps_count(hp);
+    for (int32_t i = 0; i < ps_count; i++) {
+        if (ysw_ps_is_selected(ysw_hp_get_ps(hp, i))) {
+            selection_count++;
+        }
+    }
+    return selection_count;
+}
+
+int32_t ysw_hp_find_previous_selected_ps(ysw_hp_t *hp, uint32_t ps_index, bool is_wrap)
+{
+    uint32_t ps_count = ysw_hp_get_ps_count(hp);
+    assert(ps_index < ps_count);
+    for (int32_t i = ps_index - 1; i >= 0; i--) {
+        if (ysw_ps_is_selected(ysw_hp_get_ps(hp, i))) {
+            return i;
+        }
+    }
+    if (is_wrap) {
+        for (int32_t i = ps_count - 1; i > ps_index; i--) {
+            if (ysw_ps_is_selected(ysw_hp_get_ps(hp, i))) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+int32_t ysw_hp_find_next_selected_ps(ysw_hp_t *hp, uint32_t ps_index, bool is_wrap)
+{
+    uint32_t ps_count = ysw_hp_get_ps_count(hp);
+    assert(ps_index < ps_count);
+    for (int32_t i = ps_index + 1; i < ps_count; i++) {
+        if (ysw_ps_is_selected(ysw_hp_get_ps(hp, i))) {
+            return i;
+        }
+    }
+    if (is_wrap) {
+        for (int32_t i = 0; i < ps_index; i++) {
+            if (ysw_ps_is_selected(ysw_hp_get_ps(hp, i))) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+

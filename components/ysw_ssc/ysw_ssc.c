@@ -12,9 +12,11 @@
 #include "ysw_csc.h"
 #include "ysw_degree.h"
 #include "ysw_heap.h"
+#include "ysw_hpe.h"
 #include "ysw_main_seq.h"
 #include "lvgl/lvgl.h"
 #include "esp_log.h"
+#include "assert.h"
 #include "stdio.h"
 
 #define TAG "YSW_SSC"
@@ -22,7 +24,6 @@
 #define EDIT "Edit"
 #define CREATE "Create"
 #define APPLY_ALL "Apply All"
-#define APPLY_SELECTED "Apply Selected"
 
 // NB: returned value is allocated on ysw_heap. Caller must free it.
 
@@ -132,9 +133,11 @@ static void on_chord_style_action(ysw_ssc_t *ssc, const char *button)
     } else if (strcmp(button, CREATE) == 0) {
         on_create_style(ssc);
     } else if (strcmp(button, APPLY_ALL) == 0) {
-        on_apply_all(ssc);
-    } else if (strcmp(button, APPLY_SELECTED) == 0) {
-        on_apply_selected(ssc);
+        if (ysw_hpe_gs.multiple_selection && ysw_hp_get_selection_count(ssc->model.hp) >= 2) {
+            on_apply_selected(ssc);
+        } else {
+            on_apply_all(ssc);
+        }
     }
 }
 
@@ -157,18 +160,46 @@ static void update_settings(ysw_ssc_t *ssc, uint32_t ps_index)
     lv_obj_invalidate(ssc->view.styles);
 }
 
-static void on_prev(ysw_ssc_t *ssc, lv_obj_t *btn)
+typedef enum {
+    FORWARD,
+    BACKWARD,
+} move_direction_t;
+
+static void move(ysw_ssc_t *ssc, move_direction_t direction)
 {
-    // TODO: if multiple selection, move amongst selection, otherwise move selection
     uint32_t ps_count = ysw_hp_get_ps_count(ssc->model.hp);
-    if (ps_count) {
+    if (ps_count >= 2) { // can only move if at least two items
+        int32_t new_ps_index = -1;
         uint32_t ps_index = ysw_hp_get_ps_index(ssc->model.hp, ssc->model.ps);
-        int32_t new_ps_index = ps_index - 1;
-        if (new_ps_index < 0) {
-            new_ps_index = ps_count - 1;
+        if (ysw_hpe_gs.multiple_selection) {
+            if (direction == FORWARD) {
+                new_ps_index = ysw_hp_find_next_selected_ps(ssc->model.hp, ps_index, true);
+            } else {
+                new_ps_index = ysw_hp_find_previous_selected_ps(ssc->model.hp, ps_index, true);
+            }
+        } // not else
+        if (new_ps_index == -1) { // single selection, or only one item selected
+            if (direction == FORWARD) {
+                new_ps_index = ps_index + 1;
+                if (new_ps_index >= ps_count) {
+                    new_ps_index = 0;
+                }
+            } else {
+                new_ps_index = ps_index - 1;
+                if (new_ps_index < 0) {
+                    new_ps_index = ps_count - 1;
+                }
+            }
+            ysw_ps_select(ssc->model.ps, false);
+            ysw_ps_select(ysw_hp_get_ps(ssc->model.hp, new_ps_index), true);
         }
         update_settings(ssc, new_ps_index);
     }
+}
+
+static void on_prev(ysw_ssc_t *ssc, lv_obj_t *btn)
+{
+    move(ssc, BACKWARD);
 }
 
 static void on_play(ysw_ssc_t *ssc, lv_obj_t *btn)
@@ -177,16 +208,7 @@ static void on_play(ysw_ssc_t *ssc, lv_obj_t *btn)
 
 static void on_next(ysw_ssc_t *ssc, lv_obj_t *btn)
 {
-    // TODO: if multiple selection, move amongst selection, otherwise move selection
-    uint32_t ps_count = ysw_hp_get_ps_count(ssc->model.hp);
-    if (ps_count) {
-        uint32_t ps_index = ysw_hp_get_ps_index(ssc->model.hp, ssc->model.ps);
-        uint32_t new_ps_index = ps_index + 1;
-        if (new_ps_index == ps_count) {
-            new_ps_index = 0;
-        }
-        update_settings(ssc, new_ps_index);
-    }
+    move(ssc, FORWARD);
 }
 
 static void on_close(ysw_ssc_t *ssc, lv_obj_t *btn)
@@ -208,7 +230,7 @@ static const char *map[] = { EDIT, CREATE, APPLY_ALL, "" };
 
 void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index)
 {
-    ysw_ssc_t *ssc = ysw_heap_allocate(sizeof(ysw_ssc_t)); // TODO: make sure this gets freed
+    ysw_ssc_t *ssc = ysw_heap_allocate(sizeof(ysw_ssc_t)); // freed in ysw_ssc_close
     ssc->model.music = music;
     ssc->model.hp = hp;
     ssc->model.ps = ysw_hp_get_ps(hp, ps_index);

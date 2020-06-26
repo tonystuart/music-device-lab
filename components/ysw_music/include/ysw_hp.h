@@ -49,6 +49,9 @@ void ysw_hp_free(ysw_hp_t *hp);
 ysw_hp_t *ysw_hp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo);
 ysw_hp_t *ysw_hp_copy(ysw_hp_t *old_hp);
 void ysw_hp_dump(ysw_hp_t *progresssion, char *tag);
+uint32_t ysw_hp_get_selection_count(ysw_hp_t *hp);
+int32_t ysw_hp_find_previous_selected_ps(ysw_hp_t *hp, uint32_t ps_index, bool is_wrap);
+int32_t ysw_hp_find_next_selected_ps(ysw_hp_t *hp, uint32_t ps_index, bool is_wrap);
 
 static inline ysw_ps_t *ysw_hp_get_ps(ysw_hp_t *hp, uint32_t index)
 {
