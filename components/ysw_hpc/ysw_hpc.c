@@ -426,7 +426,7 @@ static void on_create_ps(ysw_hpc_t *hpc, uint32_t ps_index, uint8_t degree)
             ysw_ps_t *last_ps = ysw_hp_get_ps(hp, hpc->controller.ps_index);
             template_cs = last_ps->cs;
         } else {
-            template_cs = ysw_music_get_cs(hpc->controller.music, 0);
+            template_cs = ysw_music_get_cs(hpc->controller.music, 0); // TODO: what if null?
         }
         ysw_ps_t *ps = ysw_ps_create(template_cs, degree, YSW_PS_NEW_MEASURE);
         ps_count++;

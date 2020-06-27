@@ -288,7 +288,7 @@ static void draw_metro_marker(dc_t *dc)
         .x = left,
         .y = dc->m.hp_top + dc->m.hp_height,
     };
-    lv_draw_line(&top, &bottom, dc->mask, &line_dsc);
+    lv_draw_line(&top, &bottom, dc->mask, &metro_line_dsc);
 }
 
 static void draw_main(lv_obj_t *hpe, const lv_area_t *mask)

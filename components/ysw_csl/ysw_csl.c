@@ -337,7 +337,6 @@ static void on_next(ysw_csl_t *csl, lv_obj_t *btn)
 static void on_play(ysw_csl_t *csl, lv_obj_t *btn)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csl->controller.music, csl->controller.cs_index);
-    ysw_cs_sort_sn_array(cs);
 
     uint32_t note_count = 0;
     ysw_note_t *notes = ysw_cs_get_notes(cs, &note_count);

@@ -69,7 +69,7 @@ void ysw_style_initialize()
 
     metro_line_dsc = (lv_draw_line_dsc_t ) {
                 .color = LV_COLOR_RED,
-                .width = 1,
+                .width = 3,
                 .opa = LV_OPA_COVER,
             };
 

@@ -51,7 +51,6 @@ static void on_sequencer_status(ysw_csc_t *csc, ysw_seq_status_message_t *messag
 static void send_notes(ysw_csc_t *csc, ysw_seq_message_type_t type)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
-    ysw_cs_sort_sn_array(cs);
 
     uint32_t note_count = 0;
     ysw_note_t *notes = ysw_cs_get_notes(cs, &note_count);
@@ -261,7 +260,7 @@ static void on_name_change(ysw_csc_t *csc, const char *new_name)
 static void on_instrument_change(ysw_csc_t *csc, uint16_t new_instrument)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
-    ysw_cs_set_instrument(cs, new_instrument);
+    cs->instrument = new_instrument;
     auto_play_all(csc);
 }
 

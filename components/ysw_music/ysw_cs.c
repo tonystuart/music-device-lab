@@ -15,7 +15,7 @@
 
 #define TAG "YSW_CS"
 
-ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo, uint8_t divisions)
+ysw_cs_t* ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo, uint8_t divisions)
 {
     ysw_cs_t *cs = ysw_heap_allocate(sizeof(ysw_cs_t));
     cs->name = ysw_heap_strdup(name);
@@ -29,7 +29,7 @@ ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode
     return cs;
 }
 
-ysw_cs_t *ysw_cs_copy(ysw_cs_t *old_cs)
+ysw_cs_t* ysw_cs_copy(ysw_cs_t *old_cs)
 {
     uint32_t sn_count = ysw_cs_get_sn_count(old_cs);
     ysw_cs_t *new_cs = ysw_heap_allocate(sizeof(ysw_cs_t));
@@ -63,8 +63,7 @@ void ysw_cs_free(ysw_cs_t *cs)
 
 uint32_t ysw_cs_add_sn(ysw_cs_t *cs, ysw_sn_t *sn)
 {
-    uint32_t index = ysw_array_push(cs->sn_array, sn);
-    return index;
+    return ysw_array_push(cs->sn_array, sn);
 }
 
 void ysw_cs_sort_sn_array(ysw_cs_t *cs)
@@ -72,78 +71,77 @@ void ysw_cs_sort_sn_array(ysw_cs_t *cs)
     ysw_array_sort(cs->sn_array, ysw_sn_compare);
 }
 
-void ysw_cs_set_name(ysw_cs_t *cs, const char* name)
+void ysw_cs_set_name(ysw_cs_t *cs, const char *name)
 {
     cs->name = ysw_heap_string_reallocate(cs->name, name);
 }
 
-void ysw_cs_set_instrument(ysw_cs_t *cs, uint8_t instrument)
-{
-    cs->instrument = instrument;
-}
+typedef struct {
+    ysw_cs_t *cs;
+    uint8_t tonic;
+    uint8_t root;
+    ysw_note_t *notes;
+    ysw_note_t *note_p;
+    uint32_t sn_count;
+    uint32_t metronome_index;
+    uint32_t metronome_tick;
+    uint32_t end_time;
+} mc_t;
 
-const char* ysw_cs_get_name(ysw_cs_t *cs)
+static mc_t* initialize_context(mc_t *mc)
 {
-    return cs->name;
-}
-
-uint8_t ysw_cs_get_instrument(ysw_cs_t *cs)
-{
-    return cs->instrument;
-}
-
-// sn_array must be in order produced by ysw_cs_sort_sn_array prior to call
-
-ysw_note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
-{
-    int end_time = 0;
-    int sn_count = ysw_cs_get_sn_count(cs);
-    uint32_t max_note_count = sn_count;
-    max_note_count += cs->divisions; // metronome ticks
+    mc->sn_count = ysw_cs_get_sn_count(mc->cs);
+    uint32_t max_note_count = mc->sn_count;
+    max_note_count += mc->cs->divisions; // metronome ticks
     max_note_count += 1; // fill-to-measure
-    ysw_note_t *notes = ysw_heap_allocate(sizeof(ysw_note_t) * max_note_count);
-    ysw_note_t *note_p = notes;
-    uint8_t tonic = cs->octave * 12;
-    uint8_t root = ysw_degree_intervals[0][cs->mode % 7] + 1; // +1 because root is 1-based
-    uint32_t ticks_per_division = YSW_CS_DURATION / cs->divisions;
-    uint32_t metronome_tick = 0;
-    for (int j = 0; j < sn_count; j++) {
-        ysw_sn_t *sn = ysw_cs_get_sn(cs, j);
-        while (metronome_tick <= sn->start) {
-            note_p->start = metronome_tick;
-            note_p->duration = 0;
-            note_p->channel = YSW_MIDI_STATUS_CHANNEL;
-            note_p->midi_note = YSW_MIDI_STATUS_NOTE;
-            note_p->velocity = 0;
-            note_p->instrument = 0;
-            note_p++;
-            metronome_tick += ticks_per_division;
-        }
-        note_p->start = sn->start;
-        note_p->duration = sn->duration;
-        note_p->channel = YSW_CS_MUSIC_CHANNEL;
-        note_p->midi_note = ysw_sn_to_midi_note(sn, tonic, root) + cs->transposition;
-        note_p->velocity = sn->velocity;
-        note_p->instrument = cs->instrument;
-        //ESP_LOGD(TAG, "ysw_cs_get_notes start=%u, duration=%d, midi_note=%d, velocity=%d, instrument=%d", note_p->start, note_p->duration, note_p->midi_note, note_p->velocity, note_p->instrument);
-        end_time = note_p->start + note_p->duration;
-        note_p++;
-    }
-    uint32_t fill_to_measure = YSW_CS_DURATION - end_time;
-    if (fill_to_measure) {
-        note_p->start = end_time;
-        note_p->duration = fill_to_measure;
-        note_p->channel = YSW_CS_MUSIC_CHANNEL;
-        note_p->midi_note = 0;
-        note_p->velocity = 0;
-        note_p->instrument = 0;
-        note_p++;
-    }
-    *note_count = note_p - notes;
-    return notes;
+    mc->notes = ysw_heap_allocate(sizeof(ysw_note_t) * max_note_count);
+    mc->note_p = mc->notes;
+    mc->tonic = mc->cs->octave * 12;
+    mc->root = ysw_degree_intervals[0][mc->cs->mode % 7] + 1; // +1 because root is 1-based
+    return mc;
 }
 
-ysw_note_t *ysw_cs_get_note(ysw_cs_t *cs, ysw_sn_t *sn)
+static void add_metro_markers(mc_t *mc, uint32_t up_to_tick)
+{
+    while (mc->metronome_tick <= up_to_tick) {
+        mc->note_p->start = mc->metronome_tick;
+        mc->note_p->duration = 0;
+        mc->note_p->channel = YSW_MIDI_STATUS_CHANNEL;
+        mc->note_p->midi_note = YSW_MIDI_STATUS_NOTE;
+        mc->note_p->velocity = 0;
+        mc->note_p->instrument = 0;
+        mc->note_p++;
+        mc->metronome_tick = (++mc->metronome_index * YSW_CS_DURATION) / mc->cs->divisions;
+    }
+}
+
+static void add_note(mc_t *mc, ysw_sn_t *sn)
+{
+    mc->note_p->start = sn->start;
+    mc->note_p->duration = sn->duration;
+    mc->note_p->channel = YSW_CS_MUSIC_CHANNEL;
+    mc->note_p->midi_note = ysw_sn_to_midi_note(sn, mc->tonic, mc->root) + mc->cs->transposition;
+    mc->note_p->velocity = sn->velocity;
+    mc->note_p->instrument = mc->cs->instrument;
+    mc->end_time = mc->note_p->start + mc->note_p->duration;
+    mc->note_p++;
+}
+
+ysw_note_t* ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count)
+{
+    ysw_cs_sort_sn_array(cs);
+    mc_t *mc = initialize_context(&(mc_t ) { .cs = cs });
+    for (int j = 0; j < mc->sn_count; j++) {
+        ysw_sn_t *sn = ysw_cs_get_sn(mc->cs, j);
+        add_metro_markers(mc, sn->start);
+        add_note(mc, sn);
+    }
+    add_metro_markers(mc, YSW_CS_DURATION);
+    *note_count = mc->note_p - mc->notes;
+    return mc->notes;
+}
+
+ysw_note_t* ysw_cs_get_note(ysw_cs_t *cs, ysw_sn_t *sn)
 {
     ysw_note_t *notes = ysw_heap_allocate(sizeof(ysw_note_t));
     ysw_note_t *note_p = notes;
