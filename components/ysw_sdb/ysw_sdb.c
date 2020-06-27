@@ -89,7 +89,7 @@ static void on_ta_event(lv_obj_t *ta, lv_event_t event)
 static void on_ddlist_event(lv_obj_t *ddlist, lv_event_t event)
 {
     if (event == LV_EVENT_VALUE_CHANGED) {
-        uint8_t new_value = lv_dropdown_get_selected(ddlist);
+        uint16_t new_value = lv_dropdown_get_selected(ddlist);
         ysw_sdb_choice_cb_t cb = lv_obj_get_user_data(ddlist);
         if (cb) {
             cb(get_sdb(ddlist)->controller.context, new_value);
@@ -201,7 +201,7 @@ lv_obj_t* ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value
     return ta;
 }
 
-lv_obj_t* ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint8_t value, const char *options, void *cb)
+lv_obj_t* ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint16_t value, const char *options, void *cb)
 {
     create_field_name(sdb, name);
 

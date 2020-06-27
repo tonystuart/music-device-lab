@@ -75,6 +75,33 @@ static char *key_labels[] =
             "VII",
         };
 
+static inline uint8_t degree_to_row(ysw_degree_t degree)
+{
+    return YSW_MIDI_UNPO - degree;
+}
+
+static inline ysw_degree_t row_to_degree(uint8_t row)
+{
+    return YSW_MIDI_UNPO - row;
+}
+
+static inline lv_coord_t y_to_row(metrics_t *m, lv_coord_t y)
+{
+    // y / row_height
+    // y / (total_height / number_of_items) -> invert and multiply:
+    // (y * number_of_items) / total_height
+    return ysw_common_muldiv(y, YSW_MIDI_UNPO, m->hp_height);
+}
+
+static inline lv_coord_t row_to_y(metrics_t *m, lv_coord_t row)
+{
+    // row * row_height
+    // row * (total_height / number_of_items)
+    // (row * total_height) / number_of_items
+    return ysw_common_muldiv(row, m->hp_height, YSW_MIDI_UNPO);
+
+}
+
 static void get_metrics(lv_obj_t *hpe, metrics_t *m)
 {
     ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
@@ -107,8 +134,9 @@ static void get_ps_info(lv_obj_t *hpe, uint32_t ps_index, lv_area_t *ret_area)
     ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
     ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, ps_index);
 
+    lv_coord_t row = degree_to_row(ps->degree);
     lv_coord_t left = m.hp_left + (ps_index * m.col_width);
-    lv_coord_t cell_top = m.hp_top + ((YSW_MIDI_UNPO - ps->degree) * m.row_height);
+    lv_coord_t cell_top = m.hp_top + row_to_y(&m, row);
 
     lv_area_t cell_area = {
         .x1 = left,
@@ -205,9 +233,24 @@ static void draw_column_heading(dc_t *dc)
     }
 }
 
+static void draw_cs(dc_t *dc)
+{
+    lv_area_t footer_area = {
+        .x1 = dc->m.hpe_left,
+        .y1 = dc->m.hp_top + dc->m.hp_height,
+        .x2 = dc->m.hpe_left + dc->m.hpe_width,
+        .y2 = dc->m.hp_top + dc->m.hp_height + dc->m.row_height,
+    };
+    lv_area_t footer_mask;
+    if (_lv_area_intersect(&footer_mask, dc->mask, &footer_area)) {
+        lv_draw_label(&footer_area, &footer_mask, &sn_label_dsc, dc->ext->last_ps->cs->name, NULL);
+    }
+}
+
 static void draw_ps(dc_t *dc)
 {
-    lv_coord_t cell_top = dc->m.hp_top + ((YSW_MIDI_UNPO - dc->ps->degree) * dc->m.row_height);
+    lv_coord_t row = degree_to_row(dc->ps->degree);
+    lv_coord_t cell_top = dc->m.hp_top + row_to_y(&dc->m, row);
     lv_area_t cell_area = {
         .x1 = dc->left,
         .y1 = cell_top,
@@ -229,19 +272,8 @@ static void draw_ps(dc_t *dc)
             lv_draw_label(&cell_area, &cell_mask, &hp_label_dsc, key_labels[to_index(dc->ps->degree)], NULL);
         }
     }
-}
-
-static void draw_cs(dc_t *dc)
-{
-    lv_area_t footer_area = {
-        .x1 = dc->m.hpe_left,
-        .y1 = dc->m.hp_top + dc->m.hp_height,
-        .x2 = dc->m.hpe_left + dc->m.hpe_width,
-        .y2 = dc->m.hp_top + dc->m.hp_height + dc->m.row_height,
-    };
-    lv_area_t footer_mask;
-    if (_lv_area_intersect(&footer_mask, dc->mask, &footer_area)) {
-        lv_draw_label(&footer_area, &footer_mask, &sn_label_dsc, dc->ps->cs->name, NULL);
+    if (dc->ps == dc->ext->last_ps) {
+        draw_cs(dc);
     }
 }
 
@@ -273,7 +305,7 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask)
             };
 
     get_metrics(hpe, &dc->m);
-    ysw_hp_get_pss_in_measures(dc->ext->hp, dc->spm, dc->ps_count); // TODO: rename ysw_hp_get_spm
+    ysw_hp_get_spm(dc->ext->hp, dc->spm, dc->ps_count);
 
     if (dc->ext->metro_marker != -1 && ysw_hpe_gs.auto_scroll) {
         ysw_hpe_ensure_visible(hpe, dc->ext->metro_marker, dc->ext->metro_marker);
@@ -287,10 +319,6 @@ static void draw_main(lv_obj_t *hpe, const lv_area_t *mask)
         draw_column_line(dc);
         draw_column_heading(dc);
         draw_ps(dc);
-        if (!dc->cs_displayed && ysw_ps_is_selected(dc->ps)) {
-            draw_cs(dc);
-            dc->cs_displayed = true;
-        }
     }
 
     if (dc->ext->metro_marker != -1) {
@@ -334,6 +362,7 @@ static void fire_edit(lv_obj_t *hpe, ysw_ps_t *ps)
 static void fire_select(lv_obj_t *hpe, ysw_ps_t *ps)
 {
     ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
+    ext->last_ps = ps;
     if (ext->select_cb) {
         ext->select_cb(ext->context, ps);
     }
@@ -342,6 +371,7 @@ static void fire_select(lv_obj_t *hpe, ysw_ps_t *ps)
 static void fire_deselect(lv_obj_t *hpe, ysw_ps_t *ps)
 {
     ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
+    ext->last_ps = NULL;
     if (ext->deselect_cb) {
         ext->deselect_cb(ext->context, ps);
     }
@@ -402,8 +432,8 @@ static void prepare_create(lv_obj_t *hpe, lv_point_t *point)
         lv_coord_t adj_x = point->x - m.hp_left; // hp_left includes scroll_left
         lv_coord_t adj_y = point->y - m.hp_top;
         uint32_t ps_index = adj_x / m.col_width;
-        uint32_t row_index = adj_y / m.row_height;
-        uint8_t degree = YSW_MIDI_UNPO - row_index;
+        uint32_t row_index = y_to_row(&m, adj_y);
+        uint8_t degree = row_to_degree(row_index);
         bool insert_after = (adj_x % m.col_width) > (m.col_width / 2);
         if (insert_after && (ps_index < ysw_hp_get_ps_count(ext->hp))) {
             ps_index++;
@@ -413,6 +443,15 @@ static void prepare_create(lv_obj_t *hpe, lv_point_t *point)
         }
         fire_create(hpe, ps_index, degree);
     }
+}
+
+static void prepare_edit(lv_obj_t *hpe, ysw_ps_t *ps)
+{
+    if (!ysw_hpe_gs.multiple_selection) {
+        deselect_all(hpe);
+    }
+    select_ps(hpe, ps);
+    fire_edit(hpe, ps);
 }
 
 static void scroll_horizontally(lv_obj_t *hpe, lv_coord_t x)
@@ -430,11 +469,11 @@ static void scroll_horizontally(lv_obj_t *hpe, lv_coord_t x)
     ext->scroll_left = new_scroll_left;
 }
 
-static void drag_vertically(lv_obj_t *hpe, ysw_ps_t *ps, ysw_ps_t *drag_start_ps, lv_coord_t y)
+static void drag_vertically(lv_obj_t *hpe, ysw_ps_t *ps, ysw_ps_t *drag_start_ps, lv_coord_t delta_y)
 {
     metrics_t m;
     get_metrics(hpe, &m);
-    uint8_t new_degree = drag_start_ps->degree - (y / m.row_height);
+    uint8_t new_degree = drag_start_ps->degree - (delta_y / m.row_height);
     if (new_degree >= 1 && new_degree <= YSW_MIDI_UNPO) {
         ps->degree = new_degree;
     }
@@ -578,7 +617,7 @@ static void on_signal_long_press(lv_obj_t *hpe, void *param)
         lv_indev_t *indev_act = (lv_indev_t*)param;
         lv_indev_wait_release(indev_act);
         if (ext->clicked_ps) {
-            fire_edit(hpe, ext->clicked_ps);
+            prepare_edit(hpe, ext->clicked_ps);
         } else {
             lv_indev_proc_t *proc = &indev_act->proc;
             lv_point_t *point = &proc->types.pointer.act_point;

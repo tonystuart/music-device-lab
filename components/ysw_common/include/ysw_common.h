@@ -58,6 +58,11 @@ static inline bool match(char *left, char *right)
     return left && right ? strcmp(left, right) == 0 : 0;
 }
 
+static inline uint32_t ysw_common_muldiv(uint32_t m1, uint32_t m2, uint32_t d)
+{
+    return (m1 * m2) / d;
+}
+
 uint32_t get_millis();
 void wait_millis(int millis);
 uint32_t to_millis(uint32_t ticks);

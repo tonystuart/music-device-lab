@@ -258,35 +258,35 @@ static void on_name_change(ysw_csc_t *csc, const char *new_name)
     update_header(csc);
 }
 
-static void on_instrument_change(ysw_csc_t *csc, uint8_t new_instrument)
+static void on_instrument_change(ysw_csc_t *csc, uint16_t new_instrument)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     ysw_cs_set_instrument(cs, new_instrument);
     auto_play_all(csc);
 }
 
-static void on_octave_change(ysw_csc_t *csc, uint8_t new_octave)
+static void on_octave_change(ysw_csc_t *csc, uint16_t new_octave)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     cs->octave = new_octave;
     auto_play_all(csc);
 }
 
-static void on_mode_change(ysw_csc_t *csc, ysw_mode_t new_mode)
+static void on_mode_change(ysw_csc_t *csc, uint16_t new_mode)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     cs->mode = new_mode;
     auto_play_all(csc);
 }
 
-static void on_transposition_change(ysw_csc_t *csc, uint8_t new_transposition_index)
+static void on_transposition_change(ysw_csc_t *csc, uint16_t new_transposition_index)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     cs->transposition = ysw_transposition_from_index(new_transposition_index);
     auto_play_all(csc);
 }
 
-static void on_tempo_change(ysw_csc_t *csc, uint8_t new_tempo_index)
+static void on_tempo_change(ysw_csc_t *csc, uint16_t new_tempo_index)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     cs->tempo = ysw_tempo_from_index(new_tempo_index);
@@ -294,7 +294,7 @@ static void on_tempo_change(ysw_csc_t *csc, uint8_t new_tempo_index)
     auto_play_all(csc);
 }
 
-static void on_division_change(ysw_csc_t *csc, uint8_t new_division_index)
+static void on_division_change(ysw_csc_t *csc, uint16_t new_division_index)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     cs->divisions = ysw_division_from_index(new_division_index);

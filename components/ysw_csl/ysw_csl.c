@@ -185,17 +185,17 @@ static void on_csc_close(ysw_csl_t *csl, uint32_t cs_index)
     display_chord_styles(csl);
 }
 
-static void on_auto_play_all(ysw_csl_t *csl, ysw_auto_play_t auto_play)
+static void on_auto_play_all(ysw_csl_t *csl, uint16_t auto_play)
 {
     ysw_cse_gs.auto_play_all = auto_play;
 }
 
-static void on_auto_play_last(ysw_csl_t *csl, ysw_auto_play_t auto_play)
+static void on_auto_play_last(ysw_csl_t *csl, uint16_t auto_play)
 {
     ysw_cse_gs.auto_play_last = auto_play;
 }
 
-static void on_multiple_selection(ysw_csl_t *csl, bool multiple_selection)
+static void on_multiple_selection(ysw_csl_t *csl, uint16_t multiple_selection)
 {
     ysw_cse_gs.multiple_selection = multiple_selection;
 }

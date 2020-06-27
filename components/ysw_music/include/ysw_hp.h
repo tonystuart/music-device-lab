@@ -26,7 +26,7 @@ typedef struct {
 
 typedef struct {
     char *name;
-    ysw_array_t *pss;
+    ysw_array_t *ps_array;
     uint8_t instrument;
     uint8_t octave;
     ysw_mode_t mode;
@@ -38,7 +38,7 @@ ysw_ps_t *ysw_ps_create(ysw_cs_t *cs, uint8_t degree, uint8_t flags);
 void ysw_ps_free(ysw_ps_t *ps);
 void ysw_hp_set_name(ysw_hp_t *hp, const char* name);
 int32_t ysw_hp_get_ps_index(ysw_hp_t *hp, ysw_ps_t *target_ps);
-uint32_t ysw_hp_get_pss_in_measures(ysw_hp_t *hp, uint8_t measures[], uint32_t size);
+uint32_t ysw_hp_get_spm(ysw_hp_t *hp, uint8_t measures[], uint32_t size);
 ysw_note_t *ysw_hp_get_notes(ysw_hp_t *hp, uint32_t *note_count);
 ysw_note_t *ysw_hp_get_step_notes(ysw_hp_t *hp, ysw_ps_t *ps, uint32_t *note_count);
 void ysw_hp_set_percent_tempo(ysw_hp_t *hp);
@@ -55,7 +55,7 @@ int32_t ysw_hp_find_next_selected_ps(ysw_hp_t *hp, uint32_t ps_index, bool is_wr
 
 static inline ysw_ps_t *ysw_hp_get_ps(ysw_hp_t *hp, uint32_t index)
 {
-    return ysw_array_get(hp->pss, index);
+    return ysw_array_get(hp->ps_array, index);
 }
 
 static inline ysw_cs_t *ysw_hp_get_cs(ysw_hp_t *hp, uint32_t index)
@@ -70,7 +70,7 @@ static inline ysw_degree_t ysw_hp_get_degree(ysw_hp_t *hp, uint32_t index)
 
 static inline uint32_t ysw_hp_get_ps_count(ysw_hp_t *hp)
 {
-    return ysw_array_get_count(hp->pss);
+    return ysw_array_get_count(hp->ps_array);
 }
 
 static inline ysw_sn_t *ysw_ps_get_sn(ysw_ps_t *ps, uint32_t index)
@@ -109,7 +109,7 @@ static inline bool ysw_ps_is_selected(ysw_ps_t *ps)
 
 static inline void ysw_hp_insert_ps(ysw_hp_t *hp, uint32_t index, ysw_ps_t *ps)
 {
-    ysw_array_insert(hp->pss, index, ps);
+    ysw_array_insert(hp->ps_array, index, ps);
 }
 
 static inline bool ysw_ps_is_new_measure(ysw_ps_t *ps)

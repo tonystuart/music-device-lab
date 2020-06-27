@@ -199,35 +199,35 @@ static void on_name_change(ysw_hpc_t *hpc, const char *new_name)
     update_header(hpc);
 }
 
-static void on_instrument_change(ysw_hpc_t *hpc, uint8_t new_instrument)
+static void on_instrument_change(ysw_hpc_t *hpc, uint16_t new_instrument)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
     ysw_hp_set_instrument(hp, new_instrument);
     auto_play_all(hpc);
 }
 
-static void on_octave_change(ysw_hpc_t *hpc, uint8_t new_octave)
+static void on_octave_change(ysw_hpc_t *hpc, uint16_t new_octave)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
     hp->octave = new_octave;
     auto_play_all(hpc);
 }
 
-static void on_mode_change(ysw_hpc_t *hpc, ysw_mode_t new_mode)
+static void on_mode_change(ysw_hpc_t *hpc, uint16_t new_mode)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
     hp->mode = new_mode;
     auto_play_all(hpc);
 }
 
-static void on_transposition_change(ysw_hpc_t *hpc, uint8_t new_transposition_index)
+static void on_transposition_change(ysw_hpc_t *hpc, uint16_t new_transposition_index)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
     hp->transposition = ysw_transposition_from_index(new_transposition_index);
     auto_play_all(hpc);
 }
 
-static void on_tempo_change(ysw_hpc_t *hpc, uint8_t new_tempo_index)
+static void on_tempo_change(ysw_hpc_t *hpc, uint16_t new_tempo_index)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
     hp->tempo = ysw_tempo_from_index(new_tempo_index);
@@ -368,12 +368,12 @@ static void on_trash(ysw_hpc_t *hpc, lv_obj_t *btn)
             ysw_ps_free(ps);
             changes++;
         } else {
-            ysw_array_set(hp->pss, target, ps);
+            ysw_array_set(hp->ps_array, target, ps);
             target++;
         }
     }
     if (changes) {
-        ysw_array_truncate(hp->pss, target);
+        ysw_array_truncate(hp->ps_array, target);
         refresh(hpc);
     }
 }
@@ -386,9 +386,9 @@ static void on_left(ysw_hpc_t *hpc, lv_obj_t *btn)
     for (int32_t i = 0, j = 1; j < ps_count; i++, j++) {
         ysw_ps_t *hpc_ps = ysw_hp_get_ps(hp, j);
         if (ysw_ps_is_selected(hpc_ps)) {
-            ysw_ps_t *other_ps = ysw_array_get(hp->pss, i);
-            ysw_array_set(hp->pss, i, hpc_ps);
-            ysw_array_set(hp->pss, j, other_ps);
+            ysw_ps_t *other_ps = ysw_array_get(hp->ps_array, i);
+            ysw_array_set(hp->ps_array, i, hpc_ps);
+            ysw_array_set(hp->ps_array, j, other_ps);
             changes++;
         }
     }
@@ -405,9 +405,9 @@ static void on_right(ysw_hpc_t *hpc, lv_obj_t *btn)
     for (int32_t i = ps_count - 1, j = ps_count - 2; j >= 0; i--, j--) {
         ysw_ps_t *hpc_ps = ysw_hp_get_ps(hp, j);
         if (ysw_ps_is_selected(hpc_ps)) {
-            ysw_ps_t *other_ps = ysw_array_get(hp->pss, i);
-            ysw_array_set(hp->pss, i, hpc_ps);
-            ysw_array_set(hp->pss, j, other_ps);
+            ysw_ps_t *other_ps = ysw_array_get(hp->ps_array, i);
+            ysw_array_set(hp->ps_array, i, hpc_ps);
+            ysw_array_set(hp->ps_array, j, other_ps);
             changes++;
         }
     }
@@ -446,10 +446,10 @@ static void on_create_ps(ysw_hpc_t *hpc, uint32_t ps_index, uint8_t degree)
 
 static void on_edit_ps(ysw_hpc_t *hpc, ysw_ps_t *ps)
 {
-    ysw_ps_select(ps, true);
+    ESP_LOGE(TAG, "on_edit_ps entered");
     ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
     hpc->controller.ps_index = ysw_hp_get_ps_index(hp, ps);
-    ysw_ssc_create(hpc->controller.music, hp, hpc->controller.ps_index);
+    ysw_ssc_create(hpc->controller.music, hp, hpc->controller.ps_index, false);
 }
 
 static void on_select(ysw_hpc_t *hpc, ysw_ps_t *ps)

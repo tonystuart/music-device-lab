@@ -22,6 +22,7 @@ typedef void (*ysw_hpe_drag_end_cb_t)(void *context);
 typedef struct {
     ysw_hp_t *hp;
     ysw_ps_t *clicked_ps; // only set while pressed
+    ysw_ps_t *last_ps; // most recently selected ps, only valid if in hp->ps_array
     ysw_hp_t *drag_start_hp;
     lv_coord_t scroll_left;
     lv_coord_t drag_start_scroll_left;

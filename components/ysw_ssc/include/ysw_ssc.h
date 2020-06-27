@@ -19,6 +19,7 @@ typedef struct {
     ysw_music_t *music;
     ysw_hp_t *hp;
     ysw_ps_t *ps;
+    bool apply_all;
 } ysw_ssc_model_t;
 
 typedef struct {
@@ -33,5 +34,5 @@ typedef struct {
     ysw_ssc_view_t view;
 } ysw_ssc_t;
 
-void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index);
+void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index, bool apply_all);
 void ysw_ssc_close(ysw_ssc_t *ssc);

@@ -28,17 +28,17 @@ static void on_ysw_hpe_gs_scroll(void *context, bool auto_scroll)
     ysw_hpe_gs.auto_scroll = auto_scroll;
 }
 
-static void on_ysw_hpe_gs_play_all(void *context, ysw_auto_play_t auto_play)
+static void on_ysw_hpe_gs_play_all(void *context, uint16_t auto_play)
 {
     ysw_hpe_gs.auto_play_all = auto_play;
 }
 
-static void on_ysw_hpe_gs_play_last(void *context, ysw_auto_play_t auto_play)
+static void on_ysw_hpe_gs_play_last(void *context, uint16_t auto_play)
 {
     ysw_hpe_gs.auto_play_last = auto_play;
 }
 
-static void on_multiple_selection(void *context, bool multiple_selection)
+static void on_multiple_selection(void *context, uint16_t multiple_selection)
 {
     ysw_hpe_gs.multiple_selection = multiple_selection;
 }

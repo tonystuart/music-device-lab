@@ -23,7 +23,7 @@ ysw_hp_t *ysw_hp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode
     ESP_LOGD(TAG, "ysw_hp_create name=%s", name);
     ysw_hp_t *hp = ysw_heap_allocate(sizeof(ysw_hp_t));
     hp->name = ysw_heap_strdup(name);
-    hp->pss = ysw_array_create(8);
+    hp->ps_array = ysw_array_create(8);
     hp->instrument = instrument;
     hp->octave = octave;
     hp->mode = mode;
@@ -37,7 +37,7 @@ ysw_hp_t *ysw_hp_copy(ysw_hp_t *old_hp)
     uint32_t ps_count = ysw_hp_get_ps_count(old_hp);
     ysw_hp_t *new_hp = ysw_heap_allocate(sizeof(ysw_hp_t));
     new_hp->name = ysw_heap_strdup(old_hp->name);
-    new_hp->pss = ysw_array_create(ps_count);
+    new_hp->ps_array = ysw_array_create(ps_count);
     new_hp->instrument = old_hp->instrument;
     new_hp->octave = old_hp->octave;
     new_hp->mode = old_hp->mode;
@@ -55,12 +55,12 @@ void ysw_hp_free(ysw_hp_t *hp)
 {
     assert(hp);
     ESP_LOGD(TAG, "ysw_hp_free name=%s", hp->name);
-    int cs_count = ysw_array_get_count(hp->pss);
+    int cs_count = ysw_array_get_count(hp->ps_array);
     for (int i = 0; i < cs_count; i++) {
-        ysw_ps_t *ps = ysw_array_get(hp->pss, i);
+        ysw_ps_t *ps = ysw_array_get(hp->ps_array, i);
         ysw_ps_free(ps);
     }
-    ysw_array_free(hp->pss);
+    ysw_array_free(hp->ps_array);
     ysw_heap_free(hp->name);
     ysw_heap_free(hp);
 }
@@ -82,7 +82,7 @@ ysw_ps_t *ysw_ps_create(ysw_cs_t *cs, uint8_t degree, uint8_t flags)
 
 int ysw_hp_add_ps(ysw_hp_t *hp, ysw_ps_t *ps)
 {
-    return ysw_array_push(hp->pss, ps);
+    return ysw_array_push(hp->ps_array, ps);
 }
 
 void ysw_ps_free(ysw_ps_t *ps)
@@ -112,10 +112,10 @@ void ysw_hp_dump(ysw_hp_t *hp, char *tag)
     ESP_LOGD(tag, "ysw_hp_dump hp=%p", hp);
     ESP_LOGD(tag, "name=%s", hp->name);
     ESP_LOGD(tag, "instrument=%d", hp->instrument);
-    uint32_t cs_count = ysw_array_get_count(hp->pss);
+    uint32_t cs_count = ysw_array_get_count(hp->ps_array);
     ESP_LOGD(tag, "cs_count=%d", cs_count);
     for (uint32_t i = 0; i < cs_count; i++) {
-        ysw_ps_t *ps = ysw_array_get(hp->pss, i);
+        ysw_ps_t *ps = ysw_array_get(hp->ps_array, i);
         ESP_LOGD(tag, "cs index=%d, degree=%d", i, ps->degree);
         ysw_cs_dump(ps->cs, tag);
     }
@@ -123,7 +123,7 @@ void ysw_hp_dump(ysw_hp_t *hp, char *tag)
 
 int32_t ysw_hp_get_ps_index(ysw_hp_t *hp, ysw_ps_t *ps)
 {
-    return ysw_array_find(hp->pss, ps);
+    return ysw_array_find(hp->ps_array, ps);
 }
 
 uint32_t ysw_hp_get_pss_to_next_measure(ysw_hp_t *hp, uint32_t ps_index)
@@ -154,18 +154,20 @@ uint32_t ysw_hp_get_measure_count(ysw_hp_t *hp)
     return measure_count;
 }
 
-uint32_t ysw_hp_get_pss_in_measures(ysw_hp_t *hp, uint8_t pss_in_measures[], uint32_t size)
+// Get steps per measure (for each measure)
+
+uint32_t ysw_hp_get_spm(ysw_hp_t *hp, uint8_t spm[], uint32_t size)
 {
     int32_t measure_index = -1;
     uint32_t ps_count = ysw_hp_get_ps_count(hp);
     assert(size >= ps_count);
-    memset(pss_in_measures, 0, size);
+    memset(spm, 0, size);
     for (uint32_t i = 0; i < ps_count; i++) {
         ysw_ps_t *ps = ysw_hp_get_ps(hp, i);
         if (!i || ysw_ps_is_new_measure(ps)) {
             measure_index++;
         }
-        pss_in_measures[measure_index]++;
+        spm[measure_index]++;
     }
     return measure_index + 1;
 }
@@ -188,8 +190,8 @@ ysw_note_t *ysw_hp_get_notes(ysw_hp_t *hp, uint32_t *note_count)
     assert(note_count);
 
     int ps_count = ysw_hp_get_ps_count(hp);
-    uint8_t pss_in_measures[ps_count];
-    ysw_hp_get_pss_in_measures(hp, pss_in_measures, ps_count);
+    uint8_t spm[ps_count];
+    ysw_hp_get_spm(hp, spm, ps_count);
 
     uint32_t sn_count = ysw_hp_get_sn_count(hp);
     uint32_t max_note_count = sn_count;
@@ -207,7 +209,7 @@ ysw_note_t *ysw_hp_get_notes(ysw_hp_t *hp, uint32_t *note_count)
 
         ysw_ps_t *ps = ysw_hp_get_ps(hp, i);
         if (!i || ysw_ps_is_new_measure(ps)) {
-            time_scaler = 1.0 / pss_in_measures[measure];
+            time_scaler = 1.0 / spm[measure];
             measure++;
         }
 
