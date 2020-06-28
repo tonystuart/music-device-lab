@@ -19,6 +19,12 @@ typedef void (*ysw_hpe_select_cb_t)(void *context, ysw_ps_t *ps);
 typedef void (*ysw_hpe_deselect_cb_t)(void *context, ysw_ps_t *ps);
 typedef void (*ysw_hpe_drag_end_cb_t)(void *context);
 
+typedef enum {
+    YSW_HPE_DRAG_NONE = 0,
+    YSW_HPE_DRAG_HORIZONTAL,
+    YSW_HPE_DRAG_VERTICAL,
+} ysw_hpe_drag_t;
+
 typedef struct {
     ysw_hp_t *hp;
     ysw_ps_t *clicked_ps; // only set while pressed
@@ -27,7 +33,7 @@ typedef struct {
     lv_coord_t scroll_left;
     lv_coord_t drag_start_scroll_left;
     lv_point_t click_point;
-    bool dragging;
+    ysw_hpe_drag_t dragging;
     bool scrolling;
     bool long_press;
     bool press_lost;

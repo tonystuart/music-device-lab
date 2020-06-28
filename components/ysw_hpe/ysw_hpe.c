@@ -469,13 +469,79 @@ static void scroll_horizontally(lv_obj_t *hpe, lv_coord_t x)
     ext->scroll_left = new_scroll_left;
 }
 
-static void drag_vertically(lv_obj_t *hpe, ysw_ps_t *ps, ysw_ps_t *drag_start_ps, lv_coord_t delta_y)
+static void drag_vertically(lv_obj_t *hpe, lv_coord_t delta_y)
 {
     metrics_t m;
     get_metrics(hpe, &m);
-    uint8_t new_degree = drag_start_ps->degree - (delta_y / m.row_height);
-    if (new_degree >= 1 && new_degree <= YSW_MIDI_UNPO) {
-        ps->degree = new_degree;
+    ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
+    lv_coord_t delta_degrees = delta_y / m.row_height;
+    uint32_t ps_count = ysw_hp_get_ps_count(ext->hp);
+    for (int i = 0; i < ps_count; i++) {
+        ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
+        ysw_ps_t *drag_start_ps = ysw_hp_get_ps(ext->drag_start_hp, i);
+        if (ysw_ps_is_selected(ps)) {
+            uint8_t new_degree = drag_start_ps->degree - delta_degrees;
+            if (new_degree >= 1 && new_degree <= YSW_MIDI_UNPO) {
+                ps->degree = new_degree;
+            }
+        }
+    }
+}
+
+static void drag_horizontally(lv_obj_t *hpe, lv_coord_t delta_x)
+{
+    metrics_t m;
+    get_metrics(hpe, &m);
+    ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
+    lv_coord_t divisions = delta_x / m.col_width;
+
+    uint32_t selected_count = 0;
+    uint32_t ps_count = ysw_hp_get_ps_count(ext->drag_start_hp);
+    for (uint32_t i = 0; i < ps_count; i++) {
+        ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
+        ysw_ps_t *drag_start_ps = ysw_hp_get_ps(ext->drag_start_hp, i);
+        *ps = *drag_start_ps;
+        if (ysw_ps_is_selected(ps)) {
+            selected_count++;
+        }
+    }
+
+    if (divisions < 0) {
+        for (int32_t i = 0; i < ps_count; i++) {
+            ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
+            if (ysw_ps_is_selected(ps)) {
+                lv_coord_t j = i + divisions; // divisions is negative
+                if (j < 0) {
+                    j = 0;
+                }
+                ysw_ps_t *tmp_ps = ysw_hp_get_ps(ext->hp, j);
+                ysw_array_set(ext->hp->ps_array, j, ps);
+                ysw_array_set(ext->hp->ps_array, i, tmp_ps);
+            }
+        }
+    } else {
+        for (int32_t i = ps_count - 1; i >= 0; i--) {
+            ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
+            if (ysw_ps_is_selected(ps)) {
+                lv_coord_t j = i + divisions;
+                if (j >= ps_count) {
+                    j = ps_count - 1;
+                }
+                ysw_ps_t *tmp_ps = ysw_hp_get_ps(ext->hp, j);
+                ysw_array_set(ext->hp->ps_array, j, ps);
+                ysw_array_set(ext->hp->ps_array, i, tmp_ps);
+            }
+        }
+    }
+}
+
+static void copy_state(ysw_hp_t *to_hp, ysw_hp_t *from_hp)
+{
+    uint32_t ps_count = ysw_hp_get_ps_count(to_hp);
+    for (uint32_t i = 0; i < ps_count; i++) {
+        ysw_ps_t *to_ps = ysw_hp_get_ps(to_hp, i);
+        ysw_ps_t *from_ps = ysw_hp_get_ps(from_hp, i);
+        to_ps->state = from_ps->state;
     }
 }
 
@@ -486,7 +552,11 @@ static void capture_drag(lv_obj_t *hpe, lv_coord_t x, lv_coord_t y)
         bool drag_x = abs(x) > MINIMUM_DRAG;
         bool drag_y = abs(y) > MINIMUM_DRAG;
         if (ext->clicked_ps) {
-            ext->dragging = drag_x || drag_y;
+            if (drag_x) {
+                ext->dragging = YSW_HPE_DRAG_HORIZONTAL;
+            } else if (drag_y) {
+                ext->dragging = YSW_HPE_DRAG_VERTICAL;
+            }
             if (ext->dragging) {
                 if (!ysw_ps_is_selected(ext->clicked_ps)) {
                     if (count_selected_ps(hpe)) {
@@ -495,6 +565,7 @@ static void capture_drag(lv_obj_t *hpe, lv_coord_t x, lv_coord_t y)
                     select_ps(hpe, ext->clicked_ps);
                 }
                 ext->drag_start_hp = ysw_hp_copy(ext->hp);
+                copy_state(ext->drag_start_hp, ext->hp); // needed for drag_horizontal
             }
         } else {
             ext->scrolling = drag_x || drag_y;
@@ -537,7 +608,7 @@ static void on_signal_pressed(lv_obj_t *hpe, void *param)
         ext->press_lost = false;
     } else {
         // user has clicked on hpe widget
-        ext->dragging = false;
+        ext->dragging = YSW_HPE_DRAG_NONE;
         ext->scrolling = false;
         ext->long_press = false;
         ext->press_lost = false;
@@ -554,15 +625,11 @@ static void on_signal_pressing(lv_obj_t *hpe, void *param)
     lv_coord_t x = point->x - ext->click_point.x;
     lv_coord_t y = point->y - ext->click_point.y;
     capture_drag(hpe, x, y);
-    if (ext->dragging) {
-        uint32_t ps_count = ysw_hp_get_ps_count(ext->hp);
-        for (int i = 0; i < ps_count; i++) {
-            ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
-            ysw_ps_t *drag_start_ps = ysw_hp_get_ps(ext->drag_start_hp, i);
-            if (ysw_ps_is_selected(ps)) {
-                drag_vertically(hpe, ps, drag_start_ps, y);
-            }
-        }
+    if (ext->dragging == YSW_HPE_DRAG_HORIZONTAL) {
+        drag_horizontally(hpe, x);
+        lv_obj_invalidate(hpe);
+    } else if (ext->dragging == YSW_HPE_DRAG_VERTICAL) {
+        drag_vertically(hpe, y);
         lv_obj_invalidate(hpe);
     } else if (ext->scrolling) {
         scroll_horizontally(hpe, x);
@@ -595,7 +662,7 @@ static void on_signal_released(lv_obj_t *hpe, void *param)
     } else {
         deselect_all(hpe);
     }
-    ext->dragging = false;
+    ext->dragging = YSW_HPE_DRAG_NONE;
     ext->drag_start_hp = NULL;
     ext->long_press = false;
     ext->press_lost = false;
