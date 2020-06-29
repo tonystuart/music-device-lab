@@ -502,6 +502,9 @@ static void drag_horizontally(lv_obj_t *hpe, lv_coord_t delta_x)
         *ps = *drag_start_ps;
     }
 
+    lv_coord_t first = -1;
+    lv_coord_t last = -1;
+
     if (divisions < 0) {
         int32_t pileup_count = 0;
         for (int32_t i = 0; i < ps_count; i++) {
@@ -514,6 +517,10 @@ static void drag_horizontally(lv_obj_t *hpe, lv_coord_t delta_x)
                 ysw_ps_t *tmp_ps = ysw_hp_get_ps(ext->hp, j);
                 ysw_array_set(ext->hp->ps_array, j, ps);
                 ysw_array_set(ext->hp->ps_array, i, tmp_ps);
+                if (first < 0) {
+                    first = j;
+                }
+                last = j;
             }
         }
     } else {
@@ -528,9 +535,14 @@ static void drag_horizontally(lv_obj_t *hpe, lv_coord_t delta_x)
                 ysw_ps_t *tmp_ps = ysw_hp_get_ps(ext->hp, j);
                 ysw_array_set(ext->hp->ps_array, j, ps);
                 ysw_array_set(ext->hp->ps_array, i, tmp_ps);
+                if (last < 0) {
+                    last = j;
+                }
+                first = j;
             }
         }
     }
+    ysw_hpe_ensure_visible(hpe, first, last);
 }
 
 static void copy_state(ysw_hp_t *to_hp, ysw_hp_t *from_hp)
