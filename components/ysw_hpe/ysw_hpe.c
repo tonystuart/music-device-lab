@@ -495,24 +495,21 @@ static void drag_horizontally(lv_obj_t *hpe, lv_coord_t delta_x)
     ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
     lv_coord_t divisions = delta_x / m.col_width;
 
-    uint32_t selected_count = 0;
     uint32_t ps_count = ysw_hp_get_ps_count(ext->drag_start_hp);
     for (uint32_t i = 0; i < ps_count; i++) {
         ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
         ysw_ps_t *drag_start_ps = ysw_hp_get_ps(ext->drag_start_hp, i);
         *ps = *drag_start_ps;
-        if (ysw_ps_is_selected(ps)) {
-            selected_count++;
-        }
     }
 
     if (divisions < 0) {
+        int32_t pileup_count = 0;
         for (int32_t i = 0; i < ps_count; i++) {
             ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
             if (ysw_ps_is_selected(ps)) {
                 lv_coord_t j = i + divisions; // divisions is negative
-                if (j < 0) {
-                    j = 0;
+                if (j < pileup_count) {
+                    j = pileup_count++;
                 }
                 ysw_ps_t *tmp_ps = ysw_hp_get_ps(ext->hp, j);
                 ysw_array_set(ext->hp->ps_array, j, ps);
@@ -520,12 +517,13 @@ static void drag_horizontally(lv_obj_t *hpe, lv_coord_t delta_x)
             }
         }
     } else {
+        int32_t pileup_count = ps_count - 1;
         for (int32_t i = ps_count - 1; i >= 0; i--) {
             ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
             if (ysw_ps_is_selected(ps)) {
                 lv_coord_t j = i + divisions;
-                if (j >= ps_count) {
-                    j = ps_count - 1;
+                if (j > pileup_count) {
+                    j = pileup_count--;
                 }
                 ysw_ps_t *tmp_ps = ysw_hp_get_ps(ext->hp, j);
                 ysw_array_set(ext->hp->ps_array, j, ps);
