@@ -43,9 +43,12 @@ ysw_hp_t *ysw_music_get_hp(ysw_music_t *music, uint32_t index)
     return ysw_array_get(music->hp_array, index);
 }
 
-void ysw_music_insert_cs(ysw_music_t *music, uint32_t index, ysw_cs_t *cs)
+
+uint32_t ysw_music_insert_cs(ysw_music_t *music, ysw_cs_t *cs)
 {
-    ysw_array_insert(music->cs_array, index, cs);
+    uint32_t cs_index = ysw_array_push(music->cs_array, cs);
+    ysw_music_sort_cs_by_name(music);
+    return ysw_music_get_cs_index(music, cs);
 }
 
 void ysw_music_insert_hp(ysw_music_t *music, uint32_t index, ysw_hp_t *hp)
@@ -82,4 +85,3 @@ void ysw_music_sort_cs_by_name(ysw_music_t *music)
 {
     ysw_array_sort(music->cs_array, compare_cs_name);
 }
-

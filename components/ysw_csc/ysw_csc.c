@@ -146,26 +146,13 @@ static void refresh(ysw_csc_t *csc)
     auto_play_all(csc);
 }
 
-static void sort_styles(ysw_csc_t *csc)
-{
-    if (csc->controller.cs_index < ysw_music_get_cs_count(csc->controller.music)) {
-        ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
-        ysw_music_sort_cs_by_name(csc->controller.music);
-        csc->controller.cs_index = ysw_music_get_cs_index(csc->controller.music, cs);
-    }
-}
-
 static ysw_cs_t* create_cs(ysw_csc_t *csc)
 {
     char name[64];
     ysw_name_create(name, sizeof(name));
 
     ysw_cs_t *new_cs;
-    uint32_t new_index;
-
     uint32_t cs_count = ysw_music_get_cs_count(csc->controller.music);
-
-    ESP_LOGD(TAG, "cs_count=%d, csc->controller.cs_index=%d", cs_count, csc->controller.cs_index);
 
     if (csc->controller.cs_index < cs_count) {
         ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
@@ -176,7 +163,6 @@ static ysw_cs_t* create_cs(ysw_csc_t *csc)
                 cs->transposition,
                 cs->tempo,
                 cs->divisions);
-        new_index = csc->controller.cs_index + 1;
     } else {
         new_cs = ysw_cs_create(name,
                 0,
@@ -185,14 +171,9 @@ static ysw_cs_t* create_cs(ysw_csc_t *csc)
                 0,
                 120,
                 4);
-        new_index = 0;
     }
 
-    ESP_LOGD(TAG, "new_index=%d", new_index);
-
-    ysw_music_insert_cs(csc->controller.music, new_index, new_cs);
-    csc->controller.cs_index = new_index;
-    sort_styles(csc);
+    csc->controller.cs_index = ysw_music_insert_cs(csc->controller.music, new_cs);
     update_frame(csc);
     return new_cs;
 }
@@ -264,7 +245,8 @@ static void on_name_change(ysw_csc_t *csc, const char *new_name)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     ysw_cs_set_name(cs, new_name);
-    sort_styles(csc);
+    ysw_music_sort_cs_by_name(csc->controller.music);
+    csc->controller.cs_index = ysw_music_get_cs_index(csc->controller.music, cs);
     update_header(csc);
 }
 

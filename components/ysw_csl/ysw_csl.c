@@ -28,25 +28,11 @@
 #include "lvgl.h"
 #include "esp_log.h"
 
+#include "stdlib.h"
+
 #define TAG "YSW_CSL"
 
 static void on_row_event(lv_obj_t *obj, lv_event_t event);
-
-static void sort_styles(ysw_csl_t *csl)
-{
-    ysw_cs_t *cs = NULL;
-    uint32_t cs_count = ysw_music_get_cs_count(csl->model.music);
-    if (csl->model.cs_index < cs_count) {
-        cs = ysw_music_get_cs(csl->model.music, csl->model.cs_index);
-    }
-    ysw_music_sort_cs_by_name(csl->model.music);
-    if (cs) {
-        int32_t cs_index = ysw_music_get_cs_index(csl->model.music, cs);
-        if (cs_index != -1) {
-            csl->model.cs_index = cs_index;
-        }
-    }
-}
 
 static void clear_selection_highlight(ysw_csl_t *csl)
 {
@@ -109,16 +95,6 @@ static void display_chord_styles(ysw_csl_t *csl)
     } else {
         csl->model.cs_index = 0;
         clear_selection_highlight(csl);
-    }
-}
-
-static void calculate_insert_index(ysw_csl_t *csl)
-{
-    uint32_t cs_count = ysw_music_get_cs_count(csl->model.music);
-    if (csl->model.cs_index < cs_count) {
-        csl->model.cs_index++; // insert afterwards
-    } else {
-        csl->model.cs_index = cs_count; // insert at end (or beginning if empty)
     }
 }
 
@@ -224,15 +200,28 @@ static void on_copy(ysw_csl_t *csl, lv_obj_t *btn)
     }
 }
 
+static void find_unique_name(ysw_music_t *music, const char *old_name, char *new_name, uint32_t size)
+{
+    uint32_t max_version = 0;
+    uint32_t cs_count = ysw_music_get_cs_count(music);
+    uint32_t version_point = ysw_name_find_version_point(old_name);
+    for (uint32_t i = 0; i < cs_count; i++) {
+        ysw_cs_t *cs = ysw_music_get_cs(music, i);
+        if (strncmp(cs->name, old_name, version_point) == 0) {
+            max_version = max(max_version, atoi(cs->name + version_point) + 1);
+        }
+    }
+    ysw_name_format_version(new_name, size, version_point, old_name, max_version);
+}
+
 static void on_paste(ysw_csl_t *csl, lv_obj_t *btn)
 {
     if (csl->controller.clipboard_cs) {
         ysw_cs_t *cs = ysw_cs_copy(csl->controller.clipboard_cs);
-        char name[CS_NAME_SZ];
-        ysw_name_create(name, sizeof(name));
-        ysw_cs_set_name(cs, name);
-        calculate_insert_index(csl);
-        ysw_music_insert_cs(csl->model.music, csl->model.cs_index, cs);
+        char new_name[CS_NAME_SZ];
+        find_unique_name(csl->model.music, cs->name, new_name, sizeof(new_name));
+        ysw_cs_set_name(cs, new_name);
+        csl->model.cs_index = ysw_music_insert_cs(csl->model.music, cs);
         display_chord_styles(csl);
     } else {
         ysw_mb_clipboard_empty();

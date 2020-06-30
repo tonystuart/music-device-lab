@@ -13,6 +13,8 @@
 #include "esp_system.h"
 
 #include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
 
 #define TAG "YSW_NAME"
 
@@ -728,12 +730,39 @@ const char *nouns[] = {
 
 #define NOUNS_SZ (sizeof(nouns) / sizeof(const char *))
 
-int ysw_name_create(char *buffer, uint32_t size)
+int ysw_name_create(char *name, uint32_t size)
 {
     uint32_t adjective_index = esp_random() % ADJECTIVES_SZ;
     uint32_t noun_index = esp_random() % NOUNS_SZ;
     ESP_LOGD(TAG, "adjective_index=%d, noun_index=%d", adjective_index, noun_index);
-    int rc = snprintf(buffer, size, "%s %s", adjectives[adjective_index], nouns[noun_index]);
+    int rc = snprintf(name, size, "%s %s", adjectives[adjective_index], nouns[noun_index]);
     return rc;
 }
 
+int ysw_name_create_new_version(const char *old_name, char *new_name, uint32_t size)
+{
+    int version_point = ysw_name_find_version_point(old_name);
+    int version = atoi(old_name + version_point) + 1; // works for any version_point
+    return ysw_name_format_version(new_name, size, version_point, old_name, version);
+}
+
+int ysw_name_find_version_point(const char *name)
+{
+    int index = strlen(name) - 1;
+    while (index > 0) {
+        if (!('0' <= name[index] && name[index] <= '9')) {
+            if (name[index] == '+' && index > 0 && name[index - 1] == ' ') {
+                return index - 1;
+            }
+            return index + 1;
+        }
+        index--;
+    }
+    return 0;
+}
+
+int ysw_name_format_version(char *new_name, uint32_t size, uint32_t version_point, const char *old_name, uint32_t version)
+{
+    int rc = snprintf(new_name, size, "%.*s +%d", version_point, old_name, version);
+    return rc;
+}

@@ -11,4 +11,7 @@
 
 #include "stdint.h"
 
-int ysw_name_create(char *buffer, uint32_t size);
+int ysw_name_create(char *name, uint32_t size);
+int ysw_name_create_new_version(const char *old_name, char *new_name, uint32_t size);
+int ysw_name_find_version_point(const char *name);
+int ysw_name_format_version(char *new_name, uint32_t size, uint32_t version_point, const char *old_name, uint32_t version);
