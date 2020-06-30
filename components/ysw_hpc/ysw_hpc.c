@@ -378,44 +378,6 @@ static void on_trash(ysw_hpc_t *hpc, lv_obj_t *btn)
     }
 }
 
-static void on_left(ysw_hpc_t *hpc, lv_obj_t *btn)
-{
-    uint32_t changes = 0;
-    ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
-    uint32_t ps_count = ysw_hp_get_ps_count(hp);
-    for (int32_t i = 0, j = 1; j < ps_count; i++, j++) {
-        ysw_ps_t *hpc_ps = ysw_hp_get_ps(hp, j);
-        if (ysw_ps_is_selected(hpc_ps)) {
-            ysw_ps_t *other_ps = ysw_array_get(hp->ps_array, i);
-            ysw_array_set(hp->ps_array, i, hpc_ps);
-            ysw_array_set(hp->ps_array, j, other_ps);
-            changes++;
-        }
-    }
-    if (changes) {
-        refresh(hpc);
-    }
-}
-
-static void on_right(ysw_hpc_t *hpc, lv_obj_t *btn)
-{
-    uint32_t changes = 0;
-    ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
-    uint32_t ps_count = ysw_hp_get_ps_count(hp);
-    for (int32_t i = ps_count - 1, j = ps_count - 2; j >= 0; i--, j--) {
-        ysw_ps_t *hpc_ps = ysw_hp_get_ps(hp, j);
-        if (ysw_ps_is_selected(hpc_ps)) {
-            ysw_ps_t *other_ps = ysw_array_get(hp->ps_array, i);
-            ysw_array_set(hp->ps_array, i, hpc_ps);
-            ysw_array_set(hp->ps_array, j, other_ps);
-            changes++;
-        }
-    }
-    if (changes) {
-        refresh(hpc);
-    }
-}
-
 static void on_create_ps(ysw_hpc_t *hpc, uint32_t ps_index, uint8_t degree)
 {
     if (ysw_music_get_cs_count(hpc->controller.music)) {
@@ -482,8 +444,6 @@ static const ysw_ui_btn_def_t footer_buttons[] = {
     { LV_SYMBOL_COPY, on_copy },
     { LV_SYMBOL_PASTE, on_paste },
     { LV_SYMBOL_TRASH, on_trash },
-    { LV_SYMBOL_LEFT, on_left },
-    { LV_SYMBOL_RIGHT, on_right },
     { NULL, NULL },
 };
 
