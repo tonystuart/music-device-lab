@@ -32,7 +32,11 @@ typedef struct csc_s {
     ysw_csc_controller_t controller;
 } ysw_csc_t;
 
-ysw_csc_t *ysw_csc_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index);
-ysw_csc_t *ysw_csc_create_new(lv_obj_t *parent, ysw_music_t *music, uint32_t old_cs_index);
+typedef enum {
+    YSW_CSC_CREATE_CS,
+    YSW_CSC_EDIT_CS,
+} ysw_csc_type_t;
+
+ysw_csc_t *ysw_csc_create(ysw_music_t *music, uint32_t cs_index, ysw_csc_type_t type);
 void ysw_csc_set_close_cb(ysw_csc_t *csc, void *cb, void *context);
 

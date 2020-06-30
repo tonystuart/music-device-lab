@@ -146,6 +146,15 @@ static void refresh(ysw_csc_t *csc)
     auto_play_all(csc);
 }
 
+static void sort_styles(ysw_csc_t *csc)
+{
+    if (csc->controller.cs_index < ysw_music_get_cs_count(csc->controller.music)) {
+        ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
+        ysw_music_sort_cs_by_name(csc->controller.music);
+        csc->controller.cs_index = ysw_music_get_cs_index(csc->controller.music, cs);
+    }
+}
+
 static ysw_cs_t* create_cs(ysw_csc_t *csc)
 {
     char name[64];
@@ -183,6 +192,7 @@ static ysw_cs_t* create_cs(ysw_csc_t *csc)
 
     ysw_music_insert_cs(csc->controller.music, new_index, new_cs);
     csc->controller.cs_index = new_index;
+    sort_styles(csc);
     update_frame(csc);
     return new_cs;
 }
@@ -254,6 +264,7 @@ static void on_name_change(ysw_csc_t *csc, const char *new_name)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     ysw_cs_set_name(cs, new_name);
+    sort_styles(csc);
     update_header(csc);
 }
 
@@ -348,7 +359,7 @@ static void on_settings(ysw_csc_t *csc, lv_obj_t *btn)
     uint8_t trans_index = ysw_transposition_to_index(cs->transposition);
     uint8_t tempo_index = ysw_tempo_to_index(cs->tempo);
     uint8_t division_index = ysw_division_to_index(cs->divisions);
-    ysw_sdb_t *sdb = ysw_sdb_create_standard(lv_scr_act(), "Chord Style Settings", csc);
+    ysw_sdb_t *sdb = ysw_sdb_create_standard("Chord Style Settings", csc);
     ysw_sdb_add_string(sdb, "Name:", cs->name, on_name_change);
     ysw_sdb_add_choice(sdb, "Instrument:", cs->instrument, ysw_instruments, on_instrument_change);
     ysw_sdb_add_choice(sdb, "Octave:", cs->octave, ysw_octaves, on_octave_change);
@@ -499,7 +510,7 @@ static void create_cse(ysw_csc_t *csc)
     ysw_cse_set_drag_end_cb(csc->controller.cse, on_drag_end);
 }
 
-ysw_csc_t* ysw_csc_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index)
+ysw_csc_t* ysw_csc_create(ysw_music_t *music, uint32_t cs_index, ysw_csc_type_t type)
 {
     ysw_csc_t *csc = ysw_heap_allocate(sizeof(ysw_csc_t)); // freed in on_close
 
@@ -508,20 +519,12 @@ ysw_csc_t* ysw_csc_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_inde
 
     ysw_ui_init_buttons(csc->frame.header.buttons, header_buttons, csc);
     ysw_ui_init_buttons(csc->frame.footer.buttons, footer_buttons, csc);
-
-    ysw_ui_create_frame(&csc->frame, parent);
-
+    ysw_ui_create_frame(&csc->frame);
     create_cse(csc);
-
     update_frame(csc);
-
-    return csc;
-}
-
-ysw_csc_t* ysw_csc_create_new(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index)
-{
-    ysw_csc_t *csc = ysw_csc_create(parent, music, cs_index);
-    create_cs(csc);
+    if (type == YSW_CSC_CREATE_CS) {
+        create_cs(csc);
+    }
     return csc;
 }
 

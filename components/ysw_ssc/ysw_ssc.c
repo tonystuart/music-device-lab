@@ -140,24 +140,24 @@ static void on_csc_close(ysw_ssc_model_t *model, uint32_t cs_index)
     ysw_heap_free(model);
 }
 
-static void on_edit_style(ysw_ssc_t *ssc)
+static void launch_style_editor(ysw_ssc_t *ssc, ysw_csc_type_t type)
 {
     ysw_ssc_model_t *model = ysw_heap_allocate(sizeof(ysw_ssc_model_t));
     *model = ssc->model;
     ysw_ssc_close(ssc); // no ref to ssc after this point
     uint32_t cs_index = ysw_music_get_cs_index(model->music, model->ps->cs);
-    ysw_csc_t *csc = ysw_csc_create(lv_scr_act(), model->music, cs_index);
+    ysw_csc_t *csc = ysw_csc_create(model->music, cs_index, type);
     ysw_csc_set_close_cb(csc, on_csc_close, model);
+}
+
+static void on_edit_style(ysw_ssc_t *ssc)
+{
+    launch_style_editor(ssc, YSW_CSC_EDIT_CS);
 }
 
 static void on_create_style(ysw_ssc_t *ssc)
 {
-    ysw_ssc_model_t *model = ysw_heap_allocate(sizeof(ysw_ssc_model_t));
-    *model = ssc->model;
-    ysw_ssc_close(ssc); // no ref to ssc after this point
-    uint32_t cs_index = ysw_music_get_cs_index(model->music, model->ps->cs);
-    ysw_csc_t *csc = ysw_csc_create_new(lv_scr_act(), model->music, cs_index);
-    ysw_csc_set_close_cb(csc, on_csc_close, model);
+    launch_style_editor(ssc, YSW_CSC_CREATE_CS);
 }
 
 static void on_chord_style_action(ysw_ssc_t *ssc, const char *button)
@@ -283,7 +283,7 @@ void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index, bool ap
     char text[64];
     get_step_number_text(hp, ps_index, text, sizeof(text));
 
-    ssc->view.sdb = ysw_sdb_create_custom(lv_scr_act(), text, header_buttons, ssc);
+    ssc->view.sdb = ysw_sdb_create_custom(text, header_buttons, ssc);
     ssc->view.som = ysw_sdb_add_checkbox(ssc->view.sdb, NULL, " Apply changes to all Steps", ssc->model.apply_all, on_apply_all);
     ssc->view.som = ysw_sdb_add_checkbox(ssc->view.sdb, NULL, " Start new Measure on this Step", ysw_ps_is_new_measure(ssc->model.ps), on_new_measure);
     ssc->view.degree = ysw_sdb_add_choice(ssc->view.sdb, "Step Degree:", ysw_degree_to_index(ssc->model.ps->degree), ysw_degree, on_degree);

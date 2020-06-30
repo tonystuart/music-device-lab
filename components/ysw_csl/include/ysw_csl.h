@@ -20,14 +20,17 @@ typedef void (*csl_close_cb_t)(void *context, ysw_csl_t *csl);
 typedef struct {
     ysw_music_t *music;
     uint32_t cs_index;
+} ysw_csl_model_t;
+
+typedef struct {
     ysw_cs_t *clipboard_cs;
-    csl_close_cb_t close_cb;
-    void *close_cb_context;
 } ysw_csl_controller_t;
 
 typedef struct ysw_csl_s {
+    ysw_csl_model_t model;
     ysw_ui_frame_t frame;
     ysw_csl_controller_t controller;
 } ysw_csl_t;
 
-ysw_csl_t *ysw_csl_create(lv_obj_t *parent, ysw_music_t *music, uint32_t cs_index);
+ysw_csl_t* ysw_csl_create(ysw_music_t *music, uint32_t cs_index);
+void ysw_csl_close(ysw_csl_t *csl);

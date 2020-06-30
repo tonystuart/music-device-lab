@@ -255,12 +255,12 @@ void ysw_ui_set_footer_text(ysw_ui_footer_t *footer, const char *text)
     lv_label_set_text(footer->info.label, text);
 }
 
-void ysw_ui_create_frame(ysw_ui_frame_t *frame, lv_obj_t *parent)
+void ysw_ui_create_frame(ysw_ui_frame_t *frame)
 {
-    frame->container = lv_cont_create(parent, NULL);
+    frame->container = lv_cont_create(lv_scr_act(), NULL);
     lv_obj_set_size(frame->container, 320, 240);
     ysw_style_adjust_obj(frame->container);
-    lv_obj_align_origo(frame->container, parent, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align_origo(frame->container, NULL, LV_ALIGN_CENTER, 0, 0);
 
     ysw_ui_create_header(frame->container, &frame->header);
     ysw_ui_create_body(frame->container, &frame->body);

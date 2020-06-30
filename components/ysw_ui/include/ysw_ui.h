@@ -76,6 +76,6 @@ void ysw_ui_set_header_text(ysw_ui_header_t *header, const char *text);
 void ysw_ui_create_body(lv_obj_t *parent, ysw_ui_body_t *body);
 void ysw_ui_create_footer(lv_obj_t *parent, ysw_ui_footer_t *footer);
 void ysw_ui_set_footer_text(ysw_ui_footer_t *footer, const char *text);
-void ysw_ui_create_frame(ysw_ui_frame_t *frame, lv_obj_t *parent);
+void ysw_ui_create_frame(ysw_ui_frame_t *frame);
 void ysw_ui_close_frame(ysw_ui_frame_t *frame);
 

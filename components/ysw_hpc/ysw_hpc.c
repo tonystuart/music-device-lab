@@ -279,7 +279,7 @@ static void on_settings(ysw_hpc_t *hpc, lv_obj_t *btn)
     ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
     uint8_t trans_index = ysw_transposition_to_index(hp->transposition);
     uint8_t tempo_index = ysw_tempo_to_index(hp->tempo);
-    ysw_sdb_t *sdb = ysw_sdb_create_standard(lv_scr_act(), "Chord Progression Settings", hpc);
+    ysw_sdb_t *sdb = ysw_sdb_create_standard("Chord Progression Settings", hpc);
     ysw_sdb_add_string(sdb, "Name:", hp->name, on_name_change);
     ysw_sdb_add_choice(sdb, "Instrument:", hp->instrument, ysw_instruments, on_instrument_change);
     ysw_sdb_add_choice(sdb, "Octave:", hp->octave, ysw_octaves, on_octave_change);
@@ -460,7 +460,7 @@ static void create_hpe(ysw_hpc_t *hpc)
     ysw_hpe_set_drag_end_cb(hpc->controller.hpe, on_drag_end);
 }
 
-ysw_hpc_t* ysw_hpc_create(lv_obj_t *parent, ysw_music_t *music, uint32_t hp_index)
+ysw_hpc_t* ysw_hpc_create(ysw_music_t *music, uint32_t hp_index)
 {
     ysw_hpc_t *hpc = ysw_heap_allocate(sizeof(ysw_hpc_t)); // freed in on_close
 
@@ -470,13 +470,9 @@ ysw_hpc_t* ysw_hpc_create(lv_obj_t *parent, ysw_music_t *music, uint32_t hp_inde
 
     ysw_ui_init_buttons(hpc->frame.header.buttons, header_buttons, hpc);
     ysw_ui_init_buttons(hpc->frame.footer.buttons, footer_buttons, hpc);
-
-    ysw_ui_create_frame(&hpc->frame, parent);
-
+    ysw_ui_create_frame(&hpc->frame);
     create_hpe(hpc);
-
     update_frame(hpc);
-
     return hpc;
 }
 

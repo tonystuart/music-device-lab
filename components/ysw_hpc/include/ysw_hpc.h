@@ -33,6 +33,6 @@ typedef struct hpc_s {
     ysw_hpc_controller_t controller;
 } ysw_hpc_t;
 
-ysw_hpc_t* ysw_hpc_create(lv_obj_t *parent, ysw_music_t *new_music, uint32_t new_cs_index);
+ysw_hpc_t* ysw_hpc_create(ysw_music_t *new_music, uint32_t new_cs_index);
 void ysw_hpc_set_close_cb(ysw_hpc_t *hpc, hpc_close_cb_t cb, void *context);
 

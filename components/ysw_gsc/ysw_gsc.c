@@ -45,7 +45,7 @@ static void on_multiple_selection(void *context, uint16_t multiple_selection)
 
 void ysw_gsc_create(ysw_music_t *music)
 {
-    ysw_sdb_t *sdb = ysw_sdb_create_standard(lv_scr_act(), "Global Settings", NULL);
+    ysw_sdb_t *sdb = ysw_sdb_create_standard("Global Settings", NULL);
     ysw_sdb_add_separator(sdb, "Chord Progression Settings");
     ysw_sdb_add_checkbox(sdb, "Auto Scroll", "",
             ysw_hpe_gs.auto_scroll, on_ysw_hpe_gs_scroll);
