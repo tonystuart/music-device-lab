@@ -283,3 +283,21 @@ void ysw_style_adjust_checkbox(lv_obj_t *cb)
     lv_obj_set_style_local_pad_bottom(cb, LV_CHECKBOX_PART_BULLET, LV_STATE_DEFAULT, 2);
     lv_obj_set_style_local_pad_left(cb, LV_CHECKBOX_PART_BULLET, LV_STATE_DEFAULT, 2);
 }
+
+void ysw_style_adjust_mbox(lv_obj_t *mbox)
+{
+    lv_obj_set_style_local_bg_color(mbox, LV_MSGBOX_PART_BG, LV_STATE_DEFAULT, YSW_STYLE_COLOR(0xc0c0c0));
+    lv_obj_set_style_local_text_color(mbox, LV_MSGBOX_PART_BG, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_obj_set_style_local_border_width(mbox, LV_MSGBOX_PART_BG, LV_STATE_DEFAULT, 0);
+
+    lv_obj_set_style_local_shadow_width(mbox, LV_MSGBOX_PART_BG, LV_STATE_DEFAULT, 50);
+    lv_obj_set_style_local_shadow_spread(mbox, LV_MSGBOX_PART_BG, LV_STATE_DEFAULT, 10);
+    lv_obj_set_style_local_shadow_color(mbox, LV_MSGBOX_PART_BG, LV_STATE_DEFAULT, LV_COLOR_GRAY);
+    lv_obj_set_style_local_shadow_opa(mbox, LV_MSGBOX_PART_BG, LV_STATE_DEFAULT, LV_OPA_COVER);
+
+    lv_obj_set_style_local_bg_color(mbox, LV_MSGBOX_PART_BTN, LV_STATE_DEFAULT, YSW_STYLE_COLOR(0xf5f5f5));
+    lv_obj_set_style_local_text_color(mbox, LV_MSGBOX_PART_BTN, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+    lv_obj_set_style_local_border_width(mbox, LV_MSGBOX_PART_BTN, LV_STATE_DEFAULT, 0);
+}
+
+

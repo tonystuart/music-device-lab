@@ -30,25 +30,32 @@ static void ysw_mb_event_cb(lv_obj_t *mbox, lv_event_t event)
 {
     if (event == LV_EVENT_VALUE_CHANGED) {
         const char *text = lv_msgbox_get_active_btn_text(mbox);
+        ysw_mb_t *ysw_mb = lv_obj_get_user_data(mbox);
         if (strcmp(text, YSW_MB_OK) == 0) {
-            ysw_mb_t *ysw_mb = lv_obj_get_user_data(mbox);
             ysw_mb->cb(ysw_mb->context);
-            ysw_heap_free(ysw_mb);
         }
+        ysw_heap_free(ysw_mb);
         lv_msgbox_start_auto_close(mbox, 0);
     }
 }
 
-void ysw_mb_create_confirm(const char* text, void *cb, void *context)
+lv_obj_t* create_common(const char *text, const char *btns[])
 {
-    static const char *btns[] = { YSW_MB_CANCEL, YSW_MB_OK, "" };
     lv_obj_t *mbox = lv_msgbox_create(lv_scr_act(), NULL);
     lv_msgbox_set_text(mbox, text);
     lv_msgbox_add_btns(mbox, btns);
-    lv_obj_set_width(mbox, 300);
-    lv_obj_set_event_cb(mbox, ysw_mb_event_cb);
+    lv_obj_set_width(mbox, 280);
+    ysw_style_adjust_mbox(mbox);
     lv_obj_align(mbox, NULL, LV_ALIGN_CENTER, 0, 0);
-    ysw_mb_t *ysw_mb = ysw_heap_allocate(sizeof(ysw_mb_t));
+    return mbox;
+}
+
+void ysw_mb_create_confirm(const char *text, void *cb, void *context)
+{
+    static const char *btns[] = { YSW_MB_CANCEL, YSW_MB_OK, "" };
+    lv_obj_t *mbox = create_common(text, btns);
+    ysw_mb_t *ysw_mb = ysw_heap_allocate(sizeof(ysw_mb_t)); // freed in ysw_mb_event_cb
+    lv_obj_set_event_cb(mbox, ysw_mb_event_cb);
     ysw_mb->context = context;
     ysw_mb->cb = cb;
     lv_obj_set_user_data(mbox, ysw_mb);
@@ -57,11 +64,7 @@ void ysw_mb_create_confirm(const char* text, void *cb, void *context)
 void ysw_mb_create_okay(const char *text)
 {
     static const char *btns[] = { YSW_MB_OK, "" };
-    lv_obj_t *mbox = lv_msgbox_create(lv_scr_act(), NULL);
-    lv_msgbox_set_text(mbox, text);
-    lv_msgbox_add_btns(mbox, btns);
-    lv_obj_set_width(mbox, 300);
-    lv_obj_align(mbox, NULL, LV_ALIGN_CENTER, 0, 0);
+    create_common(text, btns);
 }
 
 void ysw_mb_nothing_selected()

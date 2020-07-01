@@ -11,7 +11,7 @@
 
 #include "lvgl/lvgl.h"
 
-#define YSW_STYLE_COLOR(c) LV_COLOR_MAKE((c >> 16) & 0xff, ((c >> 8) & 0xff), c & 0xff)
+#define YSW_STYLE_COLOR(c) LV_COLOR_MAKE(((c >> 16) & 0xff), ((c >> 8) & 0xff), (c & 0xff))
 
 extern lv_draw_rect_dsc_t rect_dsc;
 extern lv_draw_label_dsc_t label_dsc;
