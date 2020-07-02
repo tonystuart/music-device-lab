@@ -50,8 +50,17 @@ typedef struct {
 } ysw_cs_t;
 
 ysw_cs_t *ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo, ysw_time_t time);
-
 ysw_cs_t *ysw_cs_copy(ysw_cs_t *old_cs);
+void ysw_cs_free(ysw_cs_t *cs);
+uint32_t ysw_cs_add_sn(ysw_cs_t *cs, ysw_sn_t *sn);
+void ysw_cs_sort_sn_array(ysw_cs_t *cs);
+void ysw_cs_set_name(ysw_cs_t *cs, const char *name);
+void ysw_cs_set_instrument(ysw_cs_t *cs, uint8_t instrument);
+const char *ysw_cs_get_name(ysw_cs_t *cs);
+uint8_t ysw_cs_get_instrument(ysw_cs_t *cs);
+ysw_note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count);
+ysw_note_t *ysw_cs_get_note(ysw_cs_t *cs, ysw_sn_t *sn);
+uint32_t ysw_cs_insert_sn(ysw_cs_t *cs, ysw_sn_t *sn);
 
 static inline uint32_t ysw_cs_get_sn_count(ysw_cs_t *cs)
 {
@@ -63,13 +72,8 @@ static inline ysw_sn_t *ysw_cs_get_sn(ysw_cs_t *cs, uint32_t index)
     return ysw_array_get(cs->sn_array, index);
 }
 
-void ysw_cs_free(ysw_cs_t *cs);
-uint32_t ysw_cs_add_sn(ysw_cs_t *cs, ysw_sn_t *sn);
-void ysw_cs_sort_sn_array(ysw_cs_t *cs);
-void ysw_cs_set_name(ysw_cs_t *cs, const char *name);
-void ysw_cs_set_instrument(ysw_cs_t *cs, uint8_t instrument);
-const char *ysw_cs_get_name(ysw_cs_t *cs);
-uint8_t ysw_cs_get_instrument(ysw_cs_t *cs);
-ysw_note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count);
-ysw_note_t *ysw_cs_get_note(ysw_cs_t *cs, ysw_sn_t *sn);
-void ysw_cs_dump(ysw_cs_t *cs, char *tag);
+static inline int32_t ysw_cs_get_sn_index(ysw_cs_t *cs, ysw_sn_t *sn)
+{
+    return ysw_array_find(cs->sn_array, sn);
+}
+

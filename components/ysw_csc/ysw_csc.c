@@ -11,11 +11,12 @@
 
 #include "ysw_auto_play.h"
 #include "ysw_cs.h"
-#include "ysw_sn.h"
+#include "ysw_cse.h"
 #include "ysw_division.h"
 #include "ysw_heap.h"
 #include "ysw_instruments.h"
-#include "ysw_cse.h"
+#include "ysw_main_seq.h"
+#include "ysw_mb.h"
 #include "ysw_mfw.h"
 #include "ysw_mode.h"
 #include "ysw_music.h"
@@ -23,7 +24,7 @@
 #include "ysw_octaves.h"
 #include "ysw_sdb.h"
 #include "ysw_seq.h"
-#include "ysw_main_seq.h"
+#include "ysw_sn.h"
 #include "ysw_style.h"
 #include "ysw_synth.h"
 #include "ysw_tempo.h"
@@ -37,6 +38,57 @@
 #define TAG "YSW_CSC"
 
 typedef void (*sn_visitor_t)(ysw_csc_t *csc, ysw_sn_t *sn);
+
+static void deselect_all(ysw_csc_t *csc)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
+    uint32_t sn_count = ysw_cs_get_sn_count(cs);
+    for (uint32_t i = 0; i < sn_count; i++) {
+        ysw_sn_t *sn = ysw_cs_get_sn(cs, i);
+        ysw_sn_select(sn, false);
+    }
+}
+
+static ysw_sn_t* get_current_note(ysw_csc_t *csc)
+{
+    ysw_sn_t *sn = NULL;
+    uint32_t cs_count = ysw_music_get_cs_count(csc->controller.music);
+    if (csc->controller.cs_index < cs_count) {
+        ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
+        uint32_t sn_count = ysw_cs_get_sn_count(cs);
+        if (csc->controller.sn_index < sn_count) {
+            sn = ysw_cs_get_sn(cs, csc->controller.sn_index);
+        }
+    }
+    return sn;
+}
+
+static ysw_sn_t* get_closest_note(ysw_csc_t *csc)
+{
+    ysw_sn_t *sn = NULL;
+    uint32_t cs_count = ysw_music_get_cs_count(csc->controller.music);
+    if (csc->controller.cs_index < cs_count) {
+        ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
+        uint32_t sn_count = ysw_cs_get_sn_count(cs);
+        if (sn_count) {
+            if (csc->controller.sn_index >= sn_count) {
+                csc->controller.sn_index = sn_count - 1;
+            }
+            sn = ysw_cs_get_sn(cs, csc->controller.sn_index);
+        }
+    }
+    return sn;
+}
+
+static ysw_sn_t* get_selected_note(ysw_csc_t *csc)
+{
+    ysw_sn_t *sn = NULL;
+    ysw_sn_t *current_sn = get_current_note(csc);
+    if (current_sn && ysw_sn_is_selected(current_sn)) {
+        sn = current_sn;
+    }
+    return sn;
+}
 
 // NB: invoked by sequencer task
 static void on_sequencer_status(ysw_csc_t *csc, ysw_seq_status_message_t *message)
@@ -125,7 +177,7 @@ static void update_footer(ysw_csc_t *csc)
 {
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     char buf[64];
-    snprintf(buf, sizeof(buf), "%d BPM %s", cs->tempo, ysw_division_to_tick(cs->divisions));
+    snprintf(buf, sizeof(buf), "%d BPM", cs->tempo);
     ysw_ui_set_footer_text(&csc->frame.footer, buf);
 }
 
@@ -146,7 +198,7 @@ static void refresh(ysw_csc_t *csc)
     auto_play_all(csc);
 }
 
-static ysw_cs_t* create_cs(ysw_csc_t *csc)
+static ysw_cs_t* create_style(ysw_csc_t *csc)
 {
     char name[64];
     ysw_name_create(name, sizeof(name));
@@ -181,7 +233,6 @@ static ysw_cs_t* create_cs(ysw_csc_t *csc)
 static void copy_to_clipboard(ysw_csc_t *csc, ysw_sn_t *sn)
 {
     ysw_sn_t *new_sn = ysw_sn_copy(sn);
-    //ysw_sn_select(sn, false);
     ysw_sn_select(new_sn, true);
     ysw_array_push(csc->controller.clipboard, new_sn);
 }
@@ -208,23 +259,7 @@ static void truncate_clipboard(ysw_csc_t *csc)
     ysw_array_truncate(csc->controller.clipboard, 0);
 }
 
-static void decrease_volume(ysw_csc_t *csc, ysw_sn_t *sn)
-{
-    int new_velocity = ((sn->velocity - 1) / 10) * 10;
-    if (new_velocity >= 0) {
-        sn->velocity = new_velocity;
-    }
-}
-
-static void increase_volume(ysw_csc_t *csc, ysw_sn_t *sn)
-{
-    int new_velocity = ((sn->velocity + 10) / 10) * 10;
-    if (new_velocity <= 120) {
-        sn->velocity = new_velocity;
-    }
-}
-
-static void visit_sn(ysw_csc_t *csc, sn_visitor_t visitor)
+static void visit_notes(ysw_csc_t *csc, sn_visitor_t visitor)
 {
     uint32_t visitor_count = 0;
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
@@ -319,13 +354,11 @@ static void on_prev(ysw_csc_t *csc, lv_obj_t *btn)
 
 static void on_close(ysw_csc_t *csc, lv_obj_t *btn)
 {
-    ESP_LOGD(TAG, "on_close csc->controller.close_cb=%p", csc->controller.close_cb);
     ysw_seq_message_t message = {
         .type = YSW_SEQ_STOP,
     };
     ysw_main_seq_rendezvous(&message);
     if (csc->controller.clipboard) {
-        // TODO: be sure that ysw_hpc also frees clipboard
         free_clipboard(csc);
     }
     ysw_ui_close_frame(&csc->frame);
@@ -358,26 +391,20 @@ static void on_save(ysw_csc_t *csc, lv_obj_t *btn)
 
 static void on_new(ysw_csc_t *csc, lv_obj_t *btn)
 {
-    create_cs(csc);
+    create_style(csc);
 }
 
 static void on_copy(ysw_csc_t *csc, lv_obj_t *btn)
 {
-    if (csc->controller.clipboard) {
-        truncate_clipboard(csc);
+    if (get_selected_note(csc)) {
+        if (csc->controller.clipboard) {
+            truncate_clipboard(csc);
+        } else {
+            csc->controller.clipboard = ysw_array_create(10);
+        }
+        visit_notes(csc, copy_to_clipboard);
     } else {
-        csc->controller.clipboard = ysw_array_create(10);
-    }
-    visit_sn(csc, copy_to_clipboard);
-}
-
-static void deselect_all(ysw_csc_t *csc)
-{
-    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
-    uint32_t sn_count = ysw_cs_get_sn_count(cs);
-    for (uint32_t i = 0; i < sn_count; i++) {
-        ysw_sn_t *sn = ysw_cs_get_sn(cs, i);
-        ysw_sn_select(sn, false);
+        ysw_mb_nothing_selected();
     }
 }
 
@@ -385,15 +412,18 @@ static void on_paste(ysw_csc_t *csc, lv_obj_t *btn)
 {
     if (csc->controller.clipboard) {
         deselect_all(csc);
+        // unlike hpc, csc doesn't order by position, it orders by starting tick
         ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
-        uint32_t sn_count = ysw_array_get_count(csc->controller.clipboard);
-        for (uint32_t i = 0; i < sn_count; i++) {
+        uint32_t paste_count = ysw_array_get_count(csc->controller.clipboard);
+        for (uint32_t i = 0; i < paste_count; i++) {
             ysw_sn_t *sn = ysw_array_get(csc->controller.clipboard, i);
             ysw_sn_t *new_sn = ysw_sn_copy(sn);
             new_sn->state = sn->state;
-            ysw_cs_add_sn(cs, new_sn);
+            csc->controller.sn_index = ysw_cs_insert_sn(cs, new_sn);
         }
         refresh(csc);
+    } else {
+        ysw_mb_clipboard_empty();
     }
 }
 
@@ -415,40 +445,39 @@ static void on_trash(ysw_csc_t *csc, lv_obj_t *btn)
     }
     if (changes) {
         ysw_array_truncate(cs->sn_array, target);
+        ysw_sn_t *sn = get_closest_note(csc);
+        if (sn) {
+            ysw_sn_select(sn, true);
+        }
         refresh(csc);
+    } else {
+        ysw_mb_nothing_selected();
     }
 }
 
-static void on_volume_mid(ysw_csc_t *csc, lv_obj_t *btn)
+static void on_edit(ysw_csc_t *csc, ysw_sn_t *sn)
 {
-    visit_sn(csc, decrease_volume);
+    ESP_LOGD(TAG, "on_edit_sn stub");
 }
 
-static void on_volume_max(ysw_csc_t *csc, lv_obj_t *btn)
+static void on_create_note(ysw_csc_t *csc, uint32_t start, int8_t degree)
 {
-    visit_sn(csc, increase_volume);
-}
-
-static void on_create_sn(ysw_csc_t *csc, uint32_t start, int8_t degree)
-{
+    // unlike hpc, csc doesn't order by position, it orders by starting tick
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     uint32_t division_duration = YSW_CS_DURATION / cs->divisions;
     uint32_t start_floor = (start / division_duration) * division_duration;
     uint32_t duration = division_duration - 5;
     ysw_sn_t *sn = ysw_sn_create(degree, 80, start_floor, duration, 0);
     ysw_sn_select(sn, true);
-    ysw_cs_add_sn(cs, sn);
+    csc->controller.sn_index = ysw_cs_insert_sn(cs, sn);
     auto_play_last(csc, sn);
     refresh(csc);
 }
 
-static void on_edit_sn(ysw_csc_t *csc, ysw_sn_t *sn)
-{
-    ESP_LOGD(TAG, "on_edit_sn stub");
-}
-
 static void on_select(ysw_csc_t *csc, ysw_sn_t *sn)
 {
+    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
+    csc->controller.sn_index = ysw_cs_get_sn_index(cs, sn);
     auto_play_last(csc, sn);
 }
 
@@ -474,8 +503,7 @@ static const ysw_ui_btn_def_t footer_buttons[] = {
     { LV_SYMBOL_COPY, on_copy },
     { LV_SYMBOL_PASTE, on_paste },
     { LV_SYMBOL_TRASH, on_trash },
-    { LV_SYMBOL_VOLUME_MID, on_volume_mid },
-    { LV_SYMBOL_VOLUME_MAX, on_volume_max },
+    { LV_SYMBOL_EDIT, on_edit },
     { NULL, NULL },
 };
 
@@ -486,8 +514,7 @@ static void create_cse(ysw_csc_t *csc)
     lv_coord_t h = lv_page_get_height_fit(csc->frame.body.page);
     lv_obj_set_size(csc->controller.cse, w, h);
     ysw_style_adjust_obj(csc->controller.cse);
-    ysw_cse_set_create_cb(csc->controller.cse, on_create_sn);
-    ysw_cse_set_edit_cb(csc->controller.cse, on_edit_sn);
+    ysw_cse_set_create_cb(csc->controller.cse, on_create_note);
     ysw_cse_set_select_cb(csc->controller.cse, on_select);
     ysw_cse_set_drag_end_cb(csc->controller.cse, on_drag_end);
 }
@@ -498,6 +525,7 @@ ysw_csc_t* ysw_csc_create(ysw_music_t *music, uint32_t cs_index, ysw_csc_type_t 
 
     csc->controller.music = music;
     csc->controller.cs_index = cs_index;
+    csc->controller.sn_index = 0;
 
     ysw_ui_init_buttons(csc->frame.header.buttons, header_buttons, csc);
     ysw_ui_init_buttons(csc->frame.footer.buttons, footer_buttons, csc);
@@ -505,7 +533,7 @@ ysw_csc_t* ysw_csc_create(ysw_music_t *music, uint32_t cs_index, ysw_csc_type_t 
     create_cse(csc);
     update_frame(csc);
     if (type == YSW_CSC_CREATE_CS) {
-        create_cs(csc);
+        create_style(csc);
     }
     return csc;
 }

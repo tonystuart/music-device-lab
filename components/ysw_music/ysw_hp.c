@@ -18,6 +18,8 @@
 
 #define TAG "YSW_HP"
 
+// TODO: consider inlining one liners
+
 ysw_hp_t *ysw_hp_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo)
 {
     ESP_LOGD(TAG, "ysw_hp_create name=%s", name);
@@ -105,20 +107,6 @@ void ysw_hp_set_instrument(ysw_hp_t *hp, uint8_t instrument)
     assert(hp);
     assert(instrument < YSW_MIDI_MAX);
     hp->instrument = instrument;
-}
-
-void ysw_hp_dump(ysw_hp_t *hp, char *tag)
-{
-    ESP_LOGD(tag, "ysw_hp_dump hp=%p", hp);
-    ESP_LOGD(tag, "name=%s", hp->name);
-    ESP_LOGD(tag, "instrument=%d", hp->instrument);
-    uint32_t cs_count = ysw_array_get_count(hp->ps_array);
-    ESP_LOGD(tag, "cs_count=%d", cs_count);
-    for (uint32_t i = 0; i < cs_count; i++) {
-        ysw_ps_t *ps = ysw_array_get(hp->ps_array, i);
-        ESP_LOGD(tag, "cs index=%d, degree=%d", i, ps->degree);
-        ysw_cs_dump(ps->cs, tag);
-    }
 }
 
 int32_t ysw_hp_get_ps_index(ysw_hp_t *hp, ysw_ps_t *ps)

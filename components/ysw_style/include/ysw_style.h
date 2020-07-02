@@ -56,3 +56,4 @@ void ysw_style_adjust_ddlist(lv_obj_t *ddlist);
 void ysw_style_adjust_btn(lv_obj_t *btn);
 void ysw_style_adjust_button_bar(lv_obj_t *btn);
 void ysw_style_adjust_checkbox(lv_obj_t *cb);
+void ysw_style_adjust_mbox(lv_obj_t *mbox);

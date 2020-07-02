@@ -16,7 +16,6 @@
 
 void *ysw_heap_allocate_uninitialized(size_t size)
 {
-    ESP_LOGD(TAG, "ysw_heap_allocate size=%d", size);
     void *p = malloc(size);
     if (!p) {
         ESP_LOGE(TAG, "malloc failed, size=%d", size);
@@ -34,7 +33,6 @@ void *ysw_heap_allocate(size_t size)
 
 void *ysw_heap_reallocate(void *old_p, size_t size)
 {
-    ESP_LOGD(TAG, "ysw_heap_reallocate old_p=%p, size=%d", old_p, size);
     void *p = realloc(old_p, size);
     if (!p) {
         ESP_LOGE(TAG, "realloc failed, size=%d", size);
@@ -63,7 +61,6 @@ char *ysw_heap_string_reallocate(char *old_string, const char *new_string)
 
 void ysw_heap_free(void *p)
 {
-    ESP_LOGD(TAG, "ysw_heap_free p=%p", p);
     free(p);
 }
 

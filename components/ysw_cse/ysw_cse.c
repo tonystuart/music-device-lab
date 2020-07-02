@@ -115,9 +115,9 @@ static void get_style_note_label(char *label, uint32_t size, ysw_sn_t *sn, int8_
     const char *degree = degrees[sn->degree - 1]; // -1 because degrees are 1 based
 
     if (octave) {
-        snprintf(label, size, "%s%s%+d %d", modifier, degree, octave, sn->velocity);
+        snprintf(label, size, "%s%s%+d", modifier, degree, octave);
     } else {
-        snprintf(label, size, "%s%s %d", modifier, degree, sn->velocity);
+        snprintf(label, size, "%s%s", modifier, degree);
     }
 }
 
@@ -260,14 +260,6 @@ static void fire_create(lv_obj_t *cse, uint32_t start, int8_t degree)
     ysw_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->create_cb) {
         ext->create_cb(ext->context, start, degree);
-    }
-}
-
-static void fire_edit(lv_obj_t *cse, ysw_sn_t *sn)
-{
-    ysw_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    if (ext->edit_cb) {
-        ext->edit_cb(ext->context, sn);
     }
 }
 
@@ -577,16 +569,16 @@ static void on_signal_long_press(lv_obj_t *cse, void *param)
 {
     ysw_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (!ext->dragging) {
-        lv_indev_t *indev_act = (lv_indev_t*)param;
-        lv_indev_wait_release(indev_act);
         if (ext->clicked_sn) {
-            fire_edit(cse, ext->clicked_sn);
+            // handle like short press
         } else {
+            lv_indev_t *indev_act = (lv_indev_t*)param;
+            lv_indev_wait_release(indev_act);
             lv_indev_proc_t *proc = &indev_act->proc;
             lv_point_t *point = &proc->types.pointer.act_point;
             prepare_create(cse, point);
+            ext->long_press = true;
         }
-        ext->long_press = true;
     }
 }
 
@@ -674,12 +666,6 @@ void ysw_cse_set_create_cb(lv_obj_t *cse, void *cb)
 {
     ysw_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     ext->create_cb = cb;
-}
-
-void ysw_cse_set_edit_cb(lv_obj_t *cse, void *cb)
-{
-    ysw_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
-    ext->edit_cb = cb;
 }
 
 void ysw_cse_set_select_cb(lv_obj_t *cse, void *cb)

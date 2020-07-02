@@ -16,6 +16,7 @@
 #include "ysw_heap.h"
 #include "ysw_instruments.h"
 #include "ysw_hpe.h"
+#include "ysw_mb.h"
 #include "ysw_mfw.h"
 #include "ysw_mode.h"
 #include "ysw_music.h"
@@ -37,6 +38,57 @@
 #define TAG "YSW_HPC"
 
 typedef void (*ps_visitor_t)(ysw_hpc_t *hpc, ysw_ps_t *ps);
+
+static void deselect_all(ysw_hpc_t *hpc)
+{
+    ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
+    uint32_t ps_count = ysw_hp_get_ps_count(hp);
+    for (uint32_t i = 0; i < ps_count; i++) {
+        ysw_ps_t *ps = ysw_hp_get_ps(hp, i);
+        ysw_ps_select(ps, false);
+    }
+}
+
+static ysw_ps_t* get_current_step(ysw_hpc_t *hpc)
+{
+    ysw_ps_t *ps = NULL;
+    uint32_t hp_count = ysw_music_get_hp_count(hpc->controller.music);
+    if (hpc->controller.hp_index < hp_count) {
+        ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
+        uint32_t ps_count = ysw_hp_get_ps_count(hp);
+        if (hpc->controller.ps_index < ps_count) {
+            ps = ysw_hp_get_ps(hp, hpc->controller.ps_index);
+        }
+    }
+    return ps;
+}
+
+static ysw_ps_t* get_closest_step(ysw_hpc_t *hpc)
+{
+    ysw_ps_t *ps = NULL;
+    uint32_t hp_count = ysw_music_get_hp_count(hpc->controller.music);
+    if (hpc->controller.hp_index < hp_count) {
+        ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
+        uint32_t ps_count = ysw_hp_get_ps_count(hp);
+        if (ps_count) {
+            if (hpc->controller.ps_index >= ps_count) {
+                hpc->controller.ps_index = ps_count - 1;
+            }
+            ps = ysw_hp_get_ps(hp, hpc->controller.ps_index);
+        }
+    }
+    return ps;
+}
+
+static ysw_ps_t* get_selected_step(ysw_hpc_t *hpc)
+{
+    ysw_ps_t *ps = NULL;
+    ysw_ps_t *current_ps = get_current_step(hpc);
+    if (current_ps && ysw_ps_is_selected(current_ps)) {
+        ps = current_ps;
+    }
+    return ps;
+}
 
 // NB: invoked by sequencer task
 static void on_sequencer_status(ysw_hpc_t *hpc, ysw_seq_status_message_t *message)
@@ -149,7 +201,7 @@ static void refresh(ysw_hpc_t *hpc)
     auto_play_all(hpc);
 }
 
-static void create_hp(ysw_hpc_t *hpc, uint32_t new_index)
+static void create_progression(ysw_hpc_t *hpc, uint32_t new_index)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
 
@@ -170,12 +222,33 @@ static void create_hp(ysw_hpc_t *hpc, uint32_t new_index)
 static void copy_to_clipboard(ysw_hpc_t *hpc, ysw_ps_t *ps)
 {
     ysw_ps_t *new_ps = ysw_ps_copy(ps);
-    //ysw_ps_select(ps, false);
     ysw_ps_select(new_ps, true);
     ysw_array_push(hpc->controller.clipboard, new_ps);
 }
 
-static void visit_pss(ysw_hpc_t *hpc, ps_visitor_t visitor)
+static void free_clipboard_contents(ysw_hpc_t *hpc)
+{
+    uint32_t old_ps_count = ysw_array_get_count(hpc->controller.clipboard);
+    for (int i = 0; i < old_ps_count; i++) {
+        ysw_ps_t *old_ps = ysw_array_get(hpc->controller.clipboard, i);
+        ysw_ps_free(old_ps);
+    }
+}
+
+static void free_clipboard(ysw_hpc_t *hpc)
+{
+    free_clipboard_contents(hpc);
+    ysw_heap_free(hpc->controller.clipboard);
+    hpc->controller.clipboard = NULL;
+}
+
+static void truncate_clipboard(ysw_hpc_t *hpc)
+{
+    free_clipboard_contents(hpc);
+    ysw_array_truncate(hpc->controller.clipboard, 0);
+}
+
+static void visit_steps(ysw_hpc_t *hpc, ps_visitor_t visitor)
 {
     uint32_t visitor_count = 0;
     ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
@@ -260,17 +333,17 @@ static void on_prev(ysw_hpc_t *hpc, lv_obj_t *btn)
 
 static void on_close(ysw_hpc_t *hpc, lv_obj_t *btn)
 {
-    ESP_LOGD(TAG, "on_close hpc->controller.close_cb=%p", hpc->controller.close_cb);
     ysw_seq_message_t message = {
         .type = YSW_SEQ_STOP,
     };
     ysw_main_seq_rendezvous(&message);
-    if (hpc->controller.close_cb) {
-        hpc->controller.close_cb(hpc->controller.close_cb_context, hpc);
+    if (hpc->controller.clipboard) {
+        free_clipboard(hpc);
     }
-    ESP_LOGD(TAG, "on_close deleting hpc->frame");
-    ysw_ui_close_frame(&hpc->frame); // deletes contents
-    ESP_LOGD(TAG, "on_close freeing hpc");
+    ysw_ui_close_frame(&hpc->frame);
+    if (hpc->controller.close_cb) {
+        hpc->controller.close_cb(hpc->controller.close_cb_context, hpc->controller.hp_index);
+    }
     ysw_heap_free(hpc);
 }
 
@@ -295,64 +368,51 @@ static void on_save(ysw_hpc_t *hpc, lv_obj_t *btn)
 
 static void on_new(ysw_hpc_t *hpc, lv_obj_t *btn)
 {
-    create_hp(hpc, hpc->controller.hp_index + 1);
+    create_progression(hpc, hpc->controller.hp_index + 1);
 }
 
 static void on_copy(ysw_hpc_t *hpc, lv_obj_t *btn)
 {
-    if (hpc->controller.clipboard) {
-        uint32_t old_ps_count = ysw_array_get_count(hpc->controller.clipboard);
-        for (int i = 0; i < old_ps_count; i++) {
-            ysw_ps_t *old_ps = ysw_array_get(hpc->controller.clipboard, i);
-            ysw_ps_free(old_ps);
+    if (get_selected_step(hpc)) {
+        if (hpc->controller.clipboard) {
+            truncate_clipboard(hpc);
+        } else {
+            hpc->controller.clipboard = ysw_array_create(10);
         }
-        ysw_array_truncate(hpc->controller.clipboard, 0);
-    } else {
-        hpc->controller.clipboard = ysw_array_create(10);
+        visit_steps(hpc, copy_to_clipboard);
     }
-    visit_pss(hpc, copy_to_clipboard);
-}
-
-static void deselect_all(ysw_hpc_t *hpc)
-{
-    ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
-    uint32_t ps_count = ysw_hp_get_ps_count(hp);
-    for (uint32_t i = 0; i < ps_count; i++) {
-        ysw_ps_t *ps = ysw_hp_get_ps(hp, i);
-        ysw_ps_select(ps, false);
+    else {
+        ysw_mb_nothing_selected();
     }
 }
 
 static void on_paste(ysw_hpc_t *hpc, lv_obj_t *btn)
 {
-    ESP_LOGD(TAG, "on_paste entered");
     if (hpc->controller.clipboard) {
-        uint32_t paste_count = ysw_array_get_count(hpc->controller.clipboard);
-        if (paste_count) {
-            deselect_all(hpc);
-            uint32_t insert_index;
-            ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
-            uint32_t ps_count = ysw_hp_get_ps_count(hp);
-            if (hpc->controller.ps_index < ps_count) {
-                // paste after most recently selected ps
-                insert_index = hpc->controller.ps_index + 1;
-            } else {
-                // paste at end (which is also beginning, if empty)
-                insert_index = ps_count;
-            }
-            uint32_t first = insert_index;
-            ESP_LOGD(TAG, "ps_index=%d, paste_count=%d, ps_count=%d, insert_index=%d", hpc->controller.ps_index, paste_count, ps_count, insert_index);
-            for (uint32_t i = 0; i < paste_count; i++) {
-                ysw_ps_t *ps = ysw_array_get(hpc->controller.clipboard, i);
-                ysw_ps_t *new_ps = ysw_ps_copy(ps);
-                new_ps->state = ps->state;
-                ysw_hp_insert_ps(hp, insert_index, new_ps);
-                hpc->controller.ps_index = ++insert_index;
-            }
-            ysw_hpe_ensure_visible(hpc->controller.hpe, first, first + paste_count - 1); // -1 because width is included
-            ESP_LOGD(TAG, "on_paste calling refresh");
-            refresh(hpc);
+        deselect_all(hpc);
+        uint32_t insert_index;
+        ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
+        uint32_t ps_count = ysw_hp_get_ps_count(hp);
+        if (hpc->controller.ps_index < ps_count) {
+            // paste after most recently selected ps
+            insert_index = hpc->controller.ps_index + 1;
+        } else {
+            // paste at end (which is also beginning, if empty)
+            insert_index = ps_count;
         }
+        uint32_t first = insert_index;
+        uint32_t paste_count = ysw_array_get_count(hpc->controller.clipboard);
+        for (uint32_t i = 0; i < paste_count; i++) {
+            ysw_ps_t *ps = ysw_array_get(hpc->controller.clipboard, i);
+            ysw_ps_t *new_ps = ysw_ps_copy(ps);
+            new_ps->state = ps->state;
+            ysw_hp_insert_ps(hp, insert_index, new_ps);
+            hpc->controller.ps_index = insert_index++;
+        }
+        ysw_hpe_ensure_visible(hpc->controller.hpe, first, first + paste_count - 1); // -1 because width is included
+        refresh(hpc);
+    } else {
+        ysw_mb_clipboard_empty();
     }
 }
 
@@ -374,11 +434,32 @@ static void on_trash(ysw_hpc_t *hpc, lv_obj_t *btn)
     }
     if (changes) {
         ysw_array_truncate(hp->ps_array, target);
+        ysw_ps_t *ps = get_closest_step(hpc);
+        if (ps) {
+            ysw_ps_select(ps, true);
+        }
         refresh(hpc);
+    } else {
+        ysw_mb_nothing_selected();
     }
 }
 
-static void on_create_ps(ysw_hpc_t *hpc, uint32_t ps_index, uint8_t degree)
+static void on_edit(ysw_hpc_t *hpc, lv_obj_t *btn)
+{
+    ysw_ps_t *ps = get_selected_step(hpc);
+    if (ps) {
+        if (!ysw_hpe_gs.multiple_selection) {
+            deselect_all(hpc);
+        }
+        ysw_ps_select(ps, true);
+        ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
+        ysw_ssc_create(hpc->controller.music, hp, hpc->controller.ps_index, false);
+    } else {
+        ysw_mb_nothing_selected();
+    }
+}
+
+static void on_create_step(ysw_hpc_t *hpc, uint32_t ps_index, uint8_t degree)
 {
     if (ysw_music_get_cs_count(hpc->controller.music)) {
         ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
@@ -406,19 +487,10 @@ static void on_create_ps(ysw_hpc_t *hpc, uint32_t ps_index, uint8_t degree)
     }
 }
 
-static void on_edit_ps(ysw_hpc_t *hpc, ysw_ps_t *ps)
-{
-    ESP_LOGE(TAG, "on_edit_ps entered");
-    ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
-    hpc->controller.ps_index = ysw_hp_get_ps_index(hp, ps);
-    ysw_ssc_create(hpc->controller.music, hp, hpc->controller.ps_index, false);
-}
-
 static void on_select(ysw_hpc_t *hpc, ysw_ps_t *ps)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
     hpc->controller.ps_index = ysw_hp_get_ps_index(hp, ps);
-    ESP_LOGD(TAG, "on_select ps_index=%d", hpc->controller.ps_index);
     auto_play_last(hpc, ps);
 }
 
@@ -444,18 +516,18 @@ static const ysw_ui_btn_def_t footer_buttons[] = {
     { LV_SYMBOL_COPY, on_copy },
     { LV_SYMBOL_PASTE, on_paste },
     { LV_SYMBOL_TRASH, on_trash },
+    { LV_SYMBOL_EDIT, on_edit },
     { NULL, NULL },
 };
 
-static void create_hpe(ysw_hpc_t *hpc)
+static void create_progression_editor(ysw_hpc_t *hpc)
 {
     hpc->controller.hpe = ysw_hpe_create(hpc->frame.body.page, hpc);
     lv_coord_t w = lv_page_get_width_fit(hpc->frame.body.page);
     lv_coord_t h = lv_page_get_height_fit(hpc->frame.body.page);
     lv_obj_set_size(hpc->controller.hpe, w, h);
     ysw_style_adjust_obj(hpc->controller.hpe);
-    ysw_hpe_set_create_cb(hpc->controller.hpe, on_create_ps);
-    ysw_hpe_set_edit_cb(hpc->controller.hpe, on_edit_ps);
+    ysw_hpe_set_create_cb(hpc->controller.hpe, on_create_step);
     ysw_hpe_set_select_cb(hpc->controller.hpe, on_select);
     ysw_hpe_set_drag_end_cb(hpc->controller.hpe, on_drag_end);
 }
@@ -471,7 +543,7 @@ ysw_hpc_t* ysw_hpc_create(ysw_music_t *music, uint32_t hp_index)
     ysw_ui_init_buttons(hpc->frame.header.buttons, header_buttons, hpc);
     ysw_ui_init_buttons(hpc->frame.footer.buttons, footer_buttons, hpc);
     ysw_ui_create_frame(&hpc->frame);
-    create_hpe(hpc);
+    create_progression_editor(hpc);
     update_frame(hpc);
     return hpc;
 }

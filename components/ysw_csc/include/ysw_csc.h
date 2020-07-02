@@ -21,6 +21,7 @@ typedef void (*csc_close_cb_t)(void *context, uint32_t cs_index);
 typedef struct {
     ysw_music_t *music;
     uint32_t cs_index;
+    uint32_t sn_index;
     ysw_array_t *clipboard;
     csc_close_cb_t close_cb;
     void *close_cb_context;

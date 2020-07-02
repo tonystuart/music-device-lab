@@ -14,7 +14,6 @@
 #include "ysw_hp.h"
 
 typedef void (*ysw_hpe_create_cb_t)(void *context, uint32_t ps_index, uint8_t degree);
-typedef void (*ysw_hpe_edit_cb_t)(void *context, ysw_ps_t *ps);
 typedef void (*ysw_hpe_select_cb_t)(void *context, ysw_ps_t *ps);
 typedef void (*ysw_hpe_deselect_cb_t)(void *context, ysw_ps_t *ps);
 typedef void (*ysw_hpe_drag_end_cb_t)(void *context);
@@ -44,7 +43,6 @@ typedef struct {
     const lv_style_t *ss_style; // selected ps
     const lv_style_t *ms_style; // metro ps
     ysw_hpe_create_cb_t create_cb;
-    ysw_hpe_edit_cb_t edit_cb;
     ysw_hpe_select_cb_t select_cb;
     ysw_hpe_deselect_cb_t deselect_cb;
     ysw_hpe_drag_end_cb_t drag_end_cb;
@@ -62,7 +60,6 @@ extern ysw_hpe_gs_t ysw_hpe_gs;
 
 lv_obj_t *ysw_hpe_create(lv_obj_t *par, void *context);
 void ysw_hpe_set_create_cb(lv_obj_t *hpe, void *cb);
-void ysw_hpe_set_edit_cb(lv_obj_t *hpe, void *cb);
 void ysw_hpe_set_select_cb(lv_obj_t *hpe, void *cb);
 void ysw_hpe_set_deselect_cb(lv_obj_t *hpe, void *cb);
 void ysw_hpe_set_drag_end_cb(lv_obj_t *hpe, void *cb);

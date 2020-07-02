@@ -16,7 +16,7 @@
 
 typedef struct hpc_s ysw_hpc_t;
 
-typedef void (*hpc_close_cb_t)(void *context, ysw_hpc_t *hpc);
+typedef void (*hpc_close_cb_t)(void *context, uint32_t hp_index);
 
 typedef struct {
     ysw_music_t *music;

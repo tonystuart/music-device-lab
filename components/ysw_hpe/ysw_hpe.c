@@ -351,14 +351,6 @@ static void fire_create(lv_obj_t *hpe, uint32_t ps_index, uint8_t degree)
     }
 }
 
-static void fire_edit(lv_obj_t *hpe, ysw_ps_t *ps)
-{
-    ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
-    if (ext->edit_cb) {
-        ext->edit_cb(ext->context, ps);
-    }
-}
-
 static void fire_select(lv_obj_t *hpe, ysw_ps_t *ps)
 {
     ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
@@ -443,15 +435,6 @@ static void prepare_create(lv_obj_t *hpe, lv_point_t *point)
         }
         fire_create(hpe, ps_index, degree);
     }
-}
-
-static void prepare_edit(lv_obj_t *hpe, ysw_ps_t *ps)
-{
-    if (!ysw_hpe_gs.multiple_selection) {
-        deselect_all(hpe);
-    }
-    select_ps(hpe, ps);
-    fire_edit(hpe, ps);
 }
 
 static void scroll_horizontally(lv_obj_t *hpe, lv_coord_t x)
@@ -691,16 +674,16 @@ static void on_signal_long_press(lv_obj_t *hpe, void *param)
 {
     ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
     if (!ext->dragging && !ext->scrolling) {
-        lv_indev_t *indev_act = (lv_indev_t*)param;
-        lv_indev_wait_release(indev_act);
         if (ext->clicked_ps) {
-            prepare_edit(hpe, ext->clicked_ps);
+            // handle like short press
         } else {
+            lv_indev_t *indev_act = (lv_indev_t*)param;
+            lv_indev_wait_release(indev_act);
             lv_indev_proc_t *proc = &indev_act->proc;
             lv_point_t *point = &proc->types.pointer.act_point;
             prepare_create(hpe, point);
+            ext->long_press = true;
         }
-        ext->long_press = true;
     }
 }
 
@@ -794,12 +777,6 @@ void ysw_hpe_set_create_cb(lv_obj_t *hpe, void *cb)
 {
     ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
     ext->create_cb = cb;
-}
-
-void ysw_hpe_set_edit_cb(lv_obj_t *hpe, void *cb)
-{
-    ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
-    ext->edit_cb = cb;
 }
 
 void ysw_hpe_set_select_cb(lv_obj_t *hpe, void *cb)

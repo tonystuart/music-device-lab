@@ -40,7 +40,6 @@ typedef struct {
     const lv_style_t *sn_style; // selected note
     const lv_style_t *mn_style; // metro note
     ysw_cse_create_cb_t create_cb;
-    ysw_cse_edit_cb_t edit_cb;
     ysw_cse_select_cb_t select_cb;
     ysw_cse_deselect_cb_t deselect_cb;
     ysw_cse_drag_end_cb_t drag_end_cb;
@@ -57,7 +56,6 @@ extern ysw_cse_gs_t ysw_cse_gs;
 
 lv_obj_t *ysw_cse_create(lv_obj_t *par, void *context);
 void ysw_cse_set_create_cb(lv_obj_t *cse, void *cb);
-void ysw_cse_set_edit_cb(lv_obj_t *cse, void *cb);
 void ysw_cse_set_select_cb(lv_obj_t *cse, void *cb);
 void ysw_cse_set_deselect_cb(lv_obj_t *cse, void *cb);
 void ysw_cse_set_drag_end_cb(lv_obj_t *cse, void *cb);

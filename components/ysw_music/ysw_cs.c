@@ -15,6 +15,8 @@
 
 #define TAG "YSW_CS"
 
+// TODO: consider inlining one liners
+
 ysw_cs_t* ysw_cs_create(char *name, uint8_t instrument, uint8_t octave, ysw_mode_t mode, int8_t transposition, uint8_t tempo, uint8_t divisions)
 {
     ysw_cs_t *cs = ysw_heap_allocate(sizeof(ysw_cs_t));
@@ -156,11 +158,11 @@ ysw_note_t* ysw_cs_get_note(ysw_cs_t *cs, ysw_sn_t *sn)
     return notes;
 }
 
-void ysw_cs_dump(ysw_cs_t *cs, char *tag)
+uint32_t ysw_cs_insert_sn(ysw_cs_t *cs, ysw_sn_t *sn)
 {
-    ESP_LOGD(tag, "ysw_cs_dump cs=%p", cs);
-    ESP_LOGD(tag, "name=%s", cs->name);
-    uint32_t sn_count = ysw_cs_get_sn_count(cs);
-    ESP_LOGD(tag, "sn_count=%d", sn_count);
+    // TODO: consider in-order insertion
+    ysw_array_push(cs->sn_array, sn);
+    ysw_cs_sort_sn_array(cs);
+    return ysw_cs_get_sn_index(cs, sn);
 }
 

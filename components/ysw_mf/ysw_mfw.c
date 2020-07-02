@@ -19,6 +19,7 @@
 
 #include "assert.h"
 #include "errno.h"
+#include "stdlib.h"
 #include "unistd.h"
 
 #define TAG "YSW_MFW"
