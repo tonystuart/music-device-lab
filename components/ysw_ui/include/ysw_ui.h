@@ -27,6 +27,11 @@ typedef struct {
 } ysw_ui_btn_def_t;
 
 typedef struct {
+    void *img_src;
+    uint32_t msg;
+} ysw_ui_bus_btn_def_t;
+
+typedef struct {
     lv_obj_t *label;
 } ysw_ui_label_t;
 
@@ -68,6 +73,7 @@ void ysw_ui_ensure_visible(lv_obj_t *child, bool do_center);
 void ysw_ui_init_cbd(ysw_ui_cbd_t *cbd, void *cb, void *context);
 void ysw_ui_init_button(ysw_ui_button_t *button, void *img_src, ysw_ui_btn_cb_t cb, void *context);
 void ysw_ui_init_buttons(ysw_ui_button_t buttons[], const ysw_ui_btn_def_t defs[], void *context);
+void ysw_ui_init_bus_buttons(ysw_ui_button_t buttons[], const ysw_ui_bus_btn_def_t defs[]);
 void ysw_ui_create_label(lv_obj_t *parent, ysw_ui_label_t *label);
 void ysw_ui_on_btn_event(lv_obj_t *btn, lv_event_t event);
 void ysw_ui_create_button(lv_obj_t *parent, ysw_ui_button_t *button);

@@ -31,13 +31,14 @@ static uint32_t allocate_handle(ysw_bus_t *bus)
     return handle;
 }
 
-ysw_bus_t* ysw_bus_create()
+ysw_bus_t* ysw_bus_create(uint32_t initial_size)
 {
     ysw_bus_t *bus = ysw_heap_allocate(sizeof(ysw_bus_t));
+    bus->listeners = ysw_array_create(initial_size);
     return bus;
 }
 
-uint32_t ysw_bus_subscribe(ysw_bus_t *bus, void *context, void *cb)
+uint32_t ysw_bus_subscribe(ysw_bus_t *bus, void *cb, void *context)
 {
     ysw_bus_listener_t *listener = ysw_heap_allocate(sizeof(ysw_bus_listener_t));
     listener->context = context;

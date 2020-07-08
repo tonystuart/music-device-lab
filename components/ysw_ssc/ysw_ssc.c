@@ -13,6 +13,7 @@
 #include "ysw_degree.h"
 #include "ysw_heap.h"
 #include "ysw_hpe.h"
+#include "ysw_main_bus.h"
 #include "ysw_main_seq.h"
 #include "lvgl/lvgl.h"
 #include "esp_log.h"
@@ -220,6 +221,7 @@ static void move(ysw_ssc_t *ssc, move_direction_t direction)
             }
             ysw_ps_select(ssc->model.ps, false);
             ysw_ps_select(ysw_hp_get_ps(ssc->model.hp, new_ps_index), true);
+            ysw_main_bus_publish(YSW_MSG_SEL_STEP, new_ps_index);
         }
         update_settings(ssc, new_ps_index);
     }

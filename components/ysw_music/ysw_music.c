@@ -43,7 +43,6 @@ ysw_hp_t *ysw_music_get_hp(ysw_music_t *music, uint32_t index)
     return ysw_array_get(music->hp_array, index);
 }
 
-
 uint32_t ysw_music_insert_cs(ysw_music_t *music, ysw_cs_t *cs)
 {
     ysw_array_push(music->cs_array, cs);

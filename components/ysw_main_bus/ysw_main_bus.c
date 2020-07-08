@@ -13,12 +13,12 @@ static ysw_bus_t *ysw_main_bus;
 
 void ysw_main_bus_create()
 {
-    ysw_main_bus = ysw_bus_create();
+    ysw_main_bus = ysw_bus_create(8);
 }
 
-uint32_t ysw_main_bus_subscribe(void *context, void *cb)
+uint32_t ysw_main_bus_subscribe(void *cb, void *context)
 {
-    return ysw_bus_subscribe(ysw_main_bus, context, cb);
+    return ysw_bus_subscribe(ysw_main_bus, cb, context);
 }
 
 uint32_t ysw_main_bus_publish(ysw_msg_t msg, void *details)

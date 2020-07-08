@@ -8,6 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_ui.h"
+#include "ysw_main_bus.h"
 #include "ysw_main_seq.h"
 #include "ysw_style.h"
 
@@ -159,6 +160,11 @@ void ysw_ui_on_btn_event(lv_obj_t *btn, lv_event_t event)
     }
 }
 
+static void ysw_ui_bus_cb(void *context, lv_obj_t *btn)
+{
+    ysw_main_bus_publish((ysw_msg_t)context, btn);
+}
+
 void ysw_ui_init_cbd(ysw_ui_cbd_t *cbd, void *cb, void *context)
 {
     cbd->cb = cb;
@@ -175,6 +181,13 @@ void ysw_ui_init_buttons(ysw_ui_button_t buttons[], const ysw_ui_btn_def_t defs[
 {
     for (uint32_t i = 0; defs[i].img_src && i < YSW_UI_BUTTONS; i++) {
         ysw_ui_init_button(&buttons[i], defs[i].img_src, defs[i].btn_cb, context);
+    }
+}
+
+void ysw_ui_init_bus_buttons(ysw_ui_button_t buttons[], const ysw_ui_bus_btn_def_t defs[])
+{
+    for (uint32_t i = 0; defs[i].img_src && i < YSW_UI_BUTTONS; i++) {
+        ysw_ui_init_button(&buttons[i], defs[i].img_src, ysw_ui_bus_cb, (void*)defs[i].msg);
     }
 }
 
