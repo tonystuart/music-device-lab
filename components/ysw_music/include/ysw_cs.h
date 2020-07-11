@@ -61,6 +61,8 @@ uint8_t ysw_cs_get_instrument(ysw_cs_t *cs);
 ysw_note_t *ysw_cs_get_notes(ysw_cs_t *cs, uint32_t *note_count);
 ysw_note_t *ysw_cs_get_note(ysw_cs_t *cs, ysw_sn_t *sn);
 uint32_t ysw_cs_insert_sn(ysw_cs_t *cs, ysw_sn_t *sn);
+int32_t ysw_cs_find_previous_selected_sn(ysw_cs_t *cs, uint32_t sn_index, bool is_wrap);
+int32_t ysw_cs_find_next_selected_sn(ysw_cs_t *cs, uint32_t sn_index, bool is_wrap);
 
 static inline uint32_t ysw_cs_get_sn_count(ysw_cs_t *cs)
 {

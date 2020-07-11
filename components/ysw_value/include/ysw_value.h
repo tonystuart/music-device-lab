@@ -9,15 +9,17 @@
 
 #pragma once
 
-#include "ysw_bus.h"
+#include "stdbool.h"
+#include "stdint.h"
 
-// To avoid infinite loops, no event handler shall publish an event at the same or lower enum value.
+// Note that sizeof(intptr_t) == sizeof(uintptr_t) == sizeof(void*)
 
-typedef enum {
-    YSW_BUS_EVT_SEL_STEP,
-} ysw_bus_evt_t;
+typedef union {
+    bool b;
+    int16_t ss;
+    uint16_t us;
+    int32_t si;
+    uint32_t ui;
+    void *p;
+} ysw_value_t;
 
-void ysw_main_bus_create();
-uint32_t ysw_main_bus_subscribe(void *cb, void *context);
-uint32_t ysw_main_bus_publish(ysw_bus_evt_t msg, void *details);
-void ysw_main_bus_unsubscribe(uint32_t handle);

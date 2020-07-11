@@ -48,7 +48,7 @@ uint32_t ysw_bus_subscribe(ysw_bus_t *bus, void *cb, void *context)
     return index;
 }
 
-uint32_t ysw_bus_publish(ysw_bus_t *bus, uint32_t msg, void *details)
+uint32_t ysw_bus_publish(ysw_bus_t *bus, uint32_t evt, void *details)
 {
     uint32_t publish_count = 0;
     uint32_t listener_count = ysw_array_get_count(bus->listeners);
@@ -56,7 +56,7 @@ uint32_t ysw_bus_publish(ysw_bus_t *bus, uint32_t msg, void *details)
     for (uint32_t i = 0; i < listener_count; i++) {
         ysw_bus_listener_t *listener = ysw_array_get(bus->listeners, i);
         if (listener) {
-            listener->cb(listener->context, msg, details, sender);
+            listener->cb(listener->context, evt, details, sender);
             publish_count++;
         }
     }

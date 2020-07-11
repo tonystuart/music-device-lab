@@ -215,6 +215,12 @@ lv_color_t ysw_style_adjust_obj(lv_obj_t *obj)
     return child_bg;
 }
 
+void ysw_style_adjust_sdb_container(lv_obj_t *container)
+{
+    lv_obj_set_style_local_pad_left(container, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 5);
+    lv_obj_set_style_local_pad_right(container, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 10);
+}
+
 void ysw_style_adjust_field_name(lv_obj_t *label)
 {
     lv_obj_set_style_local_pad_top(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 5);
@@ -235,7 +241,7 @@ void ysw_style_adjust_keyboard(lv_obj_t *kb)
     lv_obj_set_style_local_bg_color(kb, LV_KEYBOARD_PART_BTN, LV_STATE_DEFAULT, btn_bg);
     lv_obj_set_style_local_border_width(kb, LV_KEYBOARD_PART_BG, LV_STATE_DEFAULT, 0);
     lv_obj_set_style_local_border_width(kb, LV_KEYBOARD_PART_BTN, LV_STATE_DEFAULT, 0);
-    lv_obj_set_style_local_pad_left(kb, LV_KEYBOARD_PART_BG, LV_STATE_DEFAULT, 10);
+    lv_obj_set_style_local_pad_left(kb, LV_KEYBOARD_PART_BG, LV_STATE_DEFAULT, 5);
 }
 
 void ysw_style_adjust_ddlist(lv_obj_t *ddlist)
@@ -299,5 +305,4 @@ void ysw_style_adjust_mbox(lv_obj_t *mbox)
     lv_obj_set_style_local_text_color(mbox, LV_MSGBOX_PART_BTN, LV_STATE_DEFAULT, LV_COLOR_BLACK);
     lv_obj_set_style_local_border_width(mbox, LV_MSGBOX_PART_BTN, LV_STATE_DEFAULT, 0);
 }
-
 

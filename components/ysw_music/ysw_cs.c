@@ -166,3 +166,42 @@ uint32_t ysw_cs_insert_sn(ysw_cs_t *cs, ysw_sn_t *sn)
     return ysw_cs_get_sn_index(cs, sn);
 }
 
+int32_t ysw_cs_find_previous_selected_sn(ysw_cs_t *cs, uint32_t sn_index, bool is_wrap)
+{
+    uint32_t sn_count = ysw_cs_get_sn_count(cs);
+    assert(sn_index < sn_count);
+    for (int32_t i = sn_index - 1; i >= 0; i--) {
+        if (ysw_sn_is_selected(ysw_cs_get_sn(cs, i))) {
+            return i;
+        }
+    }
+    if (is_wrap) {
+        for (int32_t i = sn_count - 1; i > sn_index; i--) {
+            if (ysw_sn_is_selected(ysw_cs_get_sn(cs, i))) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+int32_t ysw_cs_find_next_selected_sn(ysw_cs_t *cs, uint32_t sn_index, bool is_wrap)
+{
+    uint32_t sn_count = ysw_cs_get_sn_count(cs);
+    assert(sn_index < sn_count);
+    for (int32_t i = sn_index + 1; i < sn_count; i++) {
+        if (ysw_sn_is_selected(ysw_cs_get_sn(cs, i))) {
+            return i;
+        }
+    }
+    if (is_wrap) {
+        for (int32_t i = 0; i < sn_index; i++) {
+            if (ysw_sn_is_selected(ysw_cs_get_sn(cs, i))) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+

@@ -17,7 +17,7 @@
 
 #define TAG "YSW_UI"
 
-void ysw_ui_distribute_extra_width(lv_obj_t *parent, lv_obj_t *obj)
+lv_coord_t ysw_ui_get_extra_width(lv_obj_t *parent)
 {
     lv_coord_t inner = lv_obj_get_style_pad_inner(parent, LV_CONT_PART_MAIN);
 
@@ -30,13 +30,18 @@ void ysw_ui_distribute_extra_width(lv_obj_t *parent, lv_obj_t *obj)
         lv_style_int_t mright = lv_obj_get_style_margin_right(child, LV_OBJ_PART_MAIN);
         width += lv_obj_get_width(child) + inner + mleft + mright;
     }
-    ESP_LOGD(TAG, "extra_width=%d", width);
     lv_coord_t parent_width = lv_obj_get_width(parent);
     lv_coord_t extra_width = parent_width - width; // can be negative
+    return extra_width;
+}
+
+void ysw_ui_distribute_extra_width(lv_obj_t *parent, lv_obj_t *obj)
+{
+    lv_coord_t extra_width = ysw_ui_get_extra_width(parent); // can be negative
     lv_obj_set_width(obj, lv_obj_get_width(obj) + extra_width);
 }
 
-void ysw_ui_distribute_extra_height(lv_obj_t *parent, lv_obj_t *obj)
+lv_coord_t ysw_ui_get_extra_height(lv_obj_t *parent)
 {
     lv_coord_t inner = lv_obj_get_style_pad_inner(parent, LV_CONT_PART_MAIN);
 
@@ -49,9 +54,15 @@ void ysw_ui_distribute_extra_height(lv_obj_t *parent, lv_obj_t *obj)
         lv_style_int_t mbottom = lv_obj_get_style_margin_bottom(child, LV_OBJ_PART_MAIN);
         height += lv_obj_get_height(child) + inner + mtop + mbottom;
     }
-    ESP_LOGD(TAG, "extra_height=%d", height);
     lv_coord_t parent_height = lv_obj_get_height(parent);
     lv_coord_t extra_height = parent_height - height; // can be negative
+    return extra_height;
+}
+
+
+void ysw_ui_distribute_extra_height(lv_obj_t *parent, lv_obj_t *obj)
+{
+    lv_coord_t extra_height = ysw_ui_get_extra_height(parent); // can be negative
     lv_obj_set_height(obj, lv_obj_get_height(obj) + extra_height);
 }
 
@@ -162,7 +173,7 @@ void ysw_ui_on_btn_event(lv_obj_t *btn, lv_event_t event)
 
 static void ysw_ui_bus_cb(void *context, lv_obj_t *btn)
 {
-    ysw_main_bus_publish((ysw_msg_t)context, btn);
+    ysw_main_bus_publish((ysw_bus_evt_t)context, btn);
 }
 
 void ysw_ui_init_cbd(ysw_ui_cbd_t *cbd, void *cb, void *context)
@@ -187,7 +198,7 @@ void ysw_ui_init_buttons(ysw_ui_button_t buttons[], const ysw_ui_btn_def_t defs[
 void ysw_ui_init_bus_buttons(ysw_ui_button_t buttons[], const ysw_ui_bus_btn_def_t defs[])
 {
     for (uint32_t i = 0; defs[i].img_src && i < YSW_UI_BUTTONS; i++) {
-        ysw_ui_init_button(&buttons[i], defs[i].img_src, ysw_ui_bus_cb, (void*)defs[i].msg);
+        ysw_ui_init_button(&buttons[i], defs[i].img_src, ysw_ui_bus_cb, (void*)(uintptr_t)defs[i].msg);
     }
 }
 

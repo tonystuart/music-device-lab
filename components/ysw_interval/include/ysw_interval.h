@@ -9,15 +9,6 @@
 
 #pragma once
 
-#include "ysw_bus.h"
+// See https://en.wikipedia.org/wiki/Interval_(music)
 
-// To avoid infinite loops, no event handler shall publish an event at the same or lower enum value.
 
-typedef enum {
-    YSW_BUS_EVT_SEL_STEP,
-} ysw_bus_evt_t;
-
-void ysw_main_bus_create();
-uint32_t ysw_main_bus_subscribe(void *cb, void *context);
-uint32_t ysw_main_bus_publish(ysw_bus_evt_t msg, void *details);
-void ysw_main_bus_unsubscribe(uint32_t handle);

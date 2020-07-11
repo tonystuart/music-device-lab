@@ -24,7 +24,7 @@
 
 // See https://en.wikipedia.org/wiki/Roman_numeral_analysis
 
-const char *ysw_degree =
+const char *ysw_degree_roman_choices =
 "I\n"
 "II\n"
 "III\n"
@@ -33,7 +33,7 @@ const char *ysw_degree =
 "VI\n"
 "VII";
 
-const char *ysw_degree_names[] = {
+const char *ysw_degree_roman[] = {
     "I",
     "II",
     "III",
@@ -43,7 +43,26 @@ const char *ysw_degree_names[] = {
     "VII",
 };
 
-#define YSW_DEGREE_NAMES_SZ (sizeof(ysw_degree_names) / sizeof(const char *))
+#define YSW_DEGREE_SZ (sizeof(ysw_degree_roman) / sizeof(const char *))
+
+const char *ysw_degree_cardinal_choices =
+"1st\n"
+"2nd\n"
+"3rd\n"
+"4th\n"
+"5th\n"
+"6th\n"
+"7th";
+
+const char *ysw_degree_cardinal[] = {
+    "1st",
+    "2nd",
+    "3rd",
+    "4th",
+    "5th",
+    "6th",
+    "7th",
+};
 
 const uint8_t ysw_degree_intervals[7][7] = {
     /* C */ { 0, 2, 4, 5, 7, 9, 11 },
@@ -75,6 +94,36 @@ void ysw_degree_normalize(int8_t degree_number, uint8_t *normalized_degree_numbe
             *normalized_degree_number = (degree_index % YSW_MIDI_UNPO) + 1;
         }
     }
+}
+
+int8_t ysw_degree_denormalize(uint8_t normalized_degree_number, int8_t octave)
+{
+    uint8_t normalized_degree_index = normalized_degree_number - 1;
+    int8_t new_degree_index = (octave * YSW_MIDI_UNPO) + normalized_degree_index;
+    int8_t new_degree_number = new_degree_index + 1;
+    ESP_LOGD(TAG, "input degree=%d, octave=%d, output degree=%d", normalized_degree_number, octave, new_degree_number);
+    return new_degree_number;
+}
+
+int8_t ysw_degree_set_octave(int8_t degree_number, int8_t relative_octave)
+{
+    uint8_t normalized_degree = 0;
+    int8_t normalized_octave = 0;
+    ysw_degree_normalize(degree_number, &normalized_degree, &normalized_octave);
+
+    int8_t correction = 0;
+
+    if (relative_octave < 0) {
+        correction = 1;
+    } else if (relative_octave == 0) {
+        correction = 0;
+    } else {
+        correction = -1;
+    }
+
+    int8_t octave_notes = relative_octave * (YSW_MIDI_UNPO + 1);
+    uint8_t new_degree_number = octave_notes + normalized_degree + correction;
+    return new_degree_number;
 }
 
 /**
@@ -122,7 +171,7 @@ uint8_t ysw_degree_to_note(uint8_t scale_tonic, uint8_t root_number, int8_t degr
 const char* ysw_degree_get_name(uint8_t degree)
 {
     uint8_t degree_index = to_index(degree);
-    assert(degree_index < YSW_DEGREE_NAMES_SZ);
-    return ysw_degree_names[degree_index];
+    assert(degree_index < YSW_DEGREE_SZ);
+    return ysw_degree_roman[degree_index];
 }
 

@@ -13,29 +13,82 @@
 #include "ysw_cs.h"
 #include "ysw_ticks.h"
 #include "ysw_style.h"
-
-#include "stdio.h"
-#include "esp_log.h"
 #include "lvgl.h"
+#include "esp_log.h"
+#include "assert.h"
+#include "limits.h"
+#include "stdio.h"
+#include "stdlib.h"
 
 #define TAG "YSW_SDB"
 
 // Key to SDB context management:
 // We stash the context in the sdb
-// We stash the sdb in the body's page's scrollable user data
+// We stash the sdb in the body's page's lv_obj
 // We stash the callback in each widget's user data
 // We fetch the context via the sdb using the parent relationship
+// There can be an arbitrary number of lv_obj's between the page and the widget
 
 static const ysw_ui_btn_def_t header_buttons[] = {
     { LV_SYMBOL_CLOSE, ysw_sdb_on_close },
     { NULL, NULL },
 };
 
+typedef void (*ysw_number_ta_cb)(void *context, int32_t *min_value, int32_t *max_value, uint32_t *step);
+
+typedef struct {
+    lv_textarea_ext_t ta;
+    ysw_number_ta_cb cb;
+} ysw_number_ta_ext_t;
+
 static ysw_sdb_t* get_sdb(lv_obj_t *field)
 {
-    lv_obj_t *scrl = lv_obj_get_parent(field);
-    ysw_sdb_t *sdb = lv_obj_get_user_data(scrl);
+    ysw_sdb_t *sdb = NULL;
+    lv_obj_t *parent = lv_obj_get_parent(field);
+    while (parent && !sdb) {
+        sdb = lv_obj_get_user_data(parent);
+        parent = lv_obj_get_parent(parent);
+    }
+    assert(sdb);
     return sdb;
+}
+
+static lv_obj_t* get_oldest_child_in_lineage(lv_obj_t *oldest, lv_obj_t *youngest)
+{
+    lv_obj_t *oldest_child = youngest;
+    lv_obj_t *parent = lv_obj_get_parent(youngest);
+    while (parent && parent != oldest) {
+        oldest_child = parent;
+        parent = lv_obj_get_parent(parent);
+    }
+    assert(oldest_child);
+    return oldest_child;
+}
+
+static void update_number_ta(lv_obj_t *number_ta, bool increment)
+{
+    ysw_number_ta_ext_t *ext = lv_obj_get_ext_attr(number_ta);
+    int32_t min_value = INT_MIN;
+    int32_t max_value = INT_MAX;
+    uint32_t step = 1;
+    if (ext->cb) {
+        ysw_sdb_t *sdb = get_sdb(number_ta);
+        ext->cb(sdb->controller.context, &min_value, &max_value, &step);
+    }
+    const char *text = lv_textarea_get_text(number_ta);
+    int number = atoi(text);
+    if (increment) {
+        number += step;
+    } else {
+        number -= step;
+    }
+    if (number < min_value) {
+        number = min_value;
+    }
+    if (number > max_value) {
+        number = max_value;
+    }
+    ysw_sdb_set_number(number_ta, number);
 }
 
 static void on_kb_event(lv_obj_t *keyboard, lv_event_t event)
@@ -46,6 +99,7 @@ static void on_kb_event(lv_obj_t *keyboard, lv_event_t event)
         lv_obj_t *ta = lv_keyboard_get_textarea(keyboard);
         if (ta) {
             //v7.1: lv_textarea_set_cursor_type(ta, LV_CURSOR_LINE|LV_CURSOR_HIDDEN);
+            lv_textarea_set_cursor_hidden(ta, true);
             ysw_sdb_t *sdb = get_sdb(ta);
             lv_obj_del(sdb->controller.kb);
             sdb->controller.kb = NULL;
@@ -53,34 +107,73 @@ static void on_kb_event(lv_obj_t *keyboard, lv_event_t event)
     }
 }
 
-static void on_ta_event(lv_obj_t *ta, lv_event_t event)
+static void manage_keyboard(lv_obj_t *ta, lv_keyboard_mode_t mode, lv_coord_t width)
+{
+    ysw_sdb_t *sdb = get_sdb(ta);
+    lv_obj_t *container = lv_page_get_scrl(sdb->frame.body.page);
+    lv_cont_set_layout(container, LV_LAYOUT_OFF);
+    if (!sdb->controller.kb) {
+        sdb->controller.kb = lv_keyboard_create(sdb->frame.body.page, NULL);
+        lv_obj_set_size(sdb->controller.kb, width, 100);
+        ysw_style_adjust_keyboard(sdb->controller.kb);
+        lv_obj_set_event_cb(sdb->controller.kb, on_kb_event);
+        lv_keyboard_set_cursor_manage(sdb->controller.kb, true);
+        lv_keyboard_set_mode(sdb->controller.kb, mode);
+    }
+    if (lv_keyboard_get_textarea(sdb->controller.kb) == ta) {
+        // click again in same field - hide the kb
+        //v7.1: lv_textarea_set_cursor_type(ta, LV_CURSOR_LINE|LV_CURSOR_HIDDEN);
+        lv_textarea_set_cursor_hidden(ta, true);
+        lv_obj_del(sdb->controller.kb);
+        sdb->controller.kb = NULL;
+    } else {
+        lv_keyboard_set_textarea(sdb->controller.kb, ta);
+        lv_obj_t *ta_child = get_oldest_child_in_lineage(container, ta);
+        _lv_ll_move_before(&container->child_ll, sdb->controller.kb, ta_child);
+    }
+    lv_cont_set_layout(container, LV_LAYOUT_COLUMN_LEFT);
+}
+
+static void on_text_ta_event(lv_obj_t *ta, lv_event_t event)
 {
     if (event == LV_EVENT_CLICKED) {
-        ysw_sdb_t *sdb = get_sdb(ta);
-        lv_obj_t *container = lv_page_get_scrl(sdb->frame.body.page);
-        lv_cont_set_layout(container, LV_LAYOUT_OFF);
-        if (!sdb->controller.kb) {
-            sdb->controller.kb = lv_keyboard_create(sdb->frame.body.page, NULL);
-            lv_obj_set_size(sdb->controller.kb, 280, 100);
-            ysw_style_adjust_keyboard(sdb->controller.kb);
-            lv_obj_set_event_cb(sdb->controller.kb, on_kb_event);
-            lv_keyboard_set_cursor_manage(sdb->controller.kb, true);
-        }
-        if (lv_keyboard_get_textarea(sdb->controller.kb) == ta) {
-            // click again in same field - hide the kb
-            //v7.1: lv_textarea_set_cursor_type(ta, LV_CURSOR_LINE|LV_CURSOR_HIDDEN);
-            lv_obj_del(sdb->controller.kb);
-            sdb->controller.kb = NULL;
-        } else {
-            lv_keyboard_set_textarea(sdb->controller.kb, ta);
-            _lv_ll_move_before(&container->child_ll, sdb->controller.kb, ta);
-        }
-        lv_cont_set_layout(container, LV_LAYOUT_COLUMN_LEFT);
+        manage_keyboard(ta, LV_KEYBOARD_MODE_TEXT_LOWER, 268);
     }
     if (event == LV_EVENT_VALUE_CHANGED) {
         const char *new_value = lv_textarea_get_text(ta);
         ysw_sdb_string_cb_t cb = lv_obj_get_user_data(ta);
         if (cb) {
+            cb(get_sdb(ta)->controller.context, new_value);
+        }
+    }
+}
+
+static void on_number_ta_minus(lv_obj_t *btn, lv_event_t e)
+{
+    if (e == LV_EVENT_SHORT_CLICKED || e == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_obj_t *number_ta = lv_obj_get_user_data(btn);
+        update_number_ta(number_ta, false);
+    }
+}
+
+static void on_number_ta_plus(lv_obj_t *btn, lv_event_t e)
+{
+    if (e == LV_EVENT_SHORT_CLICKED || e == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_obj_t *number_ta = lv_obj_get_user_data(btn);
+        update_number_ta(number_ta, true);
+    }
+}
+
+static void on_number_ta_event(lv_obj_t *ta, lv_event_t event)
+{
+    if (event == LV_EVENT_CLICKED) {
+        manage_keyboard(ta, LV_KEYBOARD_MODE_NUM, 140);
+    }
+    if (event == LV_EVENT_VALUE_CHANGED) {
+        const char *text_value = lv_textarea_get_text(ta);
+        ysw_sdb_number_cb_t cb = lv_obj_get_user_data(ta);
+        if (cb) {
+            int32_t new_value = atoi(text_value);
             cb(get_sdb(ta)->controller.context, new_value);
         }
     }
@@ -160,8 +253,9 @@ ysw_sdb_t* ysw_sdb_create(const char *title, const ysw_ui_btn_def_t buttons[], b
     sdb->controller.context = context;
     ysw_ui_init_buttons(sdb->frame.header.buttons, buttons, sdb_button_context ? sdb : context);
     ysw_ui_create_frame(&sdb->frame);
+    ysw_style_adjust_sdb_container(sdb->frame.body.page);
     ysw_ui_set_header_text(&sdb->frame.header, title);
-    lv_obj_set_user_data(lv_page_get_scrl(sdb->frame.body.page), sdb);
+    lv_obj_set_user_data(sdb->frame.body.page, sdb);
     lv_page_set_scrl_layout(sdb->frame.body.page, LV_LAYOUT_COLUMN_LEFT);
     return sdb;
 }
@@ -192,13 +286,59 @@ lv_obj_t* ysw_sdb_add_string(ysw_sdb_t *sdb, const char *name, const char *value
     create_field_name(sdb, name);
 
     lv_obj_t *ta = lv_textarea_create(sdb->frame.body.page, NULL);
+    lv_textarea_set_cursor_hidden(ta, true);
     lv_obj_set_width(ta, lv_page_get_width_fit(sdb->frame.body.page));
     ysw_style_adjust_obj(ta);
     lv_obj_set_user_data(ta, cb);
     lv_textarea_set_one_line(ta, true);
     lv_textarea_set_text(ta, value);
-    lv_obj_set_event_cb(ta, on_ta_event);
+    lv_obj_set_event_cb(ta, on_text_ta_event);
     return ta;
+}
+
+lv_obj_t* ysw_sdb_add_number(ysw_sdb_t *sdb, const char *name, int32_t value, void *number_ta_cb, void *cb)
+{
+    create_field_name(sdb, name);
+
+    lv_obj_t *container = lv_obj_create(sdb->frame.body.page, NULL);
+
+    lv_obj_t *number_ta = lv_textarea_create(container, NULL);
+    lv_obj_t *minus = lv_btn_create(container, NULL);
+    lv_obj_t *plus = lv_btn_create(container, NULL);
+
+    lv_textarea_set_one_line(number_ta, true);
+    lv_textarea_set_cursor_hidden(number_ta, true);
+    ysw_sdb_set_number(number_ta, value);
+    lv_obj_set_user_data(number_ta, cb);
+    lv_obj_set_event_cb(number_ta, on_number_ta_event);
+    ysw_number_ta_ext_t *ext = lv_obj_allocate_ext_attr(number_ta, sizeof(ysw_number_ta_ext_t));
+    ext->cb = number_ta_cb;
+
+    lv_coord_t h = lv_obj_get_height(number_ta);
+    lv_obj_set_size(container, lv_page_get_width_fit(sdb->frame.body.page), h);
+    lv_obj_set_size(minus, h, h);
+    lv_obj_set_size(plus, h, h);
+    ysw_ui_distribute_extra_width(container, number_ta);
+
+    lv_obj_set_style_local_value_str(minus, LV_BTN_PART_MAIN, LV_STATE_DEFAULT, LV_SYMBOL_MINUS);
+    lv_obj_set_style_local_value_str(plus, LV_BTN_PART_MAIN, LV_STATE_DEFAULT, LV_SYMBOL_PLUS);
+
+    ysw_style_adjust_obj(container);
+    ysw_style_adjust_obj(number_ta);
+    ysw_style_adjust_obj(plus);
+    ysw_style_adjust_obj(minus);
+
+    lv_obj_align(number_ta, container, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_obj_align(minus, number_ta, LV_ALIGN_OUT_RIGHT_MID, 10, 0);
+    lv_obj_align(plus, minus, LV_ALIGN_OUT_RIGHT_MID, 10, 0);
+
+    lv_obj_set_user_data(minus, number_ta);
+    lv_obj_set_user_data(plus, number_ta);
+
+    lv_obj_set_event_cb(minus, on_number_ta_minus);
+    lv_obj_set_event_cb(plus, on_number_ta_plus);
+
+    return number_ta;
 }
 
 lv_obj_t* ysw_sdb_add_choice(ysw_sdb_t *sdb, const char *name, uint16_t value, const char *options, void *cb)
@@ -272,3 +412,12 @@ lv_obj_t* ysw_sdb_add_button_bar(ysw_sdb_t *sdb, const char *name, const char *m
     lv_obj_set_event_cb(bar, on_bar_event);
     return bar;
 }
+
+void ysw_sdb_set_number(lv_obj_t *number_ta, int number)
+{
+    char number_as_text[32];
+    ysw_itoa(number, number_as_text, sizeof(number_as_text));
+    lv_textarea_set_text(number_ta, number_as_text);
+}
+
+

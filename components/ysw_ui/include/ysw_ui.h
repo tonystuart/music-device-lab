@@ -64,7 +64,9 @@ typedef struct {
     ysw_ui_footer_t footer;
 } ysw_ui_frame_t;
 
+lv_coord_t ysw_ui_get_extra_width(lv_obj_t *parent);
 void ysw_ui_distribute_extra_width(lv_obj_t *parent, lv_obj_t *obj);
+lv_coord_t ysw_ui_get_extra_height(lv_obj_t *parent);
 void ysw_ui_distribute_extra_height(lv_obj_t *parent, lv_obj_t *obj);
 void ysw_ui_get_obj_type(lv_obj_t *obj, char *buffer, uint32_t size);
 int32_t ysw_ui_get_index_of_child(lv_obj_t *obj);

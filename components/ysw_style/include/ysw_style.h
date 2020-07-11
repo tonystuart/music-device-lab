@@ -50,6 +50,7 @@ void ysw_style_clear_border(lv_obj_t *obj);
 lv_color_t ysw_style_get_child_background(lv_obj_t *obj);
 lv_color_t ysw_style_lighten_background(lv_obj_t *obj);
 lv_color_t ysw_style_adjust_obj(lv_obj_t *obj);
+void ysw_style_adjust_sdb_container(lv_obj_t *container);
 void ysw_style_adjust_field_name(lv_obj_t *label);
 void ysw_style_adjust_keyboard(lv_obj_t *kb);
 void ysw_style_adjust_ddlist(lv_obj_t *ddlist);

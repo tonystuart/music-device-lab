@@ -95,7 +95,7 @@ void ysw_ps_free(ysw_ps_t *ps)
 int ysw_hp_add_cs(ysw_hp_t *hp, uint8_t degree, ysw_cs_t *cs, uint8_t flags)
 {
     assert(hp);
-    assert(degree < YSW_MIDI_MAX);
+    assert(degree <= YSW_MIDI_MAX);
     assert(cs);
     ysw_ps_t *ps = ysw_ps_create(cs, degree, flags);
     int index = ysw_hp_add_ps(hp, ps);
@@ -105,7 +105,7 @@ int ysw_hp_add_cs(ysw_hp_t *hp, uint8_t degree, ysw_cs_t *cs, uint8_t flags)
 void ysw_hp_set_instrument(ysw_hp_t *hp, uint8_t instrument)
 {
     assert(hp);
-    assert(instrument < YSW_MIDI_MAX);
+    assert(instrument <= YSW_MIDI_MAX);
     hp->instrument = instrument;
 }
 

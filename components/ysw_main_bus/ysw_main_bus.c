@@ -21,7 +21,7 @@ uint32_t ysw_main_bus_subscribe(void *cb, void *context)
     return ysw_bus_subscribe(ysw_main_bus, cb, context);
 }
 
-uint32_t ysw_main_bus_publish(ysw_msg_t msg, void *details)
+uint32_t ysw_main_bus_publish(ysw_bus_evt_t msg, void *details)
 {
     return ysw_bus_publish(ysw_main_bus, msg, details);
 }

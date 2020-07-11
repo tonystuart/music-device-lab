@@ -15,6 +15,7 @@
 #include "ysw_hpe.h"
 #include "ysw_main_bus.h"
 #include "ysw_main_seq.h"
+#include "ysw_value.h"
 #include "lvgl/lvgl.h"
 #include "esp_log.h"
 #include "assert.h"
@@ -25,16 +26,12 @@
 #define EDIT "Edit/Select"
 #define CREATE "Create/Select"
 
-typedef union {
-    bool b;
-    int16_t ss;
-    uint16_t us;
-    int32_t si;
-    uint32_t ui;
-    void *p;
-} value_t;
+typedef void (*step_visitor_cb)(ysw_ps_t *ps, ysw_value_t value);
 
-typedef void (*step_visitor_cb)(ysw_ps_t *ps, value_t value);
+typedef enum {
+    FORWARD,
+    BACKWARD,
+} move_direction_t;
 
 // NB: returned value is allocated on ysw_heap. Caller must free it.
 
@@ -68,7 +65,59 @@ static char* get_chord_styles(ysw_ssc_t *ssc, uint32_t *cs_index)
     return chord_styles;
 }
 
-static void visit_steps(ysw_ssc_model_t *model, step_visitor_cb cb, value_t value)
+static void get_step_number_text(ysw_hp_t *hp, uint32_t ps_index, char *text, uint32_t size)
+{
+    uint32_t ps_count = ysw_hp_get_ps_count(hp);
+    snprintf(text, size, "Step %d of %d", ps_index + 1, ps_count);
+}
+
+static void update_settings(ysw_ssc_t *ssc, uint32_t ps_index)
+{
+    char text[64];
+    get_step_number_text(ssc->model.hp, ps_index, text, sizeof(text));
+    ysw_ui_set_header_text(&ssc->view.sdb->frame.header, text);
+    ssc->model.ps = ysw_hp_get_ps(ssc->model.hp, ps_index);
+    lv_checkbox_set_checked(ssc->view.som, ysw_ps_is_new_measure(ssc->model.ps));
+    lv_dropdown_set_selected(ssc->view.degree, ysw_degree_to_index(ssc->model.ps->degree));
+    lv_dropdown_set_selected(ssc->view.styles, ysw_music_get_cs_index(ssc->model.music, ssc->model.ps->cs));
+    lv_obj_invalidate(ssc->view.degree);
+    lv_obj_invalidate(ssc->view.styles);
+}
+
+static void move(ysw_ssc_t *ssc, move_direction_t direction)
+{
+    uint32_t ps_count = ysw_hp_get_ps_count(ssc->model.hp);
+    if (ps_count >= 2) { // can only move if at least two items
+        int32_t new_ps_index = -1;
+        uint32_t ps_index = ysw_hp_get_ps_index(ssc->model.hp, ssc->model.ps);
+        if (ysw_hpe_gs.multiple_selection) {
+            if (direction == FORWARD) {
+                new_ps_index = ysw_hp_find_next_selected_ps(ssc->model.hp, ps_index, true);
+            } else {
+                new_ps_index = ysw_hp_find_previous_selected_ps(ssc->model.hp, ps_index, true);
+            }
+        } // not else
+        if (new_ps_index == -1) { // single selection, or only one item selected
+            if (direction == FORWARD) {
+                new_ps_index = ps_index + 1;
+                if (new_ps_index >= ps_count) {
+                    new_ps_index = 0;
+                }
+            } else {
+                new_ps_index = ps_index - 1;
+                if (new_ps_index < 0) {
+                    new_ps_index = ps_count - 1;
+                }
+            }
+            ysw_ps_select(ssc->model.ps, false);
+            ysw_ps_select(ysw_hp_get_ps(ssc->model.hp, new_ps_index), true);
+            ysw_main_bus_publish(YSW_BUS_EVT_SEL_STEP, (void*)new_ps_index);
+        }
+        update_settings(ssc, new_ps_index);
+    }
+}
+
+static void visit_steps(ysw_ssc_model_t *model, step_visitor_cb cb, ysw_value_t value)
 {
     if (model->apply_all || ysw_hpe_gs.multiple_selection) {
         uint32_t ps_count = ysw_hp_get_ps_count(model->hp);
@@ -83,37 +132,37 @@ static void visit_steps(ysw_ssc_model_t *model, step_visitor_cb cb, value_t valu
     }
 }
 
-static void new_measure_visitor(ysw_ps_t *ps, value_t value)
+static void new_measure_visitor(ysw_ps_t *ps, ysw_value_t value)
 {
     ysw_ps_set_new_measure(ps, value.b);
 }
 
 static void on_new_measure(ysw_ssc_t *ssc, bool new_measure)
 {
-    visit_steps(&ssc->model, new_measure_visitor, (value_t ) { .b = new_measure });
+    visit_steps(&ssc->model, new_measure_visitor, (ysw_value_t ) { .b = new_measure });
 }
 
-static void degree_visitor(ysw_ps_t *ps, value_t value)
+static void degree_visitor(ysw_ps_t *ps, ysw_value_t value)
 {
     ps->degree = value.us;
 }
 
 static void on_degree(ysw_ssc_t *ssc, uint16_t new_index)
 {
-    value_t value = {
+    ysw_value_t value = {
         .us = ysw_degree_from_index(new_index),
     };
     visit_steps(&ssc->model, degree_visitor, value);
 }
 
-static void chord_style_visitor(ysw_ps_t *ps, value_t value)
+static void chord_style_visitor(ysw_ps_t *ps, ysw_value_t value)
 {
     ps->cs = value.p;
 }
 
 static void on_chord_style(ysw_ssc_t *ssc, uint16_t new_index)
 {
-    value_t value = {
+    ysw_value_t value = {
         .p = ysw_music_get_cs(ssc->model.music, new_index),
     };
     visit_steps(&ssc->model, chord_style_visitor, value);
@@ -128,7 +177,7 @@ static void on_csc_close(ysw_ssc_model_t *model, uint32_t cs_index)
 {
     uint32_t cs_count = ysw_music_get_cs_count(model->music);
     if (cs_index < cs_count) {
-        value_t value = {
+        ysw_value_t value = {
             .p = ysw_music_get_cs(model->music, cs_index),
         };
         visit_steps(model, chord_style_visitor, value);
@@ -167,63 +216,6 @@ static void on_chord_style_action(ysw_ssc_t *ssc, const char *button)
         on_edit_style(ssc);
     } else if (strcmp(button, CREATE) == 0) {
         on_create_style(ssc);
-    }
-}
-
-static void get_step_number_text(ysw_hp_t *hp, uint32_t ps_index, char *text, uint32_t size)
-{
-    uint32_t ps_count = ysw_hp_get_ps_count(hp);
-    snprintf(text, size, "Step %d of %d", ps_index + 1, ps_count);
-}
-
-static void update_settings(ysw_ssc_t *ssc, uint32_t ps_index)
-{
-    char text[64];
-    get_step_number_text(ssc->model.hp, ps_index, text, sizeof(text));
-    ysw_ui_set_header_text(&ssc->view.sdb->frame.header, text);
-    ssc->model.ps = ysw_hp_get_ps(ssc->model.hp, ps_index);
-    lv_checkbox_set_checked(ssc->view.som, ysw_ps_is_new_measure(ssc->model.ps));
-    lv_dropdown_set_selected(ssc->view.degree, ysw_degree_to_index(ssc->model.ps->degree));
-    lv_dropdown_set_selected(ssc->view.styles, ysw_music_get_cs_index(ssc->model.music, ssc->model.ps->cs));
-    lv_obj_invalidate(ssc->view.degree);
-    lv_obj_invalidate(ssc->view.styles);
-}
-
-typedef enum {
-    FORWARD,
-    BACKWARD,
-} move_direction_t;
-
-static void move(ysw_ssc_t *ssc, move_direction_t direction)
-{
-    uint32_t ps_count = ysw_hp_get_ps_count(ssc->model.hp);
-    if (ps_count >= 2) { // can only move if at least two items
-        int32_t new_ps_index = -1;
-        uint32_t ps_index = ysw_hp_get_ps_index(ssc->model.hp, ssc->model.ps);
-        if (ysw_hpe_gs.multiple_selection) {
-            if (direction == FORWARD) {
-                new_ps_index = ysw_hp_find_next_selected_ps(ssc->model.hp, ps_index, true);
-            } else {
-                new_ps_index = ysw_hp_find_previous_selected_ps(ssc->model.hp, ps_index, true);
-            }
-        } // not else
-        if (new_ps_index == -1) { // single selection, or only one item selected
-            if (direction == FORWARD) {
-                new_ps_index = ps_index + 1;
-                if (new_ps_index >= ps_count) {
-                    new_ps_index = 0;
-                }
-            } else {
-                new_ps_index = ps_index - 1;
-                if (new_ps_index < 0) {
-                    new_ps_index = ps_count - 1;
-                }
-            }
-            ysw_ps_select(ssc->model.ps, false);
-            ysw_ps_select(ysw_hp_get_ps(ssc->model.hp, new_ps_index), true);
-            ysw_main_bus_publish(YSW_MSG_SEL_STEP, new_ps_index);
-        }
-        update_settings(ssc, new_ps_index);
     }
 }
 
@@ -286,9 +278,9 @@ void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index, bool ap
     get_step_number_text(hp, ps_index, text, sizeof(text));
 
     ssc->view.sdb = ysw_sdb_create_custom(text, header_buttons, ssc);
-    ssc->view.som = ysw_sdb_add_checkbox(ssc->view.sdb, NULL, " Apply changes to all Steps", ssc->model.apply_all, on_apply_all);
+    ysw_sdb_add_checkbox(ssc->view.sdb, NULL, " Apply changes to all Steps", ssc->model.apply_all, on_apply_all);
     ssc->view.som = ysw_sdb_add_checkbox(ssc->view.sdb, NULL, " Start new Measure on this Step", ysw_ps_is_new_measure(ssc->model.ps), on_new_measure);
-    ssc->view.degree = ysw_sdb_add_choice(ssc->view.sdb, "Step Degree:", ysw_degree_to_index(ssc->model.ps->degree), ysw_degree, on_degree);
+    ssc->view.degree = ysw_sdb_add_choice(ssc->view.sdb, "Step Degree:", ysw_degree_to_index(ssc->model.ps->degree), ysw_degree_roman_choices, on_degree);
     ssc->view.styles = ysw_sdb_add_choice(ssc->view.sdb, "Chord Style:", cs_index, chord_styles, on_chord_style);
     ysw_sdb_add_button_bar(ssc->view.sdb, "Chord Style Actions:", map, on_chord_style_action);
 

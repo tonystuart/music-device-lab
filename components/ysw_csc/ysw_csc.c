@@ -21,6 +21,7 @@
 #include "ysw_mode.h"
 #include "ysw_music.h"
 #include "ysw_name.h"
+#include "ysw_nsc.h"
 #include "ysw_octaves.h"
 #include "ysw_sdb.h"
 #include "ysw_seq.h"
@@ -455,9 +456,19 @@ static void on_trash(ysw_csc_t *csc, lv_obj_t *btn)
     }
 }
 
-static void on_edit(ysw_csc_t *csc, ysw_sn_t *sn)
+static void on_edit(ysw_csc_t *csc, lv_obj_t *btn)
 {
-    ESP_LOGD(TAG, "on_edit_sn stub");
+    ysw_sn_t *sn = get_selected_note(csc);
+    if (sn) {
+        if (!ysw_cse_gs.multiple_selection) {
+            deselect_all(csc);
+        }
+        ysw_sn_select(sn, true);
+        ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
+        ysw_nsc_create(csc->controller.music, cs, csc->controller.sn_index, false);
+    } else {
+        ysw_mb_nothing_selected();
+    }
 }
 
 static void on_create_note(ysw_csc_t *csc, uint32_t start, int8_t degree)
@@ -526,6 +537,8 @@ ysw_csc_t* ysw_csc_create(ysw_music_t *music, uint32_t cs_index, ysw_csc_type_t 
     csc->controller.music = music;
     csc->controller.cs_index = cs_index;
     csc->controller.sn_index = 0;
+
+    deselect_all(csc);
 
     ysw_ui_init_buttons(csc->frame.header.buttons, header_buttons, csc);
     ysw_ui_init_buttons(csc->frame.footer.buttons, footer_buttons, csc);

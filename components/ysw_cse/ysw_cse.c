@@ -12,6 +12,7 @@
 #include "ysw_cse.h"
 
 #include "ysw_cs.h"
+#include "ysw_degree.h"
 #include "ysw_sn.h"
 #include "ysw_style.h"
 #include "ysw_ticks.h"
@@ -28,7 +29,6 @@
 #define TAG "YSW_CSE"
 #define LV_OBJX_NAME "ysw_cse"
 #define MINIMUM_DRAG 5
-#define MINIMUM_DURATION 10
 #define ROW_COUNT YSW_MIDI_UNPO
 
 ysw_cse_gs_t ysw_cse_gs = {
@@ -46,16 +46,6 @@ typedef struct {
 
 static lv_design_cb_t base_design_cb;
 static lv_signal_cb_t base_signal_cb;
-
-static const char *degrees[] = {
-    "1st",
-    "2nd",
-    "3rd",
-    "4th",
-    "5th",
-    "6th",
-    "7th",
-};
 
 static const char *accidentals[] = {
     "b",
@@ -108,16 +98,15 @@ static void get_sn_info(lv_obj_t *cse, ysw_sn_t *sn, lv_area_t *ret_area, uint8_
     }
 }
 
-static void get_style_note_label(char *label, uint32_t size, ysw_sn_t *sn, int8_t octave)
+static void get_style_note_label(char *label, uint32_t size, ysw_accidental_t accidental, uint8_t normalized_degree, int8_t octave)
 {
-    ysw_accidental_t accidental = ysw_sn_get_accidental(sn);
-    const char *modifier = accidentals[accidental + 1]; // +1 because accidentals are -1 based
-    const char *degree = degrees[sn->degree - 1]; // -1 because degrees are 1 based
+    const char *modifier_text = accidentals[accidental + 1]; // +1 because accidentals are -1 based
+    const char *degree_text = ysw_degree_cardinal[normalized_degree - 1]; // -1 because degrees are 1 based
 
     if (octave) {
-        snprintf(label, size, "%s%s%+d", modifier, degree, octave);
+        snprintf(label, size, "%s%s%+d", modifier_text, degree_text, octave);
     } else {
-        snprintf(label, size, "%s%s", modifier, degree);
+        snprintf(label, size, "%s%s", modifier_text, degree_text);
     }
 }
 
@@ -184,16 +173,18 @@ static void draw_sn(lv_obj_t *cse, const lv_area_t *mask)
 
         ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
 
+        uint8_t degree = 0;
         int8_t octave = 0;
         lv_area_t sn_area = { };
-        get_sn_info(cse, sn, &sn_area, NULL, &octave);
+        get_sn_info(cse, sn, &sn_area, &degree, &octave);
+        ysw_accidental_t accidental = ysw_sn_get_accidental(sn);
 
         lv_area_t sn_mask;
 
         if (_lv_area_intersect(&sn_mask, mask, &sn_area)) {
 
             char buffer[32];
-            get_style_note_label(buffer, sizeof(buffer), sn, octave);
+            get_style_note_label(buffer, sizeof(buffer), accidental, degree, octave);
             if (ysw_sn_is_selected(sn)) {
                 if (ext->dragging) {
                     lv_draw_rect(&sn_area, &sn_mask, &drag_sn_rect_dsc);
@@ -355,16 +346,16 @@ static void drag_horizontally(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_
             new_start = old_start - ticks;
         } else {
             new_duration = old_duration - ticks;
-            if (new_duration < MINIMUM_DURATION) {
-                new_duration = MINIMUM_DURATION;
+            if (new_duration < YSW_CSN_MIN_DURATION) {
+                new_duration = YSW_CSN_MIN_DURATION;
             }
             new_start = old_start + ticks;
         }
     } else if (ext->click_type == YSW_BOUNDS_RIGHT) {
         if (left_drag) {
             new_duration = old_duration - ticks;
-            if (new_duration < MINIMUM_DURATION) {
-                new_duration = MINIMUM_DURATION;
+            if (new_duration < YSW_CSN_MIN_DURATION) {
+                new_duration = YSW_CSN_MIN_DURATION;
                 new_start = old_start - (ticks - old_duration) - new_duration;
             }
         } else {

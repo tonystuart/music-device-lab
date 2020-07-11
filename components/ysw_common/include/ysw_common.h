@@ -43,6 +43,11 @@ static inline int max(int x, int y)
     return x > y ? x : y;
 }
 
+static inline int range(int x, int first, int last)
+{
+    return x < first ? first : x > last ? last : x;
+}
+
 static inline int to_count(int index)
 {
     return index + 1;

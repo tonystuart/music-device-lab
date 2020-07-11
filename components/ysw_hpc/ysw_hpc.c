@@ -533,11 +533,11 @@ static void create_progression_editor(ysw_hpc_t *hpc)
     ysw_hpe_set_drag_end_cb(hpc->controller.hpe, on_drag_end);
 }
 
-static void on_bus_msg(ysw_hpc_t *hpc, uint32_t msg, void *details, char *sender)
+static void on_bus_evt(ysw_hpc_t *hpc, uint32_t evt, void *details, char *sender)
 {
-    switch (msg) {
-        case YSW_MSG_SEL_STEP:
-            hpc->controller.ps_index = (uint32_t)details;
+    switch (evt) {
+        case YSW_BUS_EVT_SEL_STEP:
+            hpc->controller.ps_index = (uint32_t)(uintptr_t)details;
             break;
 
     }
@@ -551,7 +551,9 @@ ysw_hpc_t* ysw_hpc_create(ysw_music_t *music, uint32_t hp_index)
     hpc->controller.hp_index = hp_index;
     hpc->controller.ps_index = 0;
 
-    ysw_main_bus_subscribe(on_bus_msg, hpc);
+    deselect_all(hpc);
+
+    ysw_main_bus_subscribe(on_bus_evt, hpc);
 
     ysw_ui_init_buttons(hpc->frame.header.buttons, header_buttons, hpc);
     ysw_ui_init_buttons(hpc->frame.footer.buttons, footer_buttons, hpc);
