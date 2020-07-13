@@ -15,16 +15,16 @@
 
 #define TAG "YSW_CS"
 
-ysw_sn_t *ysw_sn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags)
+ysw_sn_t *ysw_sn_create(ysw_quatone_t quatone, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags)
 {
     ysw_sn_t *sn = ysw_heap_allocate(sizeof(ysw_sn_t));
     sn->start = start;
     sn->duration = duration;
-    sn->quatone = degree;
+    sn->quatone = quatone;
     sn->velocity = velocity;
     sn->flags = flags;
     sn->state = 0;
-    //ESP_LOGD(TAG, "create sn=%p, degree=%u, velocity=%u, start=%u, duration=%u, flags=%#x", sn, sn->degree, sn->velocity, sn->start, sn->duration, sn->flags);
+    //ESP_LOGD(TAG, "create sn=%p, quatone=%u, velocity=%u, start=%u, duration=%u, flags=%#x", sn, sn->quatone, sn->velocity, sn->start, sn->duration, sn->flags);
     return sn;
 }
 
@@ -36,7 +36,7 @@ ysw_sn_t *ysw_sn_copy(ysw_sn_t *sn)
 void ysw_sn_free(ysw_sn_t *sn)
 {
     assert(sn);
-    //ESP_LOGD(TAG, "free sn=%p, degree=%u, velocity=%u, start=%u, duration=%u, flags=%#x", sn, sn->degree, sn->velocity, sn->start, sn->duration, sn->flags);
+    //ESP_LOGD(TAG, "free sn=%p, quatone=%u, velocity=%u, start=%u, duration=%u, flags=%#x", sn, sn->quatone, sn->velocity, sn->start, sn->duration, sn->flags);
     ysw_heap_free(sn);
 }
 
@@ -55,9 +55,7 @@ void ysw_sn_normalize(ysw_sn_t *sn)
         sn->start = YSW_CS_DURATION - sn->duration;
     }
 
-    if (sn->quatone < YSW_CSN_MIN_DEGREE) {
-        sn->quatone = YSW_CSN_MIN_DEGREE;
-    } else if (sn->quatone > YSW_QUATONE_MAX) {
+    if (sn->quatone > YSW_QUATONE_MAX) {
         sn->quatone = YSW_QUATONE_MAX;
     }
 

@@ -16,7 +16,7 @@
 #include "ysw_cs.h"
 #include "ysw_bounds.h"
 
-typedef void (*ysw_cse_create_cb_t)(void *context, uint32_t start, int8_t degree);
+typedef void (*ysw_cse_create_cb_t)(void *context, uint32_t start, ysw_quatone_t quatone);
 typedef void (*ysw_cse_edit_cb_t)(void *context, ysw_sn_t *sn);
 typedef void (*ysw_cse_select_cb_t)(void *context, ysw_sn_t *sn);
 typedef void (*ysw_cse_deselect_cb_t)(void *context, ysw_sn_t *sn);

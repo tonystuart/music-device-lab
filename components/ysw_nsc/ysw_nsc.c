@@ -112,9 +112,14 @@ static void new_velocity_visitor(ysw_sn_t *sn, ysw_value_t value)
     sn->velocity = range(value.ui, 0, YSW_MIDI_MAX);
 }
 
-static void quatone_visitor(ysw_sn_t *sn, ysw_value_t value)
+static void quatone_offset_visitor(ysw_sn_t *sn, ysw_value_t value)
 {
-    sn->quatone = value.us;
+    sn->quatone = ysw_quatone_set_offset(sn->quatone, value.us);
+}
+
+static void quatone_octave_visitor(ysw_sn_t *sn, ysw_value_t value)
+{
+    sn->quatone = ysw_quatone_set_octave(sn->quatone, ysw_quatone_octave_from_index(value.us));
 }
 
 static void on_new_start(ysw_nsc_t *nsc, int32_t new_start)
@@ -132,12 +137,20 @@ static void on_new_velocity(ysw_nsc_t *nsc, int32_t new_velocity)
     visit_notes(&nsc->model, new_velocity_visitor, (ysw_value_t ) { .ui = new_velocity });
 }
 
-static void on_new_quatone(ysw_nsc_t *nsc, uint16_t new_index)
+static void on_new_quatone_offset(ysw_nsc_t *nsc, uint16_t new_index)
 {
     ysw_value_t value = {
         .us = new_index,
     };
-    visit_notes(&nsc->model, quatone_visitor, value);
+    visit_notes(&nsc->model, quatone_offset_visitor, value);
+}
+
+static void on_new_quatone_octave(ysw_nsc_t *nsc, uint16_t new_index)
+{
+    ysw_value_t value = {
+        .us = new_index,
+    };
+    visit_notes(&nsc->model, quatone_octave_visitor, value);
 }
 
 static void on_apply_all(ysw_nsc_t *nsc, bool apply_all)
@@ -217,6 +230,9 @@ void ysw_nsc_create(ysw_music_t *music, ysw_cs_t *cs, uint32_t sn_index, bool ap
     nsc->model.sn = sn;
     nsc->model.apply_all = apply_all;
 
+    int8_t octave_index = ysw_quatone_octave_to_index(ysw_quatone_get_octave(sn->quatone));
+    uint8_t offset = ysw_quatone_get_offset(sn->quatone);
+
     char text[64];
     get_note_number_text(cs, sn_index, text, sizeof(text));
 
@@ -225,7 +241,8 @@ void ysw_nsc_create(ysw_music_t *music, ysw_cs_t *cs, uint32_t sn_index, bool ap
     nsc->view.start = ysw_sdb_add_number(nsc->view.sdb, "Note Start Time:", sn->start, on_start_number_ta_cb, on_new_start);
     nsc->view.duration = ysw_sdb_add_number(nsc->view.sdb, "Note Duration:", sn->duration, on_duration_number_ta_cb, on_new_duration);
     nsc->view.velocity = ysw_sdb_add_number(nsc->view.sdb, "Velocity (Loudness or Volume):", sn->velocity, on_velocity_number_ta_cb, on_new_velocity);
-    nsc->view.quatone = ysw_sdb_add_choice(nsc->view.sdb, "Note:", sn->quatone, ysw_quatone_choices, on_new_quatone);
+    nsc->view.quatone = ysw_sdb_add_choice(nsc->view.sdb, "Note (Whole Tones from Root):", offset, ysw_quatone_offset_choices, on_new_quatone_offset);
+    nsc->view.quatone = ysw_sdb_add_choice(nsc->view.sdb, "Relative Octave:", octave_index, ysw_quatone_octave_choices, on_new_quatone_octave);
 }
 
 void ysw_nsc_close(ysw_nsc_t *nsc)

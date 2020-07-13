@@ -58,9 +58,11 @@ static lv_design_res_t draw_main(lv_obj_t *csp, const lv_area_t *clip_area)
         uint32_t sn_count = ysw_cs_get_sn_count(ext->cs);
         for (uint32_t i = 0; i < sn_count; i++) {
             ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
+            uint8_t degree = ysw_quatone_get_offset(sn->quatone) / YSW_QUATONES_PER_DEGREE;
+            uint8_t row = YSW_MIDI_UNPO - degree;
             lv_coord_t sn_left = (pixels_per_tick * sn->start) + 1; // +1 for pad
             lv_coord_t sn_right = (pixels_per_tick * (sn->start + sn->duration)) - 1; // -1 for pad
-            lv_coord_t sn_top = (pixels_per_degree * (YSW_MIDI_UNPO - sn->quatone)) + 1; // +1 for pad
+            lv_coord_t sn_top = (pixels_per_degree * row) + 1; // +1 for pad
             lv_coord_t sn_bottom = sn_top + pixels_per_degree;
             lv_area_t sn_area = {
                     .x1 = csp->coords.x1 + pad_left + sn_left,

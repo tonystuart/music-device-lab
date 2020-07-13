@@ -30,7 +30,7 @@
 #define TAG "YSW_CSE"
 #define LV_OBJX_NAME "ysw_cse"
 #define MINIMUM_DRAG 5
-#define ROW_COUNT YSW_MIDI_UNPO
+#define ROW_COUNT YSW_QUATONES_PER_OCTAVE
 
 ysw_cse_gs_t ysw_cse_gs = {
     .auto_play_all = YSW_AUTO_PLAY_OFF,
@@ -63,14 +63,15 @@ static void get_sn_info(lv_obj_t *cse, ysw_sn_t *sn, lv_area_t *ret_area)
     get_metrics(cse, &m);
 
     uint8_t offset = ysw_quatone_get_offset(sn->quatone);
-    float row = (((float)YSW_QUATONES_PER_OCTAVE - offset) / 2) - 1;
+    int row = to_index(YSW_QUATONES_PER_OCTAVE) - offset;
 
-    lv_coord_t left = m.cse_left + (sn->start * m.cse_width) / YSW_CS_DURATION;
-    lv_coord_t right = m.cse_left + ((sn->start + sn->duration) * m.cse_width) / YSW_CS_DURATION;
-    lv_coord_t top = m.cse_top + ((row * m.cse_height) / ROW_COUNT);
-    lv_coord_t bottom = m.cse_top + (((row + 1) * m.cse_height) / ROW_COUNT);
+    int top_row = row - 1; // use two rows to display the note
+    int bottom_row = row + 1;
 
-    ESP_LOGD(TAG, "row=%g, top=%d, bottom=%d", row, top, bottom);
+    lv_coord_t left = m.cse_left + ysw_common_muldiv(sn->start, m.cse_width, YSW_CS_DURATION);
+    lv_coord_t right = m.cse_left + ysw_common_muldiv(sn->start + sn->duration, m.cse_width, YSW_CS_DURATION);
+    lv_coord_t top = m.cse_top + ysw_common_muldiv(top_row, m.cse_height, ROW_COUNT);
+    lv_coord_t bottom = m.cse_top + ysw_common_muldiv(bottom_row, m.cse_height, ROW_COUNT);
 
     lv_area_t area = {
         .x1 = left,
@@ -89,7 +90,7 @@ static void get_style_note_label(ysw_sn_t *sn, char *label, uint32_t size)
 {
     int8_t octave = ysw_quatone_get_octave(sn->quatone);
     int8_t offset = ysw_quatone_get_offset(sn->quatone);
-    const char *quatone_name = ysw_quatone_cardinal[offset];
+    const char *quatone_name = ysw_quatone_offset_cardinal[offset];
 
     if (octave) {
         snprintf(label, size, "%s%+d", quatone_name, octave);
@@ -98,24 +99,28 @@ static void get_style_note_label(ysw_sn_t *sn, char *label, uint32_t size)
     }
 }
 
-static void draw_rows(metrics_t *m, const lv_area_t *mask)
+static void draw_background(metrics_t *m, const lv_area_t *mask)
 {
-    for (lv_coord_t i = 0; i < ROW_COUNT; i++) {
+    bool use_even_style = true;
+    for (lv_coord_t i = 0; i < ROW_COUNT; i += 2) {
+
+        lv_coord_t top_row = i; // use two rows for each division
+        lv_coord_t bottom_row = i + 2;
 
         lv_area_t row_area = {
             .x1 = m->cse_left,
-            .y1 = m->cse_top + ((i * m->cse_height) / ROW_COUNT),
             .x2 = m->cse_left + m->cse_width,
-            .y2 = m->cse_top + (((i + 1) * m->cse_height) / ROW_COUNT)
+            .y1 = m->cse_top + ysw_common_muldiv(top_row, m->cse_height, ROW_COUNT),
+            .y2 = m->cse_top + ysw_common_muldiv(bottom_row, m->cse_height, ROW_COUNT),
         };
 
         lv_area_t row_mask;
         if (_lv_area_intersect(&row_mask, mask, &row_area)) {
 
-            if (i & 0x01) {
-                lv_draw_rect(&row_area, &row_mask, &odd_rect_dsc);
-            } else {
+            if (use_even_style) {
                 lv_draw_rect(&row_area, &row_mask, &even_rect_dsc);
+            } else {
+                lv_draw_rect(&row_area, &row_mask, &odd_rect_dsc);
             }
 
             if (i) {
@@ -127,13 +132,14 @@ static void draw_rows(metrics_t *m, const lv_area_t *mask)
                     .x = row_area.x1 + m->cse_width,
                     .y = row_area.y1
                 };
-                if (i & 0x01) {
-                    lv_draw_line(&point1, &point2, mask, &odd_line_dsc);
-                } else {
+                if (use_even_style) {
                     lv_draw_line(&point1, &point2, mask, &even_line_dsc);
+                } else {
+                    lv_draw_line(&point1, &point2, mask, &odd_line_dsc);
                 }
             }
         }
+        use_even_style = !use_even_style;
     }
 }
 
@@ -141,11 +147,11 @@ static void draw_divisions(uint32_t divisions, metrics_t *m, const lv_area_t *ma
 {
     for (int i = 1; i < divisions; i++) {
         lv_point_t point1 = {
-            .x = m->cse_left + ((i * m->cse_width) / divisions),
+            .x = m->cse_left + ysw_common_muldiv(i, m->cse_width, divisions),
             .y = m->cse_top
         };
         lv_point_t point2 = {
-            .x = m->cse_left + ((i * m->cse_width) / divisions),
+            .x = m->cse_left + ysw_common_muldiv(i, m->cse_width, divisions),
             .y = m->cse_top + m->cse_height
         };
         lv_draw_line(&point1, &point2, mask, &div_line_dsc);
@@ -190,11 +196,11 @@ static void draw_metro_marker(int32_t metro_marker, metrics_t *m, const lv_area_
 {
     if (metro_marker != -1) {
         lv_point_t top = {
-            .x = m->cse_left + ((m->cse_width * metro_marker) / YSW_CS_DURATION),
+            .x = m->cse_left + ysw_common_muldiv(m->cse_width, metro_marker, YSW_CS_DURATION),
             .y = m->cse_top,
         };
         lv_point_t bottom = {
-            .x = m->cse_left + ((m->cse_width * metro_marker) / YSW_CS_DURATION),
+            .x = m->cse_left + ysw_common_muldiv(m->cse_width, metro_marker, YSW_CS_DURATION),
             .y = m->cse_top + m->cse_height,
         };
         lv_draw_line(&top, &bottom, mask, &metro_line_dsc);
@@ -207,7 +213,7 @@ static void draw_main(lv_obj_t *cse, const lv_area_t *mask)
     if (ext->cs) {
         metrics_t m;
         get_metrics(cse, &m);
-        draw_rows(&m, mask);
+        draw_background(&m, mask);
         draw_divisions(ext->cs->divisions, &m, mask);
         draw_sn(cse, mask);
         draw_metro_marker(ext->metro_marker, &m, mask);
@@ -231,11 +237,11 @@ static lv_design_res_t design_cb(lv_obj_t *cse, const lv_area_t *mask, lv_design
     return result;
 }
 
-static void fire_create(lv_obj_t *cse, uint32_t start, int8_t degree)
+static void fire_create(lv_obj_t *cse, uint32_t start, ysw_quatone_t quatone)
 {
     ysw_cse_ext_t *ext = lv_obj_get_ext_attr(cse);
     if (ext->create_cb) {
-        ext->create_cb(ext->context, start, degree);
+        ext->create_cb(ext->context, start, quatone);
     }
 }
 
@@ -300,7 +306,8 @@ static void prepare_create(lv_obj_t *cse, lv_point_t *point)
     if (!ysw_cse_gs.multiple_selection) {
         deselect_all(cse);
     }
-    fire_create(cse, tick_index, YSW_MIDI_UNPO - row_index);
+    ysw_quatone_t quatone = ysw_quatone_create(0, to_index(YSW_QUATONES_PER_OCTAVE) - row_index);
+    fire_create(cse, tick_index, quatone);
 }
 
 static void drag_horizontally(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_sn, lv_coord_t x)

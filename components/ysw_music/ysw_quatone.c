@@ -16,22 +16,7 @@
 
 #define TAG "YSW_QUATONE"
 
-// TODO: quatone cleanup
-const char *ysw_quatone_choices =
-"1st (octave lower)\n"
-"1.5 (octave lower)\n"
-"2nd (octave lower)\n"
-"2.5 (octave lower)\n"
-"3rd (octave lower)\n"
-"3.5 (octave lower)\n"
-"4th (octave lower)\n"
-"4.5 (octave lower)\n"
-"5th (octave lower)\n"
-"5.5 (octave lower)\n"
-"6th (octave lower)\n"
-"6.5 (octave lower)\n"
-"7th (octave lower)\n"
-"7.5 (octave lower)\n"
+const char *ysw_quatone_offset_choices =
 "1st\n"
 "1.5\n"
 "2nd\n"
@@ -45,23 +30,14 @@ const char *ysw_quatone_choices =
 "6th\n"
 "6.5\n"
 "7th\n"
-"7.5\n"
-"1st (octave higher)\n"
-"1.5 (octave higher)\n"
-"2nd (octave higher)\n"
-"2.5 (octave higher)\n"
-"3rd (octave higher)\n"
-"3.5 (octave higher)\n"
-"4th (octave higher)\n"
-"4.5 (octave higher)\n"
-"5th (octave higher)\n"
-"5.5 (octave higher)\n"
-"6th (octave higher)\n"
-"6.5 (octave higher)\n"
-"7th (octave higher)\n"
-"7.5 (octave higher)";
+"7.5";
 
-const char *ysw_quatone_cardinal[] = {
+const char *ysw_quatone_octave_choices =
+"-1\n"
+" 0 (Standard)\n"
+"+1";
+
+const char *ysw_quatone_offset_cardinal[] = {
     "1st",
     "1.5",
     "2nd",

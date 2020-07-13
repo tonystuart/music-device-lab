@@ -49,7 +49,7 @@ static inline bool ysw_sn_is_selected(ysw_sn_t *sn)
     return sn->state & YSW_SN_SELECTED;
 }
 
-ysw_sn_t *ysw_sn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags);
+ysw_sn_t *ysw_sn_create(ysw_quatone_t quatone, uint8_t velocity, uint32_t start, uint32_t duration, uint8_t flags);
 ysw_sn_t *ysw_sn_copy(ysw_sn_t *sn);
 void ysw_sn_free(ysw_sn_t *ysw_sn);
 void ysw_sn_normalize(ysw_sn_t *sn);
