@@ -7,10 +7,13 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_accidental.h"
-
-const char *ysw_accidental =
-"Flat\n"
-"Natural\n"
-"Sharp\n";
-
+const char *ysw_octave =
+"0\n"
+"1\n"
+"2\n"
+"3\n"
+"4 (Middle)\n"
+"5\n"
+"6\n"
+"7\n"
+"8";

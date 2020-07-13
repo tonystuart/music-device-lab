@@ -65,24 +65,24 @@ static lv_design_cb_t super_design_cb;
 static lv_signal_cb_t super_signal_cb;
 
 static char *key_labels[] =
-        {
-            "I",
-            "II",
-            "III",
-            "IV",
-            "V",
-            "VI",
-            "VII",
-        };
+{
+    "I",
+    "II",
+    "III",
+    "IV",
+    "V",
+    "VI",
+    "VII",
+};
 
 static inline uint8_t degree_to_row(ysw_degree_t degree)
 {
-    return YSW_MIDI_UNPO - degree;
+    return YSW_MIDI_UNPO - to_count(degree);
 }
 
 static inline ysw_degree_t row_to_degree(uint8_t row)
 {
-    return YSW_MIDI_UNPO - row;
+    return YSW_MIDI_UNPO - to_count(row);
 }
 
 static inline lv_coord_t y_to_row(metrics_t *m, lv_coord_t y)

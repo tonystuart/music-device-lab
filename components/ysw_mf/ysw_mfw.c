@@ -70,7 +70,7 @@ static void write_cs(ysw_mfw_t *ysw_mfw)
             ysw_sn_t *sn = ysw_cs_get_sn(cs, j);
             fprintf(ysw_mfw->file, "%d,%d,%d,%d,%d,%d\n",
                     YSW_MF_STYLE_NOTE,
-                    sn->degree,
+                    sn->quatone,
                     sn->velocity,
                     sn->start,
                     sn->duration,
@@ -78,7 +78,7 @@ static void write_cs(ysw_mfw_t *ysw_mfw)
 
             printf("%d,%d,%d,%d,%d,%d\n",
                     YSW_MF_STYLE_NOTE,
-                    sn->degree,
+                    sn->quatone,
                     sn->velocity,
                     sn->start,
                     sn->duration,

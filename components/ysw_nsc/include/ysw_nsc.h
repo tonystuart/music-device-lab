@@ -26,10 +26,8 @@ typedef struct {
     ysw_sdb_t *sdb;
     lv_obj_t *start;
     lv_obj_t *duration;
-    lv_obj_t *degree;
     lv_obj_t *velocity;
-    lv_obj_t *octave;
-    lv_obj_t *accidental;
+    lv_obj_t *quatone;
 } ysw_nsc_view_t;
 
 typedef struct {

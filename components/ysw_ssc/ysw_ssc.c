@@ -78,7 +78,7 @@ static void update_settings(ysw_ssc_t *ssc, uint32_t ps_index)
     ysw_ui_set_header_text(&ssc->view.sdb->frame.header, text);
     ssc->model.ps = ysw_hp_get_ps(ssc->model.hp, ps_index);
     lv_checkbox_set_checked(ssc->view.som, ysw_ps_is_new_measure(ssc->model.ps));
-    lv_dropdown_set_selected(ssc->view.degree, ysw_degree_to_index(ssc->model.ps->degree));
+    lv_dropdown_set_selected(ssc->view.degree, ssc->model.ps->degree);
     lv_dropdown_set_selected(ssc->view.styles, ysw_music_get_cs_index(ssc->model.music, ssc->model.ps->cs));
     lv_obj_invalidate(ssc->view.degree);
     lv_obj_invalidate(ssc->view.styles);
@@ -150,7 +150,7 @@ static void degree_visitor(ysw_ps_t *ps, ysw_value_t value)
 static void on_degree(ysw_ssc_t *ssc, uint16_t new_index)
 {
     ysw_value_t value = {
-        .us = ysw_degree_from_index(new_index),
+        .us = new_index,
     };
     visit_steps(&ssc->model, degree_visitor, value);
 }
@@ -280,7 +280,7 @@ void ysw_ssc_create(ysw_music_t *music, ysw_hp_t *hp, uint32_t ps_index, bool ap
     ssc->view.sdb = ysw_sdb_create_custom(text, header_buttons, ssc);
     ysw_sdb_add_checkbox(ssc->view.sdb, NULL, " Apply changes to all Steps", ssc->model.apply_all, on_apply_all);
     ssc->view.som = ysw_sdb_add_checkbox(ssc->view.sdb, NULL, " Start new Measure on this Step", ysw_ps_is_new_measure(ssc->model.ps), on_new_measure);
-    ssc->view.degree = ysw_sdb_add_choice(ssc->view.sdb, "Step Degree:", ysw_degree_to_index(ssc->model.ps->degree), ysw_degree_roman_choices, on_degree);
+    ssc->view.degree = ysw_sdb_add_choice(ssc->view.sdb, "Step Degree:", ssc->model.ps->degree, ysw_degree_choices, on_degree);
     ssc->view.styles = ysw_sdb_add_choice(ssc->view.sdb, "Chord Style:", cs_index, chord_styles, on_chord_style);
     ysw_sdb_add_button_bar(ssc->view.sdb, "Chord Style Actions:", map, on_chord_style_action);
 

@@ -9,4 +9,4 @@
 
 #pragma once
 
-extern const char *ysw_octaves;
+extern const char *ysw_octave;

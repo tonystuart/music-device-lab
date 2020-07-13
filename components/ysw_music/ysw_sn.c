@@ -20,7 +20,7 @@ ysw_sn_t *ysw_sn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_
     ysw_sn_t *sn = ysw_heap_allocate(sizeof(ysw_sn_t));
     sn->start = start;
     sn->duration = duration;
-    sn->degree = degree;
+    sn->quatone = degree;
     sn->velocity = velocity;
     sn->flags = flags;
     sn->state = 0;
@@ -30,7 +30,7 @@ ysw_sn_t *ysw_sn_create(int8_t degree, uint8_t velocity, uint32_t start, uint32_
 
 ysw_sn_t *ysw_sn_copy(ysw_sn_t *sn)
 {
-    return ysw_sn_create(sn->degree, sn->velocity, sn->start, sn->duration, sn->flags);
+    return ysw_sn_create(sn->quatone, sn->velocity, sn->start, sn->duration, sn->flags);
 }
 
 void ysw_sn_free(ysw_sn_t *sn)
@@ -55,10 +55,10 @@ void ysw_sn_normalize(ysw_sn_t *sn)
         sn->start = YSW_CS_DURATION - sn->duration;
     }
 
-    if (sn->degree < YSW_CSN_MIN_DEGREE) {
-        sn->degree = YSW_CSN_MIN_DEGREE;
-    } else if (sn->degree > YSW_CSN_MAX_DEGREE) {
-        sn->degree = YSW_CSN_MAX_DEGREE;
+    if (sn->quatone < YSW_CSN_MIN_DEGREE) {
+        sn->quatone = YSW_CSN_MIN_DEGREE;
+    } else if (sn->quatone > YSW_QUATONE_MAX) {
+        sn->quatone = YSW_QUATONE_MAX;
     }
 
     if (sn->velocity > YSW_CSN_MAX_VELOCITY) {
@@ -71,9 +71,7 @@ void ysw_sn_normalize(ysw_sn_t *sn)
 
 uint8_t ysw_sn_to_midi_note(ysw_sn_t *sn, uint8_t scale_tonic, uint8_t root_number)
 {
-    ysw_accidental_t accidental = ysw_sn_get_accidental(sn);
-    uint8_t midi_note = ysw_degree_to_note(scale_tonic, root_number, sn->degree, accidental);
-    return midi_note;
+    return ysw_quatone_to_note(scale_tonic, root_number, sn->quatone);
 }
 
 int ysw_sn_compare(const void *left, const void *right)
@@ -82,9 +80,8 @@ int ysw_sn_compare(const void *left, const void *right)
     const ysw_sn_t *right_sn = *(ysw_sn_t * const *)right;
     int delta = left_sn->start - right_sn->start;
     if (!delta) {
-        delta = left_sn->degree - right_sn->degree;
+        delta = left_sn->quatone - right_sn->quatone;
         if (!delta) {
-            delta = ysw_sn_get_accidental(left_sn) - ysw_sn_get_accidental(right_sn);
             if (!delta) {
                 delta = left_sn->duration - right_sn->duration;
                 if (!delta) {

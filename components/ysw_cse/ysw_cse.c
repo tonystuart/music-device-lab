@@ -13,6 +13,7 @@
 
 #include "ysw_cs.h"
 #include "ysw_degree.h"
+#include "ysw_quatone.h"
 #include "ysw_sn.h"
 #include "ysw_style.h"
 #include "ysw_ticks.h"
@@ -47,12 +48,6 @@ typedef struct {
 static lv_design_cb_t base_design_cb;
 static lv_signal_cb_t base_signal_cb;
 
-static const char *accidentals[] = {
-    "b",
-    "",
-    "#",
-};
-
 static void get_metrics(lv_obj_t *cse, metrics_t *m)
 {
     m->cse_left = cse->coords.x1;
@@ -62,21 +57,20 @@ static void get_metrics(lv_obj_t *cse, metrics_t *m)
     m->cse_width = lv_obj_get_width(cse);
 }
 
-static void get_sn_info(lv_obj_t *cse, ysw_sn_t *sn, lv_area_t *ret_area, uint8_t *ret_degree, int8_t *ret_octave)
+static void get_sn_info(lv_obj_t *cse, ysw_sn_t *sn, lv_area_t *ret_area)
 {
-    uint8_t degree;
-    int8_t octave;
-
     metrics_t m;
     get_metrics(cse, &m);
 
-    ysw_degree_normalize(sn->degree, &degree, &octave);
-    lv_coord_t delta_y = -ysw_sn_get_accidental(sn) * ((m.cse_height / ROW_COUNT) / 2);
+    uint8_t offset = ysw_quatone_get_offset(sn->quatone);
+    float row = (((float)YSW_QUATONES_PER_OCTAVE - offset) / 2) - 1;
 
     lv_coord_t left = m.cse_left + (sn->start * m.cse_width) / YSW_CS_DURATION;
     lv_coord_t right = m.cse_left + ((sn->start + sn->duration) * m.cse_width) / YSW_CS_DURATION;
-    lv_coord_t top = m.cse_top + (((YSW_MIDI_UNPO - degree) * m.cse_height) / ROW_COUNT) + delta_y;
-    lv_coord_t bottom = m.cse_top + ((((YSW_MIDI_UNPO - degree) + 1) * m.cse_height) / ROW_COUNT) + delta_y;
+    lv_coord_t top = m.cse_top + ((row * m.cse_height) / ROW_COUNT);
+    lv_coord_t bottom = m.cse_top + (((row + 1) * m.cse_height) / ROW_COUNT);
+
+    ESP_LOGD(TAG, "row=%g, top=%d, bottom=%d", row, top, bottom);
 
     lv_area_t area = {
         .x1 = left,
@@ -89,24 +83,18 @@ static void get_sn_info(lv_obj_t *cse, ysw_sn_t *sn, lv_area_t *ret_area, uint8_
         *ret_area = area;
     }
 
-    if (ret_degree) {
-        *ret_degree = degree;
-    }
-
-    if (ret_octave) {
-        *ret_octave = octave;
-    }
 }
 
-static void get_style_note_label(char *label, uint32_t size, ysw_accidental_t accidental, uint8_t normalized_degree, int8_t octave)
+static void get_style_note_label(ysw_sn_t *sn, char *label, uint32_t size)
 {
-    const char *modifier_text = accidentals[accidental + 1]; // +1 because accidentals are -1 based
-    const char *degree_text = ysw_degree_cardinal[normalized_degree - 1]; // -1 because degrees are 1 based
+    int8_t octave = ysw_quatone_get_octave(sn->quatone);
+    int8_t offset = ysw_quatone_get_offset(sn->quatone);
+    const char *quatone_name = ysw_quatone_cardinal[offset];
 
     if (octave) {
-        snprintf(label, size, "%s%s%+d", modifier_text, degree_text, octave);
+        snprintf(label, size, "%s%+d", quatone_name, octave);
     } else {
-        snprintf(label, size, "%s%s", modifier_text, degree_text);
+        snprintf(label, size, "%s", quatone_name);
     }
 }
 
@@ -173,18 +161,15 @@ static void draw_sn(lv_obj_t *cse, const lv_area_t *mask)
 
         ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
 
-        uint8_t degree = 0;
-        int8_t octave = 0;
         lv_area_t sn_area = { };
-        get_sn_info(cse, sn, &sn_area, &degree, &octave);
-        ysw_accidental_t accidental = ysw_sn_get_accidental(sn);
+        get_sn_info(cse, sn, &sn_area);
 
         lv_area_t sn_mask;
 
         if (_lv_area_intersect(&sn_mask, mask, &sn_area)) {
 
             char buffer[32];
-            get_style_note_label(buffer, sizeof(buffer), accidental, degree, octave);
+            get_style_note_label(sn, buffer, sizeof(buffer));
             if (ysw_sn_is_selected(sn)) {
                 if (ext->dragging) {
                     lv_draw_rect(&sn_area, &sn_mask, &drag_sn_rect_dsc);
@@ -383,56 +368,26 @@ static void drag_horizontally(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_
     sn->duration = new_duration;
 }
 
+// TODO: quatone cleanup
 static void drag_vertically(lv_obj_t *cse, ysw_sn_t *sn, ysw_sn_t *drag_start_sn, lv_coord_t y)
 {
     metrics_t m;
     get_metrics(cse, &m);
-    double pixels_per_half_degree = ((double)m.cse_height / ROW_COUNT) / 2;
-    lv_coord_t delta_half_degrees = round(y / pixels_per_half_degree);
-
-    //ESP_LOGD(TAG, "drag_vertically m.cse_height=%d", m.cse_height);
-    //ESP_LOGD(TAG, "drag_vertically drag.y=%d", y);
-    //ESP_LOGD(TAG, "drag_vertically pixels_per_half_degree=%g", pixels_per_half_degree);
-    //ESP_LOGD(TAG, "drag_vertically delta_half_degrees=%d", delta_half_degrees);
-
-    bool top_drag = delta_half_degrees < 0;
-    uint8_t half_degrees = abs(delta_half_degrees);
-    uint8_t degrees = half_degrees / 2;
-    bool is_accidental = half_degrees % 2;
+    double pixels_per_quatone = (double)m.cse_height / ROW_COUNT;
+    lv_coord_t delta_quatones = round(y / pixels_per_quatone);
+    bool top_drag = delta_quatones < 0;
+    uint8_t quatones = abs(delta_quatones);
 
     if (top_drag) {
-        sn->degree = drag_start_sn->degree + degrees;
-        if (is_accidental) {
-            if (ysw_sn_is_flat(drag_start_sn)) {
-                ysw_sn_set_natural(sn);
-            } else if (ysw_sn_is_natural(drag_start_sn)) {
-                ysw_sn_set_sharp(sn);
-            } else {
-                ysw_sn_set_natural(sn);
-                sn->degree++;
-            }
-        } else {
-            ysw_sn_set_natural(sn);
-        }
-        if (sn->degree > YSW_CSN_MAX_DEGREE) {
-            sn->degree = YSW_CSN_MAX_DEGREE;
+        sn->quatone = drag_start_sn->quatone + quatones;
+        if (sn->quatone > YSW_QUATONE_MAX) {
+            sn->quatone = YSW_QUATONE_MAX;
         }
     } else {
-        sn->degree = drag_start_sn->degree - degrees;
-        if (is_accidental) {
-            if (ysw_sn_is_sharp(drag_start_sn)) {
-                ysw_sn_set_natural(sn);
-            } else if (ysw_sn_is_natural(drag_start_sn)) {
-                ysw_sn_set_flat(sn);
-            } else {
-                ysw_sn_set_natural(sn);
-                sn->degree--;
-            }
+        if (quatones > drag_start_sn->quatone) {
+            sn->quatone = 0;
         } else {
-            ysw_sn_set_natural(sn);
-        }
-        if (sn->degree < YSW_CSN_MIN_DEGREE) {
-            sn->degree = YSW_CSN_MIN_DEGREE;
+            sn->quatone = drag_start_sn->quatone - quatones;
         }
     }
 }
@@ -464,7 +419,7 @@ static void capture_click(lv_obj_t *cse, lv_point_t *point)
     for (uint8_t i = 0; i < sn_count; i++) {
         lv_area_t sn_area;
         ysw_sn_t *sn = ysw_cs_get_sn(ext->cs, i);
-        get_sn_info(cse, sn, &sn_area, NULL, NULL);
+        get_sn_info(cse, sn, &sn_area);
         ysw_bounds_t bounds_type = ysw_bounds_check(&sn_area, point);
         if (bounds_type) {
             ext->clicked_sn = sn;

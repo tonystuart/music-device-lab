@@ -22,7 +22,7 @@
 #include "ysw_music.h"
 #include "ysw_name.h"
 #include "ysw_nsc.h"
-#include "ysw_octaves.h"
+#include "ysw_octave.h"
 #include "ysw_sdb.h"
 #include "ysw_seq.h"
 #include "ysw_sn.h"
@@ -378,7 +378,7 @@ static void on_settings(ysw_csc_t *csc, lv_obj_t *btn)
     ysw_sdb_t *sdb = ysw_sdb_create_standard("Chord Style Settings", csc);
     ysw_sdb_add_string(sdb, "Name:", cs->name, on_name_change);
     ysw_sdb_add_choice(sdb, "Instrument:", cs->instrument, ysw_instruments, on_instrument_change);
-    ysw_sdb_add_choice(sdb, "Octave:", cs->octave, ysw_octaves, on_octave_change);
+    ysw_sdb_add_choice(sdb, "Octave:", cs->octave, ysw_octave, on_octave_change);
     ysw_sdb_add_choice(sdb, "Mode:", cs->mode, ysw_modes, on_mode_change);
     ysw_sdb_add_choice(sdb, "Transposition:", trans_index, ysw_transposition, on_transposition_change);
     ysw_sdb_add_choice(sdb, "Tempo:", tempo_index, ysw_tempo, on_tempo_change);

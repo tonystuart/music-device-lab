@@ -8,14 +8,13 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_nsc.h"
-#include "ysw_accidental.h"
 #include "ysw_common.h"
-#include "ysw_csc.h"
-#include "ysw_degree.h"
-#include "ysw_heap.h"
 #include "ysw_cse.h"
+#include "ysw_csc.h"
+#include "ysw_heap.h"
 #include "ysw_main_bus.h"
 #include "ysw_main_seq.h"
+#include "ysw_quatone.h"
 #include "ysw_value.h"
 #include "lvgl/lvgl.h"
 #include "esp_log.h"
@@ -46,11 +45,8 @@ static void update_settings(ysw_nsc_t *nsc, uint32_t sn_index)
     ysw_sdb_set_number(nsc->view.start, nsc->model.sn->start);
     ysw_sdb_set_number(nsc->view.duration, nsc->model.sn->duration);
     ysw_sdb_set_number(nsc->view.velocity, nsc->model.sn->velocity);
-    ESP_LOGD(TAG, "degree=%d", nsc->model.sn->degree);
-    lv_dropdown_set_selected(nsc->view.degree, ysw_degree_to_index(nsc->model.sn->degree));
-    lv_dropdown_set_selected(nsc->view.accidental, ysw_accidental_to_index(ysw_sn_get_accidental(nsc->model.sn)));
-    lv_obj_invalidate(nsc->view.degree);
-    lv_obj_invalidate(nsc->view.accidental);
+    lv_dropdown_set_selected(nsc->view.quatone, nsc->model.sn->quatone);
+    lv_obj_invalidate(nsc->view.quatone);
 }
 
 static void move(ysw_nsc_t *nsc, move_direction_t direction)
@@ -116,21 +112,9 @@ static void new_velocity_visitor(ysw_sn_t *sn, ysw_value_t value)
     sn->velocity = range(value.ui, 0, YSW_MIDI_MAX);
 }
 
-static void new_octave_visitor(ysw_sn_t *sn, ysw_value_t value)
+static void quatone_visitor(ysw_sn_t *sn, ysw_value_t value)
 {
-    uint8_t normalized_degree = 0;
-    ysw_degree_normalize(sn->degree, &normalized_degree, NULL);
-    sn->degree = ysw_degree_denormalize(normalized_degree, value.si);
-}
-
-static void degree_visitor(ysw_sn_t *sn, ysw_value_t value)
-{
-    sn->degree = value.us;
-}
-
-static void accidental_visitor(ysw_sn_t *sn, ysw_value_t value)
-{
-    ysw_sn_set_accidental(sn, value.ui);
+    sn->quatone = value.us;
 }
 
 static void on_new_start(ysw_nsc_t *nsc, int32_t new_start)
@@ -148,25 +132,12 @@ static void on_new_velocity(ysw_nsc_t *nsc, int32_t new_velocity)
     visit_notes(&nsc->model, new_velocity_visitor, (ysw_value_t ) { .ui = new_velocity });
 }
 
-static void on_new_octave(ysw_nsc_t *nsc, int32_t new_octave)
-{
-    visit_notes(&nsc->model, new_octave_visitor, (ysw_value_t ) { .si = new_octave });
-}
-
-static void on_new_degree(ysw_nsc_t *nsc, uint16_t new_index)
+static void on_new_quatone(ysw_nsc_t *nsc, uint16_t new_index)
 {
     ysw_value_t value = {
-        .us = ysw_degree_from_index(new_index),
+        .us = new_index,
     };
-    visit_notes(&nsc->model, degree_visitor, value);
-}
-
-static void on_new_accidental(ysw_nsc_t *nsc, uint16_t new_index)
-{
-    ysw_value_t value = {
-        .us = ysw_accidental_from_index(new_index),
-    };
-    visit_notes(&nsc->model, accidental_visitor, value);
+    visit_notes(&nsc->model, quatone_visitor, value);
 }
 
 static void on_apply_all(ysw_nsc_t *nsc, bool apply_all)
@@ -236,13 +207,6 @@ void on_velocity_number_ta_cb(ysw_nsc_t *nsc, int32_t *min_value, int32_t *max_v
     *step = 1;
 }
 
-void on_octave_number_ta_cb(ysw_nsc_t *nsc, int32_t *min_value, int32_t *max_value, int32_t *step)
-{
-    *min_value = -2;
-    *max_value = +2;
-    *step = 1;
-}
-
 void ysw_nsc_create(ysw_music_t *music, ysw_cs_t *cs, uint32_t sn_index, bool apply_all)
 {
     ysw_sn_t *sn = ysw_cs_get_sn(cs, sn_index);;
@@ -255,20 +219,13 @@ void ysw_nsc_create(ysw_music_t *music, ysw_cs_t *cs, uint32_t sn_index, bool ap
 
     char text[64];
     get_note_number_text(cs, sn_index, text, sizeof(text));
-    ysw_accidental_t accidental = ysw_sn_get_accidental(sn);
-
-    uint8_t degree = 0;
-    int8_t octave = 0;
-    ysw_degree_normalize(sn->degree, &degree, &octave);
 
     nsc->view.sdb = ysw_sdb_create_custom(text, header_buttons, nsc);
     ysw_sdb_add_checkbox(nsc->view.sdb, NULL, " Apply changes to all Notes", nsc->model.apply_all, on_apply_all);
     nsc->view.start = ysw_sdb_add_number(nsc->view.sdb, "Note Start Time:", sn->start, on_start_number_ta_cb, on_new_start);
     nsc->view.duration = ysw_sdb_add_number(nsc->view.sdb, "Note Duration:", sn->duration, on_duration_number_ta_cb, on_new_duration);
     nsc->view.velocity = ysw_sdb_add_number(nsc->view.sdb, "Velocity (Loudness or Volume):", sn->velocity, on_velocity_number_ta_cb, on_new_velocity);
-    nsc->view.octave = ysw_sdb_add_number(nsc->view.sdb, "Octave (Relative to Root of Style):", octave, on_octave_number_ta_cb, on_new_octave);
-    nsc->view.degree = ysw_sdb_add_choice(nsc->view.sdb, "Note Degree:", ysw_degree_to_index(degree), ysw_degree_cardinal_choices, on_new_degree);
-    nsc->view.accidental = ysw_sdb_add_choice(nsc->view.sdb, "Accidental:", ysw_accidental_to_index(accidental), ysw_accidental, on_new_accidental);
+    nsc->view.quatone = ysw_sdb_add_choice(nsc->view.sdb, "Note:", sn->quatone, ysw_quatone_choices, on_new_quatone);
 }
 
 void ysw_nsc_close(ysw_nsc_t *nsc)

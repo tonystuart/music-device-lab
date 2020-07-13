@@ -52,11 +52,6 @@ static inline ysw_cs_t *ysw_hp_get_cs(ysw_hp_t *hp, uint32_t index)
     return ysw_hp_get_ps(hp, index)->cs;
 }
 
-static inline ysw_degree_t ysw_hp_get_degree(ysw_hp_t *hp, uint32_t index)
-{
-    return ysw_hp_get_ps(hp, index)->degree;
-}
-
 static inline uint32_t ysw_hp_get_ps_count(ysw_hp_t *hp)
 {
     return ysw_array_get_count(hp->ps_array);
