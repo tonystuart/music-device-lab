@@ -543,7 +543,7 @@ static void on_bus_evt(ysw_hpc_t *hpc, uint32_t evt, void *details, char *sender
     }
 }
 
-ysw_hpc_t* ysw_hpc_create(ysw_music_t *music, uint32_t hp_index)
+ysw_hpc_t* ysw_hpc_create(ysw_music_t *music, uint32_t hp_index, ysw_hpc_type_t type)
 {
     ysw_hpc_t *hpc = ysw_heap_allocate(sizeof(ysw_hpc_t)); // freed in on_close
 

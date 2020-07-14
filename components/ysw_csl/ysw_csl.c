@@ -41,8 +41,7 @@ static void clear_selection_highlight(ysw_csl_t *csl)
         lv_obj_t *scrl = lv_page_get_scrl(csl->frame.body.page);
         lv_obj_t *child = ysw_ui_child_at_index(scrl, csl->model.cs_index);
         if (child) {
-            //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 0);
-            lv_obj_set_style_local_text_color(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_WHITE);
+            ysw_style_adjust_csl_selection(child, false);
         }
     }
     ysw_ui_set_footer_text(&csl->frame.footer, "");
@@ -55,8 +54,7 @@ static void display_selection_highlight(ysw_csl_t *csl)
         lv_obj_t *scrl = lv_page_get_scrl(csl->frame.body.page);
         lv_obj_t *child = ysw_ui_child_at_index(scrl, csl->model.cs_index);
         if (child) {
-            //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 1);
-            lv_obj_set_style_local_text_color(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_YELLOW);
+            ysw_style_adjust_csl_selection(child, true);
             ysw_ui_ensure_visible(child, true);
         }
         char buf[32];

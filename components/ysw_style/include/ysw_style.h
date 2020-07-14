@@ -58,3 +58,5 @@ void ysw_style_adjust_btn(lv_obj_t *btn);
 void ysw_style_adjust_button_bar(lv_obj_t *btn);
 void ysw_style_adjust_checkbox(lv_obj_t *cb);
 void ysw_style_adjust_mbox(lv_obj_t *mbox);
+void ysw_style_adjust_csl_selection(lv_obj_t *child, bool is_selected);
+void ysw_style_adjust_hpl_selection(lv_obj_t *child, bool is_selected);
