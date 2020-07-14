@@ -48,6 +48,16 @@ typedef struct {
 static lv_design_cb_t base_design_cb;
 static lv_signal_cb_t base_signal_cb;
 
+static inline uint8_t offset_to_row(uint8_t offset)
+{
+    return to_index(YSW_QUATONES_PER_OCTAVE) - offset;
+}
+
+static inline uint8_t row_to_offset(uint8_t row)
+{
+    return to_index(YSW_QUATONES_PER_OCTAVE) - row;
+}
+
 static void get_metrics(lv_obj_t *cse, metrics_t *m)
 {
     m->cse_left = cse->coords.x1;
@@ -63,7 +73,7 @@ static void get_sn_info(lv_obj_t *cse, ysw_sn_t *sn, lv_area_t *ret_area)
     get_metrics(cse, &m);
 
     uint8_t offset = ysw_quatone_get_offset(sn->quatone);
-    int row = to_index(YSW_QUATONES_PER_OCTAVE) - offset;
+    int row = offset_to_row(offset);
 
     int top_row = row - 1; // use two rows to display the note
     int bottom_row = row + 1;
@@ -306,7 +316,7 @@ static void prepare_create(lv_obj_t *cse, lv_point_t *point)
     if (!ysw_cse_gs.multiple_selection) {
         deselect_all(cse);
     }
-    ysw_quatone_t quatone = ysw_quatone_create(0, to_index(YSW_QUATONES_PER_OCTAVE) - row_index);
+    ysw_quatone_t quatone = ysw_quatone_create(0, row_to_offset(row_index));
     fire_create(cse, tick_index, quatone);
 }
 

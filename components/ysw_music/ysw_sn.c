@@ -67,9 +67,9 @@ void ysw_sn_normalize(ysw_sn_t *sn)
     sn->duration = round_tick(sn->duration);
 }
 
-uint8_t ysw_sn_to_midi_note(ysw_sn_t *sn, uint8_t scale_tonic, uint8_t root_number)
+uint8_t ysw_sn_to_midi_note(ysw_sn_t *sn, uint8_t scale_tonic, uint8_t root)
 {
-    return ysw_quatone_to_note(scale_tonic, root_number, sn->quatone);
+    return ysw_quatone_to_note(scale_tonic, root, sn->quatone);
 }
 
 int ysw_sn_compare(const void *left, const void *right)

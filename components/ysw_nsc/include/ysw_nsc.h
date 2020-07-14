@@ -28,6 +28,7 @@ typedef struct {
     lv_obj_t *duration;
     lv_obj_t *velocity;
     lv_obj_t *quatone;
+    lv_obj_t *octave;
 } ysw_nsc_view_t;
 
 typedef struct {

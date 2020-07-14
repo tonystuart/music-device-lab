@@ -33,6 +33,17 @@ const char *ysw_degree_choices =
 "VI\n"
 "VII";
 
+const char *ysw_degree_labels[] =
+{
+    "I",
+    "II",
+    "III",
+    "IV",
+    "V",
+    "VI",
+    "VII",
+};
+
 const uint8_t ysw_degree_intervals[7][7] = {
     /* C */ { 0, 2, 4, 5, 7, 9, 11 },
     /* D */ { 0, 2, 3, 5, 7, 9, 10 },

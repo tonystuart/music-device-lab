@@ -33,6 +33,7 @@ void ysw_array_set(ysw_array_t *array, uint32_t index, void *value);
 void ysw_array_insert(ysw_array_t *array, uint32_t index, void *value);
 void ysw_array_remove(ysw_array_t *array, uint32_t index);
 void ysw_array_swap(ysw_array_t *array, uint32_t i, uint32_t j);
+void ysw_array_move(ysw_array_t *array, uint32_t from, uint32_t to);
 int32_t ysw_array_find(ysw_array_t *array, void *value);
 uint32_t ysw_array_get_free_space(ysw_array_t *array);
 void ysw_array_sort(ysw_array_t *array,  int (*comparator)(const void *, const void *));

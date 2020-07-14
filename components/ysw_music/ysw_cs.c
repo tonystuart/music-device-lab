@@ -99,7 +99,7 @@ static mc_t* initialize_context(mc_t *mc)
     mc->notes = ysw_heap_allocate(sizeof(ysw_note_t) * max_note_count);
     mc->note_p = mc->notes;
     mc->tonic = mc->cs->octave * 12;
-    mc->root = ysw_degree_intervals[0][mc->cs->mode % 7] + 1; // +1 because root is 1-based
+    mc->root = ysw_degree_intervals[0][mc->cs->mode % 7];
     return mc;
 }
 

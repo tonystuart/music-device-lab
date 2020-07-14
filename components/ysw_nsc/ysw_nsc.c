@@ -42,11 +42,15 @@ static void update_settings(ysw_nsc_t *nsc, uint32_t sn_index)
     get_note_number_text(nsc->model.cs, sn_index, text, sizeof(text));
     ysw_ui_set_header_text(&nsc->view.sdb->frame.header, text);
     nsc->model.sn = ysw_cs_get_sn(nsc->model.cs, sn_index);
+    uint8_t offset = ysw_quatone_get_offset(nsc->model.sn->quatone);
+    int8_t octave_index = ysw_quatone_octave_to_index(ysw_quatone_get_octave(nsc->model.sn->quatone));
     ysw_sdb_set_number(nsc->view.start, nsc->model.sn->start);
     ysw_sdb_set_number(nsc->view.duration, nsc->model.sn->duration);
     ysw_sdb_set_number(nsc->view.velocity, nsc->model.sn->velocity);
-    lv_dropdown_set_selected(nsc->view.quatone, nsc->model.sn->quatone);
+    lv_dropdown_set_selected(nsc->view.quatone, offset);
+    lv_dropdown_set_selected(nsc->view.octave, octave_index);
     lv_obj_invalidate(nsc->view.quatone);
+    lv_obj_invalidate(nsc->view.octave);
 }
 
 static void move(ysw_nsc_t *nsc, move_direction_t direction)
@@ -76,7 +80,7 @@ static void move(ysw_nsc_t *nsc, move_direction_t direction)
             }
             ysw_sn_select(nsc->model.sn, false);
             ysw_sn_select(ysw_cs_get_sn(nsc->model.cs, new_sn_index), true);
-            ysw_main_bus_publish(YSW_BUS_EVT_SEL_STEP, (void*)new_sn_index);
+            ysw_main_bus_publish(YSW_BUS_EVT_SEL_STEP, (void*)(intptr_t)new_sn_index);
         }
         update_settings(nsc, new_sn_index);
     }
@@ -242,7 +246,7 @@ void ysw_nsc_create(ysw_music_t *music, ysw_cs_t *cs, uint32_t sn_index, bool ap
     nsc->view.duration = ysw_sdb_add_number(nsc->view.sdb, "Note Duration:", sn->duration, on_duration_number_ta_cb, on_new_duration);
     nsc->view.velocity = ysw_sdb_add_number(nsc->view.sdb, "Velocity (Loudness or Volume):", sn->velocity, on_velocity_number_ta_cb, on_new_velocity);
     nsc->view.quatone = ysw_sdb_add_choice(nsc->view.sdb, "Note (Whole Tones from Root):", offset, ysw_quatone_offset_choices, on_new_quatone_offset);
-    nsc->view.quatone = ysw_sdb_add_choice(nsc->view.sdb, "Relative Octave:", octave_index, ysw_quatone_octave_choices, on_new_quatone_octave);
+    nsc->view.octave = ysw_sdb_add_choice(nsc->view.sdb, "Relative Octave:", octave_index, ysw_quatone_octave_choices, on_new_quatone_octave);
 }
 
 void ysw_nsc_close(ysw_nsc_t *nsc)

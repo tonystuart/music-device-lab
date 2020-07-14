@@ -15,6 +15,7 @@
 #include "ysw_division.h"
 #include "ysw_heap.h"
 #include "ysw_instruments.h"
+#include "ysw_main_bus.h"
 #include "ysw_main_seq.h"
 #include "ysw_mb.h"
 #include "ysw_mfw.h"
@@ -518,7 +519,7 @@ static const ysw_ui_btn_def_t footer_buttons[] = {
     { NULL, NULL },
 };
 
-static void create_cse(ysw_csc_t *csc)
+static void create_style_editor(ysw_csc_t *csc)
 {
     csc->controller.cse = ysw_cse_create(csc->frame.body.page, csc);
     lv_coord_t w = lv_page_get_width_fit(csc->frame.body.page);
@@ -528,6 +529,16 @@ static void create_cse(ysw_csc_t *csc)
     ysw_cse_set_create_cb(csc->controller.cse, on_create_note);
     ysw_cse_set_select_cb(csc->controller.cse, on_select);
     ysw_cse_set_drag_end_cb(csc->controller.cse, on_drag_end);
+}
+
+static void on_bus_evt(ysw_csc_t *csc, uint32_t evt, void *details, char *sender)
+{
+    switch (evt) {
+        case YSW_BUS_EVT_SEL_STEP:
+            csc->controller.sn_index = (uint32_t)(uintptr_t)details;
+            break;
+
+    }
 }
 
 ysw_csc_t* ysw_csc_create(ysw_music_t *music, uint32_t cs_index, ysw_csc_type_t type)
@@ -540,10 +551,12 @@ ysw_csc_t* ysw_csc_create(ysw_music_t *music, uint32_t cs_index, ysw_csc_type_t 
 
     deselect_all(csc);
 
+    ysw_main_bus_subscribe(on_bus_evt, csc);
+
     ysw_ui_init_buttons(csc->frame.header.buttons, header_buttons, csc);
     ysw_ui_init_buttons(csc->frame.footer.buttons, footer_buttons, csc);
     ysw_ui_create_frame(&csc->frame);
-    create_cse(csc);
+    create_style_editor(csc);
     update_frame(csc);
     if (type == YSW_CSC_CREATE_CS) {
         create_style(csc);

@@ -64,25 +64,14 @@ typedef struct {
 static lv_design_cb_t super_design_cb;
 static lv_signal_cb_t super_signal_cb;
 
-static char *key_labels[] =
-{
-    "I",
-    "II",
-    "III",
-    "IV",
-    "V",
-    "VI",
-    "VII",
-};
-
 static inline uint8_t degree_to_row(ysw_degree_t degree)
 {
-    return YSW_MIDI_UNPO - to_count(degree);
+    return to_index(YSW_MIDI_UNPO) - degree;
 }
 
 static inline ysw_degree_t row_to_degree(uint8_t row)
 {
-    return YSW_MIDI_UNPO - to_count(row);
+    return to_index(YSW_MIDI_UNPO) - row;
 }
 
 static inline lv_coord_t y_to_row(metrics_t *m, lv_coord_t y)
@@ -262,14 +251,14 @@ static void draw_ps(dc_t *dc)
         if (ysw_ps_is_selected(dc->ps)) {
             if (dc->ext->dragging) {
                 lv_draw_rect(&cell_area, &cell_mask, &drag_hp_rect_dsc);
-                lv_draw_label(&cell_area, &cell_mask, &drag_hp_label_dsc, key_labels[to_index(dc->ps->degree)], NULL);
+                lv_draw_label(&cell_area, &cell_mask, &drag_hp_label_dsc, ysw_degree_labels[dc->ps->degree], NULL);
             } else {
                 lv_draw_rect(&cell_area, &cell_mask, &sel_hp_rect_dsc);
-                lv_draw_label(&cell_area, &cell_mask, &sel_hp_label_dsc, key_labels[to_index(dc->ps->degree)], NULL);
+                lv_draw_label(&cell_area, &cell_mask, &sel_hp_label_dsc, ysw_degree_labels[dc->ps->degree], NULL);
             }
         } else {
             lv_draw_rect(&cell_area, &cell_mask, &hp_rect_dsc);
-            lv_draw_label(&cell_area, &cell_mask, &hp_label_dsc, key_labels[to_index(dc->ps->degree)], NULL);
+            lv_draw_label(&cell_area, &cell_mask, &hp_label_dsc, ysw_degree_labels[dc->ps->degree], NULL);
         }
     }
     if (dc->ps == dc->ext->last_ps) {
@@ -464,7 +453,7 @@ static void drag_vertically(lv_obj_t *hpe, lv_coord_t delta_y)
         ysw_ps_t *drag_start_ps = ysw_hp_get_ps(ext->drag_start_hp, i);
         if (ysw_ps_is_selected(ps)) {
             uint8_t new_degree = drag_start_ps->degree - delta_degrees;
-            if (new_degree >= 1 && new_degree <= YSW_MIDI_UNPO) {
+            if (new_degree < YSW_MIDI_UNPO) {
                 ps->degree = new_degree;
             }
         }
@@ -489,6 +478,7 @@ static void drag_horizontally(lv_obj_t *hpe, lv_coord_t delta_x)
     lv_coord_t last = -1;
 
     if (divisions < 0) {
+        // moving left
         int32_t pileup_count = 0;
         for (int32_t i = 0; i < ps_count; i++) {
             ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
@@ -497,9 +487,7 @@ static void drag_horizontally(lv_obj_t *hpe, lv_coord_t delta_x)
                 if (j < pileup_count) {
                     j = pileup_count++;
                 }
-                ysw_ps_t *tmp_ps = ysw_hp_get_ps(ext->hp, j);
-                ysw_array_set(ext->hp->ps_array, j, ps);
-                ysw_array_set(ext->hp->ps_array, i, tmp_ps);
+                ysw_array_move(ext->hp->ps_array, i, j);
                 if (first < 0) {
                     first = j;
                 }
@@ -507,6 +495,7 @@ static void drag_horizontally(lv_obj_t *hpe, lv_coord_t delta_x)
             }
         }
     } else {
+        // moving right
         int32_t pileup_count = ps_count - 1;
         for (int32_t i = ps_count - 1; i >= 0; i--) {
             ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
@@ -515,9 +504,7 @@ static void drag_horizontally(lv_obj_t *hpe, lv_coord_t delta_x)
                 if (j > pileup_count) {
                     j = pileup_count--;
                 }
-                ysw_ps_t *tmp_ps = ysw_hp_get_ps(ext->hp, j);
-                ysw_array_set(ext->hp->ps_array, j, ps);
-                ysw_array_set(ext->hp->ps_array, i, tmp_ps);
+                ysw_array_move(ext->hp->ps_array, i, j);
                 if (last < 0) {
                     last = j;
                 }
@@ -811,18 +798,16 @@ void ysw_hpe_on_metro(lv_obj_t *hpe, ysw_note_t *metro_note)
 
 void ysw_hpe_ensure_visible(lv_obj_t *hpe, uint32_t first_ps_index, uint32_t last_ps_index)
 {
-// NB: scroll_left is always <= 0
+    // NB: scroll_left is always <= 0
     ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
     metrics_t m;
     get_metrics(hpe, &m);
     lv_coord_t left = first_ps_index * m.col_width;
     lv_coord_t right = (last_ps_index + 1) * m.col_width;
-//ESP_LOGD(TAG, "first=%d, last=%d, col_width=%d, scroll_left=%d, left=%d, right=%d", first_ps_index, last_ps_index, m.col_width, ext->scroll_left, left, right);
     if (left < -ext->scroll_left) {
         ext->scroll_left = -left;
     } else if (right > -ext->scroll_left + m.hpe_width) {
         ext->scroll_left = m.hpe_width - right;
     }
-//ESP_LOGD(TAG, "new scroll_left=%d", ext->scroll_left);
 }
 

@@ -101,8 +101,8 @@ const char *ysw_quatone_offset_cardinal[] = {
 //       14 to 27 are the standard middle octave
 //       28 to 41 are +1 octave
 // 4. To use the ysw_quatone_interval table, we calculate:
-//       octave = (value / 14) - 1
-//       quatone = value % 14
+//       octave = (quatone / 14) - 1
+//       offset = quatone % 14
 
 const uint8_t ysw_quatone_intervals[7][14] = {
     /* C */ { 0, 1, 2, 3, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12 },
@@ -114,11 +114,10 @@ const uint8_t ysw_quatone_intervals[7][14] = {
     /* B */ { 0, 1, 1, 2, 3, 4, 5, 6, 6, 7, 8, 9, 10, 11 },
 };
 
-// TODO: quatone cleanup
 uint8_t ysw_quatone_to_note(uint8_t scale_tonic, uint8_t root, ysw_quatone_t quatone)
 {
-    int8_t root_octave = root / 7;
-    int8_t root_offset = root % 7;
+    int8_t root_octave = root / YSW_MIDI_UNPO;
+    int8_t root_offset = root % YSW_MIDI_UNPO;
 
     int8_t quatone_octave = ysw_quatone_get_octave(quatone);
     int8_t quatone_offset = ysw_quatone_get_offset(quatone);

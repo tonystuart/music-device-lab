@@ -135,6 +135,28 @@ void ysw_array_swap(ysw_array_t *array, uint32_t i, uint32_t j)
     array->data[j] = p;
 }
 
+void ysw_array_move(ysw_array_t *array, uint32_t from, uint32_t to)
+{
+    assert(array);
+    assert(from < array->count);
+    assert(to < array->count);
+    if (from < to) {
+        // moving right, everything shifts left
+        void *temp = array->data[from];
+        for (uint32_t i = from; i < to; i++) {
+            array->data[i] = array->data[i+1];
+        }
+        array->data[to] = temp;
+    } else if (to < from) {
+        // moving left, everything shifts right
+        void *temp = array->data[from];
+        for (uint32_t i = from; i > to; i--) {
+            array->data[i] = array->data[i-1];
+        }
+        array->data[to] = temp;
+    }
+}
+
 int32_t ysw_array_find(ysw_array_t *array, void *value)
 {
     for (uint32_t i = 0; i < array->count; i++) {

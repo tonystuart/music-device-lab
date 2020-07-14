@@ -14,6 +14,7 @@
 #include "stddef.h"
 
 extern const char *ysw_degree_choices;
+extern const char *ysw_degree_labels[];
 extern const uint8_t ysw_degree_intervals[7][7];
 
 typedef enum {
