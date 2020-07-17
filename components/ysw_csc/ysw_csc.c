@@ -43,11 +43,13 @@ typedef void (*sn_visitor_t)(ysw_csc_t *csc, ysw_sn_t *sn);
 
 static void deselect_all(ysw_csc_t *csc)
 {
-    ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
-    uint32_t sn_count = ysw_cs_get_sn_count(cs);
-    for (uint32_t i = 0; i < sn_count; i++) {
-        ysw_sn_t *sn = ysw_cs_get_sn(cs, i);
-        ysw_sn_select(sn, false);
+    if (csc->controller.cs_index < ysw_music_get_cs_count(csc->controller.music)) {
+        ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
+        uint32_t sn_count = ysw_cs_get_sn_count(cs);
+        for (uint32_t i = 0; i < sn_count; i++) {
+            ysw_sn_t *sn = ysw_cs_get_sn(cs, i);
+            ysw_sn_select(sn, false);
+        }
     }
 }
 
@@ -185,8 +187,7 @@ static void update_footer(ysw_csc_t *csc)
 
 static void update_frame(ysw_csc_t *csc)
 {
-    uint32_t cs_count = ysw_music_get_cs_count(csc->controller.music);
-    if (csc->controller.cs_index < cs_count) {
+    if (csc->controller.cs_index < ysw_music_get_cs_count(csc->controller.music)) {
         ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
         ysw_cse_set_cs(csc->controller.cse, cs);
         update_header(csc);
@@ -206,9 +207,8 @@ static ysw_cs_t* create_style(ysw_csc_t *csc)
     ysw_name_create(name, sizeof(name));
 
     ysw_cs_t *new_cs;
-    uint32_t cs_count = ysw_music_get_cs_count(csc->controller.music);
 
-    if (csc->controller.cs_index < cs_count) {
+    if (csc->controller.cs_index < ysw_music_get_cs_count(csc->controller.music)) {
         ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
         new_cs = ysw_cs_create(name,
                 cs->instrument,

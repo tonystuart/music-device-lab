@@ -21,7 +21,6 @@
 #include "ysw_music.h"
 #include "ysw_name.h"
 #include "ysw_sdb.h"
-#include "ysw_sn.h"
 #include "ysw_style.h"
 #include "ysw_ui.h"
 
@@ -63,6 +62,24 @@ static void display_selection_highlight(ysw_csl_t *csl)
     }
 }
 
+static void create_list_item(ysw_csl_t *csl, uint32_t index)
+{
+    ysw_cs_t *cs = ysw_music_get_cs(csl->model.music, index);
+    lv_obj_t *obj = lv_obj_create(csl->frame.body.page, NULL);
+    lv_obj_set_size(obj, 300, 34);
+    ysw_style_adjust_obj(obj);
+    lv_obj_set_user_data(obj, csl);
+    lv_obj_set_event_cb(obj, on_row_event);
+
+    lv_obj_t *label = lv_label_create(obj, NULL);
+    lv_obj_align(label, obj, LV_ALIGN_IN_LEFT_MID, 5, 0);
+    lv_label_set_text_static(label, cs->name);
+
+    lv_obj_t *csp = ysw_csp_create(obj);
+    lv_obj_align(csp, obj, LV_ALIGN_IN_RIGHT_MID, -2, 0);
+    ysw_csp_set_cs(csp, cs);
+}
+
 static void display_chord_styles(ysw_csl_t *csl)
 {
     lv_label_set_text_static(csl->frame.footer.info.label, "");
@@ -71,19 +88,7 @@ static void display_chord_styles(ysw_csl_t *csl)
     if (cs_count) {
         lv_page_set_scrl_layout(csl->frame.body.page, LV_LAYOUT_OFF);
         for (uint32_t i = 0; i < cs_count; i++) {
-            // TODO: consider factoring out function(s)
-            ysw_cs_t *cs = ysw_music_get_cs(csl->model.music, i);
-            lv_obj_t *obj = lv_obj_create(csl->frame.body.page, NULL);
-            lv_obj_set_size(obj, 300, 34);
-            ysw_style_adjust_obj(obj);
-            lv_obj_set_user_data(obj, csl);
-            lv_obj_t *label = lv_label_create(obj, NULL);
-            lv_obj_align(label, obj, LV_ALIGN_IN_LEFT_MID, 5, 0);
-            lv_label_set_text_static(label, cs->name);
-            lv_obj_t *csp = ysw_csp_create(obj);
-            lv_obj_align(csp, obj, LV_ALIGN_IN_RIGHT_MID, -2, 0);
-            ysw_csp_set_cs(csp, cs);
-            lv_obj_set_event_cb(obj, on_row_event);
+            create_list_item(csl, i);
         }
         lv_page_set_scrl_layout(csl->frame.body.page, LV_LAYOUT_COLUMN_MID);
         if (csl->model.cs_index >= cs_count) {
@@ -155,7 +160,7 @@ static void on_auto_play_last(ysw_csl_t *csl, uint16_t auto_play)
     ysw_cse_gs.auto_play_last = auto_play;
 }
 
-static void on_multiple_selection(ysw_csl_t *csl, uint16_t multiple_selection)
+static void on_multiple_selection(ysw_csl_t *csl, bool multiple_selection)
 {
     ysw_cse_gs.multiple_selection = multiple_selection;
 }
@@ -164,8 +169,8 @@ static void on_settings(ysw_csl_t *csl, lv_obj_t *btn)
 {
     ysw_sdb_t *sdb = ysw_sdb_create_standard("Chord Style Editor Settings", csl);
 
-    ysw_sdb_add_choice(sdb, "Multiple Selection:",
-            ysw_cse_gs.multiple_selection, "No\nYes", on_multiple_selection);
+    ysw_sdb_add_checkbox(sdb, NULL, " Allow multiple selection",
+            ysw_cse_gs.multiple_selection, on_multiple_selection);
 
     ysw_sdb_add_choice(sdb, "Auto Play - On Change:",
             ysw_cse_gs.auto_play_all, ysw_auto_play_options, on_auto_play_all);
@@ -240,12 +245,18 @@ static void on_trash(ysw_csl_t *csl, lv_obj_t *btn)
         char text[128];
         snprintf(text, sizeof(text), "Delete %s?", cs->name);
         ysw_mb_create_confirm(text, on_trash_confirm, csl);
+    } else {
+        ysw_mb_nothing_selected();
     }
 }
 
 static void on_edit(ysw_csl_t *csl, lv_obj_t *btn)
 {
-    launch_style_editor(csl, YSW_CSC_EDIT_CS);
+    if (csl->model.cs_index < ysw_music_get_cs_count(csl->model.music)) {
+        launch_style_editor(csl, YSW_CSC_EDIT_CS);
+    } else {
+        ysw_mb_nothing_selected();
+    }
 }
 
 static void on_next(ysw_csl_t *csl, lv_obj_t *btn)

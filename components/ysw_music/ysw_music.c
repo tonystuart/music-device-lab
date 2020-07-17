@@ -13,6 +13,22 @@
 
 #define TAG "YSW_MUSIC"
 
+static int compare_cs_name(const void *left, const void *right)
+{
+    const ysw_cs_t *left_cs = *(ysw_cs_t * const *)left;
+    const ysw_cs_t *right_cs = *(ysw_cs_t * const *)right;
+    int delta = strcmp(left_cs->name, right_cs->name);
+    return delta;
+}
+
+static int compare_hp_name(const void *left, const void *right)
+{
+    const ysw_hp_t *left_hp = *(ysw_hp_t * const *)left;
+    const ysw_hp_t *right_hp = *(ysw_hp_t * const *)right;
+    int delta = strcmp(left_hp->name, right_hp->name);
+    return delta;
+}
+
 uint32_t ysw_music_get_cs_count(ysw_music_t *music)
 {
     return ysw_array_get_count(music->cs_array);
@@ -28,9 +44,19 @@ int32_t ysw_music_get_cs_index(ysw_music_t *music, ysw_cs_t *cs)
     return ysw_array_find(music->cs_array, cs);
 }
 
+int32_t ysw_music_get_hp_index(ysw_music_t *music, ysw_hp_t *hp)
+{
+    return ysw_array_find(music->hp_array, hp);
+}
+
 void ysw_music_remove_cs(ysw_music_t *music, uint32_t index)
 {
     ysw_array_remove(music->cs_array, index);
+}
+
+void ysw_music_remove_hp(ysw_music_t *music, uint32_t index)
+{
+    ysw_array_remove(music->hp_array, index);
 }
 
 uint32_t ysw_music_get_hp_count(ysw_music_t *music)
@@ -50,20 +76,19 @@ uint32_t ysw_music_insert_cs(ysw_music_t *music, ysw_cs_t *cs)
     return ysw_music_get_cs_index(music, cs);
 }
 
-void ysw_music_insert_hp(ysw_music_t *music, uint32_t index, ysw_hp_t *hp)
+uint32_t ysw_music_insert_hp(ysw_music_t *music, ysw_hp_t *hp)
 {
-    ysw_array_insert(music->hp_array, index, hp);
-}
-
-static int compare_cs_name(const void *left, const void *right)
-{
-    const ysw_cs_t *left_cs = *(ysw_cs_t * const *)left;
-    const ysw_cs_t *right_cs = *(ysw_cs_t * const *)right;
-    int delta = strcmp(left_cs->name, right_cs->name);
-    return delta;
+    ysw_array_push(music->hp_array, hp);
+    ysw_music_sort_hp_by_name(music);
+    return ysw_music_get_hp_index(music, hp);
 }
 
 void ysw_music_sort_cs_by_name(ysw_music_t *music)
 {
     ysw_array_sort(music->cs_array, compare_cs_name);
+}
+
+void ysw_music_sort_hp_by_name(ysw_music_t *music)
+{
+    ysw_array_sort(music->hp_array, compare_hp_name);
 }

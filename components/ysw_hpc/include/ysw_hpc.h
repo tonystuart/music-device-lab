@@ -39,5 +39,5 @@ typedef enum {
 } ysw_hpc_type_t;
 
 ysw_hpc_t* ysw_hpc_create(ysw_music_t *new_music, uint32_t new_cs_index, ysw_hpc_type_t type);
-void ysw_hpc_set_close_cb(ysw_hpc_t *hpc, hpc_close_cb_t cb, void *context);
+void ysw_hpc_set_close_cb(ysw_hpc_t *hpc, void *cb, void *context);
 

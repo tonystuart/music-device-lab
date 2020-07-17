@@ -42,11 +42,13 @@ typedef void (*ps_visitor_t)(ysw_hpc_t *hpc, ysw_ps_t *ps);
 
 static void deselect_all(ysw_hpc_t *hpc)
 {
-    ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
-    uint32_t ps_count = ysw_hp_get_ps_count(hp);
-    for (uint32_t i = 0; i < ps_count; i++) {
-        ysw_ps_t *ps = ysw_hp_get_ps(hp, i);
-        ysw_ps_select(ps, false);
+    if (hpc->controller.hp_index < ysw_music_get_hp_count(hpc->controller.music)) {
+        ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
+        uint32_t ps_count = ysw_hp_get_ps_count(hp);
+        for (uint32_t i = 0; i < ps_count; i++) {
+            ysw_ps_t *ps = ysw_hp_get_ps(hp, i);
+            ysw_ps_select(ps, false);
+        }
     }
 }
 
@@ -190,10 +192,12 @@ static void update_footer(ysw_hpc_t *hpc)
 
 static void update_frame(ysw_hpc_t *hpc)
 {
-    ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
-    ysw_hpe_set_hp(hpc->controller.hpe, hp);
-    update_header(hpc);
-    update_footer(hpc);
+    if (hpc->controller.hp_index < ysw_music_get_hp_count(hpc->controller.music)) {
+        ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
+        ysw_hpe_set_hp(hpc->controller.hpe, hp);
+        update_header(hpc);
+        update_footer(hpc);
+    }
 }
 
 static void refresh(ysw_hpc_t *hpc)
@@ -202,21 +206,31 @@ static void refresh(ysw_hpc_t *hpc)
     auto_play_all(hpc);
 }
 
-static void create_progression(ysw_hpc_t *hpc, uint32_t new_index)
+static void create_progression(ysw_hpc_t *hpc)
 {
-    ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
-
     char name[HP_NAME_SZ];
     ysw_name_create(name, sizeof(name));
-    ysw_hp_t *new_hp = ysw_hp_create(name,
-            hp->instrument,
-            hp->octave,
-            hp->mode,
-            hp->transposition,
-            hp->tempo);
 
-    ysw_music_insert_hp(hpc->controller.music, new_index, new_hp);
-    hpc->controller.hp_index = new_index;
+    ysw_hp_t *new_hp;
+
+    if (hpc->controller.hp_index < ysw_music_get_hp_count(hpc->controller.music)) {
+        ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
+        new_hp = ysw_hp_create(name,
+                hp->instrument,
+                hp->octave,
+                hp->mode,
+                hp->transposition,
+                hp->tempo);
+    } else {
+        new_hp = ysw_hp_create(name,
+                0,
+                4,
+                0,
+                0,
+                120);
+    }
+
+    hpc->controller.hp_index = ysw_music_insert_hp(hpc->controller.music, new_hp);
     update_frame(hpc);
 }
 
@@ -270,6 +284,8 @@ static void on_name_change(ysw_hpc_t *hpc, const char *new_name)
 {
     ysw_hp_t *hp = ysw_music_get_hp(hpc->controller.music, hpc->controller.hp_index);
     ysw_hp_set_name(hp, new_name);
+    ysw_music_sort_hp_by_name(hpc->controller.music);
+    hpc->controller.hp_index = ysw_music_get_hp_index(hpc->controller.music, hp);
     update_header(hpc);
 }
 
@@ -369,7 +385,7 @@ static void on_save(ysw_hpc_t *hpc, lv_obj_t *btn)
 
 static void on_new(ysw_hpc_t *hpc, lv_obj_t *btn)
 {
-    create_progression(hpc, hpc->controller.hp_index + 1);
+    create_progression(hpc);
 }
 
 static void on_copy(ysw_hpc_t *hpc, lv_obj_t *btn)
@@ -560,10 +576,13 @@ ysw_hpc_t* ysw_hpc_create(ysw_music_t *music, uint32_t hp_index, ysw_hpc_type_t 
     ysw_ui_create_frame(&hpc->frame);
     create_progression_editor(hpc);
     update_frame(hpc);
+    if (type == YSW_HPC_CREATE_HP) {
+        create_progression(hpc);
+    }
     return hpc;
 }
 
-void ysw_hpc_set_close_cb(ysw_hpc_t *hpc, hpc_close_cb_t cb, void *context)
+void ysw_hpc_set_close_cb(ysw_hpc_t *hpc, void *cb, void *context)
 {
     hpc->controller.close_cb = cb;
     hpc->controller.close_cb_context = context;

@@ -21,7 +21,6 @@
 #include "ysw_music.h"
 #include "ysw_name.h"
 #include "ysw_sdb.h"
-#include "ysw_ps.h" // TODO: remove if not needed (and ysw_sn in ysw_csl.c)
 #include "ysw_style.h"
 #include "ysw_ui.h"
 
@@ -63,6 +62,24 @@ static void display_selection_highlight(ysw_hpl_t *hpl)
     }
 }
 
+static void create_list_item(ysw_hpl_t *hpl, uint32_t index)
+{
+    ysw_hp_t *hp = ysw_music_get_hp(hpl->model.music, index);
+    lv_obj_t *obj = lv_obj_create(hpl->frame.body.page, NULL);
+    lv_obj_set_size(obj, 300, 34);
+    ysw_style_adjust_obj(obj);
+    lv_obj_set_user_data(obj, hpl);
+    lv_obj_set_event_cb(obj, on_row_event);
+
+    lv_obj_t *label = lv_label_create(obj, NULL);
+    lv_obj_align(label, obj, LV_ALIGN_IN_LEFT_MID, 5, 0);
+    lv_label_set_text_static(label, hp->name);
+
+    lv_obj_t *hpp = ysw_hpp_create(obj);
+    lv_obj_align(hpp, obj, LV_ALIGN_IN_RIGHT_MID, -2, 0);
+    ysw_hpp_set_hp(hpp, hp);
+}
+
 static void display_progressions(ysw_hpl_t *hpl)
 {
     lv_label_set_text_static(hpl->frame.footer.info.label, "");
@@ -71,19 +88,7 @@ static void display_progressions(ysw_hpl_t *hpl)
     if (hp_count) {
         lv_page_set_scrl_layout(hpl->frame.body.page, LV_LAYOUT_OFF);
         for (uint32_t i = 0; i < hp_count; i++) {
-            // TODO: consider factoring out function(s)
-            ysw_hp_t *hp = ysw_music_get_hp(hpl->model.music, i);
-            lv_obj_t *obj = lv_obj_create(hpl->frame.body.page, NULL);
-            lv_obj_set_size(obj, 300, 34);
-            ysw_style_adjust_obj(obj);
-            lv_obj_set_user_data(obj, hpl);
-            lv_obj_t *label = lv_label_create(obj, NULL);
-            lv_obj_align(label, obj, LV_ALIGN_IN_LEFT_MID, 5, 0);
-            lv_label_set_text_static(label, hp->name);
-            lv_obj_t *hpp = ysw_hpp_create(obj);
-            lv_obj_align(hpp, obj, LV_ALIGN_IN_RIGHT_MID, -2, 0);
-            ysw_hpp_set_hp(hpp, hp);
-            lv_obj_set_event_cb(obj, on_row_event);
+            create_list_item(hpl, i);
         }
         lv_page_set_scrl_layout(hpl->frame.body.page, LV_LAYOUT_COLUMN_MID);
         if (hpl->model.hp_index >= hp_count) {
@@ -136,7 +141,7 @@ static void on_hpc_close(ysw_hpl_model_t *model, uint32_t hp_index)
     ysw_heap_free(model);
 }
 
-static void launch_style_editor(ysw_hpl_t *hpl, ysw_hpc_type_t type)
+static void launch_progression_editor(ysw_hpl_t *hpl, ysw_hpc_type_t type)
 {
     ysw_hpl_model_t *model = ysw_heap_allocate(sizeof(ysw_hpl_model_t));
     *model = hpl->model;
@@ -155,17 +160,25 @@ static void on_auto_play_last(ysw_hpl_t *hpl, uint16_t auto_play)
     ysw_hpe_gs.auto_play_last = auto_play;
 }
 
-static void on_multiple_selection(ysw_hpl_t *hpl, uint16_t multiple_selection)
+static void on_multiple_selection(ysw_hpl_t *hpl, bool multiple_selection)
 {
     ysw_hpe_gs.multiple_selection = multiple_selection;
 }
 
+static void on_auto_scroll(ysw_hpl_t *hpl, bool auto_scroll)
+{
+    ysw_hpe_gs.auto_scroll = auto_scroll;
+}
+
 static void on_settings(ysw_hpl_t *hpl, lv_obj_t *btn)
 {
-    ysw_sdb_t *sdb = ysw_sdb_create_standard("Chord Style Editor Settings", hpl);
+    ysw_sdb_t *sdb = ysw_sdb_create_standard("Progression Editor Settings", hpl);
 
-    ysw_sdb_add_choice(sdb, "Multiple Selection:",
-            ysw_hpe_gs.multiple_selection, "No\nYes", on_multiple_selection);
+    ysw_sdb_add_checkbox(sdb, NULL, " Allow multiple selection",
+            ysw_hpe_gs.multiple_selection, on_multiple_selection);
+
+    ysw_sdb_add_checkbox(sdb, NULL, " Allow auto-scroll on playback",
+            ysw_hpe_gs.auto_scroll, on_auto_scroll);
 
     ysw_sdb_add_choice(sdb, "Auto Play - On Change:",
             ysw_hpe_gs.auto_play_all, ysw_auto_play_options, on_auto_play_all);
@@ -181,7 +194,7 @@ static void on_save(ysw_hpl_t *hpl, lv_obj_t *btn)
 
 static void on_new(ysw_hpl_t *hpl, lv_obj_t *btn)
 {
-    launch_style_editor(hpl, YSW_HPC_CREATE_HP);
+    launch_progression_editor(hpl, YSW_HPC_CREATE_HP);
 }
 
 static void on_copy(ysw_hpl_t *hpl, lv_obj_t *btn)
@@ -220,7 +233,7 @@ static void on_paste(ysw_hpl_t *hpl, lv_obj_t *btn)
         find_unique_name(hpl->model.music, hp->name, new_name, sizeof(new_name));
         ysw_hp_set_name(hp, new_name);
         // TODO: use alphabetized list
-        //hpl->model.hp_index = ysw_music_insert_hp(hpl->model.music, hp);
+        hpl->model.hp_index = ysw_music_insert_hp(hpl->model.music, hp);
         display_progressions(hpl);
     } else {
         ysw_mb_clipboard_empty();
@@ -229,8 +242,7 @@ static void on_paste(ysw_hpl_t *hpl, lv_obj_t *btn)
 
 static void on_trash_confirm(ysw_hpl_t *hpl)
 {
-    // TODO: implement remove
-    //ysw_music_remove_hp(hpl->model.music, hpl->model.hp_index);
+    ysw_music_remove_hp(hpl->model.music, hpl->model.hp_index);
     display_progressions(hpl);
 }
 
@@ -242,12 +254,18 @@ static void on_trash(ysw_hpl_t *hpl, lv_obj_t *btn)
         char text[128];
         snprintf(text, sizeof(text), "Delete %s?", hp->name);
         ysw_mb_create_confirm(text, on_trash_confirm, hpl);
+    } else {
+        ysw_mb_nothing_selected();
     }
 }
 
 static void on_edit(ysw_hpl_t *hpl, lv_obj_t *btn)
 {
-    launch_style_editor(hpl, YSW_HPC_EDIT_HP);
+    if (hpl->model.hp_index < ysw_music_get_hp_count(hpl->model.music)) {
+        launch_progression_editor(hpl, YSW_HPC_EDIT_HP);
+    } else {
+        ysw_mb_nothing_selected();
+    }
 }
 
 static void on_next(ysw_hpl_t *hpl, lv_obj_t *btn)
@@ -320,7 +338,7 @@ ysw_hpl_t* ysw_hpl_create(ysw_music_t *music, uint32_t hp_index)
     ysw_ui_init_buttons(hpl->frame.header.buttons, header_buttons, hpl);
     ysw_ui_init_buttons(hpl->frame.footer.buttons, footer_buttons, hpl);
     ysw_ui_create_frame(&hpl->frame);
-    ysw_ui_set_header_text(&hpl->frame.header, "Chord Styles");
+    ysw_ui_set_header_text(&hpl->frame.header, "Progressions");
     display_progressions(hpl);
     return hpl;
 }
