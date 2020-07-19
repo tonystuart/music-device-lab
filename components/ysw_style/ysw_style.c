@@ -30,6 +30,8 @@ lv_draw_rect_dsc_t sn_rect_dsc;
 lv_draw_rect_dsc_t sel_sn_rect_dsc;
 lv_draw_rect_dsc_t drag_sn_rect_dsc;
 
+lv_draw_rect_dsc_t ysw_style_csp_rect_dsc;
+
 lv_draw_label_dsc_t sn_label_dsc;
 lv_draw_label_dsc_t sel_sn_label_dsc;
 lv_draw_label_dsc_t drag_sn_label_dsc;
@@ -41,6 +43,8 @@ lv_draw_rect_dsc_t drag_hp_rect_dsc;
 lv_draw_label_dsc_t hp_label_dsc;
 lv_draw_label_dsc_t sel_hp_label_dsc;
 lv_draw_label_dsc_t drag_hp_label_dsc;
+
+lv_draw_rect_dsc_t ysw_style_hpp_rect_dsc;
 
 void ysw_style_initialize()
 {
@@ -90,6 +94,7 @@ void ysw_style_initialize()
                 .bg_color = LV_COLOR_PURPLE,
                 .bg_opa = LV_OPA_50,
                 .border_color = LV_COLOR_PURPLE,
+                .border_color = LV_COLOR_PURPLE,
                 .border_opa = LV_OPA_COVER,
                 .border_width = 1,
                 .border_side = LV_BORDER_SIDE_FULL,
@@ -132,6 +137,12 @@ void ysw_style_initialize()
             };
 
     drag_sn_label_dsc = sel_sn_label_dsc;
+
+    // Chord Style Profile
+
+    lv_draw_rect_dsc_init(&ysw_style_csp_rect_dsc);
+    ysw_style_csp_rect_dsc.border_width = 0;
+    ysw_style_csp_rect_dsc.bg_color = LV_COLOR_MAKE(0xbb, 0x86, 0xfc);
 
     // Progressions
 
@@ -182,6 +193,12 @@ void ysw_style_initialize()
             };
 
     drag_hp_label_dsc = hp_label_dsc;
+
+    // Harmonic Progression Profile
+
+    lv_draw_rect_dsc_init(&ysw_style_hpp_rect_dsc);
+    ysw_style_hpp_rect_dsc.border_width = 0;
+    ysw_style_hpp_rect_dsc.bg_color = LV_COLOR_ORANGE;
 
 }
 

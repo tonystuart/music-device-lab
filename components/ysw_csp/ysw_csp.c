@@ -11,6 +11,7 @@
 
 #include "ysw_cs.h"
 #include "ysw_music.h"
+#include "ysw_style.h"
 
 #include "lvgl.h"
 #include "lv_debug.h"
@@ -32,15 +33,6 @@ static lv_design_res_t draw_main(lv_obj_t *csp, const lv_area_t *clip_area)
 {
     ysw_csp_ext_t *ext = lv_obj_get_ext_attr(csp);
     if (ext->cs) {
-        lv_draw_rect_dsc_t rect_dsc;
-        lv_draw_rect_dsc_init(&rect_dsc);
-
-        // The draw_dsc is generally initialized using the the part and the theme:
-        //lv_obj_init_draw_rect_dsc(csp, YSW_CSP_PART_NOTE, &rect_dsc);
-        rect_dsc.border_width = 0;
-        rect_dsc.bg_color = LV_COLOR_MAKE(0xbb, 0x86, 0xfc);
-        //rect_dsc.bg_color = LV_COLOR_PURPLE;
-        //rect_dsc.bg_color = LV_COLOR_YELLOW;
 
         lv_coord_t w = lv_area_get_width(&csp->coords);
         lv_coord_t h = lv_area_get_height(&csp->coords);
@@ -70,7 +62,7 @@ static lv_design_res_t draw_main(lv_obj_t *csp, const lv_area_t *clip_area)
                     .y1 = csp->coords.y1 + pad_top + sn_top,
                     .y2 = csp->coords.y1 + pad_top + sn_bottom
             };
-            lv_draw_rect(&sn_area, clip_area, &rect_dsc);
+            lv_draw_rect(&sn_area, clip_area, &ysw_style_csp_rect_dsc);
         }
     }
     return LV_DESIGN_RES_OK;

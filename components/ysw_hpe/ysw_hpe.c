@@ -102,7 +102,7 @@ static void get_metrics(lv_obj_t *hpe, metrics_t *m)
     m->hpe_height = lv_obj_get_height(hpe);
     m->hpe_width = lv_obj_get_width(hpe);
 
-    m->col_count = ps_count > 16 ? 16 : ps_count > 0 ? ps_count : 1;
+    m->col_count = ps_count > YSW_HPE_MAX_COLS ? YSW_HPE_MAX_COLS : ps_count > 0 ? ps_count : 1;
     m->col_width = m->hpe_width / m->col_count;
     m->row_height = m->hpe_height / 9; // 9 = header + 7 degrees + footer
 

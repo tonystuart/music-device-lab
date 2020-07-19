@@ -10,7 +10,9 @@
 #include "ysw_hpp.h"
 
 #include "ysw_hp.h"
+#include "ysw_hpe.h"
 #include "ysw_music.h"
+#include "ysw_style.h"
 
 #include "lvgl.h"
 #include "lv_debug.h"
@@ -30,18 +32,10 @@ typedef struct {
 
 static lv_design_res_t draw_main(lv_obj_t *hpp, const lv_area_t *clip_area)
 {
-#if 0
     ysw_hpp_ext_t *ext = lv_obj_get_ext_attr(hpp);
     if (ext->hp) {
         lv_draw_rect_dsc_t rect_dsc;
         lv_draw_rect_dsc_init(&rect_dsc);
-
-        // The draw_dsc is generally initialized using the the part and the theme:
-        //lv_obj_init_draw_rect_dsc(hpp, YSW_HPP_PART_NOTE, &rect_dsc);
-        rect_dsc.border_width = 0;
-        rect_dsc.bg_color = LV_COLOR_MAKE(0xbb, 0x86, 0xfc);
-        //rect_dsc.bg_color = LV_COLOR_PURPLE;
-        //rect_dsc.bg_color = LV_COLOR_YELLOW;
 
         lv_coord_t w = lv_area_get_width(&hpp->coords);
         lv_coord_t h = lv_area_get_height(&hpp->coords);
@@ -54,27 +48,25 @@ static lv_design_res_t draw_main(lv_obj_t *hpp, const lv_area_t *clip_area)
         lv_style_int_t pad_bottom = lv_obj_get_style_pad_bottom(hpp, LV_OBJ_PART_MAIN);
         h -= pad_top + pad_bottom;
 
-        float pixels_per_tick = (float)w / YSW_HP_DURATION;
+        float pixels_per_step = (float)w / YSW_HPE_MAX_COLS;
         float pixels_per_degree = (float)h / YSW_MIDI_UNPO;
-        uint32_t sn_count = ysw_hp_get_sn_count(ext->hp);
-        for (uint32_t i = 0; i < sn_count; i++) {
-            ysw_sn_t *sn = ysw_hp_get_sn(ext->hp, i);
-            uint8_t degree = ysw_quatone_get_offset(sn->quatone) / YSW_QUATONES_PER_DEGREE;
-            uint8_t row = YSW_MIDI_UNPO - degree;
-            lv_coord_t sn_left = (pixels_per_tick * sn->start) + 1; // +1 for pad
-            lv_coord_t sn_right = (pixels_per_tick * (sn->start + sn->duration)) - 1; // -1 for pad
-            lv_coord_t sn_top = (pixels_per_degree * row) + 1; // +1 for pad
-            lv_coord_t sn_bottom = sn_top + pixels_per_degree;
-            lv_area_t sn_area = {
-                    .x1 = hpp->coords.x1 + pad_left + sn_left,
-                    .x2 = hpp->coords.x1 + pad_left + sn_right,
-                    .y1 = hpp->coords.y1 + pad_top + sn_top,
-                    .y2 = hpp->coords.y1 + pad_top + sn_bottom
+        uint32_t ps_count = min(ysw_hp_get_ps_count(ext->hp), YSW_HPE_MAX_COLS);
+        for (uint32_t i = 0; i < ps_count; i++) {
+            ysw_ps_t *ps = ysw_hp_get_ps(ext->hp, i);
+            uint8_t row = YSW_MIDI_UNPO - ps->degree;
+            lv_coord_t ps_left = (pixels_per_step * i) + 1; // +1 for pad
+            lv_coord_t ps_right = (pixels_per_step * (i + 1)) - 1; // -1 for pad
+            lv_coord_t ps_top = (pixels_per_degree * row) + 1; // +1 for pad
+            lv_coord_t ps_bottom = ps_top + pixels_per_degree - 1; // -1 for pad
+            lv_area_t ps_area = {
+                    .x1 = hpp->coords.x1 + pad_left + ps_left,
+                    .x2 = hpp->coords.x1 + pad_left + ps_right,
+                    .y1 = hpp->coords.y1 + pad_top + ps_top,
+                    .y2 = hpp->coords.y1 + pad_top + ps_bottom
             };
-            lv_draw_rect(&sn_area, clip_area, &rect_dsc);
+            lv_draw_rect(&ps_area, clip_area, &ysw_style_hpp_rect_dsc);
         }
     }
-#endif
     return LV_DESIGN_RES_OK;
 }
 

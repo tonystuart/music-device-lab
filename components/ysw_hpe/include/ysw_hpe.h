@@ -13,6 +13,8 @@
 #include "ysw_auto_play.h"
 #include "ysw_hp.h"
 
+#define YSW_HPE_MAX_COLS 16
+
 typedef void (*ysw_hpe_create_cb_t)(void *context, uint32_t ps_index, uint8_t degree);
 typedef void (*ysw_hpe_select_cb_t)(void *context, ysw_ps_t *ps);
 typedef void (*ysw_hpe_deselect_cb_t)(void *context, ysw_ps_t *ps);

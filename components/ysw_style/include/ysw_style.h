@@ -35,6 +35,10 @@ extern lv_draw_label_dsc_t sn_label_dsc;
 extern lv_draw_label_dsc_t sel_sn_label_dsc;
 extern lv_draw_label_dsc_t drag_sn_label_dsc;
 
+// Chord Style Profile
+
+extern lv_draw_rect_dsc_t ysw_style_csp_rect_dsc;
+
 // Progressions
 
 extern lv_draw_rect_dsc_t hp_rect_dsc;
@@ -44,6 +48,10 @@ extern lv_draw_rect_dsc_t drag_hp_rect_dsc;
 extern lv_draw_label_dsc_t hp_label_dsc;
 extern lv_draw_label_dsc_t sel_hp_label_dsc;
 extern lv_draw_label_dsc_t drag_hp_label_dsc;
+
+// Harmonic Progression Profile
+
+extern lv_draw_rect_dsc_t ysw_style_hpp_rect_dsc;
 
 void ysw_style_initialize();
 void ysw_style_clear_border(lv_obj_t *obj);
