@@ -10,6 +10,7 @@
 #include "ysw_bus.h"
 
 #include "ysw_heap.h"
+#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "stdlib.h"
 

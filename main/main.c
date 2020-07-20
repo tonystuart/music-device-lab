@@ -9,12 +9,11 @@
 
 #include "ysw_main_display.h"
 
-#include "ysw_csc.h"
 #include "ysw_csl.h"
-#include "ysw_gsc.h"
-#include "ysw_hpc.h"
+#include "ysw_hpl.h"
 #include "ysw_music.h"
 #include "ysw_mfr.h"
+#include "ysw_main_bus.h"
 #include "ysw_main_seq.h"
 #include "ysw_spiffs.h"
 #include "ysw_style.h"
@@ -33,12 +32,9 @@ static void event_handler(lv_obj_t *btn, lv_event_t event)
     if (event == LV_EVENT_CLICKED) {
         const char *text = lv_list_get_btn_text(btn);
         if (strcmp(text, "Chords") == 0) {
-            //ysw_csc_create(music, 0);
-            ysw_csl_create(lv_scr_act(), music, 0);
+            ysw_csl_create(music, 0);
         } else if (strcmp(text, "Progressions") == 0) {
-            ysw_hpc_create(lv_scr_act(), music, 0);
-        } else if (strcmp(text, "Globals") == 0) {
-            ysw_gsc_create(music);
+            ysw_hpl_create(music, 0);
         }
     }
 }
@@ -73,6 +69,7 @@ void app_main()
     esp_log_level_set("YSW_ARRAY", ESP_LOG_INFO);
 
     ysw_spiffs_initialize(YSW_MUSIC_PARTITION);
+    ysw_main_bus_create();
     ysw_main_display_initialize();
     ysw_main_synth_initialize();
     ysw_main_seq_initialize();
