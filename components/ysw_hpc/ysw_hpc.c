@@ -12,6 +12,7 @@
 #include "ysw_auto_play.h"
 #include "ysw_hp.h"
 #include "ysw_cs.h"
+#include "ysw_csc.h"
 #include "ysw_sn.h"
 #include "ysw_heap.h"
 #include "ysw_instruments.h"
@@ -516,6 +517,12 @@ static void on_drag_end(ysw_hpc_t *hpc)
     auto_play_all(hpc);
 }
 
+static void on_edit_cs(ysw_hpc_t *hpc, ysw_cs_t *cs)
+{
+    uint32_t cs_index = ysw_music_get_cs_index(hpc->controller.music, cs);
+    ysw_csc_create(hpc->controller.music, cs_index, YSW_CSC_EDIT_CS);
+}
+
 static const ysw_ui_btn_def_t header_buttons[] = {
     { LV_SYMBOL_PREV, on_prev },
     { LV_SYMBOL_PLAY, on_play },
@@ -547,6 +554,7 @@ static void create_progression_editor(ysw_hpc_t *hpc)
     ysw_hpe_set_create_cb(hpc->controller.hpe, on_create_step);
     ysw_hpe_set_select_cb(hpc->controller.hpe, on_select);
     ysw_hpe_set_drag_end_cb(hpc->controller.hpe, on_drag_end);
+    ysw_hpe_set_edit_cs_cb(hpc->controller.hpe, on_edit_cs);
 }
 
 static void on_bus_evt(ysw_hpc_t *hpc, uint32_t evt, void *details, char *sender)

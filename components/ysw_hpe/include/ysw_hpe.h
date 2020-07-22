@@ -19,6 +19,7 @@ typedef void (*ysw_hpe_create_cb_t)(void *context, uint32_t ps_index, uint8_t de
 typedef void (*ysw_hpe_select_cb_t)(void *context, ysw_ps_t *ps);
 typedef void (*ysw_hpe_deselect_cb_t)(void *context, ysw_ps_t *ps);
 typedef void (*ysw_hpe_drag_end_cb_t)(void *context);
+typedef void (*ysw_hpe_edit_cs_cb_t)(void *context, ysw_cs_t *cs);
 
 typedef enum {
     YSW_HPE_DRAG_NONE = 0,
@@ -48,6 +49,7 @@ typedef struct {
     ysw_hpe_select_cb_t select_cb;
     ysw_hpe_deselect_cb_t deselect_cb;
     ysw_hpe_drag_end_cb_t drag_end_cb;
+    ysw_hpe_edit_cs_cb_t edit_cs_cb;
     void *context;
 } ysw_hpe_ext_t;
 
@@ -65,6 +67,7 @@ void ysw_hpe_set_create_cb(lv_obj_t *hpe, void *cb);
 void ysw_hpe_set_select_cb(lv_obj_t *hpe, void *cb);
 void ysw_hpe_set_deselect_cb(lv_obj_t *hpe, void *cb);
 void ysw_hpe_set_drag_end_cb(lv_obj_t *hpe, void *cb);
+void ysw_hpe_set_edit_cs_cb(lv_obj_t *hpe, void *cb);
 void ysw_hpe_set_hp(lv_obj_t *hpe, ysw_hp_t *hp);
 void ysw_hpe_on_metro(lv_obj_t *hpe, ysw_note_t *metro_note);
 void ysw_hpe_ensure_visible(lv_obj_t *hpe, uint32_t first_ps_index, uint32_t last_ps_index);

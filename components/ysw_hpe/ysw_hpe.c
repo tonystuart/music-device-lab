@@ -366,6 +366,14 @@ static void fire_drag_end(lv_obj_t *hpe)
     }
 }
 
+static void fire_edit_chord_style(lv_obj_t *hpe)
+{
+    ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
+    if (ext->edit_cs_cb && ext->last_ps) {
+        ext->edit_cs_cb(ext->context, ext->last_ps->cs);
+    }
+}
+
 static uint32_t count_selected_ps(lv_obj_t *hpe)
 {
     uint32_t count = 0;
@@ -592,7 +600,17 @@ static void on_signal_pressed(lv_obj_t *hpe, void *param)
         ext->scrolling = false;
         ext->long_press = false;
         ext->press_lost = false;
-        capture_click(hpe, point);
+        metrics_t m;
+        get_metrics(hpe, &m);
+        if (point->y > (m.hp_top + m.hp_height)) {
+            int32_t index = ysw_hp_get_ps_index(ext->hp, ext->last_ps);
+            if (index != -1) {
+                lv_indev_wait_release(indev_act);
+                fire_edit_chord_style(hpe);
+            }
+        } else {
+            capture_click(hpe, point);
+        }
     }
 }
 
@@ -731,15 +749,9 @@ lv_obj_t* ysw_hpe_create(lv_obj_t *par, void *context)
 
     *ext = (ysw_hpe_ext_t ) {
                 .metro_marker = -1,
-                //v7: .bg_style = &lv_style_plain,
-                //v7: .fg_style = &ysw_style_ei,
-                //v7: .rs_style = &ysw_style_rn,
-                //v7: .ss_style = &ysw_style_sn,
-                //v7: .ms_style = &ysw_style_mn,
                 .context = context,
             };
 
-//v7: lv_obj_set_style(hpe, ext->bg_style);
     lv_obj_set_signal_cb(hpe, signal_cb);
     lv_obj_set_design_cb(hpe, design_cb);
     lv_obj_set_click(hpe, true);
@@ -782,6 +794,12 @@ void ysw_hpe_set_drag_end_cb(lv_obj_t *hpe, void *cb)
 {
     ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
     ext->drag_end_cb = cb;
+}
+
+void ysw_hpe_set_edit_cs_cb(lv_obj_t *hpe, void *cb)
+{
+    ysw_hpe_ext_t *ext = lv_obj_get_ext_attr(hpe);
+    ext->edit_cs_cb = cb;
 }
 
 void ysw_hpe_on_metro(lv_obj_t *hpe, ysw_note_t *metro_note)
