@@ -11,5 +11,6 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "ysw_vs1053.h"
 
-QueueHandle_t ysw_ble_synth_create_task();
+QueueHandle_t ysw_synth_vs_create_task(ysw_vs1053_config_t *vs1053_config);

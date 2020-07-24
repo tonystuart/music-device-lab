@@ -10,9 +10,11 @@
 #include "ysw_main_synth.h"
 
 #if YSW_MAIN_SYNTH_MODEL == 1
-#include "ysw_ble_synth.h"
+#include "ysw_synth_bt.h"
 #elif YSW_MAIN_SYNTH_MODEL == 2
-#include "ysw_vs1053_synth.h"
+#include "ysw_synth_vs.h"
+#elif YSW_MAIN_SYNTH_MODEL == 3
+#include "ysw_synth_fs.h"
 #endif
 #include "ysw_synth.h"
 #include "ysw_message.h"
@@ -33,11 +35,11 @@ void ysw_main_synth_send(ysw_synth_message_t *message)
 void ysw_main_synth_initialize()
 {
 #if YSW_MAIN_SYNTH_MODEL == 1
-    ESP_LOGD(TAG, "ysw_main_synth_initialize: configuring BLE synth");
-    synth_queue = ysw_ble_synth_create_task();
+    ESP_LOGD(TAG, "ysw_main_synth_initialize: configuring BlueTooth synth");
+    synth_queue = ysw_synth_bt_create_task();
 #elif YSW_MAIN_SYNTH_MODEL == 2
     ESP_LOGD(TAG, "ysw_main_synth_initialize: configuring VS1053 synth");
-    ysw_vs1053_synth_config_t config = {
+    ysw_vs1053_config_t config = {
         .dreq_gpio = -1,
         .xrst_gpio = 0,
         .miso_gpio = 15,
@@ -47,7 +49,10 @@ void ysw_main_synth_initialize()
         .xdcs_gpio = 4,
         .spi_host = VSPI_HOST,
     };
-    synth_queue = ysw_vs1053_synth_create_task(&config);
+    synth_queue = ysw_synth_vs_create_task(&config);
+#elif YSW_MAIN_SYNTH_MODEL == 3
+    ESP_LOGD(TAG, "ysw_main_synth_initialize: configuring FluidSynth");
+    synth_queue = ysw_synth_fs_create_task();
 #else
 #error Define YSW_MAIN_SYNTH_MODEL
 #endif

@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_wavetable_synth.h"
+#include "ysw_synth_wt.h"
 
 #include "esp_log.h"
 #include "driver/gpio.h"
@@ -19,7 +19,7 @@
 #include "ysw_wavetable.h"
 #include "ysw_synth.h"
 
-#define TAG "WAVETABLE"
+#define TAG "YSW_SYNTH_WT"
 
 #define GAIN_IN_DB (-10.0f)
 #define BUFFER_COUNT 16
@@ -259,7 +259,7 @@ static void run_wt_synth(void* parameters)
     }
 }
 
-QueueHandle_t ysw_wavetable_synth_create_task(uint8_t dac_left_gpio, uint8_t dac_right_gpio)
+QueueHandle_t ysw_synth_wt_create_task(uint8_t dac_left_gpio, uint8_t dac_right_gpio)
 {
     create_synth_task(dac_left_gpio, dac_right_gpio);
     ysw_task_create_standard(TAG, run_wt_synth, &input_queue, sizeof(ysw_synth_message_t));

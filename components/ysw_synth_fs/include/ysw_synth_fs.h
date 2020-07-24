@@ -11,7 +11,5 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
-#include "freertos/semphr.h"
 
-QueueHandle_t ysw_wavetable_synth_create_task(uint8_t dac_left_gpio, uint8_t dac_right_gpio);
-
+QueueHandle_t ysw_synth_fs_create_task();

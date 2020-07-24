@@ -21,9 +21,9 @@ typedef struct {
     uint8_t xcs_gpio;
     uint8_t xdcs_gpio;
     spi_host_device_t spi_host;
-} ysw_vs1053_synth_config_t;
+} ysw_vs1053_config_t;
 
-void ysw_vs1053_synth_initialize(ysw_vs1053_synth_config_t *vs1053_config);
-void ysw_vs1053_synth_set_note_on(uint8_t channel, uint8_t midi_note, uint8_t velocity);
-void ysw_vs1053_synth_set_note_off(uint8_t channel, uint8_t midi_note);
-void ysw_vs1053_synth_select_program(uint8_t channel, uint8_t program);
+void ysw_vs1053_initialize(ysw_vs1053_config_t *vs1053_config);
+void ysw_vs1053_set_note_on(uint8_t channel, uint8_t midi_note, uint8_t velocity);
+void ysw_vs1053_set_note_off(uint8_t channel, uint8_t midi_note);
+void ysw_vs1053_select_program(uint8_t channel, uint8_t program);

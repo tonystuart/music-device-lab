@@ -6,4 +6,4 @@
 # in the build directory. This behaviour is entirely configurable,
 # please read the ESP-IDF documents if you need to do this.
 #
-#CFLAGS += -DYSW_MAIN_SYNTH_MODEL=2 -DYSW_MAIN_DISPLAY_MODEL=2
+#CFLAGS += -DCOMPONENT_SPECIFIC_DEFINE

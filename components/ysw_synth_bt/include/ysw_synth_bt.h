@@ -9,5 +9,7 @@
 
 #pragma once
 
-void ysw_main_display_initialize();
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 
+QueueHandle_t ysw_synth_bt_create_task();

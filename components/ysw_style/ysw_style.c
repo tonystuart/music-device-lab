@@ -94,7 +94,6 @@ void ysw_style_initialize()
                 .bg_color = LV_COLOR_PURPLE,
                 .bg_opa = LV_OPA_50,
                 .border_color = LV_COLOR_PURPLE,
-                .border_color = LV_COLOR_PURPLE,
                 .border_opa = LV_OPA_COVER,
                 .border_width = 1,
                 .border_side = LV_BORDER_SIDE_FULL,

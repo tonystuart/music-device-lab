@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_vs1053_driver.h"
+#include "ysw_vs1053.h"
 
 #include "esp_log.h"
 #include "driver/gpio.h"
@@ -208,22 +208,22 @@ static void load_patch(const uint16_t plugin[], int32_t length)
     }
 }
 
-void ysw_vs1053_synth_set_note_on(uint8_t channel, uint8_t midi_note, uint8_t velocity)
+void ysw_vs1053_set_note_on(uint8_t channel, uint8_t midi_note, uint8_t velocity)
 {
     write_midi(channel | 0x90, midi_note, velocity);
 }
 
-void ysw_vs1053_synth_set_note_off(uint8_t channel, uint8_t midi_note)
+void ysw_vs1053_set_note_off(uint8_t channel, uint8_t midi_note)
 {
     write_midi(channel | 0x80, midi_note, 0);
 }
 
-void ysw_vs1053_synth_select_program(uint8_t channel, uint8_t program)
+void ysw_vs1053_select_program(uint8_t channel, uint8_t program)
 {
     write_midi(channel | 0xc0, 0, program);
 }
 
-void ysw_vs1053_synth_initialize(ysw_vs1053_synth_config_t *vs1053_config)
+void ysw_vs1053_initialize(ysw_vs1053_config_t *vs1053_config)
 {
     dreq_gpio = vs1053_config->dreq_gpio;
     if (dreq_gpio != -1) {

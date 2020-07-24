@@ -11,8 +11,6 @@
 
 #include "ysw_synth.h"
 
-#define YSW_MAIN_SYNTH_MODEL 2
-
 void ysw_main_synth_send(ysw_synth_message_t *message);
 void ysw_main_synth_initialize();
 

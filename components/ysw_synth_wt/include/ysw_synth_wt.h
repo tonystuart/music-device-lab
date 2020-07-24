@@ -11,6 +11,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
-#include "ysw_vs1053_driver.h"
+#include "freertos/semphr.h"
 
-QueueHandle_t ysw_vs1053_synth_create_task(ysw_vs1053_synth_config_t *vs1053_config);
+QueueHandle_t ysw_synth_wt_create_task(uint8_t dac_left_gpio, uint8_t dac_right_gpio);
+
