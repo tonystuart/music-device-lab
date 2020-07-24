@@ -12,4 +12,4 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
-QueueHandle_t ysw_synth_fs_create_task();
+QueueHandle_t ysw_synth_fs_create_task(const char *sf_filename);
