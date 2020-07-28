@@ -478,7 +478,7 @@ static void on_create_note(ysw_csc_t *csc, uint32_t start, ysw_quatone_t quatone
     ysw_cs_t *cs = ysw_music_get_cs(csc->controller.music, csc->controller.cs_index);
     uint32_t division_duration = YSW_CS_DURATION / cs->divisions;
     uint32_t start_floor = (start / division_duration) * division_duration;
-    uint32_t duration = division_duration - 5;
+    uint32_t duration = division_duration - (division_duration / 5);
     ysw_sn_t *sn = ysw_sn_create(quatone, 80, start_floor, duration, 0);
     ysw_sn_select(sn, true);
     csc->controller.sn_index = ysw_cs_insert_sn(cs, sn);

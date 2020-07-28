@@ -135,7 +135,7 @@ static void play_note(ysw_seq_t *seq, ysw_note_t *note, int next_note_index)
         seq->active_notes[next_note_index].channel = note->channel;
         seq->active_notes[next_note_index].midi_note = note->midi_note;
         seq->active_notes[next_note_index].end_time = t2ms(seq, note->start) + t2ms(seq, note->duration);
-        ESP_LOGD(TAG, "active_notes[%d].end_time=%d", next_note_index, seq->active_notes[next_note_index].end_time);
+        ESP_LOGD(TAG, "active_notes[%d].end_time=%ld", next_note_index, seq->active_notes[next_note_index].end_time);
     } else {
         ESP_LOGE(TAG, "Maximum polyphony exceeded, active_count=%d", seq->active_count);
     }
@@ -364,7 +364,7 @@ static TickType_t process_notes(ysw_seq_t *seq)
     } else {
         if (next_note_to_end) {
             uint32_t delay_millis = next_note_to_end->end_time - playback_millis;
-            ESP_LOGD(TAG, "waiting for final notes to end, end_time=%d, current_time=%d", next_note_to_end->end_time, playback_millis);
+            ESP_LOGD(TAG, "waiting for final notes to end, end_time=%ld, current_time=%d", next_note_to_end->end_time, playback_millis);
             ticks_to_wait = to_ticks(delay_millis);
         } else if (seq->loop) {
             fire_loop_done(seq);
