@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#cmakedefine01 BUILD_SHARED_LIBS
+#define BUILD_SHARED_LIBS 1
 
 #if (BUILD_SHARED_LIBS == 0)
     #define FLUIDSYNTH_API // building static lib? no visibility control then
