@@ -25,7 +25,6 @@
 #include "fluid_settings.h"
 #include "fluid_sfont.h"
 #include "fluid_defsfont.h"
-#include "fluid_instpatch.h"
 
 #ifdef TRAP_ON_FPE
 #define _GNU_SOURCE
