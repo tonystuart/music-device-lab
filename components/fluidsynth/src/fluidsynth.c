@@ -323,7 +323,7 @@ fast_render_loop(fluid_settings_t *settings, fluid_synth_t *synth, fluid_player_
     13)create a synchronous user shell if interactive.
     14)entering fast rendering loop if requested.
  */
-int main(int argc, char **argv)
+int fluid_main(int argc, char **argv)
 {
     fluid_settings_t *settings;
     int result = -1;
