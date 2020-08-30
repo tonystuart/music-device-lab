@@ -7,13 +7,14 @@
 #include "string.h"
 
 typedef enum {
+    V,
     D,
     I,
     W,
     E
 } level_t;
 
-static const char *level_names = "DIWE";
+static const char *level_names = "VDIWE";
 
 typedef struct {
     char *tag;
@@ -22,7 +23,8 @@ typedef struct {
 
 static const tag_level_t tag_levels[] = {
         { "YSW_HEAP", I },
-        { "YSW_ARRAY", I }
+        { "YSW_ARRAY", I },
+        { "YSW_GLIB", D },
 };
 
 #define TAG_LEVEL_SZ (sizeof(tag_levels) / sizeof(tag_level_t))

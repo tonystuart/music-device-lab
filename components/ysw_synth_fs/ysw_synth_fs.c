@@ -9,10 +9,12 @@
 
 #include "ysw_synth_fs.h"
 #include "ysw_common.h"
+#include "ysw_heap.h"
 #include "ysw_task.h"
 #include "ysw_synth.h"
 #include "esp_log.h"
 #include "fluidsynth.h"
+#include "stdlib.h"
 
 #define TAG "YSW_SYNTH_FS"
 
@@ -20,6 +22,7 @@ typedef struct {
     const char *sf_filename;
     QueueHandle_t input_queue;
     fluid_synth_t *synth;
+    fluid_audio_driver_t *driver; // TODO: delete this when done with it
 } ysw_fs_t;
 
 static inline void on_note_on(ysw_fs_t *ysw_fs, ysw_synth_note_on_t *m)
@@ -65,7 +68,7 @@ static void run_fs_synth(ysw_fs_t *ysw_fs)
     fluid_settings_t *settings = new_fluid_settings();
     fluid_settings_setstr(settings, "audio.driver", "alsa");
     ysw_fs->synth = new_fluid_synth(settings);
-    fluid_audio_driver_t *adriver = new_fluid_audio_driver(settings, ysw_fs->synth);
+    ysw_fs->driver = new_fluid_audio_driver(settings, ysw_fs->synth);
     int sfont_id = fluid_synth_sfload(ysw_fs->synth, ysw_fs->sf_filename, 1);
     if (sfont_id == FLUID_FAILED) {
         ESP_LOGE(TAG, "fluid_synth_sfload failed, sf_filename=%s", ysw_fs->sf_filename);

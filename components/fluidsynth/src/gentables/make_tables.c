@@ -64,7 +64,7 @@ static void open_table(FILE**fp, const char* dir, const char* file)
     fprintf(*fp, "/* THIS FILE HAS BEEN AUTOMATICALLY GENERATED. DO NOT EDIT. */\n\n");
 }
 
-int main (int argc, char *argv[])
+int gen_main (int argc, char *argv[])
 {
     FILE *fp;
  

@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 /* Define to enable ALSA driver */
-//#define ALSA_SUPPORT 1
+#define ALSA_SUPPORT 1
 
 /* Define to activate sound output to files */
 //#define AUFILE_SUPPORT 1
