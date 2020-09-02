@@ -63,8 +63,9 @@ static void process_message(ysw_fs_t *ysw_fs, ysw_synth_message_t *message)
 //    public static final float MAXIMUM_GAIN = 10f;
 //    public static final float DEFAULT_GAIN = 0.200f;
 
-static void run_fs_synth(ysw_fs_t *ysw_fs)
+static void run_fs_synth(void *parameter)
 {
+    ysw_fs_t *ysw_fs = parameter;
     fluid_settings_t *settings = new_fluid_settings();
     fluid_settings_setstr(settings, "audio.driver", "alsa");
     ysw_fs->synth = new_fluid_synth(settings);
@@ -74,6 +75,10 @@ static void run_fs_synth(ysw_fs_t *ysw_fs)
         ESP_LOGE(TAG, "fluid_synth_sfload failed, sf_filename=%s", ysw_fs->sf_filename);
         abort();
     }
+
+    float gain = fluid_synth_get_gain(ysw_fs->synth);
+    ESP_LOGD(TAG, "run_fs_synth gain=%g", gain);
+    fluid_synth_set_gain(ysw_fs->synth, 1);
 
     for (;;) {
         ysw_synth_message_t message;

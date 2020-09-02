@@ -182,7 +182,7 @@ typedef void (*fluid_rvoice_function_t)(void *obj, const fluid_rvoice_param_t pa
 
 /* Memory allocation */
 #define FLUID_MALLOC(_n)             fluid_alloc(_n)
-#define FLUID_REALLOC(_p,_n)         realloc(_p,_n)
+#define FLUID_REALLOC(_p,_n)         g_realloc(_p,_n)
 #define FLUID_FREE(_p)               fluid_free(_p)
 #define FLUID_NEW(_t)                (_t*)FLUID_MALLOC(sizeof(_t))
 #define FLUID_ARRAY_ALIGNED(_t,_n,_a) (_t*)FLUID_MALLOC((_n)*sizeof(_t) + ((unsigned int)_a - 1u))

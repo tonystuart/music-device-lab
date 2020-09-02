@@ -9,6 +9,4 @@
 
 #pragma once
 
-#include "ysw_glib.h"
-#include "ysw_pthread.h"
-#include "ysw_socket.h"
+#define SOMAXCONN 4

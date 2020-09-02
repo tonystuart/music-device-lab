@@ -7,8 +7,19 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#pragma once
+#include "esp_log.h"
+#include "pthread.h"
 
-#include "ysw_glib.h"
-#include "ysw_pthread.h"
-#include "ysw_socket.h"
+#define TAG "YSW_PTHREAD"
+
+int pthread_setschedparam(pthread_t thread, int policy, const struct sched_param *param)
+{
+    ESP_LOGE(TAG, "pthread_setschedparam thread=%d", thread);
+    return 0;
+}
+
+int pthread_condattr_destroy (pthread_condattr_t *attr)
+{
+    ESP_LOGE(TAG, "pthread_condattr_destroy entered");
+    return 0;
+}

@@ -9,6 +9,8 @@
 
 #pragma once
 
-#include "ysw_glib.h"
-#include "ysw_pthread.h"
-#include "ysw_socket.h"
+#include "pthread.h"
+
+int pthread_setschedparam(pthread_t thread, int policy, const struct sched_param *param);
+
+int pthread_condattr_destroy (pthread_condattr_t *attr);

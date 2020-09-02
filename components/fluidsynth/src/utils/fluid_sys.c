@@ -196,7 +196,7 @@ fluid_log(int level, const char *fmt, ...)
 
 void* fluid_alloc(size_t len)
 {
-    void* ptr = malloc(len);
+    void* ptr = g_malloc(len);
 
 #if defined(DEBUG) && !defined(_MSC_VER)
     // garbage initialize allocated memory for debug builds to ease reproducing
@@ -225,7 +225,7 @@ void* fluid_alloc(size_t len)
  */
 void fluid_free(void* ptr)
 {
-    free(ptr);
+    g_free(ptr);
 }
 
 /**
@@ -1245,7 +1245,7 @@ fluid_istream_readline(fluid_istream_t in, fluid_ostream_t out, char *prompt,
             add_history(buf);
         }
 
-        free(line);
+        g_free(line);
         return 1;
     }
     else

@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 /* Define to enable ALSA driver */
-#define ALSA_SUPPORT 1
+//#define ALSA_SUPPORT 1
 
 /* Define to activate sound output to files */
 //#define AUFILE_SUPPORT 1
@@ -65,13 +65,13 @@
 #define HAVE_NETINET_IN_H 1
 
 /* Define to 1 if you have the <netinet/tcp.h> header file. */
-#define HAVE_NETINET_TCP_H 1
+//#define HAVE_NETINET_TCP_H 1
 
 /* Define if compiling the mixer with multi-thread support */
 #define ENABLE_MIXER_THREADS 1
 
 /* Define if compiling with openMP to enable parallel audio rendering */
-#define HAVE_OPENMP 1
+//#define HAVE_OPENMP 1
 
 /* Define to 1 if you have the <pthread.h> header file. */
 #define HAVE_PTHREAD_H 1

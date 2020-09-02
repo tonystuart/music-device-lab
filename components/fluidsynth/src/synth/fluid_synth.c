@@ -3993,7 +3993,9 @@ fluid_synth_write_float_LOCAL(fluid_synth_t *synth, int len,
 #define DITHER_SIZE 48000
 #define DITHER_CHANNELS 2
 
-static float rand_table[DITHER_CHANNELS][DITHER_SIZE];
+static float *rand_table_p;
+
+#define rand_table(channel, sample) (*(rand_table_p + (channel * DITHER_SIZE) + sample))
 
 /* Init dither table */
 static void
@@ -4002,6 +4004,8 @@ init_dither(void)
     float d, dp;
     int c, i;
 
+    rand_table_p = g_malloc(sizeof(float) * DITHER_CHANNELS * DITHER_SIZE);
+
     for(c = 0; c < DITHER_CHANNELS; c++)
     {
         dp = 0;
@@ -4009,11 +4013,11 @@ init_dither(void)
         for(i = 0; i < DITHER_SIZE - 1; i++)
         {
             d = rand() / (float)RAND_MAX - 0.5f;
-            rand_table[c][i] = d - dp;
+            rand_table(c, i) = d - dp;
             dp = d;
         }
 
-        rand_table[c][DITHER_SIZE - 1] = 0 - dp;
+        rand_table(c, DITHER_SIZE - 1) = 0 - dp;
     }
 }
 
@@ -4134,8 +4138,8 @@ fluid_synth_write_s16(fluid_synth_t *synth, int len,
 
         do
         {
-            *left_out = round_clip_to_i16(left_in[n] * 32766.0f + rand_table[0][di]);
-            *right_out = round_clip_to_i16(right_in[n] * 32766.0f + rand_table[1][di]);
+            *left_out = round_clip_to_i16(left_in[n] * 32766.0f + rand_table(0, di));
+            *right_out = round_clip_to_i16(right_in[n] * 32766.0f + rand_table(1, di));
 
             left_out  += lincr;
             right_out += rincr;
@@ -4192,8 +4196,8 @@ fluid_synth_dither_s16(int *dither_index, int len, const float *lin, const float
 
     for(i = 0, j = loff, k = roff; i < len; i++, j += lincr, k += rincr)
     {
-        left_out[j] = round_clip_to_i16(lin[i] * 32766.0f + rand_table[0][di]);
-        right_out[k] = round_clip_to_i16(rin[i] * 32766.0f + rand_table[1][di]);
+        left_out[j] = round_clip_to_i16(lin[i] * 32766.0f + rand_table(0, di));
+        right_out[k] = round_clip_to_i16(rin[i] * 32766.0f + rand_table(1, di));
 
         if(++di >= DITHER_SIZE)
         {

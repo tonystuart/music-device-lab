@@ -135,9 +135,22 @@ gpointer g_malloc(gsize n_bytes)
     return mem;
 }
 
+gpointer g_realloc(gpointer mem, gsize n_bytes)
+{
+    ESP_LOGV(TAG, "g_realloc entered");
+
+    gpointer new_mem;
+    
+    new_mem = ysw_heap_reallocate(mem, n_bytes);
+
+    return new_mem;
+}
+
 void g_free(gpointer mem)
 {
-    ESP_LOGE(TAG, "g_free entered");
+    ESP_LOGV(TAG, "g_free entered");
+
+    ysw_heap_free(mem);
 }
 
 // https://developer.gnome.org/glib/stable/glib-Threads.html
@@ -275,9 +288,13 @@ gboolean g_file_test(const gchar *filename, GFileTest test)
     }
 
     if ((test & G_FILE_TEST_IS_EXECUTABLE) && (access (filename, X_OK) == 0)) {
+#ifdef IDF_VER
+        return FALSE;
+#else
         if (getuid () != 0) {
             return TRUE;
         }
+#endif
 
         /* For root, on some POSIX systems, access (filename, X_OK)
          * will succeed even if no executable bits are set on the
@@ -289,10 +306,15 @@ gboolean g_file_test(const gchar *filename, GFileTest test)
     }
 
     if (test & G_FILE_TEST_IS_SYMLINK) {
+#ifdef IDF_VER
+        return FALSE;
+#else
         struct stat s;
 
-        if ((lstat (filename, &s) == 0) && S_ISLNK (s.st_mode))
+        if ((lstat (filename, &s) == 0) && S_ISLNK (s.st_mode)) {
             return TRUE;
+        }
+#endif
     }
 
     if (test & (G_FILE_TEST_IS_REGULAR |

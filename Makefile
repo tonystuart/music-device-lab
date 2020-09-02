@@ -7,4 +7,10 @@ PROJECT_NAME := player
 
 include $(IDF_PATH)/make/project.mk
 
-CFLAGS += -DYSW_MAIN_SYNTH_MODEL=2 -DYSW_MAIN_DISPLAY_MODEL=2
+CFLAGS += -DYSW_MAIN_SYNTH_MODEL=3 -DYSW_MAIN_DISPLAY_MODEL=2
+
+display-macros:
+	echo CC=$(CC)
+	echo CFLAGS=$(CFLAGS)
+	$(CC) -dM -E - < /dev/null | sort
+
