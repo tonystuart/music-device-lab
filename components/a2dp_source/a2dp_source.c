@@ -66,7 +66,7 @@ static void bt_av_hdl_stack_evt(uint16_t event, void *p_param);
 static void bt_app_a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param);
 
 /// callback function for A2DP source audio data stream
-static int32_t bt_app_a2d_data_cb(uint8_t *data, int32_t len);
+static esp_a2d_source_data_cb_t bt_app_a2d_data_cb;
 
 /// callback function for AVRCP controller
 static void bt_app_rc_ct_cb(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param);
@@ -107,8 +107,10 @@ static char *bda2str(esp_bd_addr_t bda, char *str, size_t size)
     return str;
 }
 
-void app_main()
+void a2dp_source_initialize(esp_a2d_source_data_cb_t data_cb)
 {
+    bt_app_a2d_data_cb = data_cb;
+
     // Initialize NVS.
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -372,22 +374,6 @@ static void bt_av_hdl_stack_evt(uint16_t event, void *p_param)
 static void bt_app_a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
 {
     bt_app_work_dispatch(bt_app_av_sm_hdlr, event, param, sizeof(esp_a2d_cb_param_t), NULL);
-}
-
-static int32_t bt_app_a2d_data_cb(uint8_t *data, int32_t len)
-{
-    if (len < 0 || data == NULL) {
-        return 0;
-    }
-
-    // generate random sequence
-    int val = rand() % (1 << 16);
-    for (int i = 0; i < (len >> 1); i++) {
-        data[(i << 1)] = val & 0xff;
-        data[(i << 1) + 1] = (val >> 8) & 0xff;
-    }
-
-    return len;
 }
 
 static void a2d_app_heart_beat(void *arg)

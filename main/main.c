@@ -19,6 +19,7 @@
 #include "ysw_style.h"
 #include "ysw_main_synth.h"
 
+#include "a2dp_source.h"
 #include "lvgl/lvgl.h"
 
 #include "esp_log.h"
@@ -58,6 +59,22 @@ static void create_dashboard(void)
     lv_obj_set_event_cb(list_btn, event_handler);
 }
 
+static int32_t data_cb(uint8_t *data, int32_t len)
+{
+    if (len < 0 || data == NULL) {
+        return 0;
+    }
+
+    // generate random sequence
+    int val = rand() % (1 << 16);
+    for (int i = 0; i < (len >> 1); i++) {
+        data[(i << 1)] = val & 0xff;
+        data[(i << 1) + 1] = (val >> 8) & 0xff;
+    }
+
+    return len;
+}
+
 void app_main()
 {
     ESP_LOGD(TAG, "sizeof(ysw_cs_t)=%d", sizeof(ysw_cs_t));
@@ -68,6 +85,7 @@ void app_main()
     esp_log_level_set("YSW_HEAP", ESP_LOG_INFO);
     esp_log_level_set("YSW_ARRAY", ESP_LOG_INFO);
 
+    a2dp_source_initialize(data_cb);
     ysw_spiffs_initialize(YSW_MUSIC_PARTITION);
     ysw_main_bus_create();
     ysw_main_display_initialize();
