@@ -6,5 +6,5 @@ a.c*
 .*.swp
 tags
 spiffs.bin
-
+*.sf2
 eclipse
