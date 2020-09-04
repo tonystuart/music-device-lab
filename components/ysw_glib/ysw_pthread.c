@@ -20,6 +20,7 @@ int pthread_setschedparam(pthread_t thread, int policy, const struct sched_param
 
 int pthread_condattr_destroy (pthread_condattr_t *attr)
 {
+    // NB: pthread_condattr_init is just a stub in ~/esp/esp-idf-v4.0/components/pthread/pthread_cond_var.c
     ESP_LOGE(TAG, "pthread_condattr_destroy entered");
     return 0;
 }

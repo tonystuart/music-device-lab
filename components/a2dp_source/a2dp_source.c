@@ -26,6 +26,8 @@
 #include "esp_a2dp_api.h"
 #include "esp_avrc_api.h"
 
+#define TAG "A2DP"
+
 #define BT_AV_TAG               "BT_AV"
 #define BT_RC_CT_TAG            "RCCT"
 
@@ -232,10 +234,23 @@ static void filter_inquiry_scan_result(esp_bt_gap_cb_param_t *param)
         return;
     }
 
+#if 1
+    //if (strcmp(bda_str, "94:8e:29:cd:88:6a") == 0) {
+    if (strcmp(bda_str, "87:9e:3d:cc:b9:20") == 0) {
+        ESP_LOGI(TAG, "Found OontZ Angle by BDA");
+        s_a2d_state = APP_AV_STATE_DISCOVERED;
+        memcpy(s_peer_bda, param->disc_res.bda, ESP_BD_ADDR_LEN);
+        ESP_LOGI(BT_AV_TAG, "Cancel device discovery ...");
+        esp_bt_gap_cancel_discovery();
+        return;
+    }
+#endif
+
     /* search for device named "ESP_SPEAKER" in its extended inqury response */
     if (eir) {
         get_name_from_eir(eir, s_peer_bdname, NULL);
-        if (strcmp((char *)s_peer_bdname, "ESP_SPEAKER") != 0) {
+        //if (strcmp((char *)s_peer_bdname, "ESP_SPEAKER") != 0) {
+        if (strcmp((char *)s_peer_bdname, "OontZ Angle") != 0) {
             return;
         }
 

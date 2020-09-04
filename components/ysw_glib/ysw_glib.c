@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include "errno.h"
 #include "pthread.h"
 #include "stdlib.h"
 #include "string.h"
@@ -105,8 +106,10 @@ static pthread_cond_t *g_cond_impl_new(void)
     pthread_cond_t *cond;
     gint status;
 
+    // NB: just a stub in ~/esp/esp-idf-v4.0/components/pthread/pthread_cond_var.c
     pthread_condattr_init(&attr);
 
+    // NB: just a stub in ~/esp/esp-idf-v4.0/components/newlib/pthread.c
     if ((status = pthread_condattr_setclock(&attr, CLOCK_MONOTONIC)) != 0) {
         g_thread_abort(status, "pthread_condattr_setclock");
     }
@@ -117,6 +120,7 @@ static pthread_cond_t *g_cond_impl_new(void)
         g_thread_abort(status, "pthread_cond_init");
     }
 
+    // NB: just a stub in ~/git/player/components/ysw_glib/ysw_pthread.c
     pthread_condattr_destroy(&attr);
 
     return cond;
@@ -281,67 +285,36 @@ void g_private_set(GPrivate *key, gpointer value)
 
 gboolean g_file_test(const gchar *filename, GFileTest test)
 {
-    ESP_LOGV(TAG, "g_file_test entered");
+    ESP_LOGD(TAG, "g_file_test entered, filename=%s, test=%#x", filename, test);
 
-    if ((test & G_FILE_TEST_EXISTS) && (access (filename, F_OK) == 0)) {
-        return TRUE;
+    struct stat sb;
+    int rc = stat(filename, &sb);
+    if (rc == -1) {
+        ESP_LOGD(TAG, "g_file_test stat errno=%d", errno);
+        return false;
     }
 
-    if ((test & G_FILE_TEST_IS_EXECUTABLE) && (access (filename, X_OK) == 0)) {
-#ifdef IDF_VER
-        return FALSE;
-#else
-        if (getuid () != 0) {
-            return TRUE;
-        }
-#endif
-
-        /* For root, on some POSIX systems, access (filename, X_OK)
-         * will succeed even if no executable bits are set on the
-         * file. We fall through to a stat test to avoid that.
-         */
-    }
-    else {
-        test &= ~G_FILE_TEST_IS_EXECUTABLE;
+    if ((test & G_FILE_TEST_IS_REGULAR) && !(S_ISREG(sb.st_mode))) {
+        ESP_LOGD(TAG, "g_file_test not regular");
+        return false;
     }
 
-    if (test & G_FILE_TEST_IS_SYMLINK) {
-#ifdef IDF_VER
-        return FALSE;
-#else
-        struct stat s;
-
-        if ((lstat (filename, &s) == 0) && S_ISLNK (s.st_mode)) {
-            return TRUE;
-        }
-#endif
+    if ((test & G_FILE_TEST_IS_SYMLINK) && !(S_ISLNK(sb.st_mode))) {
+        ESP_LOGD(TAG, "g_file_test not symlink");
+        return false;
     }
 
-    if (test & (G_FILE_TEST_IS_REGULAR |
-                G_FILE_TEST_IS_DIR |
-                G_FILE_TEST_IS_EXECUTABLE)) {
-        struct stat s;
-
-        if (stat (filename, &s) == 0) {
-            if ((test & G_FILE_TEST_IS_REGULAR) && S_ISREG (s.st_mode)) {
-                return TRUE;
-            }
-
-            if ((test & G_FILE_TEST_IS_DIR) && S_ISDIR (s.st_mode)) {
-                return TRUE;
-            }
-
-            /* The extra test for root when access (file, X_OK) succeeds.
-             */
-            if ((test & G_FILE_TEST_IS_EXECUTABLE) &&
-                    ((s.st_mode & S_IXOTH) ||
-                     (s.st_mode & S_IXUSR) ||
-                     (s.st_mode & S_IXGRP)))
-                return TRUE;
-        }
+    if ((test & G_FILE_TEST_IS_DIR) && !(S_ISDIR(sb.st_mode))) {
+        ESP_LOGD(TAG, "g_file_test not dir");
+        return false;
     }
 
-    return FALSE;
+    if ((test & G_FILE_TEST_IS_EXECUTABLE) && !(sb.st_mode & S_IEXEC)) {
+        ESP_LOGD(TAG, "g_file_test not exec");
+        return false;
+    }
+
+    return TRUE;
 }
 
 int g_stat(const gchar *filename, GStatBuf *buf)

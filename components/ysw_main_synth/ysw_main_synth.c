@@ -8,6 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_main_synth.h"
+#include "ysw_music.h"
 
 #if YSW_MAIN_SYNTH_MODEL == 1
 #include "ysw_synth_bt.h"
@@ -52,7 +53,7 @@ void ysw_main_synth_initialize()
     synth_queue = ysw_synth_vs_create_task(&config);
 #elif YSW_MAIN_SYNTH_MODEL == 3
     ESP_LOGD(TAG, "ysw_main_synth_initialize: configuring FluidSynth");
-    synth_queue = ysw_synth_fs_create_task("/home/tony/Downloads/1mgm.sf2");
+    synth_queue = ysw_synth_fs_create_task(YSW_MUSIC_SOUNDFONT);
 #else
 #error Define YSW_MAIN_SYNTH_MODEL
 #endif

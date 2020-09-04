@@ -57,6 +57,10 @@ void delete_fluid_alsa_audio_driver(fluid_audio_driver_t *p);
 void fluid_alsa_audio_driver_settings(fluid_settings_t *settings);
 #endif
 
+#if A2DP_SUPPORT
+#include "a2dp_driver.h"
+#endif
+
 #if OSS_SUPPORT
 fluid_audio_driver_t *new_fluid_oss_audio_driver(fluid_settings_t *settings,
         fluid_synth_t *synth);

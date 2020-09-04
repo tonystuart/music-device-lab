@@ -18,6 +18,7 @@
 #define YSW_MUSIC_PARTITION "/spiffs"
 #define YSW_MUSIC_CSV YSW_MUSIC_PARTITION "/music.csv"
 #define YSW_MUSIC_TEMP YSW_MUSIC_PARTITION "/music.tmp"
+#define YSW_MUSIC_SOUNDFONT YSW_MUSIC_PARTITION "/music.sf2"
 
 typedef struct {
     ysw_array_t *cs_array;

@@ -14,6 +14,11 @@
 #include "esp_log.h"
 #include "esp_spiffs.h"
 
+#include "sys/types.h"
+#include "sys/stat.h"
+#include "dirent.h"
+#include "unistd.h"
+
 #define TAG "YSW_SPIFFS"
 
 void ysw_spiffs_initialize(const char *base_path)
@@ -31,5 +36,20 @@ void ysw_spiffs_initialize(const char *base_path)
     size_t amount_used = 0;
     $(esp_spiffs_info(config.partition_label, &total_size, &amount_used));
     ESP_LOGD(TAG, "ysw_spiffs_initialize total_size=%d, amount_used=%d", total_size, amount_used);
+
+    DIR *spiffs_dir = opendir(base_path);
+    struct dirent *spiffs_entry;
+    while ((spiffs_entry = readdir(spiffs_dir)) != NULL) {
+        char path[128];
+        int len = snprintf(path, sizeof(path), "%s/%s", base_path, spiffs_entry->d_name);
+        if (len < sizeof(path)) {
+            struct stat sb;
+            $(stat(path, &sb));
+            ESP_LOGD(TAG, "ysw_spiffs_initialize %s %ld bytes", path, sb.st_size);
+        } else {
+            ESP_LOGD(TAG, "ysw_spiffs_initialize %s", spiffs_entry->d_name);
+        }
+    }
+    closedir(spiffs_dir);
 }
 

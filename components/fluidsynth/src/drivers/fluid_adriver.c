@@ -60,6 +60,16 @@ static const fluid_audriver_definition_t fluid_audio_drivers[] =
     },
 #endif
 
+#if A2DP_SUPPORT
+    {
+        "a2dp",
+        new_a2dp_audio_driver,
+        NULL,
+        delete_a2dp_audio_driver,
+        NULL
+    },
+#endif
+
 #if PULSE_SUPPORT
     {
         "pulseaudio",

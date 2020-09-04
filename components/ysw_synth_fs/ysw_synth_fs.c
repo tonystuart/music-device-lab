@@ -27,13 +27,13 @@ typedef struct {
 
 static inline void on_note_on(ysw_fs_t *ysw_fs, ysw_synth_note_on_t *m)
 {
-    //ESP_LOGD(TAG, "on_note_on channel=%d, note=%d, velocity=%d", m->channel, m->midi_note, m->velocity);
+    ESP_LOGD(TAG, "on_note_on channel=%d, note=%d, velocity=%d", m->channel, m->midi_note, m->velocity);
     fluid_synth_noteon(ysw_fs->synth, m->channel, m->midi_note, m->velocity);
 }
 
 static inline void on_note_off(ysw_fs_t *ysw_fs, ysw_synth_note_off_t *m)
 {
-    //ESP_LOGD(TAG, "on_note_off channel=%d, note=%d", m->channel, m->midi_note);
+    ESP_LOGD(TAG, "on_note_off channel=%d, note=%d", m->channel, m->midi_note);
     fluid_synth_noteoff(ysw_fs->synth, m->channel, m->midi_note);
 }
 
@@ -59,27 +59,36 @@ static void process_message(ysw_fs_t *ysw_fs, ysw_synth_message_t *message)
     }
 }
 
-//    public static final float MINIMUM_GAIN = 0f;
-//    public static final float MAXIMUM_GAIN = 10f;
-//    public static final float DEFAULT_GAIN = 0.200f;
+#define INITIAL_GAIN (1)
+#define MINIMUM_GAIN (0f)
+#define MAXIMUM_GAIN (10f)
+#define DEFAULT_GAIN (0.200f)
 
-static void run_fs_synth(void *parameter)
+static void initialize_fluidsynth(ysw_fs_t *ysw_fs)
 {
-    ysw_fs_t *ysw_fs = parameter;
     fluid_settings_t *settings = new_fluid_settings();
-    fluid_settings_setstr(settings, "audio.driver", "alsa");
     ysw_fs->synth = new_fluid_synth(settings);
-    ysw_fs->driver = new_fluid_audio_driver(settings, ysw_fs->synth);
+
     int sfont_id = fluid_synth_sfload(ysw_fs->synth, ysw_fs->sf_filename, 1);
     if (sfont_id == FLUID_FAILED) {
         ESP_LOGE(TAG, "fluid_synth_sfload failed, sf_filename=%s", ysw_fs->sf_filename);
         abort();
     }
 
-    float gain = fluid_synth_get_gain(ysw_fs->synth);
-    ESP_LOGD(TAG, "run_fs_synth gain=%g", gain);
-    fluid_synth_set_gain(ysw_fs->synth, 1);
+    fluid_synth_set_gain(ysw_fs->synth, INITIAL_GAIN);
 
+#ifdef IDF_VER
+    fluid_settings_setstr(settings, "audio.driver", "a2dp");
+#else
+    fluid_settings_setstr(settings, "audio.driver", "alsa");
+#endif
+    ysw_fs->driver = new_fluid_audio_driver(settings, ysw_fs->synth);
+}
+
+static void run_fs_synth(void *parameter)
+{
+    ysw_fs_t *ysw_fs = parameter;
+    // initialize_fluidsynth(ysw_fs);
     for (;;) {
         ysw_synth_message_t message;
         BaseType_t is_message = xQueueReceive(ysw_fs->input_queue, &message, portMAX_DELAY);
@@ -103,6 +112,8 @@ QueueHandle_t ysw_synth_fs_create_task(const char *sf_filename)
         .stack_size = YSW_TASK_MEDIUM_STACK,
         .priority = YSW_TASK_DEFAULT_PRIORITY,
     };
+    ESP_LOGI(TAG, "ysw_synth_fs_create_task initializing fluidsynth prior to task creation");
+    initialize_fluidsynth(ysw_fs);
     ysw_task_create(&config);
     return ysw_fs->input_queue;
 }

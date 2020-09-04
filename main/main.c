@@ -19,7 +19,6 @@
 #include "ysw_style.h"
 #include "ysw_main_synth.h"
 
-#include "a2dp_source.h"
 #include "lvgl/lvgl.h"
 
 #include "esp_log.h"
@@ -59,20 +58,28 @@ static void create_dashboard(void)
     lv_obj_set_event_cb(list_btn, event_handler);
 }
 
-static int32_t data_cb(uint8_t *data, int32_t len)
+static void play_hp_loop(ysw_music_t *music, uint32_t hp_index)
 {
-    if (len < 0 || data == NULL) {
-        return 0;
-    }
+    ysw_seq_message_t message = {
+        .type = YSW_SEQ_LOOP,
+        .loop.loop = true,
+    };
 
-    // generate random sequence
-    int val = rand() % (1 << 16);
-    for (int i = 0; i < (len >> 1); i++) {
-        data[(i << 1)] = val & 0xff;
-        data[(i << 1) + 1] = (val >> 8) & 0xff;
-    }
+    ysw_main_seq_send(&message);
 
-    return len;
+    ysw_hp_t *hp = ysw_music_get_hp(music, hp_index);
+
+    uint32_t note_count = 0;
+    ysw_note_t *notes = ysw_hp_get_notes(hp, &note_count);
+
+    message = (ysw_seq_message_t){
+        .type = YSW_SEQ_PLAY,
+        .play.notes = notes,
+        .play.note_count = note_count,
+        .play.tempo = hp->tempo,
+    };
+
+    ysw_main_seq_send(&message);
 }
 
 void app_main()
@@ -82,10 +89,10 @@ void app_main()
     esp_log_level_set("BLEServer", ESP_LOG_INFO);
     esp_log_level_set("BLEDevice", ESP_LOG_INFO);
     esp_log_level_set("BLECharacteristic", ESP_LOG_INFO);
+    esp_log_level_set("TRACE_HEAP", ESP_LOG_INFO);
     esp_log_level_set("YSW_HEAP", ESP_LOG_INFO);
     esp_log_level_set("YSW_ARRAY", ESP_LOG_INFO);
 
-    a2dp_source_initialize(data_cb);
     ysw_spiffs_initialize(YSW_MUSIC_PARTITION);
     ysw_main_bus_create();
     ysw_main_display_initialize();
@@ -97,6 +104,10 @@ void app_main()
 
     if (music && ysw_music_get_cs_count(music) > 0) {
         create_dashboard();
+        ESP_LOGI(TAG, "app_main waiting 30 seconds to connect to bluetooth");
+        wait_millis(30000);
+        ESP_LOGI(TAG, "app_main playing hp loop");
+        play_hp_loop(music, 1);
     } else {
         lv_obj_t *mbox1 = lv_msgbox_create(lv_scr_act(), NULL);
         lv_msgbox_set_text(mbox1, "The music partition is empty");
