@@ -3990,7 +3990,7 @@ fluid_synth_write_float_LOCAL(fluid_synth_t *synth, int len,
     return FLUID_OK;
 }
 
-#define DITHER_SIZE 48000
+#define DITHER_SIZE 5
 #define DITHER_CHANNELS 2
 
 static float *rand_table_p;

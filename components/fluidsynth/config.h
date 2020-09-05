@@ -216,6 +216,7 @@
 
 /* Define to do all DSP in single floating point precision */
 /* #undef WITH_FLOAT */
+#define WITH_FLOAT 1
 
 /* Define to profile the DSP code */
 /* #undef WITH_PROFILING */
@@ -236,22 +237,30 @@
 /* #undef inline */
 #endif
 
+// See ~/esp/esp-idf-v4.0/components/newlib/include/math.h
+
 /* Define to 1 if you have the sinf() function. */
 /* #undef HAVE_SINF */
+#define HAVE_SINF 1
 
 /* Define to 1 if you have the cosf() function. */
 /* #undef HAVE_COSF */
+#define HAVE_COSF 1
 
 /* Define to 1 if you have the fabsf() function. */
 /* #undef HAVE_FABSF */
+#define HAVE_FABSF 1
 
 /* Define to 1 if you have the powf() function. */
 /* #undef HAVE_POWF */
+#define HAVE_POWF 1
 
 /* Define to 1 if you have the sqrtf() function. */
 /* #undef HAVE_SQRTF */
+#define HAVE_SQRTF 1
 
 /* Define to 1 if you have the logf() function. */
 /* #undef HAVE_LOGF */
+#define HAVE_LOGF 1
 
 #endif /* CONFIG_H */

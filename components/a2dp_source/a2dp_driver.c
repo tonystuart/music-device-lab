@@ -30,6 +30,7 @@ static int32_t data_cb(uint8_t *data, int32_t len)
         return 0;
     }
 
+#if 0
     //if (driver->calls++ < 1000) { // about 3 seconds
     if (driver->calls++ < 344) { // about 1 second
         // generate random sequence
@@ -58,9 +59,13 @@ static int32_t data_cb(uint8_t *data, int32_t len)
             }
             //ESP_LOGD(TAG, "iterations=%d, x=%g", driver->iterations++, driver->x);
         }
-    } else {
+    }
+    else
+#endif
+    {
         //ESP_LOGD(TAG, "len=%d", len);
         fluid_synth_write_s16(driver->synth, len / 4, (int16_t *)data, 0, 2, (int16_t *)data, 1, 2);
+
     }
     return len;
 }

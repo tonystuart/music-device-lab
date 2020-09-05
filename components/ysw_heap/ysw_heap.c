@@ -60,7 +60,7 @@ static void* trace_malloc(size_t size)
 {
     total_size += size;
     maximum_size = max(total_size, maximum_size);
-    ESP_LOGD(TRACE_TAG, "trace_malloc size=%d, total_size=%d", size, total_size);
+    ESP_LOGD(TRACE_TAG, "trace_malloc size=%d/%d/%d", size, total_size, maximum_size);
     size_t *ps = xmalloc(size + sizeof(size_t));
     if (!ps) {
         ESP_LOGE(TRACE_TAG, "trace_malloc xmalloc failed, size=%d", size);
@@ -78,7 +78,7 @@ static void* trace_realloc(void *p, size_t size)
         total_size -= *--ps;
         total_size += size;
         maximum_size = max(total_size, maximum_size);
-        ESP_LOGD(TRACE_TAG, "trace_realloc new_size=%d, old_size=%d, total_size=%d", size, *ps, total_size);
+        ESP_LOGD(TRACE_TAG, "trace_realloc size=%d/%d/%d (old_size=%d)", size, total_size, maximum_size, *ps);
         ps = xrealloc(ps, size);
         if (!p) {
             ESP_LOGE(TRACE_TAG, "trace_realloc xrealloc failed, size=%d", size);
@@ -95,7 +95,7 @@ static void trace_free(void *p)
 {
     size_t *ps = (size_t *)p;
     total_size -= *--ps;
-    ESP_LOGD(TRACE_TAG, "trace_free size=%d, total_size=%d, maximum_size=%d", *ps, total_size, maximum_size);
+    ESP_LOGD(TRACE_TAG, "trace_free size=%d/%d/%d", *ps, total_size, maximum_size);
     xfree(ps);
 }
 

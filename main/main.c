@@ -104,8 +104,6 @@ void app_main()
 
     if (music && ysw_music_get_cs_count(music) > 0) {
         create_dashboard();
-        ESP_LOGI(TAG, "app_main waiting 30 seconds to connect to bluetooth");
-        wait_millis(30000);
         ESP_LOGI(TAG, "app_main playing hp loop");
         play_hp_loop(music, 1);
     } else {

@@ -67,6 +67,13 @@ static void process_message(ysw_fs_t *ysw_fs, ysw_synth_message_t *message)
 static void initialize_fluidsynth(ysw_fs_t *ysw_fs)
 {
     fluid_settings_t *settings = new_fluid_settings();
+
+    // See fluid_synth_settings
+    fluid_settings_setint(settings, "synth.polyphony", 8);
+    fluid_settings_setint(settings, "synth.midi-channels", 10); // 16 is minimum
+    fluid_settings_setint(settings, "synth.reverb.active", 0);
+    fluid_settings_setint(settings, "synth.chorus.active", 0);
+
     ysw_fs->synth = new_fluid_synth(settings);
 
     int sfont_id = fluid_synth_sfload(ysw_fs->synth, ysw_fs->sf_filename, 1);
@@ -76,6 +83,7 @@ static void initialize_fluidsynth(ysw_fs_t *ysw_fs)
     }
 
     fluid_synth_set_gain(ysw_fs->synth, INITIAL_GAIN);
+
 
 #ifdef IDF_VER
     fluid_settings_setstr(settings, "audio.driver", "a2dp");
