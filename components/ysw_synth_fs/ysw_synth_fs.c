@@ -70,7 +70,6 @@ static void initialize_fluidsynth(ysw_fs_t *ysw_fs)
 
     // See fluid_synth_settings
     fluid_settings_setint(settings, "synth.polyphony", 8);
-    fluid_settings_setint(settings, "synth.midi-channels", 10); // 16 is minimum
     fluid_settings_setint(settings, "synth.reverb.active", 0);
     fluid_settings_setint(settings, "synth.chorus.active", 0);
 
