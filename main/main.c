@@ -7,6 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
+#if 0
 #include "ysw_main_display.h"
 
 #include "ysw_csl.h"
@@ -118,3 +119,86 @@ void app_main()
         lv_task_handler();
     }
 }
+#else
+
+#include "a2dp_source.h"
+#include "hxcmod.h"
+#include "ysw_heap.h"
+#include "ysw_spiffs.h"
+#include "ysw_music.h"
+#include "esp_log.h"
+#include "sys/types.h"
+#include "sys/stat.h"
+#include "fcntl.h"
+#include "unistd.h"
+
+#define TAG "MOD_MAIN"
+
+static modcontext *modctx;
+
+// NB: len is in bytes (typically 512 when called from a2dp_source)
+static int32_t data_cb(uint8_t *data, int32_t len)
+{
+    if (len < 0 || data == NULL) {
+        return 0;
+    }
+    hxcmod_fillbuffer(modctx, (msample *)data, len / 4, NULL);
+    return len;
+}
+
+#define YSW_MUSIC_MOD YSW_MUSIC_PARTITION "/music.mod"
+
+void app_main()
+{
+    ESP_LOGD(TAG, "calling ysw_spiffs_initialize, partition=%s", YSW_MUSIC_PARTITION);
+    ysw_spiffs_initialize(YSW_MUSIC_PARTITION);
+
+    ESP_LOGD(TAG, "calling ysw_heap_allocate for modcontext, size=%d", sizeof(modcontext));
+    modctx = ysw_heap_allocate(sizeof(modcontext));
+
+    ESP_LOGD(TAG, "calling hxcmod_init, modctx=%p", modctx);
+    if (!hxcmod_init(modctx)) {
+        ESP_LOGE(TAG, "hxcmod_init failed");
+        abort();
+    }
+
+    ESP_LOGD(TAG, "calling stat, file=%s", YSW_MUSIC_MOD);
+    struct stat sb;
+    int rc = stat(YSW_MUSIC_MOD, &sb);
+    if (rc == -1) {
+        ESP_LOGE(TAG, "stat failed, file=%s", YSW_MUSIC_MOD);
+        abort();
+    }
+
+    int mod_data_size = sb.st_size;
+
+    ESP_LOGD(TAG, "calling ysw_heap_allocate for mod_data, size=%d", mod_data_size);
+    void *mod_data = ysw_heap_allocate(mod_data_size);
+
+    int fd = open(YSW_MUSIC_MOD, O_RDONLY);
+    if (fd == -1) {
+        ESP_LOGE(TAG, "open failed, file=%s", YSW_MUSIC_MOD);
+        abort();
+    }
+
+    rc = read(fd, mod_data, mod_data_size);
+    if (rc != mod_data_size) {
+        ESP_LOGE(TAG, "read failed, rc=%d, mod_data_size=%d", rc, mod_data_size);
+        abort();
+    }
+
+    rc = close(fd);
+    if (rc == -1) {
+        ESP_LOGE(TAG, "close failed");
+        abort();
+    }
+
+    if (!hxcmod_load(modctx, mod_data, mod_data_size)) {
+        ESP_LOGE(TAG, "hxcmod_load failed");
+        abort();
+    }
+
+    a2dp_source_initialize(data_cb);
+}
+
+#endif

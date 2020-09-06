@@ -7,4 +7,5 @@ a.c*
 tags
 spiffs.bin
 *.sf2
+*.mod
 eclipse
