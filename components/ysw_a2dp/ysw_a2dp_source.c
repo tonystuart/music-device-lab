@@ -1,3 +1,12 @@
+// Copyright 2020 Anthony F. Stuart - All rights reserved.
+//
+// This program and the accompanying materials are made available
+// under the terms of the GNU General Public License. For other license
+// options please contact the copyright owner.
+//
+// This program is made available on an "as is" basis, without
+// warranties or conditions of any kind, either express or implied.
+
 /*
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
@@ -26,7 +35,7 @@
 #include "esp_a2dp_api.h"
 #include "esp_avrc_api.h"
 
-#define TAG "A2DP"
+#define TAG "A2DP_SOURCE"
 
 #define BT_AV_TAG               "BT_AV"
 #define BT_RC_CT_TAG            "RCCT"
@@ -109,7 +118,7 @@ static char *bda2str(esp_bd_addr_t bda, char *str, size_t size)
     return str;
 }
 
-void a2dp_source_initialize(esp_a2d_source_data_cb_t data_cb)
+void ysw_a2dp_source_initialize(esp_a2d_source_data_cb_t data_cb)
 {
     bt_app_a2d_data_cb = data_cb;
 

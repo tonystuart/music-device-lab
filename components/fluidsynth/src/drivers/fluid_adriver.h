@@ -58,7 +58,7 @@ void fluid_alsa_audio_driver_settings(fluid_settings_t *settings);
 #endif
 
 #if A2DP_SUPPORT
-#include "a2dp_driver.h"
+#include "ysw_a2dp_driver.h"
 #endif
 
 #if OSS_SUPPORT

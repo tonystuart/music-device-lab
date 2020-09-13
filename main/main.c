@@ -121,7 +121,7 @@ void app_main()
 }
 #else
 
-#include "a2dp_source.h"
+#include "ysw_a2dp_source.h"
 #include "hxcmod.h"
 #include "ysw_heap.h"
 #include "ysw_spiffs.h"
@@ -136,7 +136,7 @@ void app_main()
 
 static modcontext *modctx;
 
-// NB: len is in bytes (typically 512 when called from a2dp_source)
+// NB: len is in bytes (typically 512 when called from ysw_a2dp_source)
 static int32_t data_cb(uint8_t *data, int32_t len)
 {
     if (len < 0 || data == NULL) {
@@ -198,7 +198,7 @@ void app_main()
         abort();
     }
 
-    a2dp_source_initialize(data_cb);
+    ysw_a2dp_source_initialize(data_cb);
 }
 
 #endif

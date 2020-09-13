@@ -1,6 +1,14 @@
+// Copyright 2020 Anthony F. Stuart - All rights reserved.
+//
+// This program and the accompanying materials are made available
+// under the terms of the GNU General Public License. For other license
+// options please contact the copyright owner.
+//
+// This program is made available on an "as is" basis, without
+// warranties or conditions of any kind, either express or implied.
 
-#include "a2dp_driver.h"
-#include "a2dp_source.h"
+#include "ysw_a2dp_driver.h"
+#include "ysw_a2dp_source.h"
 #include "ysw_heap.h"
 
 #include "esp_log.h"
@@ -10,7 +18,7 @@
 
 #define PI (3.141592654)
 
-// TODO: modify a2dp_source to pass context to data_cb and pass a2dp_audio_driver_t
+// TODO: modify ysw_a2dp_source to pass context to data_cb and pass ysw_a2dp_audio_driver_t
 
 typedef struct
 {
@@ -18,11 +26,11 @@ typedef struct
     uint32_t calls;
     uint32_t iterations;
     fluid_synth_t *synth;
-} a2dp_audio_driver_t;
+} ysw_a2dp_audio_driver_t;
 
-static a2dp_audio_driver_t *driver;
+static ysw_a2dp_audio_driver_t *driver;
 
-// NB: len is in bytes (typically 512 when called from a2dp_source)
+// NB: len is in bytes (typically 512 when called from ysw_a2dp_source)
 static int32_t data_cb(uint8_t *data, int32_t len)
 {
     //ESP_LOGE(TAG, "data_cb entered, len=%d", len);
@@ -70,9 +78,9 @@ static int32_t data_cb(uint8_t *data, int32_t len)
     return len;
 }
 
-fluid_audio_driver_t *new_a2dp_audio_driver(fluid_settings_t *settings, fluid_synth_t *synth)
+fluid_audio_driver_t *ysw_a2dp_driver_new(fluid_settings_t *settings, fluid_synth_t *synth)
 {
-    driver = ysw_heap_allocate(sizeof(a2dp_audio_driver_t));
+    driver = ysw_heap_allocate(sizeof(ysw_a2dp_audio_driver_t));
 
     driver->synth = synth;
 
@@ -84,14 +92,14 @@ fluid_audio_driver_t *new_a2dp_audio_driver(fluid_settings_t *settings, fluid_sy
 
     ESP_LOGD(TAG, "new_a2dp_audio_driver period_size=%d, sample_rate=%g", period_size, sample_rate);
 
-    a2dp_source_initialize(data_cb);
+    ysw_a2dp_source_initialize(data_cb);
 
     return (fluid_audio_driver_t *)driver;
 }
 
-void delete_a2dp_audio_driver(fluid_audio_driver_t *p)
+void ysw_a2dp_driver_delete(fluid_audio_driver_t *p)
 {
-    a2dp_audio_driver_t *driver = (a2dp_audio_driver_t *) p;
+    ysw_a2dp_audio_driver_t *driver = (ysw_a2dp_audio_driver_t *) p;
     ysw_heap_free(driver);
 }
 

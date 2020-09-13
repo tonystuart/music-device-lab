@@ -63,9 +63,9 @@ static const fluid_audriver_definition_t fluid_audio_drivers[] =
 #if A2DP_SUPPORT
     {
         "a2dp",
-        new_a2dp_audio_driver,
+        ysw_a2dp_driver_new,
         NULL,
-        delete_a2dp_audio_driver,
+        ysw_a2dp_driver_delete,
         NULL
     },
 #endif
