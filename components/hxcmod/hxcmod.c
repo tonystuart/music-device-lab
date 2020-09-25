@@ -171,6 +171,24 @@ static modtype modlist[]=
 
 static SemaphoreHandle_t semaphore;
 
+static void watch_samppos(int new_samppos)
+{
+    static int old_samppos;
+    if (new_samppos == 192) {
+        ESP_LOGD(TAG, "watch_samppos entered, new_samppos=%d", new_samppos);
+    }
+    old_samppos = new_samppos;
+}
+
+static void report_length(int new_length)
+{
+    static int old_length;
+    if (new_length == 0) {
+        ESP_LOGD(TAG, "report_length entered, new_length=%d", new_length);
+    }
+    old_length = new_length;
+}
+
 static void enter_critical_section()
 {
     xSemaphoreTake(semaphore, portMAX_DELAY);
@@ -236,6 +254,7 @@ static void doFunk(channel * cptr)
 				if( ( (cptr->samppos) >> 11 ) >= (unsigned long)(cptr->replen+cptr->reppnt) )
 				{
 					cptr->samppos = ((unsigned long)(cptr->reppnt)<<11) + (cptr->samppos % ((unsigned long)(cptr->replen+cptr->reppnt)<<11));
+                    watch_samppos(cptr->samppos);
 				}
 
 				// Note : Directly modify the sample in the mod buffer...
@@ -285,6 +304,7 @@ static void worknote( note * nptr, channel * cptr,char t,modcontext * mod )
 						// Immediately (re)trigger the new note
 						cptr->sampdata = mod->sampledata[cptr->sampnum];
 						cptr->length = GET_BGI_W( mod->song.samples[cptr->sampnum].length );
+                        report_length(cptr->length);
 						cptr->reppnt = GET_BGI_W( mod->song.samples[cptr->sampnum].reppnt );
 						cptr->replen = GET_BGI_W( mod->song.samples[cptr->sampnum].replen );
 
@@ -345,8 +365,10 @@ static void worknote( note * nptr, channel * cptr,char t,modcontext * mod )
 
 		if( ( effect_op != EFFECT_TONE_PORTAMENTO ) && ( effect_op != EFFECT_VOLSLIDE_TONEPORTA ) )
 		{
-			if ( period != 0 )
+			if ( period != 0 ) {
 				cptr->samppos = 0;
+                watch_samppos(cptr->samppos);
+            }
 		}
 
 		cptr->decalperiod = 0;
@@ -540,6 +562,7 @@ static void worknote( note * nptr, channel * cptr,char t,modcontext * mod )
 			*/
 
 			cptr->samppos = ( ( ((muint)effect_param_h) << 12) + ( (((muint)effect_param_l) << 8) ) ) << 10;
+            watch_samppos(cptr->samppos);
 		break;
 
 		case EFFECT_VOLUME_SLIDE:
@@ -1059,9 +1082,11 @@ static void workeffect( modcontext * modctx, note * nptr, channel * cptr )
 
 						cptr->sampdata = cptr->lst_sampdata;
 						cptr->length = cptr->lst_length;
+                        report_length(cptr->length);
 						cptr->reppnt = cptr->lst_reppnt;
 						cptr->replen = cptr->lst_replen;
 						cptr->samppos = 0;
+                        watch_samppos(cptr->samppos);
 					}
 				break;
 
@@ -1072,6 +1097,7 @@ static void workeffect( modcontext * modctx, note * nptr, channel * cptr )
 						{
 							cptr->sampdata = cptr->dly_sampdata;
 							cptr->length = cptr->dly_length;
+                            report_length(cptr->length);
 							cptr->reppnt = cptr->dly_reppnt;
 							cptr->replen = cptr->dly_replen;
 
@@ -1487,7 +1513,7 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 
 				for( j = 0, cptr = modctx->channels; j < modctx->number_of_channels ; j++, cptr++)
 				{
-#if 0
+#if 1
 				    if (cptr->samppos) {
 				        // Period is non-zero once a note plays (maybe note off would set it to zero)
 				        // I don't know what sets samppos to zero
@@ -1497,12 +1523,14 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 					if( cptr->period != 0 )
 					{
 						cptr->samppos += cptr->sampinc;
+                        watch_samppos(cptr->samppos);
 
 						if( cptr->replen < 2 )
 						{
 							if( ( cptr->samppos >> 11) >= cptr->length )
 							{
 								cptr->length = 0;
+                                report_length(cptr->length);
 								cptr->reppnt = 0;
 
 								if(cptr->update_nxt_repeat)
@@ -1511,6 +1539,7 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 									cptr->reppnt = cptr->nxt_reppnt;
 									cptr->sampdata = cptr->nxt_sampdata;
 									cptr->length = cptr->nxt_length;
+                                    report_length(cptr->length);
 
 									cptr->lst_sampdata = cptr->sampdata;
 									cptr->lst_length = cptr->length;
@@ -1520,10 +1549,14 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 									cptr->update_nxt_repeat = 0;
 								}
 
-								if( cptr->length )
+								if( cptr->length ) {
 									cptr->samppos = cptr->samppos % (((unsigned long)cptr->length)<<11);
-								else
+                                    watch_samppos(cptr->samppos);
+                                }
+								else {
 									cptr->samppos = 0;
+                                    watch_samppos(cptr->samppos);
+                                }
 							}
 						}
 						else
@@ -1536,6 +1569,7 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 									cptr->reppnt = cptr->nxt_reppnt;
 									cptr->sampdata = cptr->nxt_sampdata;
 									cptr->length = cptr->nxt_length;
+                                    report_length(cptr->length);
 
 									cptr->lst_sampdata = cptr->sampdata;
 									cptr->lst_length = cptr->length;
@@ -1548,6 +1582,7 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 								if( cptr->sampdata )
 								{
 									cptr->samppos = ((unsigned long)(cptr->reppnt)<<11) + (cptr->samppos % ((unsigned long)(cptr->replen+cptr->reppnt)<<11));
+                                    watch_samppos(cptr->samppos);
 								}
 							}
 						}
