@@ -12,7 +12,7 @@
 // File : hxcmod.c
 // Contains: a tiny mod player
 //
-// Written by: Jean François DEL NERO
+// Written by: Jean Franï¿½ois DEL NERO
 //
 // You are free to do what you want with this code.
 // A credit is always appreciated if you include it into your prod :)
@@ -163,6 +163,23 @@ static modtype modlist[]=
 
 #endif
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "esp_log.h"
+
+#define TAG "HXCMOD"
+
+static SemaphoreHandle_t semaphore;
+
+static void enter_critical_section()
+{
+    xSemaphoreTake(semaphore, portMAX_DELAY);
+}
+
+static void leave_critical_section()
+{
+    xSemaphoreGive(semaphore);
+}
 
 ///////////////////////////////////////////////////////////////////////////////////
 
@@ -1100,6 +1117,9 @@ int hxcmod_init(modcontext * modctx)
 			}
 		}
 
+        semaphore = xSemaphoreCreateMutex();
+        xSemaphoreGive(semaphore);
+
 		return 1;
 	}
 
@@ -1322,6 +1342,8 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 	note	*nptr;
 	channel *cptr;
 
+    enter_critical_section();
+
 	if( modctx && outbuffer )
 	{
 		if(modctx->mod_loaded)
@@ -1365,6 +1387,7 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 						modctx->patternticks = 0;
 						modctx->patterntickse = 0;
 
+#if 0
 						for(c=0;c<modctx->number_of_channels;c++)
 						{
 							worknote((note*)(nptr), (channel*)(cptr),(char)(c+1),modctx);
@@ -1387,6 +1410,7 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 							nptr++;
 							cptr++;
 						}
+#endif
 
 						if( !modctx->jump_loop_effect )
 							modctx->patternpos += modctx->number_of_channels;
@@ -1463,6 +1487,13 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 
 				for( j = 0, cptr = modctx->channels; j < modctx->number_of_channels ; j++, cptr++)
 				{
+#if 0
+				    if (cptr->samppos) {
+				        // Period is non-zero once a note plays (maybe note off would set it to zero)
+				        // I don't know what sets samppos to zero
+				        ESP_LOGD(TAG, "fillbuffer cptr->period=%d, cptr->samppos=%d", cptr->period, cptr->samppos);
+				    }
+#endif
 					if( cptr->period != 0 )
 					{
 						cptr->samppos += cptr->sampinc;
@@ -1718,6 +1749,43 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 #endif
 		}
 	}
+
+    leave_critical_section();
+}
+
+void play_note(modcontext *modctx, int period)
+{
+    note n = {
+        .sampperiod = (period >> 8) & 0x0f,
+        .period = period & 0xff,
+        .sampeffect = 16,
+        .effect = 0,
+    };
+
+    ESP_LOGD(TAG, "play_note sampperiod=%#x, period=%#x, sampeffec=%#x, effect=%#x",
+            n.sampperiod, n.period, n.sampeffect, n.effect);
+
+    enter_critical_section();
+    channel *cptr = &modctx->channels[1];
+    worknote(&n, cptr, 0, modctx);
+    if (cptr->period != 0)
+    {
+        short finalperiod = cptr->period - cptr->decalperiod - cptr->vibraperiod;
+        if (finalperiod)
+        {
+            ESP_LOGD(TAG, "play note final_period=%d", finalperiod);
+            cptr->sampinc = ((modctx->sampleticksconst) / finalperiod);
+        }
+        else
+        {
+            cptr->sampinc = 0;
+        }
+    }
+    else
+        cptr->sampinc = 0;
+
+    ESP_LOGD(TAG, "play_note sampinc=%d", cptr->sampinc);
+    leave_critical_section();
 }
 
 void hxcmod_unload( modcontext * modctx )

@@ -122,16 +122,15 @@ int main(int argc, char *argv[])
     pthread_create(&p, NULL, &alsa_thread, NULL);
 
     int c;
-    extern int note_period;
+    extern void play_note(modcontext *modctx, int period);
 
     while ((c = getchar()) != -1) {
         int note_index = find_note(c);
         if (note_index != -1) {
-            note_period = note_map[note_index].note_period;
+            int note_period = note_map[note_index].note_period;
+            play_note(modctx, note_period);
             ESP_LOGD(TAG, "input_char=%c, note_index=%d, note_name=%s, note_period=%d",
                     c, note_index, note_map[note_index].note_name, note_period);
-        } else if (c == ' ') {
-            note_period = 0;
         }
     }
 }
