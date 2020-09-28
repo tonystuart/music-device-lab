@@ -142,7 +142,7 @@ static int32_t data_cb(uint8_t *data, int32_t len)
     if (len < 0 || data == NULL) {
         return 0;
     }
-    hxcmod_fillbuffer(modctx, (msample *)data, len / 4, NULL);
+    hxcmod_fillbuffer(modctx, (msample *)data, len / 4);
     return len;
 }
 
@@ -157,10 +157,7 @@ void app_main()
     modctx = ysw_heap_allocate(sizeof(modcontext));
 
     ESP_LOGD(TAG, "calling hxcmod_init, modctx=%p", modctx);
-    if (!hxcmod_init(modctx)) {
-        ESP_LOGE(TAG, "hxcmod_init failed");
-        abort();
-    }
+    hxcmod_init(modctx);
 
     ESP_LOGD(TAG, "calling stat, file=%s", YSW_MUSIC_MOD);
     struct stat sb;
@@ -193,10 +190,7 @@ void app_main()
         abort();
     }
 
-    if (!hxcmod_load(modctx, mod_data, mod_data_size)) {
-        ESP_LOGE(TAG, "hxcmod_load failed");
-        abort();
-    }
+    hxcmod_load(modctx, mod_data, mod_data_size);
 
     ysw_a2dp_source_initialize(data_cb);
 }

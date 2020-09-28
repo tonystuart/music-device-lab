@@ -1,23 +1,6 @@
-///////////////////////////////////////////////////////////////////////////////////
-//-------------------------------------------------------------------------------//
-//-------------------------------------------------------------------------------//
-//-----------H----H--X----X-----CCCCC----22222----0000-----0000------11----------//
-//----------H----H----X-X-----C--------------2---0----0---0----0--1--1-----------//
-//---------HHHHHH-----X------C----------22222---0----0---0----0-----1------------//
-//--------H----H----X--X----C----------2-------0----0---0----0-----1-------------//
-//-------H----H---X-----X---CCCCC-----222222----0000-----0000----1111------------//
-//-------------------------------------------------------------------------------//
-//----------------------------------------------------- http://hxc2001.free.fr --//
-///////////////////////////////////////////////////////////////////////////////////
-// File : hxcmod.h
-// Contains: a tiny mod player
-//
-// Written by: Jean François DEL NERO
-//
-// Change History (most recent first):
-///////////////////////////////////////////////////////////////////////////////////
-#ifndef MODPLAY_DEF
-#define MODPLAY_DEF
+// Inspired by HxCModPlayer by Jean François DEL NERO
+
+#pragma once
 
 #ifndef HXCMOD_SLOW_TARGET
 	#define HXCMOD_STATE_REPORT_SUPPORT 1
@@ -253,37 +236,9 @@ typedef struct tracker_buffer_state_
 	tracker_state * track_state_buf;
 }tracker_buffer_state;
 
-///////////////////////////////////////////////////////////////////////////////////
-// HxCMOD Core API:
-// -------------------------------------------
-// int  hxcmod_init(modcontext * modctx)
-//
-// - Initialize the modcontext buffer. Must be called before doing anything else.
-//   Return 1 if success. 0 in case of error.
-// -------------------------------------------
-// int  hxcmod_load( modcontext * modctx, void * mod_data, int mod_data_size )
-//
-// - "Load" a MOD from memory (from "mod_data" with size "mod_data_size").
-//   Return 1 if success. 0 in case of error.
-// -------------------------------------------
-// void hxcmod_fillbuffer( modcontext * modctx, unsigned short * outbuffer, mssize nbsample, tracker_buffer_state * trkbuf )
-//
-// - Generate and return the next samples chunk to outbuffer.
-//   nbsample specify the number of stereo 16bits samples you want.
-//   The output format is signed 44100Hz 16-bit Stereo PCM samples.
-//   The output buffer size in byte must be equal to ( nbsample * 2 * 2 ).
-//   The optional trkbuf parameter can be used to get detailed status of the player. Put NULL/0 is unused.
-// -------------------------------------------
-// void hxcmod_unload( modcontext * modctx )
-//
-// - "Unload" / clear the player status.
-// -------------------------------------------
-///////////////////////////////////////////////////////////////////////////////////
-
-int  hxcmod_init( modcontext * modctx );
-int  hxcmod_setcfg( modcontext * modctx, int samplerate, int stereo_separation, int filter );
-int  hxcmod_load( modcontext * modctx, void * mod_data, int mod_data_size );
-void hxcmod_fillbuffer( modcontext * modctx, msample * outbuffer, mssize nbsample, tracker_buffer_state * trkbuf );
+void  hxcmod_init( modcontext * modctx );
+void  hxcmod_setcfg( modcontext * modctx, int samplerate, int stereo_separation, int filter );
+void  hxcmod_load( modcontext * modctx, void * mod_data, int mod_data_size );
+void hxcmod_fillbuffer( modcontext * modctx, msample * outbuffer, mssize nbsample);
 void hxcmod_unload( modcontext * modctx );
 
-#endif
