@@ -34,6 +34,7 @@ static const tag_level_t tag_levels[] = {
         { "YSW_HEAP", I },
         { "YSW_ARRAY", I },
         { "YSW_GLIB", D },
+        { "TRACE_HEAP", I },
 };
 
 #define TAG_LEVEL_SZ (sizeof(tag_levels) / sizeof(tag_level_t))

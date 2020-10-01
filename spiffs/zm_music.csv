@@ -1,0 +1,47 @@
+# Sound start and duration are given in 1/1024's of step duration
+# Step duration is given in 1/204's of a measure (e.g. a quarter note is 256 ticks)
+
+#type (sample),index,name
+1,0,EPiano
+
+#type (quality),index,name,semitones
+2,0,Unity,0
+2,1,Power,0,7
+2,2,Major,0,4,7
+2,3,Minor,0,3,7
+2,4,Major 7th,0,4,7,11
+2,5,Minor 7th,0,3,7,10
+2,6,Augmented,0,4,8
+2,7,Diminished,0,3,6
+2,8,M7/6,0,4,7,9,11
+
+#type (style),index,name
+3,0,Up down arpeggio
+
+#type (sound),semitone_index,velocity,start,duration
+4,0,100,0,128
+4,1,80,128,128
+4,2,80,256,128
+4,3,80,384,128
+4,4,100,512,128
+4,3,80,640,128
+4,2,80,768,128
+4,1,80,896,128
+
+#type (pattern),index,name,sample
+5,0,Twelve bar blues,0
+
+#type (step),root,quality,style,duration
+6,60,8,0,1024
+6,60,8,0,1024
+6,60,8,0,1024
+6,60,8,0,1024
+6,65,8,0,1024
+6,65,8,0,1024
+6,60,8,0,1024
+6,60,8,0,1024
+6,67,8,0,1024
+6,65,8,0,1024
+6,60,8,0,1024
+6,60,8,0,1024
+

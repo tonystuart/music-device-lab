@@ -253,8 +253,7 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 
         for (muint j = 0; j < modctx->number_of_channels; j++, cptr++) {
             if (cptr->samppos) {
-                ESP_LOGD(TAG, "fillbuffer cptr->period=%d, cptr->samppos=%ld",
-                        cptr->period, cptr->samppos);
+                //ESP_LOGD(TAG, "period=%d, samppos=%ld", cptr->period, cptr->samppos);
             }
             if (cptr->period != 0) {
                 cptr->samppos += cptr->sampinc;
@@ -341,16 +340,13 @@ void play_note(modcontext *modctx, int period)
         .effect = 0,
     };
 
-    ESP_LOGD(TAG, "play_note sampperiod=%#x, period=%#x, sampeffec=%#x, effect=%#x",
-            n.sampperiod, n.period, n.sampeffect, n.effect);
-
     enter_critical_section();
     channel *cptr = &modctx->channels[1];
     worknote(&n, cptr, modctx);
     if (cptr->period != 0) {
         short finalperiod = cptr->period - cptr->decalperiod - cptr->vibraperiod;
         if (finalperiod) {
-            ESP_LOGD(TAG, "play note final_period=%d", finalperiod);
+            //ESP_LOGD(TAG, "play note final_period=%d", finalperiod);
             cptr->sampinc = ((modctx->sampleticksconst) / finalperiod);
         }
         else {
@@ -360,7 +356,7 @@ void play_note(modcontext *modctx, int period)
         cptr->sampinc = 0;
     }
 
-    ESP_LOGD(TAG, "play_note sampinc=%ld", cptr->sampinc);
+    //ESP_LOGD(TAG, "play_note sampinc=%ld", cptr->sampinc);
     leave_critical_section();
 }
 

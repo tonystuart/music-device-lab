@@ -11,7 +11,8 @@
 
 #include "ysw_ticks.h"
 
-#define YSW_TICKS_DEFAULT_TPQN 100 // ticks per quarter note
+#define YSW_TICKS_DEFAULT_TPM 1024 // ticks per measure
+#define YSW_TICKS_DEFAULT_TPQN 256 // ticks per quarter note
 #define YSW_TICKS_DEFAULT_BPQN 120 // beats per quarter note
 
 static inline uint32_t ysw_ticks_to_millis(uint32_t ticks, uint8_t qnpm)

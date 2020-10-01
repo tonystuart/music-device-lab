@@ -84,8 +84,10 @@ void ysw_alsa_initialize(esp_a2d_source_data_cb_t data_cb)
     int buf_size = period_size * ALSA_CHANNELS * 2;
     uint8_t *buf = ysw_heap_allocate(buf_size);
 
+#ifdef DISPLAY_LATENCY
     uint64_t samples_generated = 0;
     int start_time = ysw_system_get_reference_time_in_millis();
+#endif
 
     while (data_cb(buf, buf_size) > 0) {
         rc = snd_pcm_writei(alsa, buf, period_size);
@@ -93,6 +95,7 @@ void ysw_alsa_initialize(esp_a2d_source_data_cb_t data_cb)
             ESP_LOGE(TAG, "snd_pcm_writei failed, error=%s", snd_strerror(rc));
             snd_pcm_prepare(alsa);
         }
+#ifdef DISPLAY_LATENCY
         samples_generated += period_size;
         int current_time = ysw_system_get_reference_time_in_millis();
         if (((current_time - start_time) / 1000) > 10) {
@@ -103,6 +106,7 @@ void ysw_alsa_initialize(esp_a2d_source_data_cb_t data_cb)
             samples_generated = 0;
             start_time = current_time;
         }
+#endif
     }
 
     snd_pcm_drain(alsa);

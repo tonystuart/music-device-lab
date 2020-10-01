@@ -88,7 +88,6 @@ uint32_t ysw_array_get_size(ysw_array_t *array)
 void *ysw_array_get(ysw_array_t *array, uint32_t index)
 {
     assert(array);
-    assert(array);
     assert(index < array->count);
     return array->data[index];
 }

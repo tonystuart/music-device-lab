@@ -77,7 +77,7 @@ static void parse_cs(ysw_mfr_t *ysw_mfr)
     uint32_t count = ysw_array_get_count(ysw_mfr->music->cs_array);
 
     if (index != count) {
-        ESP_LOGW(TAG, "parse_cord expected count=%d, got index=%d", count, index);
+        ESP_LOGW(TAG, "parse_cs expected count=%d, got index=%d", count, index);
         return;
     }
 
@@ -231,8 +231,10 @@ ysw_music_t *ysw_mfr_read()
             abort();
         }
         file = fopen(YSW_MUSIC_CSV, "r");
-        ESP_LOGE(TAG, "fopen file=%s failed (after rename), errno=%d", YSW_MUSIC_CSV, errno);
-        abort();
+        if (!file) {
+            ESP_LOGE(TAG, "fopen file=%s failed (after rename), errno=%d", YSW_MUSIC_CSV, errno);
+            abort();
+        }
     }
     music = ysw_mfr_read_from_file(file);
     fclose(file);

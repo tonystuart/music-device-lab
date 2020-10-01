@@ -16,6 +16,8 @@
 #include "ysw_synth_vs.h"
 #elif YSW_MAIN_SYNTH_MODEL == 3
 #include "ysw_synth_fs.h"
+#elif YSW_MAIN_SYNTH_MODEL == 4
+#include "ysw_synth_mod.h"
 #endif
 #include "ysw_synth.h"
 #include "ysw_message.h"
@@ -52,8 +54,11 @@ void ysw_main_synth_initialize()
     };
     synth_queue = ysw_synth_vs_create_task(&config);
 #elif YSW_MAIN_SYNTH_MODEL == 3
-    ESP_LOGD(TAG, "ysw_main_synth_initialize: configuring FluidSynth");
+    ESP_LOGD(TAG, "ysw_main_synth_initialize: configuring FluidSynth synth");
     synth_queue = ysw_synth_fs_create_task(YSW_MUSIC_SOUNDFONT);
+#elif YSW_MAIN_SYNTH_MODEL == 4
+    ESP_LOGD(TAG, "ysw_main_synth_initialize: configuring MOD synth");
+    synth_queue = ysw_synth_mod_create_task();
 #else
 #error Define YSW_MAIN_SYNTH_MODEL
 #endif
