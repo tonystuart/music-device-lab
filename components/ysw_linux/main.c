@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#define LINUX_MAIN 3
+#define LINUX_MAIN 2
 
 #if LINUX_MAIN == 1
 

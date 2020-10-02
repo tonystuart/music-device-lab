@@ -1,6 +1,8 @@
 // Inspired by HxCModPlayer by Jean François DEL NERO
 
 #include "hxcmod.h"
+
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "esp_log.h"
@@ -115,7 +117,6 @@ void hxcmod_init(modcontext * modctx)
     modctx->playrate = 44100;
     modctx->stereo = 1;
     modctx->stereo_separation = 1;
-    modctx->bits = 16;
     modctx->filter = 1;
 
     for (muint i = 0; i < PERIOD_TABLE_LENGTH - 1; i++) {
@@ -125,24 +126,6 @@ void hxcmod_init(modcontext * modctx)
     }
 
     semaphore = xSemaphoreCreateMutex();
-    xSemaphoreGive(semaphore);
-}
-
-void hxcmod_setcfg(modcontext * modctx, int samplerate, int stereo_separation, int filter)
-{
-    assert(modctx);
-
-    modctx->playrate = samplerate;
-
-    if (stereo_separation < 4) {
-        modctx->stereo_separation = stereo_separation;
-    }
-
-    if (filter) {
-        modctx->filter = 1;
-    } else {
-        modctx->filter = 0;
-    }
 }
 
 void hxcmod_load(modcontext * modctx, void * mod_data, int mod_data_size)
@@ -162,7 +145,6 @@ void hxcmod_load(modcontext * modctx, void * mod_data, int mod_data_size)
 
     for (muint i = 0, max = 0; i < 128; i++) {
         while (max <= modctx->song.patterntable[i]) {
-            modctx->patterndata[max] = (note *)modmemory;
             modmemory += 256 * modctx->number_of_channels;
             max++;
             assert(modmemory < endmodmemory);
@@ -190,18 +172,6 @@ void hxcmod_load(modcontext * modctx, void * mod_data, int mod_data_size)
         assert(modmemory <= endmodmemory);
     }
 
-    modctx->tablepos = 0;
-    modctx->patternpos = 0;
-    modctx->song.speed = 6;
-    modctx->bpm = 125;
-
-    // song.speed = 1 <> 31
-    // playrate = 8000 <> 96000
-    // bpm = 32 <> 255
-
-    modctx->patternticksem = ((modctx->playrate * 5) / ((mulong)modctx->bpm * 2));
-    modctx->patternticksaim = modctx->song.speed * modctx->patternticksem;
-    modctx->patternticks = modctx->patternticksaim + 1;
     modctx->sampleticksconst = ((3546894UL * 16) / modctx->playrate) << 6; //8448*428/playrate;
 
     for (muint i = 0; i < modctx->number_of_channels; i++) {
@@ -232,19 +202,6 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
     int last_right = modctx->last_r_sample;
 
     for (mssize i = 0; i < nbsample; i++) {
-        if (modctx->patternticks++ > modctx->patternticksaim) {
-            modctx->tick_cnt = 0;
-            modctx->patternticks = 0;
-            modctx->patterntickse = 0;
-            modctx->patternpos += modctx->number_of_channels;
-
-            if (modctx->patternpos == 64 * modctx->number_of_channels) {
-                modctx->tablepos++;
-                modctx->patternpos = 0;
-                if (modctx->tablepos >= modctx->song.length)
-                    modctx->tablepos = 0;
-            }
-        }
 
         int left = 0;
         int right = 0;
@@ -252,9 +209,6 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
         channel *cptr = modctx->channels;
 
         for (muint j = 0; j < modctx->number_of_channels; j++, cptr++) {
-            if (cptr->samppos) {
-                //ESP_LOGD(TAG, "period=%d, samppos=%ld", cptr->period, cptr->samppos);
-            }
             if (cptr->period != 0) {
                 cptr->samppos += cptr->sampinc;
 
@@ -262,13 +216,7 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
                     if ((cptr->samppos >> 11) >= cptr->length) {
                         cptr->length = 0;
                         cptr->reppnt = 0;
-
-                        if (cptr->length) {
-                            cptr->samppos = cptr->samppos % (((unsigned long)cptr->length)<<11);
-                        }
-                        else {
-                            cptr->samppos = 0;
-                        }
+                        cptr->samppos = 0;
                     }
                 } else {
                     if ((cptr->samppos >> 11) >= (unsigned long)(cptr->replen + cptr->reppnt)) {
@@ -279,6 +227,12 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
                 }
 
                 unsigned long k = cptr->samppos >> 10;
+
+#if 0
+                if (cptr->samppos) {
+                    ESP_LOGD(TAG, "period=%d, sampinc=%d, samppos=%ld, samppos>>11=%d, k=%d, length=%d", cptr->period, cptr->sampinc, cptr->samppos, cptr->samppos >> 11, k, cptr->length);
+                }
+#endif
 
                 if (cptr->sampdata) {
                     if (!(j & 3) || ((j & 3) == 3)) {
@@ -344,7 +298,7 @@ void play_note(modcontext *modctx, int period)
     channel *cptr = &modctx->channels[1];
     worknote(&n, cptr, modctx);
     if (cptr->period != 0) {
-        short finalperiod = cptr->period - cptr->decalperiod - cptr->vibraperiod;
+        short finalperiod = cptr->period;
         if (finalperiod) {
             //ESP_LOGD(TAG, "play note final_period=%d", finalperiod);
             cptr->sampinc = ((modctx->sampleticksconst) / finalperiod);
@@ -365,14 +319,7 @@ void hxcmod_unload(modcontext * modctx)
     assert(modctx);
     memclear(&modctx->song,0,sizeof(modctx->song));
     memclear(&modctx->sampledata,0,sizeof(modctx->sampledata));
-    memclear(&modctx->patterndata,0,sizeof(modctx->patterndata));
     memclear(modctx->channels,0,sizeof(modctx->channels));
-    modctx->tablepos = 0;
-    modctx->patternpos = 0;
-    modctx->bpm = 0;
-    modctx->patternticks = 0;
-    modctx->patterntickse = 0;
-    modctx->patternticksaim = 0;
     modctx->sampleticksconst = 0;
     modctx->number_of_channels = 0;
     modctx->mod_loaded = 0;
