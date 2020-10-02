@@ -43,7 +43,7 @@ typedef struct {
 	muchar  protracker;
 	muchar  patterntable[128];
 	muchar  signature[4];
-	muchar  speed; // TONY: formerly six to 6, but was unused
+	muchar  speed; // TONY: formerly set to 6, but was unused
 } module;
 
 #pragma pack()
@@ -83,6 +83,7 @@ typedef struct {
 
 void  hxcmod_init( modcontext * modctx );
 void  hxcmod_setcfg( modcontext * modctx, int samplerate, int stereo_separation, int filter );
-void  hxcmod_load( modcontext * modctx, void * mod_data, int mod_data_size );
+muchar hxcmod_loadchannel(modcontext *modctx, sample *sample, void *data);
 void hxcmod_fillbuffer( modcontext * modctx, msample * outbuffer, mssize nbsample);
 void hxcmod_unload( modcontext * modctx );
+

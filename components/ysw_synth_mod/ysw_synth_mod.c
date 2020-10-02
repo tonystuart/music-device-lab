@@ -149,7 +149,7 @@ QueueHandle_t ysw_synth_mod_create_task()
         abort();
     }
 
-    hxcmod_load(modctx, mod_data, mod_data_size);
+    //hxcmod_load(modctx, mod_data, mod_data_size);
 
 #ifdef IDF_VER
 #else

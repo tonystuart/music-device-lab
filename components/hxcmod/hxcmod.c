@@ -2,7 +2,6 @@
 
 #include "hxcmod.h"
 
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "esp_log.h"
@@ -12,12 +11,6 @@
 
 #define PERIOD_TABLE_LENGTH  MAXNOTES
 #define FULL_PERIOD_TABLE_LENGTH  (PERIOD_TABLE_LENGTH * 8)
-
-#ifdef HXCMOD_BIGENDIAN_MACHINE
-#define GET_BGI_W(big_endian_word) (big_endian_word)
-#else
-#define GET_BGI_W(big_endian_word) ((big_endian_word >> 8) | ((big_endian_word&0xFF) << 8))
-#endif
 
 static const short periodtable[] = {
     27392, 25856, 24384, 23040, 21696, 20480, 19328, 18240, 17216, 16256, 15360, 14496,
@@ -90,9 +83,9 @@ static void worknote(note *nptr, channel *cptr, modcontext *mod)
 
     cptr->sampnum = sample - 1;
     cptr->sampdata = mod->sampledata[cptr->sampnum];
-    cptr->length = GET_BGI_W(mod->song.samples[cptr->sampnum].length);
-    cptr->reppnt = GET_BGI_W(mod->song.samples[cptr->sampnum].reppnt);
-    cptr->replen = GET_BGI_W(mod->song.samples[cptr->sampnum].replen);
+    cptr->length = mod->song.samples[cptr->sampnum].length;
+    cptr->reppnt = mod->song.samples[cptr->sampnum].reppnt;
+    cptr->replen = mod->song.samples[cptr->sampnum].replen;
     cptr->finetune = (mod->song.samples[cptr->sampnum].finetune) & 0xF;
     cptr->volume = mod->song.samples[cptr->sampnum].volume;
     cptr->samppos = 0;
@@ -118,6 +111,9 @@ void hxcmod_init(modcontext * modctx)
     modctx->stereo = 1;
     modctx->stereo_separation = 1;
     modctx->filter = 1;
+    modctx->number_of_channels = 0;
+    modctx->sampleticksconst = ((3546894UL * 16) / modctx->playrate) << 6; //8287*428/playrate;
+    modctx->mod_loaded = 1;
 
     for (muint i = 0; i < PERIOD_TABLE_LENGTH - 1; i++) {
         for (muint j = 0; j < 8; j++) {
@@ -128,58 +124,14 @@ void hxcmod_init(modcontext * modctx)
     semaphore = xSemaphoreCreateMutex();
 }
 
-void hxcmod_load(modcontext * modctx, void * mod_data, int mod_data_size)
+muchar hxcmod_loadchannel(modcontext *modctx, sample *sample, void *data)
 {
-    assert(modctx);
-    assert(mod_data);
-    assert(mod_data_size);
+    assert(modctx->number_of_channels < NUMMAXCHANNELS);
 
-    unsigned char *modmemory = (unsigned char *)mod_data;
-    unsigned char *endmodmemory = modmemory + mod_data_size;
-
-    memcopy(&(modctx->song.title),modmemory,1084);
-    modctx->number_of_channels = 4;
-    modmemory += 1084;
-
-    assert(modmemory < endmodmemory);
-
-    for (muint i = 0, max = 0; i < 128; i++) {
-        while (max <= modctx->song.patterntable[i]) {
-            modmemory += 256 * modctx->number_of_channels;
-            max++;
-            assert(modmemory < endmodmemory);
-        }
-    }
-
-    for (muint i = 0; i < 31; i++) {
-        modctx->sampledata[i] = 0;
-    }
-
-    sample *sptr = modctx->song.samples;
-
-    for (muint i = 0; i < 31; i++, sptr++) {
-        if (sptr->length == 0) {
-            continue;
-        }
-
-        modctx->sampledata[i] = (mchar *)modmemory;
-        modmemory += (GET_BGI_W(sptr->length)*2);
-
-        if (GET_BGI_W(sptr->replen) + GET_BGI_W(sptr->reppnt) > GET_BGI_W(sptr->length)) {
-            sptr->replen = GET_BGI_W((GET_BGI_W(sptr->length) - GET_BGI_W(sptr->reppnt)));
-        }
-
-        assert(modmemory <= endmodmemory);
-    }
-
-    modctx->sampleticksconst = ((3546894UL * 16) / modctx->playrate) << 6; //8448*428/playrate;
-
-    for (muint i = 0; i < modctx->number_of_channels; i++) {
-        modctx->channels[i].volume = 0;
-        modctx->channels[i].period = 0;
-    }
-
-    modctx->mod_loaded = 1;
+    muchar index = modctx->number_of_channels++;
+    modctx->song.samples[index] = *sample;
+    modctx->sampledata[index] = data;
+    return index;
 }
 
 void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample)
@@ -228,7 +180,7 @@ void hxcmod_fillbuffer(modcontext * modctx, msample * outbuffer, mssize nbsample
 
                 unsigned long k = cptr->samppos >> 10;
 
-#if 0
+#if 1
                 if (cptr->samppos) {
                     ESP_LOGD(TAG, "period=%d, sampinc=%d, samppos=%ld, samppos>>11=%d, k=%d, length=%d", cptr->period, cptr->sampinc, cptr->samppos, cptr->samppos >> 11, k, cptr->length);
                 }
@@ -295,7 +247,7 @@ void play_note(modcontext *modctx, int period)
     };
 
     enter_critical_section();
-    channel *cptr = &modctx->channels[1];
+    channel *cptr = &modctx->channels[0];
     worknote(&n, cptr, modctx);
     if (cptr->period != 0) {
         short finalperiod = cptr->period;
