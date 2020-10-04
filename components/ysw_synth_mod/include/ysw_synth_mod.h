@@ -9,8 +9,31 @@
 
 #pragma once
 
+#include "ysw_synth.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "stdint.h"
+
+#define YSW_SYNTH_MOD_MAX_NAME_LENGTH 32
 
 QueueHandle_t ysw_synth_mod_create_task();
+
+typedef enum {
+    YSW_SYNTH_MOD_SAMPLE_LOAD = YSW_SYNTH_CUSTOM,
+} ysw_synth_mod_message_type_t;
+
+typedef struct {
+    char name[YSW_SYNTH_MOD_MAX_NAME_LENGTH];
+    uint8_t program;
+} ysw_synth_mod_sample_load_t;
+
+typedef struct {
+    ysw_synth_message_type_t type;
+    union {
+        ysw_synth_note_on_t note_on;
+        ysw_synth_note_off_t note_off;
+        ysw_synth_program_change_t program_change;
+        ysw_synth_mod_sample_load_t sample_load;
+    };
+} ysw_synth_mod_message_t;
 

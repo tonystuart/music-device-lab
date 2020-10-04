@@ -15,6 +15,7 @@ typedef enum {
     YSW_SYNTH_NOTE_ON,
     YSW_SYNTH_NOTE_OFF,
     YSW_SYNTH_PROGRAM_CHANGE,
+    YSW_SYNTH_CUSTOM,
 } ysw_synth_message_type_t;
 
 typedef struct {

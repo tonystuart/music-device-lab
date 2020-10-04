@@ -20,6 +20,7 @@
 #include "freertos/semphr.h"
 #include "assert.h"
 #include "fcntl.h"
+#include "limits.h"
 #include "stdlib.h"
 #include "unistd.h"
 #include "sys/types.h"
@@ -52,39 +53,46 @@ typedef enum {
 typedef struct {
     mchar  *data;
     muint   length;
-    muchar  volume;
     muint   reppnt;
     muint   replen;
+    muchar  volume;
     pan_t   pan;
 } sample_t;
 
 typedef struct {
     sample_t *sample;
+    mulong  samppos;
+    mulong  sampinc;
+    mulong  time;
     muint   length;
     muint   reppnt;
     muint   replen;
-    mulong  samppos;
-    mulong  sampinc;
     muint   period;
     muchar  volume;
+    muchar  channel;
+    muchar  midi_note;
 } voice_t;
 
 typedef struct {
-    sample_t  samples[MAX_SAMPLES];
+    sample_t samples[MAX_SAMPLES];
+    int8_t active_notes[YSW_MIDI_MAX_CHANNELS][YSW_MIDI_MAX_COUNT];
+    uint8_t program_samples[YSW_MIDI_MAX_COUNT];
+    uint8_t channel_samples[YSW_MIDI_MAX_CHANNELS];
+    uint8_t sample_count;
     mulong  playrate;
     mulong  sampleticksconst;
+    mulong  voice_time;
     voice_t voices[MAX_VOICES];
-    muint   number_of_voices;
+    muint   voice_count;
     muint   mod_loaded;
-    mint    last_r_sample;
-    mint    last_l_sample;
+    mint    last_left_sample;
+    mint    last_right_sample;;
     mint    stereo;
     mint    stereo_separation;
     mint    filter;
 } context_t;
 
 static QueueHandle_t input_queue;
-static context_t *context;
 
 static const short period_map[] = {
     /*  0 */ 13696, 12928, 12192, 11520, 10848, 10240,  9664,  9120,  8606,  8128,  7680,  7248,
@@ -119,11 +127,11 @@ static void initialize_synthesizer(context_t *context)
     assert(context);
 
     memset(context, 0, sizeof(context_t));
+    memset(context->active_notes, -1, sizeof(context->active_notes));
     context->playrate = 44100;
     context->stereo = 1;
     context->stereo_separation = 1;
     context->filter = 1;
-    context->number_of_voices = 0;
     context->sampleticksconst = ((3546894UL * 16) / context->playrate) << 6; //8287*428/playrate;
     context->mod_loaded = 1;
 
@@ -193,8 +201,8 @@ static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
         return;
     }
 
-    int last_left = context->last_l_sample;
-    int last_right = context->last_r_sample;
+    int last_left = context->last_left_sample;
+    int last_right = context->last_right_sample;;
 
     for (mssize i = 0; i < nbsample; i++) {
 
@@ -203,7 +211,7 @@ static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
 
         voice_t *voice = context->voices;
 
-        for (muint j = 0; j < context->number_of_voices; j++, voice++) {
+        for (muint j = 0; j < context->voice_count; j++, voice++) {
             if (voice->period != 0) {
                 voice->samppos += voice->sampinc;
 
@@ -277,17 +285,64 @@ static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
 
     }
 
-    context->last_l_sample = last_left;
-    context->last_r_sample = last_right;
+    context->last_left_sample = last_left;
+    context->last_right_sample = last_right;
 
     leave_critical_section();
 }
 
-static void play_note(context_t *context, sample_t *sample, int period)
+static uint8_t allocate_voice(context_t *context, uint8_t channel, uint8_t midi_note)
+{
+    voice_t *voice = NULL;
+    uint8_t voice_index = 0;
+    if (context->voice_count < MAX_VOICES) {
+        voice_index = context->voice_count++;
+        voice = &context->voices[voice_index];
+    } else {
+        mulong time = UINT_MAX;
+        for (uint8_t i = 0; i < context->voice_count; i++) {
+            if (context->voices[i].time < time) {
+                time = context->voices[i].time = time;
+                voice_index = i;
+            }
+        }
+        voice = &context->voices[voice_index];
+        context->active_notes[voice->channel][voice->midi_note] = -1;
+    }
+    voice->channel = channel;
+    voice->midi_note = midi_note;
+    context->active_notes[channel][midi_note] = voice_index;
+    return voice_index;
+}
+
+static void free_voice(context_t *context, uint8_t channel, uint8_t midi_note)
+{
+    if (context->active_notes[channel][midi_note] != -1) {
+        uint8_t voice_index = context->active_notes[channel][midi_note];
+        voice_t *voice = &context->voices[voice_index];
+        if (voice->channel == channel && voice->midi_note == midi_note) {
+            if (--context->voice_count != voice_index) {
+                *voice = context->voices[context->voice_count];
+            }
+            context->active_notes[channel][midi_note] = -1;
+        }
+    }
+}
+
+static void start_note(context_t *context, uint8_t channel, uint8_t midi_note, uint8_t velocity)
 {
     enter_critical_section();
-    context->number_of_voices = 1;
-    voice_t *voice = &context->voices[0];
+
+    uint8_t voice_index = allocate_voice(context, channel, midi_note);
+    uint8_t sample_index = context->channel_samples[channel];
+
+    uint16_t period = period_map[midi_note];
+    sample_t *sample = &context->samples[sample_index];
+
+    ESP_LOGD(TAG, "channel=%d, midi_note=%d, velocity=%d, period=%d, voices=%d",
+            channel, midi_note, velocity, period, context->voice_count);
+
+    voice_t *voice = &context->voices[voice_index];
     voice->sample = sample;
     voice->length = sample->length;
     voice->reppnt = sample->reppnt;
@@ -296,8 +351,21 @@ static void play_note(context_t *context, sample_t *sample, int period)
     voice->sampinc = context->sampleticksconst / period;
     voice->period = period;
     voice->samppos = 0;
+    voice->time = context->voice_time++;
+
     leave_critical_section();
 }
+
+static void stop_note(context_t *context, uint8_t channel, uint8_t midi_note)
+{
+    enter_critical_section();
+
+    free_voice(context, channel, midi_note);
+
+    leave_critical_section();
+}
+
+static context_t *data_cb_context;
 
 #ifdef IDF_VER
 #else
@@ -310,7 +378,7 @@ static int32_t data_cb(uint8_t *data, int32_t len)
     if (len < 0 || data == NULL) {
         return 0;
     }
-    fill_buffer(context, (msample*)data, len / 4);
+    fill_buffer(data_cb_context, (msample*)data, len / 4);
     return len;
 }
 
@@ -321,47 +389,56 @@ static void* alsa_thread(void *p)
 }
 #endif
 
-static void on_note_on(ysw_synth_note_on_t *m)
+static void on_note_on(context_t *context, ysw_synth_note_on_t *m)
 {
-    if (m->midi_note < PERIOD_MAP_SIZE) {
-        zm_medium_t period = period_map[m->midi_note];
-        ESP_LOGD(TAG, "channel=%d, midi_note=%d, velocity=%d, period=%d",
-                m->channel, m->midi_note, m->velocity, period);
-        play_note(context, &context->samples[0], period);
-    }
+    assert(m->channel < YSW_MIDI_MAX_CHANNELS);
+    assert(m->midi_note < YSW_MIDI_MAX_COUNT);
+    assert(m->velocity < YSW_MIDI_MAX_COUNT);
+
+    start_note(context, m->channel, m->midi_note, m->velocity);
 }
 
-static void on_note_off(ysw_synth_note_off_t *m)
+static void on_note_off(context_t *context, ysw_synth_note_off_t *m)
 {
+    assert(m->channel < YSW_MIDI_MAX_CHANNELS);
+    assert(m->midi_note < YSW_MIDI_MAX_COUNT);
+
+    stop_note(context, m->channel, m->midi_note);
 }
 
-static sample_t *program_samples[YSW_MIDI_MAX_COUNT];
-
-static sample_t *channel_samples[YSW_MIDI_MAX_CHANNELS];
-
-static void on_program_change(ysw_synth_program_change_t *m)
+static void on_program_change(context_t *context, ysw_synth_program_change_t *m)
 {
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
     assert(m->program < YSW_MIDI_MAX_COUNT);
 
-    sample_t *sample = program_samples[m->program];
-    if (!sample) {
-        sample = program_samples[0]; // default sample
-    }
-    channel_samples[m->channel] = sample;
+    uint8_t sample_index = context->program_samples[m->program];
+    context->channel_samples[m->channel] = sample_index;
 }
 
-static void process_message(ysw_synth_message_t *message)
+static void on_sample_load(context_t *context, ysw_synth_mod_sample_load_t *m)
+{
+    assert(context->sample_count < MAX_SAMPLES);
+    assert(m->program < YSW_MIDI_MAX_COUNT);
+
+    load_sample(context, m->name, context->sample_count);
+    context->program_samples[m->program] = context->sample_count;
+    context->sample_count++;
+}
+
+static void process_message(context_t *context, ysw_synth_mod_message_t *message)
 {
     switch (message->type) {
         case YSW_SYNTH_NOTE_ON:
-            on_note_on(&message->note_on);
+            on_note_on(context, &message->note_on);
             break;
         case YSW_SYNTH_NOTE_OFF:
-            on_note_off(&message->note_off);
+            on_note_off(context, &message->note_off);
             break;
         case YSW_SYNTH_PROGRAM_CHANGE:
-            on_program_change(&message->program_change);
+            on_program_change(context, &message->program_change);
+            break;
+        case YSW_SYNTH_MOD_SAMPLE_LOAD:
+            on_sample_load(context, &message->sample_load);
             break;
         default:
             break;
@@ -370,24 +447,14 @@ static void process_message(ysw_synth_message_t *message)
 
 static void run_mod_synth(void *parameters)
 {
-    for (;;) {
-        ysw_synth_message_t message;
-        BaseType_t is_message = xQueueReceive(input_queue, &message, portMAX_DELAY);
-        if (is_message) {
-            process_message(&message);
-        }
-    }
-}
-
-QueueHandle_t ysw_synth_mod_create_task()
-{
     ESP_LOGD(TAG, "calling ysw_heap_allocate for context_t, size=%d", sizeof(context_t));
-    context = ysw_heap_allocate(sizeof(context_t));
+    context_t *context = ysw_heap_allocate(sizeof(context_t));
+    data_cb_context = context;
 
     ESP_LOGD(TAG, "calling initialize_synthesizer, context=%p", context);
     initialize_synthesizer(context);
 
-    load_sample(context, YSW_MUSIC_SAMPLE, 0);
+    load_sample(context, YSW_MUSIC_SAMPLE, context->sample_count++);
 
 #ifdef IDF_VER
 #else
@@ -395,6 +462,17 @@ QueueHandle_t ysw_synth_mod_create_task()
     pthread_create(&p, NULL, &alsa_thread, NULL);
 #endif
 
-    ysw_task_create_standard(TAG, run_mod_synth, &input_queue, sizeof(ysw_synth_message_t));
+    for (;;) {
+        ysw_synth_mod_message_t message;
+        BaseType_t is_message = xQueueReceive(input_queue, &message, portMAX_DELAY);
+        if (is_message) {
+            process_message(context, &message);
+        }
+    }
+}
+
+QueueHandle_t ysw_synth_mod_create_task()
+{
+    ysw_task_create_standard(TAG, run_mod_synth, &input_queue, sizeof(ysw_synth_mod_message_t));
     return input_queue;
 }
