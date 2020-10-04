@@ -12,7 +12,8 @@
 #include "stdbool.h"
 #include "stdint.h"
 
-#define YSW_MIDI_MAX 127
+#define YSW_MIDI_MAX 127 // TODO: rename YSW_MIDI_MAX_INDEX
+#define YSW_MIDI_MAX_COUNT 128
 
 #define YSW_MIDI_DRUM_CHANNEL 9
 #define YSW_MIDI_MAX_CHANNELS 16

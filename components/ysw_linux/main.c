@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#define LINUX_MAIN 3
+#define LINUX_MAIN 4
 
 #if LINUX_MAIN == 1
 
@@ -188,35 +188,7 @@ static void memory_monitor(lv_task_t *param)
 
 #define YSW_MUSIC_MOD YSW_MUSIC_PARTITION "/music.mod"
 
-typedef struct {
-    char input_char;
-    const char *note_name;
-    int note_period;
-} note_map_t;
-
-static note_map_t note_map[] = {
-    { 'q', "C-2", 428 },
-    { 'w', "D-2", 381 },
-    { 'e', "E-2", 339 },
-    { 'r', "F-2", 320 },
-    { 't', "G-2", 285 },
-    { 'y', "A-2", 254 },
-    { 'u', "B-2", 226 },
-};
-
-#define NOTE_MAP_COUNT (sizeof(note_map) / sizeof(note_map_t))
-
 static modcontext *modctx;
-
-static int8_t find_note(int8_t input_char)
-{
-    for (int8_t i = 0; i < NOTE_MAP_COUNT; i++) {
-        if (note_map[i].input_char == input_char) {
-            return i;
-        }
-    }
-    return -1;
-}
 
 // NB: len is in bytes (typically 512 when called from a2dp_source)
 static int32_t data_cb(uint8_t *data, int32_t len)
@@ -224,14 +196,8 @@ static int32_t data_cb(uint8_t *data, int32_t len)
     if (len < 0 || data == NULL) {
         return 0;
     }
-    hxcmod_fillbuffer(modctx, (msample*)data, len / 4);
+    hxcmod_fillbuffer(modctx, (msample*)data, len / 4, NULL);
     return len;
-}
-
-static void* alsa_thread(void *p)
-{
-    ysw_alsa_initialize(data_cb);
-    return NULL;
 }
 
 int main(int argc, char *argv[])
@@ -275,21 +241,7 @@ int main(int argc, char *argv[])
 
     hxcmod_load(modctx, mod_data, mod_data_size);
 
-    pthread_t p;
-    pthread_create(&p, NULL, &alsa_thread, NULL);
-
-    int c;
-    extern void play_note(modcontext *modctx, int period);
-
-    while ((c = getchar()) != -1) {
-        int note_index = find_note(c);
-        if (note_index != -1) {
-            int note_period = note_map[note_index].note_period;
-            play_note(modctx, note_period);
-            ESP_LOGD(TAG, "input_char=%c, note_index=%d, note_name=%s, note_period=%d",
-                    c, note_index, note_map[note_index].note_name, note_period);
-        }
-    }
+    ysw_alsa_initialize(data_cb);
 }
 
 #elif LINUX_MAIN == 3
