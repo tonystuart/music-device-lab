@@ -60,7 +60,7 @@ static void write_cs(ysw_mfw_t *ysw_mfw)
                 cs->tempo,
                 cs->divisions);
 
-        if (!hash_alloc_insert(ysw_mfw->cs_map, cs, (void *)i)) {
+        if (!hash_alloc_insert(ysw_mfw->cs_map, cs, YSW_INT_PTR i)) {
             ESP_LOGE(TAG, "hash_alloc_insert(cs_map) failed");
             abort();
         }
@@ -114,7 +114,7 @@ static void write_hp(ysw_mfw_t *ysw_mfw)
                 hp->transposition,
                 hp->tempo);
 
-        if (!hash_alloc_insert(ysw_mfw->hp_map, hp, (void *)i)) {
+        if (!hash_alloc_insert(ysw_mfw->hp_map, hp, YSW_INT_PTR i)) {
             ESP_LOGE(TAG, "hash_alloc_insert(hp_map) failed");
             abort();
         }
@@ -127,7 +127,7 @@ static void write_hp(ysw_mfw_t *ysw_mfw)
                 ESP_LOGE(TAG, "hash_lookup(cs_map, cs=%p) failed", ps->cs);
                 abort();
             }
-            uint32_t cs_index = (uint32_t)hnode_get(node);
+            uint32_t cs_index = YSW_PTR_INT hnode_get(node);
             fprintf(ysw_mfw->file, "%d,%d,%d,%d\n",
                     YSW_MF_PROGRESSION_STEP,
                     ps->degree,

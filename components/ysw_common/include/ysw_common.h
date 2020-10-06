@@ -33,6 +33,9 @@
 
 #define $ ESP_ERROR_CHECK
 
+#define YSW_INT_PTR (void*)(uintptr_t)
+#define YSW_PTR_INT (uintptr_t)(void*)
+
 static inline int min(int x, int y)
 {
     return x < y ? x : y;

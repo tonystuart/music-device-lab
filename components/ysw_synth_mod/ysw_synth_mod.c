@@ -68,7 +68,6 @@ typedef struct {
 typedef struct {
     sample_t samples[MAX_SAMPLES];
     int8_t active_notes[YSW_MIDI_MAX_CHANNELS][YSW_MIDI_MAX_COUNT];
-    uint8_t program_samples[YSW_MIDI_MAX_COUNT];
     uint8_t channel_samples[YSW_MIDI_MAX_CHANNELS];
     mulong  playrate;
     mulong  sampleticksconst;
@@ -355,8 +354,7 @@ static void on_program_change(context_t *context, ysw_synth_program_change_t *m)
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
     assert(m->program < YSW_MIDI_MAX_COUNT);
 
-    uint8_t sample_index = context->program_samples[m->program];
-    context->channel_samples[m->channel] = sample_index;
+    context->channel_samples[m->channel] = m->program;
 }
 
 static void on_sample_load(context_t *context, ysw_synth_mod_sample_load_t *m)
@@ -411,14 +409,6 @@ static void on_sample_load(context_t *context, ysw_synth_mod_sample_load_t *m)
     leave_critical_section();
 }
 
-static void on_program_patch(context_t *context, ysw_synth_mod_program_patch_t *m)
-{
-    assert(m->program < YSW_MIDI_MAX_COUNT);
-    assert(m->sample < MAX_SAMPLES);
-
-    context->program_samples[m->program] = m->sample;
-}
-
 static void process_message(context_t *context, ysw_synth_mod_message_t *message)
 {
     switch ((uint8_t)message->type) {
@@ -433,9 +423,6 @@ static void process_message(context_t *context, ysw_synth_mod_message_t *message
             break;
         case YSW_SYNTH_MOD_SAMPLE_LOAD:
             on_sample_load(context, &message->sample_load);
-            break;
-        case YSW_SYNTH_MOD_PROGRAM_PATCH:
-            on_program_patch(context, &message->program_patch);
             break;
         default:
             break;

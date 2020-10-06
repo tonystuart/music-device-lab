@@ -31,7 +31,6 @@
 
 typedef enum {
     ZM_MF_SAMPLE = 1,
-    ZM_MF_PATCH,
     ZM_MF_QUALITY,
     ZM_MF_STYLE,
     ZM_MF_SOUND,
@@ -82,7 +81,6 @@ static void parse_sample(zm_mfr_t *zm_mfr)
     zm_index_t index = atoi(zm_mfr->tokens[1]);
     zm_medium_t count = ysw_array_get_count(zm_mfr->music->samples);
 
-    // TODO: decide whether this is an issue for samples
     if (index != count) {
         ESP_LOGW(TAG, "parse_sample expected count=%d, got index=%d", count, index);
         return;
@@ -96,24 +94,6 @@ static void parse_sample(zm_mfr_t *zm_mfr)
     sample->pan = atoi(zm_mfr->tokens[6]);
 
     ysw_array_push(zm_mfr->music->samples, sample);
-}
-
-static void parse_patch(zm_mfr_t *zm_mfr)
-{
-    zm_index_t index = atoi(zm_mfr->tokens[1]);
-    zm_medium_t count = ysw_array_get_count(zm_mfr->music->patches);
-
-    // TODO: decide whether this is an issue for patches
-    if (index != count) {
-        ESP_LOGW(TAG, "parse_sample expected count=%d, got index=%d", count, index);
-        return;
-    }
-
-    zm_patch_t *patch = ysw_heap_allocate(sizeof(zm_patch_t));
-    patch->program = atoi(zm_mfr->tokens[2]);
-    patch->sample = atoi(zm_mfr->tokens[3]);
-
-    ysw_array_push(zm_mfr->music->patches, patch);
 }
 
 static void parse_quality(zm_mfr_t *zm_mfr)
@@ -184,7 +164,7 @@ static void parse_pattern(zm_mfr_t *zm_mfr)
 
     zm_pattern_t *pattern = ysw_heap_allocate(sizeof(zm_pattern_t));
     pattern->name = ysw_heap_strdup(zm_mfr->tokens[2]);
-    pattern->program = atoi(zm_mfr->tokens[3]);
+    pattern->sample_index = atoi(zm_mfr->tokens[3]);
     pattern->steps = ysw_array_create(16);
 
     zm_yesno_t done = false;
@@ -246,7 +226,6 @@ static zm_music_t *create_music()
 {
     zm_music_t *music = ysw_heap_allocate(sizeof(zm_music_t));
     music->samples = ysw_array_create(8);
-    music->patches = ysw_array_create(8);
     music->qualities = ysw_array_create(32);
     music->styles = ysw_array_create(64);
     music->patterns = ysw_array_create(64);
@@ -263,13 +242,6 @@ void zm_music_free(zm_music_t *music)
         ysw_heap_free(sample);
     }
     ysw_array_free(music->samples);
-
-    zm_medium_t patch_count = ysw_array_get_count(music->patches);
-    for (zm_medium_t i = 0; i < patch_count; i++) {
-        zm_patch_t *patch = ysw_array_get(music->patches, i);
-        ysw_heap_free(patch);
-    }
-    ysw_array_free(music->patches);
 
     zm_medium_t quality_count = ysw_array_get_count(music->qualities);
     for (zm_medium_t i = 0; i < quality_count; i++) {
@@ -315,8 +287,6 @@ zm_music_t *zm_read_from_file(FILE *file)
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
         if (type == ZM_MF_SAMPLE && zm_mfr->token_count == 7) {
             parse_sample(zm_mfr);
-        } else if (type == ZM_MF_PATCH && zm_mfr->token_count == 4) {
-            parse_patch(zm_mfr);
         } else if (type == ZM_MF_QUALITY && zm_mfr->token_count > 3) {
             parse_quality(zm_mfr);
         } else if (type == ZM_MF_STYLE && zm_mfr->token_count == 3) {
@@ -410,7 +380,7 @@ zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large
                 note->start = step_start + (sound->start * step->duration) / ZM_TPU;
                 note->duration = (sound->duration * step->duration) / ZM_TPU;
                 note->velocity = sound->velocity;
-                note->instrument = pattern->program;
+                note->instrument = pattern->sample_index;
                 ysw_array_push(notes, note);
                 ESP_LOGD(TAG, "step_start=%d, midi_note=%d, start=%d, duration=%d, velocity=%d",
                         step_start, note->midi_note, note->start, note->duration, note->velocity);

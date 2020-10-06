@@ -20,7 +20,6 @@ QueueHandle_t ysw_synth_mod_create_task();
 
 typedef enum {
     YSW_SYNTH_MOD_SAMPLE_LOAD = YSW_SYNTH_CUSTOM,
-    YSW_SYNTH_MOD_PROGRAM_PATCH,
 } ysw_synth_mod_message_type_t;
 
 typedef struct {

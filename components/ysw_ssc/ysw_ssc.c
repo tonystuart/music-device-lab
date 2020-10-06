@@ -111,7 +111,7 @@ static void move(ysw_ssc_t *ssc, move_direction_t direction)
             }
             ysw_ps_select(ssc->model.ps, false);
             ysw_ps_select(ysw_hp_get_ps(ssc->model.hp, new_ps_index), true);
-            ysw_main_bus_publish(YSW_BUS_EVT_SEL_STEP, (void*)new_ps_index);
+            ysw_main_bus_publish(YSW_BUS_EVT_SEL_STEP, YSW_INT_PTR new_ps_index);
         }
         update_settings(ssc, new_ps_index);
     }

@@ -80,13 +80,8 @@ typedef struct {
 } zm_sample_t;
 
 typedef struct {
-    zm_small_t program;
-    zm_small_t sample;
-} zm_patch_t;
-
-typedef struct {
     char *name;
-    zm_small_t program;
+    zm_small_t sample_index;
     ysw_array_t *steps;
 } zm_pattern_t;
 
@@ -119,7 +114,6 @@ typedef struct {
 
 typedef struct {
     ysw_array_t *samples;
-    ysw_array_t *patches;
     ysw_array_t *qualities;
     ysw_array_t *styles;
     ysw_array_t *patterns;
