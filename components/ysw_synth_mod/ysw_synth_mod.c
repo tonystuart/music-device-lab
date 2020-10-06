@@ -28,8 +28,6 @@
 
 #define TAG "YSW_SYNTH_MOD"
 
-#define YSW_MUSIC_SAMPLE YSW_MUSIC_PARTITION "/ST-01/Steinway"
-
 #define MAX_VOICES 32
 #define MAX_SAMPLES 32
 
@@ -44,19 +42,13 @@ typedef unsigned long   mulong;
 typedef unsigned long   mssize;
 typedef signed short    msample;
 
-typedef enum {
-    PAN_LEFT,
-    PAN_CENTER,
-    PAN_RIGHT,
-} pan_t;
-
 typedef struct {
     mchar  *data;
     muint   length;
     muint   reppnt;
     muint   replen;
     muchar  volume;
-    pan_t   pan;
+    zm_pan_t pan;
 } sample_t;
 
 typedef struct {
@@ -78,7 +70,6 @@ typedef struct {
     int8_t active_notes[YSW_MIDI_MAX_CHANNELS][YSW_MIDI_MAX_COUNT];
     uint8_t program_samples[YSW_MIDI_MAX_COUNT];
     uint8_t channel_samples[YSW_MIDI_MAX_CHANNELS];
-    uint8_t sample_count;
     mulong  playrate;
     mulong  sampleticksconst;
     mulong  voice_time;
@@ -138,53 +129,6 @@ static void initialize_synthesizer(context_t *context)
     semaphore = xSemaphoreCreateMutex();
 }
 
-void load_sample(context_t *context, const char *name, int index)
-{
-    assert(index < MAX_SAMPLES);
-
-    struct stat sb;
-    int rc = stat(YSW_MUSIC_SAMPLE, &sb);
-    if (rc == -1) {
-        ESP_LOGE(TAG, "stat failed, file=%s", YSW_MUSIC_SAMPLE);
-        abort();
-    }
-
-    int sample_size = sb.st_size;
-
-    void *sample_data = ysw_heap_allocate(sample_size);
-
-    int fd = open(YSW_MUSIC_SAMPLE, O_RDONLY);
-    if (fd == -1) {
-        ESP_LOGE(TAG, "open failed, file=%s", YSW_MUSIC_SAMPLE);
-        abort();
-    }
-
-    rc = read(fd, sample_data, sample_size);
-    if (rc != sample_size) {
-        ESP_LOGE(TAG, "read failed, rc=%d, sample_size=%d", rc, sample_size);
-        abort();
-    }
-
-    rc = close(fd);
-    if (rc == -1) {
-        ESP_LOGE(TAG, "close failed");
-        abort();
-    }
-
-    sample_t sample = {
-        .data = sample_data,
-        .length = sample_size,
-        .volume = 60,
-        .reppnt = 0,
-        .replen = 0,
-        .pan = PAN_CENTER,
-    };
-
-    enter_critical_section();
-    context->samples[index] = sample;
-    leave_critical_section();
-}
-
 static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
 {
     assert(context);
@@ -236,13 +180,13 @@ static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
 #endif
 
                 switch (voice->sample->pan) {
-                    case PAN_LEFT:
+                    case ZM_PAN_LEFT:
                         left += (voice->sample->data[k] * voice->volume);
                         break;
-                    case PAN_RIGHT:
+                    case ZM_PAN_RIGHT:
                         right += (voice->sample->data[k] * voice->volume);
                         break;
-                    case PAN_CENTER:
+                    case ZM_PAN_CENTER:
                     default:
                         left += (voice->sample->data[k] * voice->volume);
                         right += (voice->sample->data[k] * voice->volume);
@@ -339,8 +283,8 @@ static void start_note(context_t *context, uint8_t channel, uint8_t midi_note, u
     uint16_t period = period_map[midi_note];
     sample_t *sample = &context->samples[sample_index];
 
-    ESP_LOGD(TAG, "channel=%d, midi_note=%d, velocity=%d, period=%d, voices=%d",
-            channel, midi_note, velocity, period, context->voice_count);
+    ESP_LOGD(TAG, "channel=%d, sample=%d, midi_note=%d, velocity=%d, period=%d, voices=%d",
+            channel, sample_index, midi_note, velocity, period, context->voice_count);
 
     voice_t *voice = &context->voices[voice_index];
     voice->sample = sample;
@@ -417,17 +361,67 @@ static void on_program_change(context_t *context, ysw_synth_program_change_t *m)
 
 static void on_sample_load(context_t *context, ysw_synth_mod_sample_load_t *m)
 {
-    assert(context->sample_count < MAX_SAMPLES);
-    assert(m->program < YSW_MIDI_MAX_COUNT);
+    assert(m->index < MAX_SAMPLES);
+    assert(m->volume < YSW_MIDI_MAX_COUNT);
 
-    load_sample(context, m->name, context->sample_count);
-    context->program_samples[m->program] = context->sample_count;
-    context->sample_count++;
+    if (context->samples[m->index].data) {
+        ysw_heap_free(context->samples[m->index].data);
+    }
+
+    struct stat sb;
+    int rc = stat(m->name, &sb);
+    if (rc == -1) {
+        ESP_LOGE(TAG, "stat failed, file=%s", m->name);
+        abort();
+    }
+
+    int sample_size = sb.st_size;
+
+    void *sample_data = ysw_heap_allocate(sample_size);
+
+    int fd = open(m->name, O_RDONLY);
+    if (fd == -1) {
+        ESP_LOGE(TAG, "open failed, file=%s", m->name);
+        abort();
+    }
+
+    rc = read(fd, sample_data, sample_size);
+    if (rc != sample_size) {
+        ESP_LOGE(TAG, "read failed, rc=%d, sample_size=%d", rc, sample_size);
+        abort();
+    }
+
+    rc = close(fd);
+    if (rc == -1) {
+        ESP_LOGE(TAG, "close failed");
+        abort();
+    }
+
+    sample_t sample = {
+        .data = sample_data,
+        .length = sample_size / 2, // length is in 2 byte (16 bit) words
+        .reppnt = m->reppnt,
+        .replen = m->replen,
+        .volume = m->volume,
+        .pan = m->pan,
+    };
+
+    enter_critical_section();
+    context->samples[m->index] = sample;
+    leave_critical_section();
+}
+
+static void on_program_patch(context_t *context, ysw_synth_mod_program_patch_t *m)
+{
+    assert(m->program < YSW_MIDI_MAX_COUNT);
+    assert(m->sample < MAX_SAMPLES);
+
+    context->program_samples[m->program] = m->sample;
 }
 
 static void process_message(context_t *context, ysw_synth_mod_message_t *message)
 {
-    switch (message->type) {
+    switch ((uint8_t)message->type) {
         case YSW_SYNTH_NOTE_ON:
             on_note_on(context, &message->note_on);
             break;
@@ -440,6 +434,9 @@ static void process_message(context_t *context, ysw_synth_mod_message_t *message
         case YSW_SYNTH_MOD_SAMPLE_LOAD:
             on_sample_load(context, &message->sample_load);
             break;
+        case YSW_SYNTH_MOD_PROGRAM_PATCH:
+            on_program_patch(context, &message->program_patch);
+            break;
         default:
             break;
     }
@@ -447,21 +444,7 @@ static void process_message(context_t *context, ysw_synth_mod_message_t *message
 
 static void run_mod_synth(void *parameters)
 {
-    ESP_LOGD(TAG, "calling ysw_heap_allocate for context_t, size=%d", sizeof(context_t));
-    context_t *context = ysw_heap_allocate(sizeof(context_t));
-    data_cb_context = context;
-
-    ESP_LOGD(TAG, "calling initialize_synthesizer, context=%p", context);
-    initialize_synthesizer(context);
-
-    load_sample(context, YSW_MUSIC_SAMPLE, context->sample_count++);
-
-#ifdef IDF_VER
-#else
-    pthread_t p;
-    pthread_create(&p, NULL, &alsa_thread, NULL);
-#endif
-
+    context_t *context = parameters;
     for (;;) {
         ysw_synth_mod_message_t message;
         BaseType_t is_message = xQueueReceive(input_queue, &message, portMAX_DELAY);
@@ -473,6 +456,29 @@ static void run_mod_synth(void *parameters)
 
 QueueHandle_t ysw_synth_mod_create_task()
 {
-    ysw_task_create_standard(TAG, run_mod_synth, &input_queue, sizeof(ysw_synth_mod_message_t));
+    ESP_LOGD(TAG, "calling ysw_heap_allocate for context_t, size=%d", sizeof(context_t));
+    context_t *context = ysw_heap_allocate(sizeof(context_t));
+    data_cb_context = context;
+
+    ESP_LOGD(TAG, "calling initialize_synthesizer, context=%p", context);
+    initialize_synthesizer(context);
+
+#ifdef IDF_VER
+#else
+    pthread_t p;
+    pthread_create(&p, NULL, &alsa_thread, NULL);
+#endif
+
+    ysw_task_config_t config = {
+        .name = TAG,
+        .function = run_mod_synth,
+        .parameters = context,
+        .queue = &input_queue,
+        .queue_size = 16,
+        .item_size = sizeof(ysw_synth_mod_message_t),
+        .stack_size = YSW_TASK_MEDIUM_STACK,
+        .priority = YSW_TASK_DEFAULT_PRIORITY,
+    };
+    ysw_task_create(&config);
     return input_queue;
 }

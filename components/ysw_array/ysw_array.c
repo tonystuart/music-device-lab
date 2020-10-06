@@ -199,3 +199,13 @@ void ysw_array_free(ysw_array_t *array)
     ysw_heap_free(array);
 }
 
+void ysw_array_free_all(ysw_array_t *array)
+{
+    assert(array);
+    for (uint32_t i = 0; i < array->count; i++) {
+        ysw_heap_free(array->data[i]);
+    }
+    ysw_heap_free(array->data);
+    ysw_heap_free(array);
+}
+

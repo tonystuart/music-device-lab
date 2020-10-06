@@ -41,6 +41,12 @@ typedef enum {
     ZM_FIT_TRUNCATE,
 } zm_fit_t;
 
+typedef enum {
+    ZM_PAN_LEFT,
+    ZM_PAN_CENTER,
+    ZM_PAN_RIGHT,
+} zm_pan_t;
+
 typedef struct {
     char *name;
     ysw_array_t *semitones;
@@ -67,43 +73,61 @@ typedef struct {
 
 typedef struct {
     char *name;
+    zm_medium_t reppnt;
+    zm_medium_t replen;
+    zm_small_t volume;
+    zm_pan_t pan;
 } zm_sample_t;
 
 typedef struct {
+    zm_small_t program;
+    zm_small_t sample;
+} zm_patch_t;
+
+typedef struct {
     char *name;
+    zm_small_t program;
     ysw_array_t *steps;
-    zm_sample_t sample;
 } zm_pattern_t;
 
 typedef enum {
-    ZM_WHEN_TYPE_AFTER,
     ZM_WHEN_TYPE_WITH,
+    ZM_WHEN_TYPE_AFTER,
 } zm_when_type_t;
 
 typedef struct {
-    zm_when_type_t when_type;
-    zm_medium_t index;
+    zm_when_type_t type;
+    zm_medium_t part_index;
 } zm_when_t;
 
 typedef struct {
-    zm_pattern_t pattern;
-    zm_when_t when;
-    zm_fit_t fit;
-} song_node_t;
+    zm_large_t begin_time;
+    zm_large_t end_time;
+} zm_part_time_t;
 
 typedef struct {
     char *name;
-    ysw_array_t parts;
-} ysw_song_t;
+    zm_small_t bpm;
+    ysw_array_t *parts;
+} zm_song_t;
+
+typedef struct {
+    zm_pattern_t *pattern;
+    zm_when_t when;
+    zm_fit_t fit;
+} zm_part_t;
 
 typedef struct {
     ysw_array_t *samples;
+    ysw_array_t *patches;
     ysw_array_t *qualities;
     ysw_array_t *styles;
     ysw_array_t *patterns;
+    ysw_array_t *songs;
 } zm_music_t;
 
 void zm_music_free(zm_music_t *music);
 zm_music_t *zm_read_from_file(FILE *file);
 zm_music_t *zm_read(void);
-ysw_array_t *zm_render_pattern(zm_pattern_t *pattern);
+zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large_t start_time, zm_small_t channel);
+ysw_array_t *zm_render_song(zm_song_t *song);

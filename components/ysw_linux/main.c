@@ -384,9 +384,10 @@ int main(int argc, char *argv[])
 #include "ysw_alsa.h"
 #include "ysw_heap.h"
 #include "ysw_music.h"
-#include "zm_music.h"
 #include "ysw_main_seq.h"
 #include "ysw_main_synth.h"
+#include "ysw_synth_mod.h"
+#include "zm_music.h"
 #include "esp_log.h"
 #include "sys/types.h"
 #include "sys/stat.h"
@@ -405,8 +406,45 @@ int main(int argc, char *argv[])
     ysw_main_seq_initialize();
 
     zm_music_t *music = zm_read();
-    zm_pattern_t *pattern = ysw_array_get(music->patterns, 0);
-    ysw_array_t *array = zm_render_pattern(pattern);
+
+    // TODO: Implement load-on-demand for samples
+    zm_small_t sample_count = ysw_array_get_count(music->samples);
+    for (zm_small_t i = 0; i < sample_count; i++) {
+        zm_sample_t *sample = ysw_array_get(music->samples, i);
+        ysw_synth_mod_message_t message = {
+            .type = YSW_SYNTH_MOD_SAMPLE_LOAD,
+            .sample_load.index = i,
+            .sample_load.reppnt = sample->reppnt,
+            .sample_load.replen = sample->replen,
+            .sample_load.volume = sample->volume,
+            .sample_load.pan = sample->pan,
+        };
+        snprintf(message.sample_load.name, sizeof(message.sample_load.name),
+            "%s/samples/%s", YSW_MUSIC_PARTITION, sample->name);
+        // TODO: figure out how to extend message for mod types
+        ysw_main_synth_send((void*)&message);
+    }
+
+    zm_small_t patch_count = ysw_array_get_count(music->patches);
+    for (zm_small_t i = 0; i < patch_count; i++) {
+        zm_patch_t *patch = ysw_array_get(music->patches, i);
+        ysw_synth_mod_message_t message = {
+            .type = YSW_SYNTH_MOD_PROGRAM_PATCH,
+            .program_patch.program = patch->program,
+            .program_patch.sample = patch->sample,
+        };
+        // TODO: figure out how to extend message for mod types
+        ysw_main_synth_send((void*)&message);
+    }
+
+#if 0
+    zm_pattern_t *pattern = ysw_array_get(music->patterns, 2);
+    ysw_array_t *array = ysw_array_create(64);
+    zm_render_pattern(array, pattern, 0);
+#else
+    zm_song_t *song = ysw_array_get(music->songs, 0);
+    ysw_array_t *array = zm_render_song(song);
+#endif
 
     zm_large_t note_count = ysw_array_get_count(array);
 
@@ -418,10 +456,17 @@ int main(int argc, char *argv[])
     ysw_array_free(array);
 
     ysw_seq_message_t message = {
+        .type = YSW_SEQ_LOOP,
+        .loop.loop = true,
+    };
+
+    ysw_main_seq_send(&message);
+
+    message = (ysw_seq_message_t){
         .type = YSW_SEQ_PLAY,
         .play.notes = notes,
         .play.note_count = note_count,
-        .play.tempo = 100,
+        .play.tempo = song->bpm,
     };
 
     ysw_main_seq_send(&message);

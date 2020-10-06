@@ -30,10 +30,10 @@
 
 typedef struct {
     char *name;
-    TaskFunction_t function;
-    QueueHandle_t *queue;
     TaskHandle_t *task;
+    TaskFunction_t function;
     void *parameters;
+    QueueHandle_t *queue;
     UBaseType_t queue_size;
     UBaseType_t item_size;
     uint16_t stack_size;
