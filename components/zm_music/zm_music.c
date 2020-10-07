@@ -382,8 +382,7 @@ zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large
                 note->velocity = sound->velocity;
                 note->instrument = pattern->sample_index;
                 ysw_array_push(notes, note);
-                ESP_LOGD(TAG, "step_start=%d, midi_note=%d, start=%d, duration=%d, velocity=%d",
-                        step_start, note->midi_note, note->start, note->duration, note->velocity);
+                ESP_LOGD(TAG, "step_start=%d, midi_note=%d, start=%d, duration=%d, velocity=%d, channel=%d, sample=%d", step_start, note->midi_note, note->start, note->duration, note->velocity, note->channel, note->instrument);
             }
         }
         step_start += step->duration;
@@ -408,6 +407,18 @@ ysw_array_t *zm_render_song(zm_song_t *song)
         } else if (part->when.type == ZM_WHEN_TYPE_WITH) {
             zm_part_time_t *part_time = ysw_array_get(part_times, part->when.part_index);
             begin_time = part_time->begin_time;
+            if (part->fit == ZM_FIT_LOOP) {
+                zm_large_t loop_time = begin_time;
+                while (end_time < part_time->end_time) {
+                    end_time = zm_render_pattern(notes, part->pattern, loop_time, i);
+                    loop_time = end_time;
+                } 
+            } else {
+                end_time = zm_render_pattern(notes, part->pattern, begin_time, i);
+            }
+        } else if (part->when.type == ZM_WHEN_TYPE_AFTER) {
+            zm_part_time_t *part_time = ysw_array_get(part_times, part->when.part_index);
+            begin_time = part_time->end_time;
             end_time = zm_render_pattern(notes, part->pattern, begin_time, i);
         }
         zm_part_time_t *part_time = ysw_heap_allocate(sizeof(zm_part_time_t));

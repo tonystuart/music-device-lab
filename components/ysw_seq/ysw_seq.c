@@ -112,9 +112,14 @@ static void fire_note_status(ysw_seq_t *seq, ysw_note_t *note)
 static void play_note(ysw_seq_t *seq, ysw_note_t *note, int next_note_index)
 {
     if (note->instrument != seq->programs[note->channel]) {
+#if YSW_MAIN_SYNTH_MODEL == 4
+        // No special treatment for channel 9 with ysw_synth_mod
+        seq->config.on_program_change(note->channel, note->instrument);
+#else
         if (note->channel != YSW_MIDI_DRUM_CHANNEL) {
             seq->config.on_program_change(note->channel, note->instrument);
         }
+#endif
         seq->programs[note->channel] = note->instrument;
     }
 

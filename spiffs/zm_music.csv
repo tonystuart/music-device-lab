@@ -15,15 +15,24 @@
 # 11 major 7th
 # 12 octave
 
-#type (sample),index,name,reppnt,replen,volume,pan
+# Key of C-Major:
+# C     D     E  F     G     A     B
+# 60 61 62 63 64 65 66 67 68 69 70 71
+
+#type(sample),index,name,reppnt,replen,volume,pan
 1,0,Steinway,0,0,60,0
 1,1,Celeste,0,0,60,2
 1,2,walker-guitar,0,0,60,2
 1,3,voices47,0,0,60,2
 1,4,flute,0,0,60,2
 1,5,Steinway,0,0,60,2
+1,6,BassDrum1,0,0,60,1
+1,7,Cymbal1,0,0,60,1
+1,8,Snare1,0,0,60,1
+1,9,thehihatclosed,0,0,60,1
+1,10,bassguitar,0,0,60,2
 
-#type (quality),index,name,semitones
+#type(quality),index,name,semitones
 2,0,Unity,0
 2,1,Power,0,7
 2,2,Major,0,4,7
@@ -36,10 +45,10 @@
 2,9,7/6,0,4,7,9,10
 2,10,M7/6,0,4,7,9,11
 
-#type (style),index,name
+#type(style),index,name
 3,0,Up Down Arpeggio
 
-#type (sound),semitone_index,velocity,start,duration
+#type(sound),semitone_index,velocity,start,duration
 4,0,100,0,128
 4,1,80,128,128
 4,2,80,256,128
@@ -49,43 +58,43 @@
 4,2,80,768,128
 4,1,80,896,128
 
-#type (style),index,name
+#type(style),index,name
 3,1,Slow Strum
 
-#type (sound),semitone_index,velocity,start,duration
+#type(sound),semitone_index,velocity,start,duration
 4,0,100,0,1024
 4,1,80,150,1024
 4,2,80,300,1024
 4,3,80,450,1024
 4,4,80,600,1024
 
-#type (style),index,name
+#type(style),index,name
 3,2,Chord (3 notes)
 
-#type (sound),semitone_index,velocity,start,duration
+#type(sound),semitone_index,velocity,start,duration
 4,0,80,0,1024
 4,1,80,0,1024
 4,2,80,0,1024
 
-#type (style),index,name
+#type(style),index,name
 3,3,Chord (4 notes)
 
-#type (sound),semitone_index,velocity,start,duration
+#type(sound),semitone_index,velocity,start,duration
 4,0,80,0,1024
 4,1,80,0,1024
 4,2,80,0,1024
 4,3,80,0,1024
 
-#type (style),index,name
+#type(style),index,name
 3,4,Note (4 note)
 
-#type (sound),semitone_index,velocity,start,duration
+#type(sound),semitone_index,velocity,start,duration
 4,0,80,0,1024
 
-#type (pattern),index,name,sample
+#type(pattern),index,name,sample
 5,0,Twelve Bar Blues,0
 
-#type (step),root,quality,style,duration
+#type(step),root,quality,style,duration
 6,60,9,0,1024
 6,60,9,0,1024
 6,60,9,0,1024
@@ -99,13 +108,14 @@
 6,60,9,0,1024
 6,60,9,0,1024
 
-# C     D     E  F     G     A     B
-# 60 61 62 63 64 65 66 67 68 69 70 71
+# Key of D-Major:
+# D     E     F# G     A     B     C#
+# 62 63 64 65 66 67 68 69 70 71 72 73
 
-#type (pattern),index,name,sample
+#type(pattern),index,name,sample
 5,1,Summer Nights Chords,0
 
-#type (step),root,quality,style,duration
+#type(step),root,quality,style,duration
 6,62,2,2,512 # D 1
 6,67,2,2,512 # G
 6,69,2,2,512 # A
@@ -129,13 +139,14 @@
 6,64,5,3,512 # Em7
 6,69,2,2,512 # A
 
-# C     D     E  F     G     A     B
-# 60 61 62 63 64 65 66 67 68 69 70 71
+# Key of D-Major:
+# D     E     F# G     A     B     C#
+# 62 63 64 65 66 67 68 69 70 71 72 73
 
-#type (pattern),index,name,sample
-5,2,Summer Nights Melody,5
+#type(pattern),index,name,sample
+5,2,Summer Nights Melody,1
 
-#type (step),root,quality,style,duration
+#type(step),root,quality,style,duration
 # Line 1 - Measure 1
 6,00,0,4,256 # Rest
 6,66,0,4,128 # F#
@@ -209,12 +220,110 @@
 6,69,0,4,128 # A
 6,62,0,4,128 # D
 
-# C     D     E  F     G     A     B
-# 60 61 62 63 64 65 66 67 68 69 70 71
+#type(pattern),index,name,sample
+5,3,Summer Nights Bass Guitar,10
 
-#type (song),index,name,bpm
+# Key of D-Major:
+# D     E     F# G     A     B     C#
+# 62 63 64 65 66 67 68 69 70 71 72 73
+
+#type(tone),root,quality,style,duration
+6,62,0,4,128
+6,64,0,4,128
+6,66,0,4,128
+6,67,0,4,128
+6,69,0,4,128
+6,71,0,4,128
+6,73,0,4,128
+6,74,0,4,128
+
+#type(pattern),index,name,sample
+5,4,Standard 8th Note Groove Bass Drum,6
+6,60,0,4,256
+6,00,0,4,256
+6,60,0,4,256
+6,00,0,4,256
+
+#type(pattern),index,name,sample
+5,5,Standard 8th Note Groove Cymbal,7
+6,60,0,4,256
+6,00,0,4,256
+6,60,0,4,256
+6,00,0,4,256
+
+#type(pattern),index,name,sample
+5,6,Standard 8th Note Groove Snare,8
+6,00,0,4,256
+6,60,0,4,256
+6,00,0,4,256
+6,60,0,4,256
+
+#type(pattern),index,name,sample
+5,7,Standard 8th Note Groove Hi Hat,9
+6,60,0,4,128
+6,60,0,4,128
+6,60,0,4,128
+6,60,0,4,128
+6,60,0,4,128
+6,60,0,4,128
+6,60,0,4,128
+6,60,0,4,128
+
+# Key of D-Major:
+# D     E     F# G     A     B     C#
+# 62 63 64 65 66 67 68 69 70 71 72 73
+
+#type(pattern),index,name,sample
+5,8,Summer Nights Intro,0
+
+#type(step),root,quality,style,duration
+# Line 0 - Measure 1
+6,50,0,4,256 # D
+6,00,0,4,128 # Rest
+6,50,0,4,128 # D
+6,55,0,4,256 # G
+6,00,0,4,128 # Rest
+6,55,0,4,128 # G
+# Line 0 - Measure 2
+6,57,0,4,256 # A
+6,00,0,4,128 # Rest
+6,57,0,4,128 # A
+6,55,0,4,128 # G
+6,57,0,4,256 # A
+6,55,0,4,128 # G
+# Line 0 - Measure 3
+6,50,0,4,256 # D
+6,00,0,4,128 # Rest
+6,50,0,4,128 # D
+6,55,0,4,256 # G
+6,00,0,4,128 # Rest
+6,55,0,4,128 # G
+# Line 0 - Measure 4
+6,57,0,4,256 # A
+6,00,0,4,128 # Rest
+6,57,0,4,128 # A
+6,55,0,4,128 # G
+6,57,0,4,256 # A
+6,55,0,4,128 # G
+
+#type(song),index,name,bpm
 7,0,Summer Nights,160
 
-#type (part),pattern,when-type,when-part-index,fit
-8,1,0,0,0
-8,2,0,0,0
+#type(part),pattern,when-type,when-part-index,fit
+8,8,0,0,0 # Intro 0
+# Page 1
+8,1,1,0,0 # Chords 1
+8,2,0,1,0 # Melody 2
+8,3,0,1,1 # Bass Guitar 3
+8,4,0,1,1 # Bass Drum 4
+8,6,0,1,1 # Snare 5
+8,7,0,1,1 # Hi Hat Closed 6
+# Page 2
+8,1,1,1,0 # Chords 7
+8,2,0,7,0 # Melody 8
+8,3,0,7,1 # Bass Guitar 9
+8,4,0,7,1 # Bass Drum 10
+8,6,0,7,1 # Snare 11
+8,7,0,7,1 # Hi Hat Closed 12
+
+

@@ -67,7 +67,7 @@ typedef struct {
 
 typedef struct {
     sample_t samples[MAX_SAMPLES];
-    int8_t active_notes[YSW_MIDI_MAX_CHANNELS][YSW_MIDI_MAX_COUNT];
+    uint8_t active_notes[YSW_MIDI_MAX_CHANNELS][YSW_MIDI_MAX_COUNT];
     uint8_t channel_samples[YSW_MIDI_MAX_CHANNELS];
     mulong  playrate;
     mulong  sampleticksconst;
@@ -117,7 +117,6 @@ static void initialize_synthesizer(context_t *context)
     assert(context);
 
     memset(context, 0, sizeof(context_t));
-    memset(context->active_notes, -1, sizeof(context->active_notes));
     context->playrate = 44100;
     context->stereo = 1;
     context->stereo_separation = 1;
@@ -242,6 +241,7 @@ static uint8_t allocate_voice(context_t *context, uint8_t channel, uint8_t midi_
         voice_index = context->voice_count++;
         voice = &context->voices[voice_index];
     } else {
+        // steal oldest voice
         mulong time = UINT_MAX;
         for (uint8_t i = 0; i < context->voice_count; i++) {
             if (context->voices[i].time < time) {
@@ -250,7 +250,6 @@ static uint8_t allocate_voice(context_t *context, uint8_t channel, uint8_t midi_
             }
         }
         voice = &context->voices[voice_index];
-        context->active_notes[voice->channel][voice->midi_note] = -1;
     }
     voice->channel = channel;
     voice->midi_note = midi_note;
@@ -260,14 +259,15 @@ static uint8_t allocate_voice(context_t *context, uint8_t channel, uint8_t midi_
 
 static void free_voice(context_t *context, uint8_t channel, uint8_t midi_note)
 {
-    if (context->active_notes[channel][midi_note] != -1) {
-        uint8_t voice_index = context->active_notes[channel][midi_note];
-        voice_t *voice = &context->voices[voice_index];
-        if (voice->channel == channel && voice->midi_note == midi_note) {
-            if (--context->voice_count != voice_index) {
-                *voice = context->voices[context->voice_count];
-            }
-            context->active_notes[channel][midi_note] = -1;
+    uint8_t voice_index = context->active_notes[channel][midi_note];
+    voice_t *voice = &context->voices[voice_index];
+    // if channel and note don't match, voice was stolen, nothing more to do
+    if (voice->channel == channel && voice->midi_note == midi_note) {
+        // if we're not freeing the last voice
+        if (--context->voice_count != voice_index) {
+            // move former last item to position of newly freed item
+            *voice = context->voices[context->voice_count];
+            context->active_notes[voice->channel][voice->midi_note] = voice_index;
         }
     }
 }

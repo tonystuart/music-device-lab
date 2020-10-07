@@ -36,9 +36,8 @@ typedef enum {
 } zm_duration_t;
 
 typedef enum {
-    ZM_FIT_REPEAT_TO_MAX,
-    ZM_FIT_LOOP_THROUGH_MAX,
-    ZM_FIT_TRUNCATE,
+    ZM_FIT_ONCE,
+    ZM_FIT_LOOP,
 } zm_fit_t;
 
 typedef enum {
