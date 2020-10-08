@@ -310,11 +310,6 @@ static void stop_note(context_t *context, uint8_t channel, uint8_t midi_note)
 
 static context_t *data_cb_context;
 
-#ifdef IDF_VER
-#else
-#include "ysw_alsa.h"
-#include "pthread.h"
-
 // NB: len is in bytes (typically 512 when called from a2dp_source)
 static int32_t data_cb(uint8_t *data, int32_t len)
 {
@@ -325,11 +320,21 @@ static int32_t data_cb(uint8_t *data, int32_t len)
     return len;
 }
 
+#ifdef IDF_VER
+
+#include "ysw_a2dp_source.h"
+
+#else
+
+#include "ysw_alsa.h"
+#include "pthread.h"
+
 static void* alsa_thread(void *p)
 {
     ysw_alsa_initialize(data_cb);
     return NULL;
 }
+
 #endif
 
 static void on_note_on(context_t *context, ysw_synth_note_on_t *m)
@@ -451,6 +456,7 @@ QueueHandle_t ysw_synth_mod_create_task()
     initialize_synthesizer(context);
 
 #ifdef IDF_VER
+    ysw_a2dp_source_initialize(data_cb);
 #else
     pthread_t p;
     pthread_create(&p, NULL, &alsa_thread, NULL);
