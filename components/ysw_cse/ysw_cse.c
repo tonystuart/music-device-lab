@@ -19,7 +19,6 @@
 #include "ysw_ticks.h"
 
 #include "lvgl.h"
-#include "lv_debug.h"
 
 #include "esp_log.h"
 

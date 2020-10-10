@@ -12,7 +12,7 @@
 #ifdef IDF_VER
 #define ESP32_MAIN 4
 #else
-#define LINUX_MAIN 1
+#define LINUX_MAIN 4
 #endif
 
 #if ESP32_MAIN == 4 || LINUX_MAIN == 4
@@ -22,6 +22,7 @@
 #include "ysw_music.h"
 #include "ysw_main_seq.h"
 #include "ysw_main_synth.h"
+#include "ysw_staff.h"
 #include "ysw_synth_mod.h"
 #include "zm_music.h"
 #include "esp_log.h"
@@ -36,16 +37,9 @@
 
 #define TAG "MAIN4"
 
-static void play_zm_song_on_ysw_synth()
+static zm_song_t *initialize_song(zm_music_t *music, uint32_t index)
 {
-    ESP_LOGD(TAG, "play_zm_song_on_ysw_synth entered");
-
-    ysw_main_synth_initialize();
-    ysw_main_seq_initialize();
-
-    zm_music_t *music = zm_read();
-
-    zm_song_t *song = ysw_array_get(music->songs, 0);
+    zm_song_t *song = ysw_array_get(music->songs, index);
     zm_small_t part_count = ysw_array_get_count(song->parts);
 
     for (zm_small_t i = 0; i < part_count; i++) {
@@ -65,16 +59,17 @@ static void play_zm_song_on_ysw_synth()
         ysw_main_synth_send((void*)&message);
     }
 
-    ysw_array_t *array = zm_render_song(song);
+    return song;
+}
 
+static void play_song(ysw_array_t *array, uint8_t bpm)
+{
     zm_large_t note_count = ysw_array_get_count(array);
 
     ysw_note_t *notes = ysw_heap_allocate(sizeof(ysw_note_t) * note_count);
     for (zm_large_t i = 0; i < note_count; i++) {
         notes[i] = *(ysw_note_t *)ysw_array_get(array, i);
     }
-
-    ysw_array_free(array);
 
     ysw_seq_message_t message = {
         .type = YSW_SEQ_LOOP,
@@ -87,15 +82,26 @@ static void play_zm_song_on_ysw_synth()
         .type = YSW_SEQ_PLAY,
         .play.notes = notes,
         .play.note_count = note_count,
-        .play.tempo = song->bpm,
+        .play.tempo = bpm,
     };
 
     ysw_main_seq_send(&message);
+}
 
-    int c;
-    while ((c = getchar()) != -1) {
-        ESP_LOGD(TAG, "c=%c", c);
-    }
+static void play_zm_song_on_ysw_synth()
+{
+    lv_obj_t *staff = ysw_staff_create(lv_scr_act(), NULL);
+    lv_obj_set_size(staff, 320, 240);
+    lv_obj_align(staff, NULL, LV_ALIGN_CENTER, 0, 0);
+
+    ysw_main_synth_initialize();
+    ysw_main_seq_initialize();
+
+    zm_music_t *music = zm_read();
+    zm_song_t *song = initialize_song(music, 0);
+    ysw_array_t *array = zm_render_song(song);
+    ysw_staff_set_notes(staff, array);
+    play_song(array, song->bpm);
 }
 
 #endif // ESP32_MAIN == 4 || LINUX_MAIN == 4
@@ -318,7 +324,6 @@ void app_main()
 
 #include <stdlib.h>
 #include <unistd.h>
-#include <SDL2/SDL.h>
 #include "lvgl/lvgl.h"
 #include "lv_drivers/display/monitor.h"
 #include "lv_drivers/indev/mouse.h"
@@ -327,8 +332,6 @@ void app_main()
 
 #define TAG "MAIN"
 
-static void hal_init(void);
-static int tick_thread(void *data);
 static void memory_monitor(lv_task_t *param);
 
 static ysw_music_t *music;
@@ -387,14 +390,14 @@ static void play_hp_loop(ysw_music_t *music, uint32_t hp_index)
 int main(int argc, char **argv)
 {
     lv_init();
-    hal_init();
+    ysw_lvgl_hal_init();
 
     ysw_main_bus_create();
     ysw_main_synth_initialize();
     ysw_main_seq_initialize();
     ysw_style_initialize();
 
-    FILE *music_file = fopen("music.csv", "r");
+    FILE *music_file = fopen("/spiffs/music.csv", "r");
     music = ysw_mfr_read_from_file(music_file);
 
     uint32_t cs_count = ysw_music_get_cs_count(music);
@@ -407,48 +410,6 @@ int main(int argc, char **argv)
     while (1) {
         lv_task_handler();
         usleep(5 * 1000);
-    }
-
-    return 0;
-}
-
-static void hal_init(void)
-{
-    monitor_init();
-
-    static lv_disp_buf_t disp_buf1;
-    static lv_color_t buf1_1[LV_HOR_RES_MAX * 120];
-    lv_disp_buf_init(&disp_buf1, buf1_1, NULL, LV_HOR_RES_MAX * 120);
-
-    lv_disp_drv_t disp_drv;
-    lv_disp_drv_init(&disp_drv);
-    disp_drv.buffer = &disp_buf1;
-    disp_drv.flush_cb = monitor_flush;
-    lv_disp_drv_register(&disp_drv);
-
-    mouse_init();
-    lv_indev_drv_t indev_drv;
-    lv_indev_drv_init(&indev_drv); /*Basic initialization*/
-    indev_drv.type = LV_INDEV_TYPE_POINTER;
-
-    indev_drv.read_cb = mouse_read;
-    lv_indev_t *mouse_indev = lv_indev_drv_register(&indev_drv);
-
-    LV_IMG_DECLARE(mouse_cursor_icon); /*Declare the image file.*/
-    lv_obj_t *cursor_obj = lv_img_create(lv_scr_act(), NULL); /*Create an image object for the cursor */
-    lv_img_set_src(cursor_obj, &mouse_cursor_icon); /*Set the image source*/
-    lv_indev_set_cursor(mouse_indev, cursor_obj); /*Connect the image  object to the driver*/
-
-    SDL_CreateThread(tick_thread, "tick", NULL);
-
-    //lv_task_create(memory_monitor, 5000, LV_TASK_PRIO_MID, NULL);
-}
-
-static int tick_thread(void *data)
-{
-    while (1) {
-        SDL_Delay(5); /*Sleep for 5 millisecond*/
-        lv_tick_inc(5); /*Tell LittelvGL that 5 milliseconds were elapsed*/
     }
 
     return 0;
@@ -676,10 +637,19 @@ int main(int argc, char *argv[])
 
 #elif LINUX_MAIN == 4
 
+#include "ysw_lvgl.h"
+
 int main(int argc, char *argv[])
 {
+    lv_init();
+    ysw_lvgl_hal_init();
+
     play_zm_song_on_ysw_synth();
-    return 0;
+
+    while (1) {
+        lv_task_handler();
+        usleep(5 * 1000);
+    }
 }
 
 #endif
