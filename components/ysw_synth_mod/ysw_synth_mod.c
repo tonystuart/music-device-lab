@@ -11,7 +11,6 @@
 #include "ysw_common.h"
 #include "ysw_heap.h"
 #include "ysw_midi.h"
-#include "ysw_music.h"
 #include "ysw_task.h"
 #include "ysw_synth.h"
 #include "zm_music.h"

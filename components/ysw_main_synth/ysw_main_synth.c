@@ -8,7 +8,6 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_main_synth.h"
-#include "ysw_music.h"
 
 #if YSW_MAIN_SYNTH_MODEL == 1
 #include "ysw_synth_bt.h"

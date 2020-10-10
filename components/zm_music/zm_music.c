@@ -23,8 +23,8 @@
 #define TAG "ZM_MUSIC"
 
 #define ZM_MF_PARTITION "/spiffs"
-#define ZM_MF_CSV ZM_MF_PARTITION "/zm_music.csv"
-#define ZM_MF_TEMP ZM_MF_PARTITION "/zm_music.tmp"
+#define ZM_MF_CSV ZM_MF_PARTITION "/music.csv"
+#define ZM_MF_TEMP ZM_MF_PARTITION "/music.tmp"
 
 #define RECORD_SIZE 128
 #define TOKENS_SIZE 20

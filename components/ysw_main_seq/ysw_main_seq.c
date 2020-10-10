@@ -9,7 +9,6 @@
 
 #include "ysw_main_seq.h"
 
-#include "ysw_cs.h"
 #include "ysw_message.h"
 #include "ysw_seq.h"
 #include "ysw_main_synth.h"
