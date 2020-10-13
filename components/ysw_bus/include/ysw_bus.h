@@ -7,17 +7,18 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_array.h"
+#pragma once
+
+#include "ysw_origin.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 #include "stdint.h"
 
-typedef struct {
-    ysw_array_t *listeners;
-} ysw_bus_t;
+typedef void *ysw_bus_h;
 
-typedef void (*ysw_bus_cb_t)(void *context, uint32_t evt, void *details, char *sender);
+ysw_bus_h ysw_bus_create(uint16_t origins_size, uint16_t listeners_size, uint32_t queue_size, uint32_t message_size);
+void ysw_bus_subscribe(ysw_bus_h bus, ysw_origin_t origin, QueueHandle_t queue);
+void ysw_bus_publish(ysw_bus_h bus, ysw_origin_t origin, void *message, uint32_t length);
+void ysw_bus_unsubscribe(ysw_bus_h bus, ysw_origin_t origin, QueueHandle_t queue);
+void ysw_bus_free(ysw_bus_h bus);
 
-ysw_bus_t* ysw_bus_create(uint32_t initial_size);
-uint32_t ysw_bus_subscribe(ysw_bus_t *bus, void *cb, void *context);
-uint32_t ysw_bus_publish(ysw_bus_t *bus, uint32_t evt, void *details);
-void ysw_bus_unsubscribe(ysw_bus_t *bus, uint32_t handle);
-void ysw_bus_free(ysw_bus_t *bus);

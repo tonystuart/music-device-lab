@@ -9,79 +9,8 @@
 
 #pragma once
 
-#include "ysw_note.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
-#include "freertos/queue.h"
+#include "ysw_bus.h"
 
 #define YSW_SEQ_SPEED_DEFAULT 100
 
-typedef enum {
-    YSW_SEQ_LOOP_DONE,
-    YSW_SEQ_PLAY_DONE,
-    YSW_SEQ_IDLE,
-    YSW_SEQ_NOTE,
-} ysw_seq_status_type_t;
-
-typedef struct {
-    ysw_seq_status_type_t type;
-    union {
-        ysw_note_t *note;
-    };
-} ysw_seq_status_message_t;
-
-typedef void (*ysw_seq_note_on_cb_t)(ysw_note_t *note);
-typedef void (*ysw_seq_note_off_cb_t)(uint8_t channel, uint8_t midi_note);
-typedef void (*ysw_seq_program_change_cb_t)(uint8_t channel, uint8_t program);
-typedef void (*ysw_seq_status_cb_t)(void *context, const ysw_seq_status_message_t *message);
-
-typedef struct {
-    ysw_seq_note_on_cb_t on_note_on;
-    ysw_seq_note_off_cb_t on_note_off;
-    ysw_seq_program_change_cb_t on_program_change;
-} ysw_seq_config_t;
-
-typedef enum {
-    YSW_SEQ_PLAY,
-    YSW_SEQ_PAUSE,
-    YSW_SEQ_RESUME,
-    YSW_SEQ_STOP,
-    YSW_SEQ_TEMPO,
-    YSW_SEQ_LOOP,
-    YSW_SEQ_STAGE,
-    YSW_SEQ_SPEED,
-} ysw_seq_message_type_t;
-
-typedef struct {
-    ysw_note_t *notes; // must remain accessible for duration of playback
-    uint32_t note_count;
-    uint8_t tempo;
-    ysw_seq_status_cb_t on_status;
-    void *on_status_context;
-} ysw_seq_clip_t;
-
-typedef struct {
-    uint8_t qnpm;
-} ysw_seq_tempo_t;
-
-typedef struct {
-    bool loop;
-} ysw_seq_loop_t;
-
-typedef struct {
-    uint8_t percent;
-} ysw_seq_speed_t;
-
-typedef struct {
-    ysw_seq_message_type_t type;
-    EventGroupHandle_t rendezvous;
-    union {
-        ysw_seq_clip_t play;
-        ysw_seq_tempo_t tempo;
-        ysw_seq_loop_t loop;
-        ysw_seq_clip_t stage;
-        ysw_seq_speed_t speed;
-    };
-} ysw_seq_message_t;
-
-QueueHandle_t ysw_seq_create_task(ysw_seq_config_t *config);
+void ysw_seq_create_task(ysw_bus_h bus);

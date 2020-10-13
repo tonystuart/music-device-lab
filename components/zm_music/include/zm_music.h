@@ -80,7 +80,7 @@ typedef struct {
 
 typedef struct {
     char *name;
-    zm_small_t sample_index;
+    zm_medium_t sample_index;
     ysw_array_t *steps;
 } zm_pattern_t;
 

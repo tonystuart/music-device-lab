@@ -41,3 +41,5 @@ void ysw_array_free_node(void *p);
 void ysw_array_clear(ysw_array_t *array, ysw_on_array_clear_t on_clear);
 void ysw_array_free(ysw_array_t *array);
 void ysw_array_free_all(ysw_array_t *array);
+static inline void *ysw_array_get_fast(ysw_array_t *a, uint32_t i) {return a->data[i];}
+static inline uint32_t ysw_array_get_count_fast(ysw_array_t *a) {return a->count;}

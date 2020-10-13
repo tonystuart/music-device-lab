@@ -11,6 +11,14 @@
 
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
 #include "freertos/queue.h"
 
+typedef struct {
+    EventGroupHandle_t event;
+    void *data;
+} ysw_message_rendezvous_t;
+
 void ysw_message_send(QueueHandle_t queue, void *message);
+void ysw_message_initiate_rendezvous(QueueHandle_t queue, void *data);
+void ysw_message_complete_rendezvous(ysw_message_rendezvous_t *rendezvous);

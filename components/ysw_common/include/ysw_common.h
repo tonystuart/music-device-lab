@@ -25,6 +25,8 @@
 #define MDBUF_SZ 64
 #define LGBUF_SZ 128
 
+#define YSW_COMMON_FS_NAME_MAX 32 // SPIFFS limit
+
 #define LOGIC_LOW 0
 #define LOGIC_HIGH 1
 

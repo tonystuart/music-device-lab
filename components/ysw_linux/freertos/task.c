@@ -42,3 +42,8 @@ char *pcTaskGetTaskName(TaskHandle_t handle)
 {
     return "TASK_NAME";
 }
+
+void vTaskDelete(TaskHandle_t handle)
+{
+    ESP_LOGW(TAG, "vTaskDelete stub entered");
+}

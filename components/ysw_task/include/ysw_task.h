@@ -9,9 +9,11 @@
 
 #pragma once
 
+#include "ysw_event.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "stdint.h"
 
 #define YSW_TASK_DEFAULT_PRIORITY (tskIDLE_PRIORITY + 1)
 
@@ -29,10 +31,10 @@
 
 typedef struct {
     char *name;
-    TaskFunction_t function;
-    QueueHandle_t *queue;
     TaskHandle_t *task;
+    TaskFunction_t function;
     void *parameters;
+    QueueHandle_t *queue;
     UBaseType_t queue_size;
     UBaseType_t item_size;
     uint16_t stack_size;
@@ -40,7 +42,10 @@ typedef struct {
     bool is_relative_priority;
 } ysw_task_config_t;
 
+typedef void (*ysw_task_event_handler)(void *caller_context, ysw_event_t *event);
+
 void ysw_task_create(ysw_task_config_t *task_config);
 
 void ysw_task_create_standard(char *name, TaskFunction_t function, QueueHandle_t *queue, UBaseType_t item_size);
 
+QueueHandle_t ysw_task_create_event_task(ysw_task_event_handler event_handler, void *caller_context);

@@ -7,9 +7,9 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
+#include "ysw_event.h"
 #include "ysw_heap.h"
-#include "ysw_main_seq.h"
-#include "ysw_main_synth.h"
+#include "ysw_seq.h"
 #include "ysw_staff.h"
 #include "ysw_synth_mod.h"
 #include "zm_music.h"
@@ -27,7 +27,222 @@
 
 #define YSW_MUSIC_PARTITION "/spiffs"
 
-static zm_song_t *initialize_song(zm_music_t *music, uint32_t index)
+#if YSW_MAIN_SYNTH_MODEL == 1
+
+#include "ysw_synth_bt.h"
+
+void initialize_synthesizer(ysw_bus_h bus)
+{
+    ESP_LOGD(TAG, "initialize_synthesizer: configuring BlueTooth synth");
+    ysw_synth_bt_create_task(bus);
+}
+
+#elif YSW_MAIN_SYNTH_MODEL == 2
+
+#include "ysw_synth_vs.h"
+
+void initialize_synthesizer(ysw_bus_h bus)
+{
+    ESP_LOGD(TAG, "initialize_synthesizer: configuring VS1053 synth");
+    ysw_vs1053_config_t config = {
+        .dreq_gpio = -1,
+        .xrst_gpio = 0,
+        .miso_gpio = 15,
+        .mosi_gpio = 17,
+        .sck_gpio = 2,
+        .xcs_gpio = 16,
+        .xdcs_gpio = 4,
+        .spi_host = VSPI_HOST,
+    };
+    ysw_synth_vs_create_task(bus, &config);
+}
+
+#elif YSW_MAIN_SYNTH_MODEL == 3
+
+#include "ysw_synth_fs.h"
+
+void initialize_synthesizer(ysw_bus_h bus)
+{
+    ESP_LOGD(TAG, "initialize_synthesizer: configuring FluidSynth synth");
+    ysw_synth_fs_create_task(bus, YSW_MUSIC_SOUNDFONT);
+}
+
+#elif YSW_MAIN_SYNTH_MODEL == 4
+
+#include "ysw_synth_mod.h"
+
+void initialize_synthesizer(ysw_bus_h bus)
+{
+    ESP_LOGD(TAG, "initialize_synthesizer: configuring MOD synth");
+    ysw_synth_mod_create_task(bus);
+}
+
+#else
+
+#error Define YSW_MAIN_SYNTH_MODEL
+
+#endif
+
+#if YSW_MAIN_DISPLAY_MODEL == 1
+
+#include "eli_ili9341_xpt2046.h"
+#include "lvgl/lvgl.h"
+#include "driver/spi_master.h"
+#include "esp_log.h"
+
+static void initialize_display(void)
+{
+    ESP_LOGD(TAG, "main: configuring model 1");
+    eli_ili9341_xpt2046_config_t new_config = {
+        .mosi = 21,
+        .clk = 22,
+        .ili9341_cs = 5,
+        .xpt2046_cs = 32,
+        .dc = 19,
+        .rst = 18,
+        .bckl = 23,
+        .miso = 27,
+        .irq = 14,
+        .x_min = 346,
+        .y_min = 235,
+        .x_max = 3919,
+        .y_max = 3883,
+        .spi_host = HSPI_HOST,
+    }
+    eli_ili9341_xpt2046_initialize(&new_config);
+}
+
+#elif YSW_MAIN_DISPLAY_MODEL == 2
+
+#include "eli_ili9341_xpt2046.h"
+#include "lvgl/lvgl.h"
+#include "driver/spi_master.h"
+#include "esp_log.h"
+
+static void initialize_display(void)
+{
+    ESP_LOGD(TAG, "main: configuring model 2");
+    eli_ili9341_xpt2046_config_t new_config = {
+        .mosi = 21,
+        .clk = 19,
+        .ili9341_cs = 23,
+        .xpt2046_cs = 5,
+        .dc = 22,
+        .rst = -1,
+        .bckl = -1,
+        .miso = 18,
+        .irq = 13,
+        .x_min = 346,
+        .y_min = 235,
+        .x_max = 3919,
+        .y_max = 3883,
+        .spi_host = HSPI_HOST,
+    };
+    eli_ili9341_xpt2046_initialize(&new_config);
+}
+
+#elif YSW_MAIN_DISPLAY_MODEL == 3
+
+#include "lvgl.h"
+#include "lv_drivers/display/monitor.h"
+#include <SDL2/SDL.h>
+
+#include <stdlib.h>
+#include <unistd.h>
+#include "lvgl/lvgl.h"
+#include "lv_drivers/display/monitor.h"
+#include "lv_drivers/indev/mouse.h"
+#include "lv_examples/lv_examples.h"
+#include "esp_log.h"
+
+static int tick_thread(void *data)
+{
+    while (1) {
+        SDL_Delay(5); /*Sleep for 5 millisecond*/
+        lv_tick_inc(5); /*Tell LittelvGL that 5 milliseconds were elapsed*/
+    }
+
+    return 0;
+}
+
+static void initialize_display(void)
+{
+    lv_init();
+    monitor_init();
+
+    static lv_disp_buf_t disp_buf1;
+    static lv_color_t buf1_1[LV_HOR_RES_MAX * 120];
+    lv_disp_buf_init(&disp_buf1, buf1_1, NULL, LV_HOR_RES_MAX * 120);
+
+    lv_disp_drv_t disp_drv;
+    lv_disp_drv_init(&disp_drv);
+    disp_drv.buffer = &disp_buf1;
+    disp_drv.flush_cb = monitor_flush;
+    lv_disp_drv_register(&disp_drv);
+
+    mouse_init();
+    lv_indev_drv_t indev_drv;
+    lv_indev_drv_init(&indev_drv); /*Basic initialization*/
+    indev_drv.type = LV_INDEV_TYPE_POINTER;
+
+    indev_drv.read_cb = mouse_read;
+    lv_indev_t *mouse_indev = lv_indev_drv_register(&indev_drv);
+
+    LV_IMG_DECLARE(mouse_cursor_icon); /*Declare the image file.*/
+    lv_obj_t *cursor_obj = lv_img_create(lv_scr_act(), NULL); /*Create an image object for the cursor */
+    lv_img_set_src(cursor_obj, &mouse_cursor_icon); /*Set the image source*/
+    lv_indev_set_cursor(mouse_indev, cursor_obj); /*Connect the image  object to the driver*/
+
+    SDL_CreateThread(tick_thread, "tick", NULL);
+
+    //lv_task_create(memory_monitor, 5000, LV_TASK_PRIO_MID, NULL);
+}
+
+#else
+
+#error Define YSW_MAIN_DISPLAY_MODEL
+
+#endif
+
+
+static void fire_loop(ysw_bus_h bus, bool loop)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_COMMAND,
+        .header.type = YSW_EVENT_LOOP,
+        .loop.loop = loop,
+    };
+    ysw_event_publish(bus, &event);
+}
+
+static void fire_play(ysw_bus_h bus, ysw_array_t *notes, uint8_t bpm)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_COMMAND,
+        .header.type = YSW_EVENT_PLAY,
+        .play.notes = notes,
+        .play.tempo = bpm,
+    };
+    ysw_event_publish(bus, &event);
+}
+
+static void fire_sample_load(ysw_bus_h bus, zm_medium_t index, zm_sample_t *sample)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_SAMPLER,
+        .header.type = YSW_EVENT_SAMPLE_LOAD,
+        .sample_load.index = index,
+        .sample_load.reppnt = sample->reppnt,
+        .sample_load.replen = sample->replen,
+        .sample_load.volume = sample->volume,
+        .sample_load.pan = sample->pan,
+    };
+    snprintf(event.sample_load.name, sizeof(event.sample_load.name),
+        "%s/samples/%s", YSW_MUSIC_PARTITION, sample->name);
+    ysw_event_publish(bus, &event);
+}
+
+static zm_song_t *initialize_song(ysw_bus_h bus, zm_music_t *music, uint32_t index)
 {
     zm_song_t *song = ysw_array_get(music->songs, index);
     zm_small_t part_count = ysw_array_get_count(song->parts);
@@ -35,63 +250,34 @@ static zm_song_t *initialize_song(zm_music_t *music, uint32_t index)
     for (zm_small_t i = 0; i < part_count; i++) {
         zm_part_t  *part = ysw_array_get(song->parts, i);
         zm_sample_t *sample = ysw_array_get(music->samples, part->pattern->sample_index);
-        ysw_synth_mod_message_t message = {
-            .type = YSW_SYNTH_MOD_SAMPLE_LOAD,
-            .sample_load.index = part->pattern->sample_index,
-            .sample_load.reppnt = sample->reppnt,
-            .sample_load.replen = sample->replen,
-            .sample_load.volume = sample->volume,
-            .sample_load.pan = sample->pan,
-        };
-        snprintf(message.sample_load.name, sizeof(message.sample_load.name),
-            "%s/samples/%s", YSW_MUSIC_PARTITION, sample->name);
-        // TODO: figure out how to extend message for mod types
-        ysw_main_synth_send((void*)&message);
+        fire_sample_load(bus, part->pattern->sample_index, sample);
     }
 
     return song;
 }
 
-static void play_song(ysw_array_t *array, uint8_t bpm)
+
+static void play_song()
 {
-    zm_large_t note_count = ysw_array_get_count(array);
+    initialize_display();
 
-    ysw_note_t *notes = ysw_heap_allocate(sizeof(ysw_note_t) * note_count);
-    for (zm_large_t i = 0; i < note_count; i++) {
-        notes[i] = *(ysw_note_t *)ysw_array_get(array, i);
-    }
-
-    ysw_seq_message_t message = {
-        .type = YSW_SEQ_LOOP,
-        .loop.loop = true,
-    };
-
-    ysw_main_seq_send(&message);
-
-    message = (ysw_seq_message_t){
-        .type = YSW_SEQ_PLAY,
-        .play.notes = notes,
-        .play.note_count = note_count,
-        .play.tempo = bpm,
-    };
-
-    ysw_main_seq_send(&message);
-}
-
-static void play_zm_song_on_ysw_synth()
-{
     //lv_obj_t *staff = ysw_staff_create(lv_scr_act(), NULL);
     //lv_obj_set_size(staff, 320, 240);
     //lv_obj_align(staff, NULL, LV_ALIGN_CENTER, 0, 0);
 
-    ysw_main_synth_initialize();
-    ysw_main_seq_initialize();
+    ysw_bus_h bus = ysw_event_create_bus();
+
+    initialize_synthesizer(bus);
+    ysw_seq_create_task(bus);
 
     zm_music_t *music = zm_read();
-    zm_song_t *song = initialize_song(music, 0);
-    ysw_array_t *array = zm_render_song(song);
-    //ysw_staff_set_notes(staff, array);
-    play_song(array, song->bpm);
+    zm_song_t *song = initialize_song(bus, music, 0);
+    ysw_array_t *notes = zm_render_song(song);
+
+    //ysw_staff_set_notes(staff, notes);
+
+    fire_loop(bus, true);
+    fire_play(bus, notes, song->bpm);
 }
 
 #ifdef IDF_VER
@@ -102,7 +288,7 @@ void app_main()
 {
     ysw_spiffs_initialize(YSW_MUSIC_PARTITION);
 
-    play_zm_song_on_ysw_synth();
+    play_song();
 }
 
 #else
@@ -111,10 +297,7 @@ void app_main()
 
 int main(int argc, char *argv[])
 {
-    lv_init();
-    ysw_lvgl_hal_init();
-
-    play_zm_song_on_ysw_synth();
+    play_song();
 
     while (1) {
         lv_task_handler();

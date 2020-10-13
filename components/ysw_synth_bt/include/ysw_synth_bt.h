@@ -9,7 +9,6 @@
 
 #pragma once
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
+#include "ysw_bus.h"
 
-QueueHandle_t ysw_synth_bt_create_task();
+void ysw_synth_bt_create_task(ysw_bus_h bus);

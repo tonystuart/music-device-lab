@@ -9,10 +9,10 @@
 
 #include "ysw_synth_mod.h"
 #include "ysw_common.h"
+#include "ysw_event.h"
 #include "ysw_heap.h"
 #include "ysw_midi.h"
 #include "ysw_task.h"
-#include "ysw_synth.h"
 #include "zm_music.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -80,8 +80,6 @@ typedef struct {
     mint    stereo_separation;
     mint    filter;
 } context_t;
-
-static QueueHandle_t input_queue;
 
 static const short period_map[] = {
     /*  0 */ 13696, 12928, 12192, 11520, 10848, 10240,  9664,  9120,  8606,  8128,  7680,  7248,
@@ -336,7 +334,7 @@ static void* alsa_thread(void *p)
 
 #endif
 
-static void on_note_on(context_t *context, ysw_synth_note_on_t *m)
+static void on_note_on(context_t *context, ysw_event_note_on_t *m)
 {
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
     assert(m->midi_note < YSW_MIDI_MAX_COUNT);
@@ -345,7 +343,7 @@ static void on_note_on(context_t *context, ysw_synth_note_on_t *m)
     start_note(context, m->channel, m->midi_note, m->velocity);
 }
 
-static void on_note_off(context_t *context, ysw_synth_note_off_t *m)
+static void on_note_off(context_t *context, ysw_event_note_off_t *m)
 {
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
     assert(m->midi_note < YSW_MIDI_MAX_COUNT);
@@ -353,7 +351,7 @@ static void on_note_off(context_t *context, ysw_synth_note_off_t *m)
     stop_note(context, m->channel, m->midi_note);
 }
 
-static void on_program_change(context_t *context, ysw_synth_program_change_t *m)
+static void on_program_change(context_t *context, ysw_event_program_change_t *m)
 {
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
     assert(m->program < YSW_MIDI_MAX_COUNT);
@@ -361,7 +359,7 @@ static void on_program_change(context_t *context, ysw_synth_program_change_t *m)
     context->channel_samples[m->channel] = m->program;
 }
 
-static void on_sample_load(context_t *context, ysw_synth_mod_sample_load_t *m)
+static void on_sample_load(context_t *context, ysw_event_sample_load_t *m)
 {
     assert(m->index < MAX_SAMPLES);
     assert(m->volume < YSW_MIDI_MAX_COUNT);
@@ -413,45 +411,32 @@ static void on_sample_load(context_t *context, ysw_synth_mod_sample_load_t *m)
     leave_critical_section();
 }
 
-static void process_message(context_t *context, ysw_synth_mod_message_t *message)
+static void process_event(void *caller_context, ysw_event_t *event)
 {
-    switch ((uint8_t)message->type) {
-        case YSW_SYNTH_NOTE_ON:
-            on_note_on(context, &message->note_on);
+    context_t *context = caller_context;
+    switch (event->header.type) {
+        case YSW_EVENT_NOTE_ON:
+            on_note_on(context, &event->note_on);
             break;
-        case YSW_SYNTH_NOTE_OFF:
-            on_note_off(context, &message->note_off);
+        case YSW_EVENT_NOTE_OFF:
+            on_note_off(context, &event->note_off);
             break;
-        case YSW_SYNTH_PROGRAM_CHANGE:
-            on_program_change(context, &message->program_change);
+        case YSW_EVENT_PROGRAM_CHANGE:
+            on_program_change(context, &event->program_change);
             break;
-        case YSW_SYNTH_MOD_SAMPLE_LOAD:
-            on_sample_load(context, &message->sample_load);
+        case YSW_EVENT_SAMPLE_LOAD:
+            on_sample_load(context, &event->sample_load);
             break;
         default:
             break;
     }
 }
 
-static void run_mod_synth(void *parameters)
+void ysw_synth_mod_create_task(ysw_bus_h bus)
 {
-    context_t *context = parameters;
-    for (;;) {
-        ysw_synth_mod_message_t message;
-        BaseType_t is_message = xQueueReceive(input_queue, &message, portMAX_DELAY);
-        if (is_message) {
-            process_message(context, &message);
-        }
-    }
-}
-
-QueueHandle_t ysw_synth_mod_create_task()
-{
-    ESP_LOGD(TAG, "calling ysw_heap_allocate for context_t, size=%d", sizeof(context_t));
     context_t *context = ysw_heap_allocate(sizeof(context_t));
     data_cb_context = context;
 
-    ESP_LOGD(TAG, "calling initialize_synthesizer, context=%p", context);
     initialize_synthesizer(context);
 
 #ifdef IDF_VER
@@ -461,16 +446,9 @@ QueueHandle_t ysw_synth_mod_create_task()
     pthread_create(&p, NULL, &alsa_thread, NULL);
 #endif
 
-    ysw_task_config_t config = {
-        .name = TAG,
-        .function = run_mod_synth,
-        .parameters = context,
-        .queue = &input_queue,
-        .queue_size = 16,
-        .item_size = sizeof(ysw_synth_mod_message_t),
-        .stack_size = YSW_TASK_MEDIUM_STACK,
-        .priority = YSW_TASK_DEFAULT_PRIORITY,
-    };
-    ysw_task_create(&config);
-    return input_queue;
+    QueueHandle_t input_queue = ysw_task_create_event_task(process_event, context);
+
+    ysw_bus_subscribe(bus, YSW_ORIGIN_SEQUENCER, input_queue);
+    ysw_bus_subscribe(bus, YSW_ORIGIN_SAMPLER, input_queue);
+    ysw_bus_subscribe(bus, YSW_ORIGIN_AUDIO_SINK, input_queue);
 }

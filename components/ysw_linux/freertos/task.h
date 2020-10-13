@@ -17,3 +17,4 @@ typedef void *TaskHandle_t;
 extern int xTaskGetTickCount();
 extern void vTaskDelay(int ticks);
 extern char *pcTaskGetTaskName(TaskHandle_t handle);
+void vTaskDelete(TaskHandle_t handle);

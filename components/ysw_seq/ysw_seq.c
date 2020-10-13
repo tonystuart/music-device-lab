@@ -8,7 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_seq.h"
-
+#include "ysw_event.h"
 #include "ysw_heap.h"
 #include "ysw_task.h"
 #include "ysw_midi.h"
@@ -27,291 +27,318 @@ typedef struct {
 } active_note_t;
 
 typedef struct {
-    bool loop;
+    ysw_bus_h bus;
+    QueueHandle_t input_queue;
+    ysw_event_clip_t playing;
+    ysw_event_clip_t staging;
+    active_note_t active_notes[MAX_POLYPHONY];
+    uint8_t programs[YSW_MIDI_MAX_CHANNELS];
     uint32_t next_note;
     uint32_t start_millis;
     uint8_t active_count;
-    ysw_seq_clip_t active;
-    ysw_seq_clip_t staged;
-    ysw_seq_config_t config;
-    QueueHandle_t input_queue;
     uint8_t playback_speed;
-    uint8_t programs[YSW_MIDI_MAX_CHANNELS];
-    active_note_t active_notes[MAX_POLYPHONY];
-} ysw_seq_t;
+    bool loop;
+} context_t;
 
-static inline time_t t2ms(ysw_seq_t *seq, uint32_t ticks)
+static void fire_note_on(context_t *context, uint8_t channel, uint8_t midi_note, uint8_t velocity)
 {
-    return ysw_ticks_to_millis_by_tpqn(ticks, seq->active.tempo, YSW_TICKS_DEFAULT_TPQN);
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_SEQUENCER,
+        .header.type = YSW_EVENT_NOTE_ON,
+        .note_on.channel = channel,
+        .note_on.midi_note = midi_note,
+        .note_on.velocity = velocity,
+    };
+    ysw_event_publish(context->bus, &event);
 }
 
-static inline bool clip_playing(ysw_seq_t *seq)
+static void fire_note_off(context_t *context, uint8_t channel, uint8_t midi_note)
 {
-    return seq->start_millis;
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_SEQUENCER,
+        .header.type = YSW_EVENT_NOTE_OFF,
+        .note_off.channel = channel,
+        .note_off.midi_note = midi_note,
+    };
+    ysw_event_publish(context->bus, &event);
 }
 
-static void free_clip(ysw_seq_clip_t *clip)
+static void fire_program_change(context_t *context, uint8_t channel, uint8_t program)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_SEQUENCER,
+        .header.type = YSW_EVENT_PROGRAM_CHANGE,
+        .program_change.channel = channel,
+        .program_change.program = program,
+    };
+    ysw_event_publish(context->bus, &event);
+}
+
+static void fire_loop_done(context_t *context)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_SEQUENCER,
+        .header.type = YSW_EVENT_LOOP_DONE,
+    };
+    ysw_event_publish(context->bus, &event);
+}
+
+static void fire_play_done(context_t *context)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_SEQUENCER,
+        .header.type = YSW_EVENT_PLAY_DONE,
+    };
+    ysw_event_publish(context->bus, &event);
+}
+
+static void fire_idle(context_t *context)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_SEQUENCER,
+        .header.type = YSW_EVENT_IDLE,
+    };
+    ysw_event_publish(context->bus, &event);
+}
+
+static void fire_note_status(context_t *context, ysw_note_t *note)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_SEQUENCER,
+        .header.type = YSW_EVENT_NOTE_STATUS,
+        .note_status.note = *note,
+    };
+    ysw_event_publish(context->bus, &event);
+}
+
+static inline time_t t2ms(context_t *context, uint32_t ticks)
+{
+    return ysw_ticks_to_millis_by_tpqn(ticks, context->playing.tempo, YSW_TICKS_DEFAULT_TPQN);
+}
+
+static inline bool clip_playing(context_t *context)
+{
+    return context->start_millis;
+}
+
+static void free_clip(ysw_event_clip_t *clip)
 {
     if (clip->notes) {
-        ysw_heap_free(clip->notes);
+        ysw_array_free(clip->notes);
         clip->notes = NULL;
-        clip->note_count = 0;
         clip->tempo = 0;
     }
 }
 
-static void release_all_notes(ysw_seq_t *seq)
+static void release_all_notes(context_t *context)
 {
-    for (uint8_t i = 0; i < seq->active_count; i++) {
-        seq->config.on_note_off(seq->active_notes[i].channel, seq->active_notes[i].midi_note);
+    for (uint8_t i = 0; i < context->active_count; i++) {
+        active_note_t *active_note = &context->active_notes[i];
+        fire_note_off(context, active_note->channel, active_note->midi_note);
     }
-    seq->active_count = 0;
+    context->active_count = 0;
 }
 
-static void fire_loop_done(ysw_seq_t *seq)
+static void play_note(context_t *context, ysw_note_t *note, int next_note_index)
 {
-    if (seq->active.on_status) {
-        ysw_seq_status_message_t message = {
-            .type = YSW_SEQ_LOOP_DONE,
-        };
-        seq->active.on_status(seq->active.on_status_context, &message);
-    }
-}
-
-static void fire_play_done(ysw_seq_t *seq)
-{
-    if (seq->active.on_status) {
-        ysw_seq_status_message_t message = {
-            .type = YSW_SEQ_PLAY_DONE,
-        };
-        seq->active.on_status(seq->active.on_status_context, &message);
-    }
-}
-
-static void fire_idle(ysw_seq_t *seq)
-{
-    if (seq->active.on_status) {
-        ysw_seq_status_message_t message = {
-            .type = YSW_SEQ_IDLE,
-        };
-        seq->active.on_status(seq->active.on_status_context, &message);
-    }
-}
-
-static void fire_note_status(ysw_seq_t *seq, ysw_note_t *note)
-{
-    if (seq->active.on_status) {
-        ysw_seq_status_message_t message = {
-            .type = YSW_SEQ_NOTE,
-            .note = note,
-        };
-        seq->active.on_status(seq->active.on_status_context, &message);
-    }
-}
-
-static void play_note(ysw_seq_t *seq, ysw_note_t *note, int next_note_index)
-{
-    if (note->instrument != seq->programs[note->channel]) {
+    if (note->instrument != context->programs[note->channel]) {
 #if YSW_MAIN_SYNTH_MODEL == 4
         // No special treatment for channel 9 with ysw_synth_mod
-        seq->config.on_program_change(note->channel, note->instrument);
+        fire_program_change(context, note->channel, note->instrument);
 #else
         if (note->channel != YSW_MIDI_DRUM_CHANNEL) {
-            seq->config.on_program_change(note->channel, note->instrument);
+            fire_program_change(context, note->channel, note->instrument);
         }
 #endif
-        seq->programs[note->channel] = note->instrument;
+        context->programs[note->channel] = note->instrument;
     }
 
     if (next_note_index != -1) {
-        seq->config.on_note_off(note->channel, note->midi_note);
+        fire_note_off(context, note->channel, note->midi_note);
     } else {
-        if (seq->active_count < MAX_POLYPHONY) {
-            next_note_index = seq->active_count++;
+        if (context->active_count < MAX_POLYPHONY) {
+            next_note_index = context->active_count++;
         }
     }
 
     if (next_note_index != -1) {
         if (note->channel == YSW_MIDI_STATUS_CHANNEL) {
-            fire_note_status(seq, note);
+            fire_note_status(context, note);
         } else {
-            seq->config.on_note_on(note);
-            seq->active_notes[next_note_index].channel = note->channel;
-            seq->active_notes[next_note_index].midi_note = note->midi_note;
-            seq->active_notes[next_note_index].end_time = t2ms(seq, note->start) + t2ms(seq, note->duration);
-            //ESP_LOGD(TAG, "active_notes[%d].end_time=%ld", next_note_index, seq->active_notes[next_note_index].end_time);
+            fire_note_on(context, note->channel, note->midi_note, note->velocity);
+            context->active_notes[next_note_index].channel = note->channel;
+            context->active_notes[next_note_index].midi_note = note->midi_note;
+            context->active_notes[next_note_index].end_time = t2ms(context, note->start) + t2ms(context, note->duration);
+            //ESP_LOGD(TAG, "active_notes[%d].end_time=%ld", next_note_index, context->active_notes[next_note_index].end_time);
         }
     } else {
-        ESP_LOGE(TAG, "Maximum polyphony exceeded, active_count=%d", seq->active_count);
+        ESP_LOGE(TAG, "Maximum polyphony exceeded, active_count=%d", context->active_count);
     }
 }
 
-static inline void adjust_playback_start_millis(ysw_seq_t *seq)
+static inline void adjust_playback_start_millis(context_t *context)
 {
     uint32_t tick;
-    if (seq->next_note == 0) {
+    if (context->next_note == 0) {
         // beginning of clip: start at zero
         tick = 0;
     } else {
         // middle of clip: start at current note
-        tick = seq->active.notes[seq->next_note].start;
+        ysw_note_t *note = ysw_array_get_fast(context->playing.notes, context->next_note);
+        tick = note->start;
     }
 
-    uint32_t old_elapsed_millis = t2ms(seq, tick);
-    uint32_t new_elapsed_millis = (100 * old_elapsed_millis) / seq->playback_speed;
-    seq->start_millis = get_millis() - new_elapsed_millis;
+    uint32_t old_elapsed_millis = t2ms(context, tick);
+    uint32_t new_elapsed_millis = (100 * old_elapsed_millis) / context->playback_speed;
+    context->start_millis = get_millis() - new_elapsed_millis;
 }
 
-static uint32_t get_current_playback_millis(ysw_seq_t *seq)
+static uint32_t get_current_playback_millis(context_t *context)
 {
     uint32_t current_millis = get_millis();
-    uint32_t elapsed_millis = current_millis - seq->start_millis;
-    uint32_t playback_millis = (elapsed_millis * seq->playback_speed) / 100;
+    uint32_t elapsed_millis = current_millis - context->start_millis;
+    uint32_t playback_millis = (elapsed_millis * context->playback_speed) / 100;
     return playback_millis;
 }
 
-static void play_clip(ysw_seq_t *seq, ysw_seq_clip_t *new_clip)
+static void play_clip(context_t *context, ysw_event_clip_t *new_clip)
 {
-    ESP_LOGD(TAG, "play_clip note_count=%d, tempo=%d", new_clip->note_count, new_clip->tempo);
-    if (clip_playing(seq)) {
+    ESP_LOGD(TAG, "play_clip tempo=%d", new_clip->tempo);
+    if (clip_playing(context)) {
         ESP_LOGD(TAG, "play_clip releasing notes");
-        release_all_notes(seq);
+        release_all_notes(context);
     }
-    free_clip(&seq->active);
-    seq->active = *new_clip;
-    if (seq->active.notes == seq->staged.notes) {
-        // playing staged clip: don't free them, just unstage them
-        ESP_LOGD(TAG, "play_clip playing staged clip");
-        seq->staged.notes = NULL;
-        seq->staged.note_count = 0;
-        seq->staged.tempo = 0;
+    free_clip(&context->playing);
+    context->playing = *new_clip;
+    if (context->playing.notes == context->staging.notes) {
+        // playing staging clip: don't free them, just unstage them
+        ESP_LOGD(TAG, "play_clip playing staging clip");
+        context->staging.notes = NULL;
+        context->staging.tempo = 0;
     } else {
-        // playing new clip: clear any staged clip
+        // playing new clip: clear any staging clip
         ESP_LOGD(TAG, "play_clip playing new clip");
-        free_clip(&seq->staged);
+        free_clip(&context->staging);
     }
-    seq->next_note = 0;
-    if (seq->active.note_count) {
+    context->next_note = 0;
+    if (context->playing.notes) {
         ESP_LOGD(TAG, "play_clip adjusting start millis");
-        adjust_playback_start_millis(seq);
+        adjust_playback_start_millis(context);
     }
-    ESP_LOGD(TAG, "play_clip start_millis=%d", seq->start_millis);
+    ESP_LOGD(TAG, "play_clip start_millis=%d", context->start_millis);
 }
 
-static void stage_clip(ysw_seq_t *seq, ysw_seq_clip_t *new_clip)
+static void stage_clip(context_t *context, ysw_event_clip_t *new_clip)
 {
-    ESP_LOGD(TAG, "stage_clip note_count=%d, tempo=%d", new_clip->note_count, new_clip->tempo);
-    if (clip_playing(seq)) {
-        free_clip(&seq->staged);
-        seq->staged = *new_clip;
+    ESP_LOGD(TAG, "stage_clip tempo=%d", new_clip->tempo);
+    if (clip_playing(context)) {
+        free_clip(&context->staging);
+        context->staging = *new_clip;
     } else {
-        play_clip(seq, new_clip);
+        play_clip(context, new_clip);
     }
 }
 
-static void pause_clip(ysw_seq_t *seq)
+static void pause_clip(context_t *context)
 {
-    ESP_LOGD(TAG, "pause_clip start_millis=%d, next_note=%d, note_count=%d", seq->start_millis, seq->next_note, seq->active.note_count);
-    if (clip_playing(seq)) {
-        release_all_notes(seq);
+    ESP_LOGD(TAG, "pause_clip start_millis=%d", context->start_millis);
+    if (clip_playing(context)) {
+        release_all_notes(context);
     } else {
         // Hitting PAUSE twice is like STOP -- you restart at beginning
-        seq->next_note = 0;
+        context->next_note = 0;
     }
-    seq->start_millis = 0;
+    context->start_millis = 0;
 }
 
-static void stop_clip(ysw_seq_t *seq)
+static void stop_clip(context_t *context)
 {
-    ESP_LOGD(TAG, "stop_clip start_millis=%d, next_note=%d, note_count=%d", seq->start_millis, seq->next_note, seq->active.note_count);
-    if (clip_playing(seq)) {
-        release_all_notes(seq);
+    ESP_LOGD(TAG, "stop_clip start_millis=%d", context->start_millis);
+    if (clip_playing(context)) {
+        release_all_notes(context);
     }
-    seq->next_note = 0;
-    seq->start_millis = 0;
-    seq->active.on_status = NULL; // callback may not be valid after stop
-    seq->active.on_status_context = NULL;
-    free_clip(&seq->active);
+    context->next_note = 0;
+    context->start_millis = 0;
+    free_clip(&context->playing);
 }
 
-static void resume_clip(ysw_seq_t *seq)
+static void resume_clip(context_t *context)
 {
-    ESP_LOGD(TAG, "resume_clip next_note=%d, note_count=%d", seq->next_note, seq->active.note_count);
-    if (seq->active.note_count) {
-        adjust_playback_start_millis(seq);
+    ESP_LOGD(TAG, "resume_clip next_note=%d", context->next_note);
+    if (context->playing.notes) {
+        adjust_playback_start_millis(context);
     }
 }
 
-static void loop_next(ysw_seq_t *seq)
+static void loop_next(context_t *context)
 {
-    ESP_LOGD(TAG, "loop_next staged.note_count=%d", seq->staged.note_count);
-    if (seq->staged.notes) {
-        play_clip(seq, &seq->staged);
+    ESP_LOGD(TAG, "loop_next");
+    if (context->staging.notes) {
+        play_clip(context, &context->staging);
     } else {
-        resume_clip(seq);
+        resume_clip(context);
     }
 }
 
-static void set_tempo(ysw_seq_t *seq, uint8_t new_tempo)
+static void set_tempo(context_t *context, uint8_t new_tempo)
 {
     ESP_LOGW(TAG, "set_tempo tempo=%d", new_tempo);
-    seq->active.tempo = new_tempo;
+    context->playing.tempo = new_tempo;
 }
 
-static void set_loop(ysw_seq_t *seq, bool new_value)
+static void set_loop(context_t *context, bool new_value)
 {
-    seq->loop = new_value;
+    context->loop = new_value;
 }
 
-static void set_playback_speed(ysw_seq_t *seq, uint8_t percent)
+static void set_playback_speed(context_t *context, uint8_t percent)
 {
-    seq->playback_speed = percent;
-    if (clip_playing(seq)) {
-        adjust_playback_start_millis(seq);
+    context->playback_speed = percent;
+    if (clip_playing(context)) {
+        adjust_playback_start_millis(context);
     }
 }
 
-static void process_message(ysw_seq_t *seq, ysw_seq_message_t *message)
+static void process_event(context_t *context, ysw_event_t *event)
 {
-    switch (message->type) {
-        case YSW_SEQ_PLAY:
-            play_clip(seq, &message->play);
+    switch (event->header.type) {
+        case YSW_EVENT_PLAY:
+            play_clip(context, &event->play);
             break;
-        case YSW_SEQ_PAUSE:
-            pause_clip(seq);
+        case YSW_EVENT_PAUSE:
+            pause_clip(context);
             break;
-        case YSW_SEQ_RESUME:
-            resume_clip(seq);
+        case YSW_EVENT_RESUME:
+            resume_clip(context);
             break;
-        case YSW_SEQ_STOP:
-            stop_clip(seq);
+        case YSW_EVENT_STOP:
+            stop_clip(context);
             break;
-        case YSW_SEQ_TEMPO:
-            set_tempo(seq, message->tempo.qnpm);
+        case YSW_EVENT_TEMPO:
+            set_tempo(context, event->tempo.qnpm);
             break;
-        case YSW_SEQ_LOOP:
-            set_loop(seq, message->loop.loop);
+        case YSW_EVENT_LOOP:
+            set_loop(context, event->loop.loop);
             break;
-        case YSW_SEQ_STAGE:
-            stage_clip(seq, &message->stage);
+        case YSW_EVENT_STAGE:
+            stage_clip(context, &event->stage);
             break;
-        case YSW_SEQ_SPEED:
-            set_playback_speed(seq, message->speed.percent);
+        case YSW_EVENT_SPEED:
+            set_playback_speed(context, event->speed.percent);
             break;
         default:
-            ESP_LOGW(TAG, "invalid message type=%d", message->type);
             break;
     }
 }
 
-static TickType_t process_notes(ysw_seq_t *seq)
+static TickType_t process_notes(context_t *context)
 {
     TickType_t ticks_to_wait = portMAX_DELAY;
-    uint32_t playback_millis = get_current_playback_millis(seq);
+    uint32_t playback_millis = get_current_playback_millis(context);
 
     ysw_note_t *note;
-    if (seq->next_note < seq->active.note_count) {
-        note = &seq->active.notes[seq->next_note];
+    if (context->next_note < ysw_array_get_count_fast(context->playing.notes)) {
+        note = ysw_array_get_fast(context->playing.notes, context->next_note);
     } else {
         note = NULL;
     }
@@ -320,16 +347,16 @@ static TickType_t process_notes(ysw_seq_t *seq)
     active_note_t *next_note_to_end = NULL;
 
     uint8_t index = 0;
-    while (index < seq->active_count) {
-        active_note_t *active_note = &seq->active_notes[index];
+    while (index < context->active_count) {
+        active_note_t *active_note = &context->active_notes[index];
         if (active_note->end_time <= playback_millis) {
-            seq->config.on_note_off(active_note->channel, active_note->midi_note);
-            if (index + 1 < seq->active_count) {
+            fire_note_off(context, active_note->channel, active_note->midi_note);
+            if (index + 1 < context->active_count) {
                 // replaced expired note with last one in array
-                seq->active_notes[index] = seq->active_notes[seq->active_count - 1];
+                context->active_notes[index] = context->active_notes[context->active_count - 1];
             }
             // free last member of array
-            seq->active_count--;
+            context->active_count--;
         } else {
             if (next_note_to_end) {
                 if (active_note->end_time < next_note_to_end->end_time) {
@@ -351,10 +378,10 @@ static TickType_t process_notes(ysw_seq_t *seq)
     }
 
     if (note) {
-        uint32_t note_start_time = t2ms(seq, note->start);
+        uint32_t note_start_time = t2ms(context, note->start);
         if (note_start_time <= playback_millis) {
-            play_note(seq, note, next_note_index);
-            seq->next_note++;
+            play_note(context, note, next_note_index);
+            context->next_note++;
             ticks_to_wait = 0;
         } else {
             long time_of_next_event;
@@ -371,67 +398,65 @@ static TickType_t process_notes(ysw_seq_t *seq)
             uint32_t delay_millis = next_note_to_end->end_time - playback_millis;
             ESP_LOGD(TAG, "waiting for final notes to end, end_time=%ld, current_time=%d", next_note_to_end->end_time, playback_millis);
             ticks_to_wait = to_ticks(delay_millis);
-        } else if (seq->loop) {
-            fire_loop_done(seq);
-            seq->next_note = 0;
-            loop_next(seq);
+        } else if (context->loop) {
+            fire_loop_done(context);
+            context->next_note = 0;
+            loop_next(context);
             ticks_to_wait = 0;
-        } else if (seq->staged.notes) {
-            ESP_LOGD(TAG, "playback complete, playing staged clip");
-            play_clip(seq, &seq->staged);
+        } else if (context->staging.notes) {
+            ESP_LOGD(TAG, "playback complete, playing staging clip");
+            play_clip(context, &context->staging);
             ticks_to_wait = 0;
         } else {
-            seq->next_note = 0;
-            seq->start_millis = 0;
+            context->next_note = 0;
+            context->start_millis = 0;
             ESP_LOGD(TAG, "playback complete, nothing more to do");
-            fire_play_done(seq);
+            fire_play_done(context);
         }
     }
 
     return ticks_to_wait;
 }
 
-static void run_task(ysw_seq_t *seq)
+static void task_handler(context_t *context)
 {
-    BaseType_t is_message = false;
-    ysw_seq_message_t message = (ysw_seq_message_t){};
+    BaseType_t is_event = false;
+    ysw_event_t event = (ysw_event_t){};
     for (;;) {
         TickType_t ticks_to_wait = portMAX_DELAY;
-        if (clip_playing(seq)) {
-            ticks_to_wait = process_notes(seq);
+        if (clip_playing(context)) {
+            ticks_to_wait = process_notes(context);
         }
         if (ticks_to_wait == portMAX_DELAY) {
             ESP_LOGD(TAG, "sequencer idle");
-            fire_idle(seq);
+            fire_idle(context);
         }
-        if (is_message && message.rendezvous) {
-            ESP_LOGD(TAG, "notifying sender");
-            xEventGroupSetBits(message.rendezvous, 1);
-        }
-        is_message = xQueueReceive(seq->input_queue, &message, ticks_to_wait);
-        if (is_message) {
-            process_message(seq, &message);
+        is_event = xQueueReceive(context->input_queue, &event, ticks_to_wait);
+        if (is_event) {
+            process_event(context, &event);
         }
     }
 }
 
-QueueHandle_t ysw_seq_create_task(ysw_seq_config_t *seq_config)
+void ysw_seq_create_task(ysw_bus_h bus)
 {
-    ysw_seq_t *seq = ysw_heap_allocate(sizeof(ysw_seq_t));
-    *seq = (ysw_seq_t) {
-        .config = *seq_config,
-        .playback_speed = YSW_SEQ_SPEED_DEFAULT,
-    };
+    context_t *context = ysw_heap_allocate(sizeof(context_t));
+
+    context->bus = bus;
+    context->playback_speed = YSW_SEQ_SPEED_DEFAULT;
+
     ysw_task_config_t task_config = {
         .name = TAG,
-        .function = (TaskFunction_t)run_task,
-        .parameters = seq,
-        .queue = &seq->input_queue,
-        .item_size = sizeof(ysw_seq_message_t),
+        .function = (TaskFunction_t)task_handler,
+        .parameters = context,
+        .queue = &context->input_queue,
+        .item_size = sizeof(ysw_event_t),
         .queue_size = YSW_TASK_MEDIUM_QUEUE,
         .stack_size = YSW_TASK_MEDIUM_STACK,
         .priority = YSW_TASK_DEFAULT_PRIORITY,
     };
+
     ysw_task_create(&task_config);
-    return seq->input_queue;
+
+    ysw_bus_subscribe(bus, YSW_ORIGIN_COMMAND, context->input_queue);
 }

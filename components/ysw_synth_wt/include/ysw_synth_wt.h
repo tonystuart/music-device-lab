@@ -9,9 +9,7 @@
 
 #pragma once
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/semphr.h"
+#include "ysw_bus.h"
 
-QueueHandle_t ysw_synth_wt_create_task(uint8_t dac_left_gpio, uint8_t dac_right_gpio);
+void ysw_synth_wt_create_task(ysw_bus_h bus, uint8_t dac_left_gpio, uint8_t dac_right_gpio);
 

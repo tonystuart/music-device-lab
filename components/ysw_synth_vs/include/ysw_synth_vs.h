@@ -9,8 +9,7 @@
 
 #pragma once
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
+#include "ysw_bus.h"
 #include "ysw_vs1053.h"
 
-QueueHandle_t ysw_synth_vs_create_task(ysw_vs1053_config_t *vs1053_config);
+void ysw_synth_vs_create_task(ysw_bus_h bus, ysw_vs1053_config_t *vs1053_config);
