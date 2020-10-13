@@ -9,7 +9,7 @@
 
 #include "ysw_event.h"
 #include "ysw_heap.h"
-#include "ysw_seq.h"
+#include "ysw_sequencer.h"
 #include "ysw_staff.h"
 #include "ysw_synth_mod.h"
 #include "zm_music.h"
@@ -268,7 +268,7 @@ static void play_song()
     ysw_bus_h bus = ysw_event_create_bus();
 
     initialize_synthesizer(bus);
-    ysw_seq_create_task(bus);
+    ysw_sequencer_create_task(bus);
 
     zm_music_t *music = zm_read();
     zm_song_t *song = initialize_song(bus, music, 0);

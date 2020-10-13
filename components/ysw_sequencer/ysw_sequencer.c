@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_seq.h"
+#include "ysw_sequencer.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
 #include "ysw_task.h"
@@ -16,7 +16,7 @@
 #include "esp_log.h"
 #include "time.h"
 
-#define TAG "YSW_SEQ"
+#define TAG "YSW_SEQUENCER"
 
 #define MAX_POLYPHONY 64
 
@@ -438,12 +438,12 @@ static void task_handler(context_t *context)
     }
 }
 
-void ysw_seq_create_task(ysw_bus_h bus)
+void ysw_sequencer_create_task(ysw_bus_h bus)
 {
     context_t *context = ysw_heap_allocate(sizeof(context_t));
 
     context->bus = bus;
-    context->playback_speed = YSW_SEQ_SPEED_DEFAULT;
+    context->playback_speed = YSW_SEQUENCER_SPEED_DEFAULT;
 
     ysw_task_config_t task_config = {
         .name = TAG,
