@@ -300,38 +300,6 @@ static void set_playback_speed(context_t *context, uint8_t percent)
     }
 }
 
-static void process_event(context_t *context, ysw_event_t *event)
-{
-    switch (event->header.type) {
-        case YSW_EVENT_PLAY:
-            play_clip(context, &event->play);
-            break;
-        case YSW_EVENT_PAUSE:
-            pause_clip(context);
-            break;
-        case YSW_EVENT_RESUME:
-            resume_clip(context);
-            break;
-        case YSW_EVENT_STOP:
-            stop_clip(context);
-            break;
-        case YSW_EVENT_TEMPO:
-            set_tempo(context, event->tempo.qnpm);
-            break;
-        case YSW_EVENT_LOOP:
-            set_loop(context, event->loop.loop);
-            break;
-        case YSW_EVENT_STAGE:
-            stage_clip(context, &event->stage);
-            break;
-        case YSW_EVENT_SPEED:
-            set_playback_speed(context, event->speed.percent);
-            break;
-        default:
-            break;
-    }
-}
-
 static TickType_t process_notes(context_t *context)
 {
     TickType_t ticks_to_wait = portMAX_DELAY;
@@ -419,24 +387,47 @@ static TickType_t process_notes(context_t *context)
     return ticks_to_wait;
 }
 
-static void task_handler(context_t *context)
+static void process_event(context_t *context, ysw_event_t *event)
 {
-    BaseType_t is_event = false;
-    ysw_event_t event = (ysw_event_t){};
-    for (;;) {
-        TickType_t ticks_to_wait = portMAX_DELAY;
-        if (clip_playing(context)) {
-            ticks_to_wait = process_notes(context);
+    if (event) {
+        switch (event->header.type) {
+            case YSW_EVENT_PLAY:
+                play_clip(context, &event->play);
+                break;
+            case YSW_EVENT_PAUSE:
+                pause_clip(context);
+                break;
+            case YSW_EVENT_RESUME:
+                resume_clip(context);
+                break;
+            case YSW_EVENT_STOP:
+                stop_clip(context);
+                break;
+            case YSW_EVENT_TEMPO:
+                set_tempo(context, event->tempo.qnpm);
+                break;
+            case YSW_EVENT_LOOP:
+                set_loop(context, event->loop.loop);
+                break;
+            case YSW_EVENT_STAGE:
+                stage_clip(context, &event->stage);
+                break;
+            case YSW_EVENT_SPEED:
+                set_playback_speed(context, event->speed.percent);
+                break;
+            default:
+                break;
         }
+    }
+    TickType_t ticks_to_wait = portMAX_DELAY;
+    if (clip_playing(context)) {
+        ticks_to_wait = process_notes(context);
         if (ticks_to_wait == portMAX_DELAY) {
             ESP_LOGD(TAG, "sequencer idle");
             fire_idle(context);
         }
-        is_event = xQueueReceive(context->queue, &event, ticks_to_wait);
-        if (is_event) {
-            process_event(context, &event);
-        }
     }
+    ysw_task_set_wait_ticks(context->task, ticks_to_wait);
 }
 
 void ysw_sequencer_create_task(ysw_bus_h bus)
@@ -446,16 +437,14 @@ void ysw_sequencer_create_task(ysw_bus_h bus)
     context->bus = bus;
     context->playback_speed = YSW_SEQUENCER_SPEED_DEFAULT;
 
-    // TODO: migrate to event task with wait_ticks
-
     ysw_task_config_t config = ysw_task_default_config;
 
     config.name = TAG;
     config.bus = bus;
-    config.function = (TaskFunction_t)task_handler;
+    config.task = &context->task;
+    config.event_handler = process_event;
     config.caller_context = context;
     config.queue = &context->queue;
-    config.task = &context->task;
 
     ysw_task_create(&config);
     ysw_task_subscribe(context->task, YSW_ORIGIN_COMMAND);
