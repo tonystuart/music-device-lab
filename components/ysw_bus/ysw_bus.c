@@ -140,16 +140,14 @@ ysw_bus_h ysw_bus_create(uint16_t origins_size, uint16_t listeners_size, uint32_
     context->listeners_size = listeners_size;
     context->bus_message_size = sizeof(ysw_bus_msg_t) + message_size;
 
-    ysw_task_config_t config = {
-        .name = TAG,
-        .function = task_handler,
-        .parameters = context,
-        .queue = &context->queue,
-        .queue_size = queue_size,
-        .item_size = context->bus_message_size,
-        .stack_size = YSW_TASK_MEDIUM_STACK,
-        .priority = YSW_TASK_DEFAULT_PRIORITY,
-    };
+    ysw_task_config_t config = ysw_task_default_config;
+
+    config.name = TAG;
+    config.function = task_handler;
+    config.caller_context = context;
+    config.queue = &context->queue;
+    config.queue_size = queue_size;
+    config.item_size = context->bus_message_size;
 
     ysw_task_create(&config);
 

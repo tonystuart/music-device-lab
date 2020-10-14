@@ -79,9 +79,9 @@ static lv_res_t ysw_staff_signal(lv_obj_t *staff, lv_signal_t sign, void *param)
     return res;
 }
 
-lv_obj_t *ysw_staff_create(lv_obj_t *par, const lv_obj_t *copy)
+lv_obj_t *ysw_staff_create(lv_obj_t *par)
 {
-    lv_obj_t *staff = lv_obj_create(par, copy);
+    lv_obj_t *staff = lv_obj_create(par, NULL);
     if (staff == NULL) {
         return NULL;
     }
@@ -103,13 +103,8 @@ lv_obj_t *ysw_staff_create(lv_obj_t *par, const lv_obj_t *copy)
     lv_obj_set_signal_cb(staff, ysw_staff_signal);
     lv_obj_set_design_cb(staff, ysw_staff_design);
 
-    if (copy == NULL) {
-        lv_obj_set_size(staff, LED_WIDTH_DEF, LED_HEIGHT_DEF);
-        lv_theme_apply(staff, LV_THEME_LED);
-    } else {
-        ysw_staff_ext_t *copy_ext = lv_obj_get_ext_attr(copy);
-        lv_obj_refresh_style(staff, LV_OBJ_PART_ALL, LV_STYLE_PROP_ALL);
-    }
+    lv_obj_set_size(staff, LED_WIDTH_DEF, LED_HEIGHT_DEF);
+    lv_theme_apply(staff, LV_THEME_LED);
 
     return staff;
 }

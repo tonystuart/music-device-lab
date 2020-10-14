@@ -16,36 +16,42 @@
 #include "stdint.h"
 
 #define YSW_TASK_DEFAULT_PRIORITY (tskIDLE_PRIORITY + 1)
+#define YSW_TASK_DEFAULT_STACK_SIZE 4096 // size in 32 bit words
+#define YSW_TASK_DEFAULT_QUEUE_SIZE 16
 
-// FreeRTOS stack sizes are in 32 bit words
+typedef void *ysw_task_h;
 
-#define YSW_TASK_TINY_STACK 1024
-#define YSW_TASK_SMALL_STACK 2048
-#define YSW_TASK_MEDIUM_STACK 4096
-#define YSW_TASK_LARGE_STACK 8192
-#define YSW_TASK_HUGE_STACK 16384
+typedef void (*ysw_task_event_handler_t)(void *caller_context, ysw_event_t *event);
 
-#define YSW_TASK_SMALL_QUEUE 2
-#define YSW_TASK_MEDIUM_QUEUE 4
-#define YSW_TASK_LARGE_QUEUE 8
+// 1. Specify queue and/or bus if you want a queue allocated
+// 2. Specify queue_size and item_size if you want a queue allocated
+// 3. Specify event_handler if you want an event handler wrapper
+// 4. Specify function if you do not want an event handler wrapper
+// 5. Specify either event_handler or function but not both
+// 6. Specify caller_context if you want to pass context to event_handler or function
+// 7. Specify task and/or queue if you want the created task or queue handle returned
+// 8. Specify non-transient (i.e. not stack) address for task or queue
 
 typedef struct {
     char *name;
-    TaskHandle_t *task;
+    ysw_bus_h bus;
+    ysw_task_h *task;
     TaskFunction_t function;
-    void *parameters;
+    ysw_task_event_handler_t event_handler;
+    void *caller_context;
+    uint16_t stack_size;
+    int8_t priority;
     QueueHandle_t *queue;
     UBaseType_t queue_size;
     UBaseType_t item_size;
-    uint16_t stack_size;
-    int8_t priority;
-    bool is_relative_priority;
+    uint32_t wait_ticks;
 } ysw_task_config_t;
 
-typedef void (*ysw_task_event_handler)(void *caller_context, ysw_event_t *event);
+extern const ysw_task_config_t ysw_task_default_config;
 
-void ysw_task_create(ysw_task_config_t *task_config);
+ysw_task_h ysw_task_create(ysw_task_config_t *config);
 
-void ysw_task_create_standard(char *name, TaskFunction_t function, QueueHandle_t *queue, UBaseType_t item_size);
+void ysw_task_subscribe(ysw_task_h task, ysw_origin_t origin);
 
-QueueHandle_t ysw_task_create_event_task(ysw_task_event_handler event_handler, void *caller_context);
+void ysw_task_set_wait_ticks(ysw_task_h task, uint32_t wait_ticks);
+

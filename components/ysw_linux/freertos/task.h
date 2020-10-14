@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "FreeRTOS.h"
+
 #define tskIDLE_PRIORITY 0
 
 typedef void *TaskFunction_t;
@@ -18,3 +20,5 @@ extern int xTaskGetTickCount();
 extern void vTaskDelay(int ticks);
 extern char *pcTaskGetTaskName(TaskHandle_t handle);
 void vTaskDelete(TaskHandle_t handle);
+UBaseType_t uxTaskPriorityGet(TaskHandle_t xTask);
+BaseType_t xTaskCreate(TaskFunction_t pvTaskCode, const char *const pcName, configSTACK_DEPTH_TYPE usStackDepth, void *pvParameters, UBaseType_t uxPriority, TaskHandle_t *pxCreatedTask);

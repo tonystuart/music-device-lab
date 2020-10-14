@@ -28,7 +28,8 @@ typedef struct {
 
 typedef struct {
     ysw_bus_h bus;
-    QueueHandle_t input_queue;
+    ysw_task_h task;
+    QueueHandle_t queue;
     ysw_event_clip_t playing;
     ysw_event_clip_t staging;
     active_note_t active_notes[MAX_POLYPHONY];
@@ -431,7 +432,7 @@ static void task_handler(context_t *context)
             ESP_LOGD(TAG, "sequencer idle");
             fire_idle(context);
         }
-        is_event = xQueueReceive(context->input_queue, &event, ticks_to_wait);
+        is_event = xQueueReceive(context->queue, &event, ticks_to_wait);
         if (is_event) {
             process_event(context, &event);
         }
@@ -445,18 +446,18 @@ void ysw_sequencer_create_task(ysw_bus_h bus)
     context->bus = bus;
     context->playback_speed = YSW_SEQUENCER_SPEED_DEFAULT;
 
-    ysw_task_config_t task_config = {
-        .name = TAG,
-        .function = (TaskFunction_t)task_handler,
-        .parameters = context,
-        .queue = &context->input_queue,
-        .item_size = sizeof(ysw_event_t),
-        .queue_size = YSW_TASK_MEDIUM_QUEUE,
-        .stack_size = YSW_TASK_MEDIUM_STACK,
-        .priority = YSW_TASK_DEFAULT_PRIORITY,
-    };
+    // TODO: migrate to event task with wait_ticks
 
-    ysw_task_create(&task_config);
+    ysw_task_config_t config = ysw_task_default_config;
 
-    ysw_bus_subscribe(bus, YSW_ORIGIN_COMMAND, context->input_queue);
+    config.name = TAG;
+    config.bus = bus;
+    config.function = (TaskFunction_t)task_handler;
+    config.caller_context = context;
+    config.queue = &context->queue;
+    config.task = &context->task;
+
+    ysw_task_create(&config);
+    ysw_task_subscribe(context->task, YSW_ORIGIN_COMMAND);
 }
+

@@ -9,18 +9,7 @@
 
 #pragma once
 
-#include "stdbool.h"
-#include "stdint.h"
+#include "ysw_bus.h"
 
-#define pdTRUE true
-#define pdFALSE false
-#define portMAX_DELAY (-1)
-#define portTICK_PERIOD_MS 1
-#define configSTACK_DEPTH_TYPE uint32_t
-#define errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY (-1)
-#define pdPASS pdTRUE
-
-typedef int BaseType_t;
-typedef unsigned int UBaseType_t;
-typedef int TickType_t;
+void ysw_display_create_task(ysw_bus_h bus);
 

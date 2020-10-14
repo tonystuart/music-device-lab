@@ -157,9 +157,12 @@ void create_synth_task(uint8_t dac_left_gpio, uint8_t dac_right_gpio)
     synth_semaphore = xSemaphoreCreateBinary();
     xSemaphoreGive(synth_semaphore);
 
-    ysw_task_create_standard(TAG, run_synth, NULL, 0);
+    ysw_task_config_t config = ysw_task_default_config;
 
-    ESP_LOGD(TAG, "create_synth_task: returning");
+    config.name = TAG;
+    config.function = run_synth;
+
+    ysw_task_create(&config);
 }
 
 uint8_t channel_notes[16][128];
@@ -257,6 +260,15 @@ void ysw_synth_wt_create_task(ysw_bus_h bus, uint8_t dac_left_gpio, uint8_t dac_
 {
     create_synth_task(dac_left_gpio, dac_right_gpio);
     context_t *context = ysw_heap_allocate(sizeof(context_t));
-    QueueHandle_t input_queue = ysw_task_create_event_task(process_event, context);
-    ysw_bus_subscribe(bus, YSW_ORIGIN_SEQUENCER, input_queue);
+
+    ysw_task_config_t config = ysw_task_default_config;
+
+    config.name = TAG;
+    config.bus = bus;
+    config.event_handler = process_event;
+    config.caller_context = context;
+
+    ysw_task_h task = ysw_task_create(&config);
+
+    ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);
 }

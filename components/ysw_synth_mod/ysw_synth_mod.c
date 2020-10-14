@@ -79,6 +79,7 @@ typedef struct {
     mint    stereo;
     mint    stereo_separation;
     mint    filter;
+    SemaphoreHandle_t mutex;
 } context_t;
 
 static const short period_map[] = {
@@ -97,16 +98,18 @@ static const short period_map[] = {
 
 #define PERIOD_MAP_SIZE (sizeof(period_map) / sizeof(period_map[0]))
 
-static SemaphoreHandle_t semaphore;
+// TODO: Consider using thread local storage instead of static variable
 
-static void enter_critical_section()
+static context_t *data_cb_context;
+
+static void enter_critical_section(context_t *context)
 {
-    xSemaphoreTake(semaphore, portMAX_DELAY);
+    xSemaphoreTake(context->mutex, portMAX_DELAY);
 }
 
-static void leave_critical_section()
+static void leave_critical_section(context_t *context)
 {
-    xSemaphoreGive(semaphore);
+    xSemaphoreGive(context->mutex);
 }
 
 static void initialize_synthesizer(context_t *context)
@@ -120,8 +123,7 @@ static void initialize_synthesizer(context_t *context)
     context->filter = 1;
     context->sampleticksconst = ((3546894UL * 16) / context->playrate) << 6; //8287*428/playrate;
     context->mod_loaded = 1;
-
-    semaphore = xSemaphoreCreateMutex();
+    context->mutex = xSemaphoreCreateMutex();
 }
 
 static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
@@ -129,7 +131,7 @@ static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
     assert(context);
     assert(outbuffer);
 
-    enter_critical_section();
+    enter_critical_section(context);
 
     if (!context->mod_loaded) {
         for (mssize i = 0; i < nbsample; i++)
@@ -227,7 +229,7 @@ static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
     context->last_left_sample = last_left;
     context->last_right_sample = last_right;
 
-    leave_critical_section();
+    leave_critical_section(context);
 }
 
 static uint8_t allocate_voice(context_t *context, uint8_t channel, uint8_t midi_note)
@@ -271,7 +273,7 @@ static void free_voice(context_t *context, uint8_t channel, uint8_t midi_note)
 
 static void start_note(context_t *context, uint8_t channel, uint8_t midi_note, uint8_t velocity)
 {
-    enter_critical_section();
+    enter_critical_section(context);
 
     uint8_t voice_index = allocate_voice(context, channel, midi_note);
     uint8_t sample_index = context->channel_samples[channel];
@@ -293,46 +295,17 @@ static void start_note(context_t *context, uint8_t channel, uint8_t midi_note, u
     voice->samppos = 0;
     voice->time = context->voice_time++;
 
-    leave_critical_section();
+    leave_critical_section(context);
 }
 
 static void stop_note(context_t *context, uint8_t channel, uint8_t midi_note)
 {
-    enter_critical_section();
+    enter_critical_section(context);
 
     free_voice(context, channel, midi_note);
 
-    leave_critical_section();
+    leave_critical_section(context);
 }
-
-static context_t *data_cb_context;
-
-// NB: len is in bytes (typically 512 when called from a2dp_source)
-static int32_t data_cb(uint8_t *data, int32_t len)
-{
-    if (len < 0 || data == NULL) {
-        return 0;
-    }
-    fill_buffer(data_cb_context, (msample*)data, len / 4);
-    return len;
-}
-
-#ifdef IDF_VER
-
-#include "ysw_a2dp_source.h"
-
-#else
-
-#include "ysw_alsa.h"
-#include "pthread.h"
-
-static void* alsa_thread(void *p)
-{
-    ysw_alsa_initialize(data_cb);
-    return NULL;
-}
-
-#endif
 
 static void on_note_on(context_t *context, ysw_event_note_on_t *m)
 {
@@ -406,9 +379,9 @@ static void on_sample_load(context_t *context, ysw_event_sample_load_t *m)
         .pan = m->pan,
     };
 
-    enter_critical_section();
+    enter_critical_section(context);
     context->samples[m->index] = sample;
-    leave_critical_section();
+    leave_critical_section(context);
 }
 
 static void process_event(void *caller_context, ysw_event_t *event)
@@ -432,23 +405,62 @@ static void process_event(void *caller_context, ysw_event_t *event)
     }
 }
 
+// NB: len is in bytes (typically 512 when called from a2dp_source)
+static int32_t data_cb(uint8_t *data, int32_t len)
+{
+    if (len < 0 || data == NULL) {
+        return 0;
+    }
+    fill_buffer(data_cb_context, (msample*)data, len / 4);
+    return len;
+}
+
+#ifdef IDF_VER
+
+#include "ysw_a2dp_source.h"
+
+static void initialize_audio_source(context_t *context)
+{
+    ysw_a2dp_source_initialize(data_cb);
+}
+
+#else
+
+#include "ysw_alsa.h"
+#include "pthread.h"
+
+static void* alsa_thread(void *p)
+{
+    ysw_alsa_initialize(data_cb);
+    return NULL;
+}
+
+static void initialize_audio_source(context_t *context)
+{
+    pthread_t p;
+    pthread_create(&p, NULL, &alsa_thread, NULL);
+}
+
+#endif
+
 void ysw_synth_mod_create_task(ysw_bus_h bus)
 {
     context_t *context = ysw_heap_allocate(sizeof(context_t));
     data_cb_context = context;
 
     initialize_synthesizer(context);
+    initialize_audio_source(context);
 
-#ifdef IDF_VER
-    ysw_a2dp_source_initialize(data_cb);
-#else
-    pthread_t p;
-    pthread_create(&p, NULL, &alsa_thread, NULL);
-#endif
+    ysw_task_config_t config = ysw_task_default_config;
 
-    QueueHandle_t input_queue = ysw_task_create_event_task(process_event, context);
+    config.name = TAG;
+    config.bus = bus;
+    config.event_handler = process_event;
+    config.caller_context = context;
 
-    ysw_bus_subscribe(bus, YSW_ORIGIN_SEQUENCER, input_queue);
-    ysw_bus_subscribe(bus, YSW_ORIGIN_SAMPLER, input_queue);
-    ysw_bus_subscribe(bus, YSW_ORIGIN_AUDIO_SINK, input_queue);
+    ysw_task_h task = ysw_task_create(&config);
+
+    ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);
+    ysw_task_subscribe(task, YSW_ORIGIN_SAMPLER);
+    ysw_task_subscribe(task, YSW_ORIGIN_AUDIO_SINK);
 }

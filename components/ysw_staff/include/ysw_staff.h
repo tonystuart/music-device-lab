@@ -27,7 +27,7 @@ enum {
 
 typedef uint8_t ysw_staff_part_t;
 
-lv_obj_t *ysw_staff_create(lv_obj_t *par, const lv_obj_t *copy);
+lv_obj_t *ysw_staff_create(lv_obj_t *par);
 void ysw_staff_set_notes(lv_obj_t *staff, ysw_array_t *notes);
 ysw_array_t *ysw_staff_get_notes(const lv_obj_t *staff);
 

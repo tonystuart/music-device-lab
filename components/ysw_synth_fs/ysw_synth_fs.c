@@ -20,7 +20,7 @@
 
 typedef struct {
     const char *sf_filename;
-    QueueHandle_t input_queue;
+    QueueHandle_t queue;
     fluid_synth_t *synth;
     fluid_audio_driver_t *driver; // TODO: delete this when done with it
 } context_t;
@@ -97,6 +97,15 @@ void ysw_synth_fs_create_task(ysw_bus_h bus, const char *sf_filename)
     context_t *context = ysw_heap_allocate(sizeof(context_t));
     context->sf_filename = sf_filename;
     initialize_synthesizer(context);
-    QueueHandle_t input_queue = ysw_task_create_event_task(process_event, context);
-    ysw_bus_subscribe(bus, YSW_ORIGIN_SEQUENCER, input_queue);
+
+    ysw_task_config_t config = ysw_task_default_config;
+
+    config.name = TAG;
+    config.bus = bus;
+    config.event_handler = process_event;
+    config.caller_context = context;
+
+    ysw_task_h task = ysw_task_create(&config);
+
+    ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);
 }

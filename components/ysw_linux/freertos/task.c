@@ -11,7 +11,8 @@
 #include "ysw_system.h"
 #include "esp_log.h"
 #include "FreeRTOS.h"
-#include <unistd.h>
+#include "pthread.h"
+#include "unistd.h"
 
 #define TAG "TASK"
 
@@ -47,3 +48,22 @@ void vTaskDelete(TaskHandle_t handle)
 {
     ESP_LOGW(TAG, "vTaskDelete stub entered");
 }
+
+UBaseType_t uxTaskPriorityGet(TaskHandle_t xTask)
+{
+    ESP_LOGW(TAG, "uxTaskPriorityGet stub entered");
+    return 0;
+}
+
+BaseType_t xTaskCreate(TaskFunction_t pvTaskCode, const char *const pcName, configSTACK_DEPTH_TYPE usStackDepth, void *pvParameters, UBaseType_t uxPriority, TaskHandle_t *pxCreatedTask)
+{
+    pthread_t tid;
+    int rc = pthread_create(&tid, NULL, pvTaskCode, pvParameters);
+    if (rc == 0) {
+        rc = pdPASS;
+    } else {
+        rc = errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
+    }
+    return rc;
+}
+

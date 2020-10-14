@@ -7,6 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
+#include "ysw_display.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
 #include "ysw_sequencer.h"
@@ -90,7 +91,7 @@ void initialize_synthesizer(ysw_bus_h bus)
 #include "driver/spi_master.h"
 #include "esp_log.h"
 
-static void initialize_display(void)
+static void initialize_touch_screen(void)
 {
     ESP_LOGD(TAG, "main: configuring model 1");
     eli_ili9341_xpt2046_config_t new_config = {
@@ -119,7 +120,7 @@ static void initialize_display(void)
 #include "driver/spi_master.h"
 #include "esp_log.h"
 
-static void initialize_display(void)
+static void initialize_touch_screen(void)
 {
     ESP_LOGD(TAG, "main: configuring model 2");
     eli_ili9341_xpt2046_config_t new_config = {
@@ -165,7 +166,7 @@ static int tick_thread(void *data)
     return 0;
 }
 
-static void initialize_display(void)
+static void initialize_touch_screen(void)
 {
     lv_init();
     monitor_init();
@@ -259,15 +260,17 @@ static zm_song_t *initialize_song(ysw_bus_h bus, zm_music_t *music, uint32_t ind
 
 static void play_song()
 {
-    initialize_display();
+    ysw_bus_h bus = ysw_event_create_bus();
+
+    initialize_touch_screen();
 
     //lv_obj_t *staff = ysw_staff_create(lv_scr_act(), NULL);
     //lv_obj_set_size(staff, 320, 240);
     //lv_obj_align(staff, NULL, LV_ALIGN_CENTER, 0, 0);
 
-    ysw_bus_h bus = ysw_event_create_bus();
 
     initialize_synthesizer(bus);
+    ysw_display_create_task(bus);
     ysw_sequencer_create_task(bus);
 
     zm_music_t *music = zm_read();
