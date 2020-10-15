@@ -264,15 +264,14 @@ static void play_song()
 {
     ysw_bus_h bus = ysw_event_create_bus();
 
-    initialize_touch_screen();
+    //initialize_touch_screen();
 
     //lv_obj_t *staff = ysw_staff_create(lv_scr_act(), NULL);
     //lv_obj_set_size(staff, 320, 240);
     //lv_obj_align(staff, NULL, LV_ALIGN_CENTER, 0, 0);
 
-
     initialize_synthesizer(bus);
-    ysw_display_create_task(bus);
+    //ysw_display_create_task(bus);
     ysw_sequencer_create_task(bus);
 
     zm_music_t *music = zm_read();

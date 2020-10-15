@@ -150,7 +150,7 @@ static inline void adjust_playback_start_millis(context_t *context)
         tick = 0;
     } else {
         // middle of clip: start at current note
-        ysw_note_t *note = ysw_array_get_fast(context->clip.notes, context->next_note);
+        ysw_note_t *note = ysw_array_get(context->clip.notes, context->next_note);
         tick = note->start;
     }
 
@@ -309,8 +309,8 @@ static TickType_t process_notes(context_t *context)
     uint32_t playback_millis = get_current_playback_millis(context);
 
     ysw_note_t *note;
-    if (context->next_note < ysw_array_get_count_fast(context->clip.notes)) {
-        note = ysw_array_get_fast(context->clip.notes, context->next_note);
+    if (context->next_note < ysw_array_get_count(context->clip.notes)) {
+        note = ysw_array_get(context->clip.notes, context->next_note);
     } else {
         note = NULL;
     }
