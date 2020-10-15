@@ -766,3 +766,4 @@ int ysw_name_format_version(char *new_name, uint32_t size, uint32_t version_poin
     int rc = snprintf(new_name, size, "%.*s +%d", version_point, old_name, version);
     return rc;
 }
+

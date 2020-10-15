@@ -382,12 +382,12 @@ zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large
                 note->velocity = sound->velocity;
                 note->instrument = pattern->sample_index;
                 ysw_array_push(notes, note);
-                ESP_LOGD(TAG, "step_start=%d, midi_note=%d, start=%d, duration=%d, velocity=%d, channel=%d, sample=%d", step_start, note->midi_note, note->start, note->duration, note->velocity, note->channel, note->instrument);
+                //ESP_LOGD(TAG, "step_start=%d, midi_note=%d, start=%d, duration=%d, velocity=%d, channel=%d, sample=%d", step_start, note->midi_note, note->start, note->duration, note->velocity, note->channel, note->instrument);
             }
         }
         step_start += step->duration;
     }
-    ESP_LOGD(TAG, "note_count=%d, end_time=%d", ysw_array_get_count(notes), step_start);
+    //ESP_LOGD(TAG, "pattern note_count=%d, end_time=%d", ysw_array_get_count(notes), step_start);
     return step_start;
 }
 
@@ -429,7 +429,7 @@ ysw_array_t *zm_render_song(zm_song_t *song)
     }
     ysw_array_free_all(part_times);
     ysw_array_sort(notes, zm_note_compare);
-    ESP_LOGD(TAG, "note_count=%d", ysw_array_get_count(notes));
+    ESP_LOGD(TAG, "song note_count=%d", ysw_array_get_count(notes));
     return notes;
 }
 

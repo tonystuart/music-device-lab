@@ -33,15 +33,16 @@ typedef struct {
 
 static void process_event(void *caller_context, ysw_event_t *event)
 {
-    context_t *context = caller_context;
-    switch (event->header.type) {
-        case YSW_EVENT_NOTE_ON:
-        default:
-            break;
+    //context_t *context = caller_context;
+    if (event) {
+        switch (event->header.type) {
+            case YSW_EVENT_NOTE_ON:
+                break;
+            default:
+                break;
+        }
     }
-
-        lv_task_handler();
-        usleep(5 * 1000);
+    lv_task_handler();
 }
 
 void ysw_display_create_task(ysw_bus_h bus)

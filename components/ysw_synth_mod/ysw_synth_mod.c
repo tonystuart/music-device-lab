@@ -172,7 +172,7 @@ static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
 
 #if 0
                 if (voice->samppos) {
-                    ESP_LOGD(TAG, "period=%d, sampinc=%d, samppos=%ld, samppos>>11=%d, k=%d, length=%d", voice->period, voice->sampinc, voice->samppos, voice->samppos >> 11, k, voice->length);
+                    ESP_LOGD(TAG, "period=%d, sampinc=%d, samppos=%d, samppos>>11=%d, k=%d, length=%d", (int)voice->period, (int)voice->sampinc, (int)voice->samppos, (int)(voice->samppos >> 11), (int)k, (int)voice->length);
                 }
 #endif
 

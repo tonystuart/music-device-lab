@@ -114,14 +114,16 @@ void ysw_array_insert(ysw_array_t *array, uint32_t index, void *value)
     array->data[index] = value;
 }
 
-void ysw_array_remove(ysw_array_t *array, uint32_t index)
+void *ysw_array_remove(ysw_array_t *array, uint32_t index)
 {
     assert(array);
     assert(index < array->count);
+    void *item = array->data[index];
     for (uint32_t i = index, j = index + 1; j < array->count; i++, j++) {
         array->data[i] = array->data[j];
     }
     array->count--;
+    return item;
 }
 
 void ysw_array_swap(ysw_array_t *array, uint32_t i, uint32_t j)
@@ -158,6 +160,7 @@ void ysw_array_move(ysw_array_t *array, uint32_t from, uint32_t to)
 
 int32_t ysw_array_find(ysw_array_t *array, void *value)
 {
+    assert(array);
     for (uint32_t i = 0; i < array->count; i++) {
         if (array->data[i] == value) {
             return i;
@@ -174,6 +177,8 @@ uint32_t ysw_array_get_free_space(ysw_array_t *array)
 
 void ysw_array_sort(ysw_array_t *array,  int (*comparator)(const void *, const void *))
 {
+    assert(array);
+    assert(comparator);
     qsort(array->data, array->count, sizeof(void *), comparator);
 }
 
@@ -186,6 +191,8 @@ void ysw_array_free_node(void *p)
 
 void ysw_array_clear(ysw_array_t *array, ysw_on_array_clear_t on_clear)
 {
+    assert(array);
+    assert(on_clear);
     for (uint32_t i = 0; i < array->count; i++) {
         on_clear(array->data[i]);
     }
@@ -202,10 +209,7 @@ void ysw_array_free(ysw_array_t *array)
 void ysw_array_free_all(ysw_array_t *array)
 {
     assert(array);
-    for (uint32_t i = 0; i < array->count; i++) {
-        ysw_heap_free(array->data[i]);
-    }
-    ysw_heap_free(array->data);
-    ysw_heap_free(array);
+    ysw_array_clear(array, ysw_array_free_node);
+    ysw_array_free(array);
 }
 

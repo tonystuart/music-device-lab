@@ -22,7 +22,6 @@ typedef enum {
     YSW_EVENT_STOP,
     YSW_EVENT_TEMPO,
     YSW_EVENT_LOOP,
-    YSW_EVENT_STAGE,
     YSW_EVENT_SPEED,
     YSW_EVENT_NOTE_ON,
     YSW_EVENT_NOTE_OFF,
@@ -43,6 +42,17 @@ typedef struct {
     ysw_array_t *notes; // must remain accessible for duration of playback
     uint8_t tempo;
 } ysw_event_clip_t;
+
+typedef enum {
+    YSW_EVENT_PLAY_NOW, // play now, replacing anything that is playing
+    YSW_EVENT_PLAY_STAGE, // play now if nothing playing, otherwise clear play list and add
+    YSW_EVENT_PLAY_QUEUE, // play now if nothing playing, otherwise add to play list
+} ysw_event_play_type_t;
+
+typedef struct {
+    ysw_event_play_type_t type;
+    ysw_event_clip_t clip;
+} ysw_event_play_t;
 
 typedef struct {
     uint8_t qnpm;
@@ -88,10 +98,9 @@ typedef struct {
 typedef struct {
     ysw_event_header_t header;
     union {
-        ysw_event_clip_t play;
+        ysw_event_play_t play;
         ysw_event_tempo_t tempo;
         ysw_event_loop_t loop;
-        ysw_event_clip_t stage;
         ysw_event_speed_t speed;
         ysw_event_note_status_t note_status;
         ysw_event_note_on_t note_on;

@@ -79,7 +79,7 @@ static void* trace_realloc(void *p, size_t size)
         total_size += size;
         maximum_size = max(total_size, maximum_size);
         ESP_LOGD(TRACE_TAG, "trace_realloc size=%d/%d/%d (old_size=%d)", size, total_size, maximum_size, *ps);
-        ps = xrealloc(ps, size);
+        ps = xrealloc(ps, size + sizeof(size_t));
         if (!p) {
             ESP_LOGE(TRACE_TAG, "trace_realloc xrealloc failed, size=%d", size);
             abort();

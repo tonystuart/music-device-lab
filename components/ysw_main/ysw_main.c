@@ -221,9 +221,11 @@ static void fire_play(ysw_bus_h bus, ysw_array_t *notes, uint8_t bpm)
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_COMMAND,
         .header.type = YSW_EVENT_PLAY,
-        .play.notes = notes,
-        .play.tempo = bpm,
+        .play.type = YSW_EVENT_PLAY_NOW,
+        .play.clip.notes = notes,
+        .play.clip.tempo = bpm,
     };
+    ESP_LOGD(TAG, "fire_play event.play.tempo=%d", event.play.clip.tempo);
     ysw_event_publish(bus, &event);
 }
 
@@ -289,6 +291,8 @@ static void play_song()
 
 void app_main()
 {
+    esp_log_level_set("efuse", ESP_LOG_INFO);
+    esp_log_level_set("TRACE_HEAP", ESP_LOG_INFO);
     ysw_spiffs_initialize(YSW_MUSIC_PARTITION);
 
     play_song();
@@ -301,11 +305,8 @@ void app_main()
 int main(int argc, char *argv[])
 {
     play_song();
-
-    while (1) {
-        lv_task_handler();
-        usleep(5 * 1000);
-    }
+    int c = getchar();
+    ESP_LOGI(TAG, "terminating");
 }
 
 #endif
