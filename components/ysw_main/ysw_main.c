@@ -271,6 +271,7 @@ static void play_song()
     //lv_obj_align(staff, NULL, LV_ALIGN_CENTER, 0, 0);
 
     initialize_synthesizer(bus);
+
     //ysw_display_create_task(bus);
     ysw_sequencer_create_task(bus);
 

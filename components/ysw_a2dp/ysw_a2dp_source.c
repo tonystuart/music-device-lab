@@ -252,6 +252,20 @@ static void filter_inquiry_scan_result(esp_bt_gap_cb_param_t *param)
         ESP_LOGI(BT_AV_TAG, "Cancel device discovery ...");
         esp_bt_gap_cancel_discovery();
         return;
+    } else if (strcmp(bda_str, "5b:9e:68:2b:32:a0") == 0) {
+        ESP_LOGI(TAG, "Found Kurdene Wireless Earbuds by BDA");
+        s_a2d_state = APP_AV_STATE_DISCOVERED;
+        memcpy(s_peer_bda, param->disc_res.bda, ESP_BD_ADDR_LEN);
+        ESP_LOGI(BT_AV_TAG, "Cancel device discovery ...");
+        esp_bt_gap_cancel_discovery();
+        return;
+    } else if (strcmp(bda_str, "a5:e8:62:af:fa:99") == 0) {
+        ESP_LOGI(TAG, "Found Logo Wireless Headset by BDA");
+        s_a2d_state = APP_AV_STATE_DISCOVERED;
+        memcpy(s_peer_bda, param->disc_res.bda, ESP_BD_ADDR_LEN);
+        ESP_LOGI(BT_AV_TAG, "Cancel device discovery ...");
+        esp_bt_gap_cancel_discovery();
+        return;
     }
 #endif
 

@@ -329,6 +329,11 @@ static void on_program_change(context_t *context, ysw_event_program_change_t *m)
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
     assert(m->program < YSW_MIDI_MAX_COUNT);
 
+    if (m->program >= MAX_SAMPLES || !context->samples[m->program].data) {
+        ESP_LOGW(TAG, "ignoring invalid program change, channel=%d, program=%d", m->channel, m->program);
+        return;
+    }
+
     context->channel_samples[m->channel] = m->program;
 }
 
@@ -338,7 +343,7 @@ static void on_sample_load(context_t *context, ysw_event_sample_load_t *m)
     assert(m->volume < YSW_MIDI_MAX_COUNT);
 
     if (context->samples[m->index].data) {
-        ysw_heap_free(context->samples[m->index].data);
+        return;
     }
 
     struct stat sb;
@@ -370,17 +375,18 @@ static void on_sample_load(context_t *context, ysw_event_sample_load_t *m)
         abort();
     }
 
-    sample_t sample = {
-        .data = sample_data,
-        .length = sample_size / 2, // length is in 2 byte (16 bit) words
-        .reppnt = m->reppnt,
-        .replen = m->replen,
-        .volume = m->volume,
-        .pan = m->pan,
-    };
-
     enter_critical_section(context);
-    context->samples[m->index] = sample;
+
+    sample_t *sample = &context->samples[m->index];
+    sample->data = sample_data;
+    sample->length = sample_size / 2; // length is in 2 byte (16 bit) words
+    sample->reppnt = m->reppnt;
+    sample->replen = m->replen;
+    sample->volume = m->volume;
+    sample->pan = m->pan;
+
+    ESP_LOGD(TAG, "on_sample_load: m->index=%d, sample=%p, data=%p", m->index, sample, sample->data);
+
     leave_critical_section(context);
 }
 

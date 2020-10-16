@@ -122,11 +122,11 @@ static void process_message(context_t *context, ysw_bus_msg_t *message)
 static void task_handler(void *parameters)
 {
     context_t *context = parameters;
+    ysw_bus_msg_t *message = alloca(context->bus_message_size);
     for (;;) {
-        ysw_bus_msg_t message;
-        BaseType_t is_message = xQueueReceive(context->queue, &message, portMAX_DELAY);
+        BaseType_t is_message = xQueueReceive(context->queue, message, portMAX_DELAY);
         if (is_message) {
-            process_message(context, &message);
+            process_message(context, message);
         }
     }
 }
