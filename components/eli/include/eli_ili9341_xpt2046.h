@@ -18,6 +18,9 @@ typedef struct {
     uint16_t y_min;
     uint16_t x_max;
     uint16_t y_max;
+    bool is_invert_x;
+    bool is_invert_y;
+    bool is_log_min_max;
     spi_host_device_t spi_host;
 } eli_ili9341_xpt2046_config_t;
 

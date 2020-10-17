@@ -122,7 +122,7 @@ void ysw_style_initialize()
     sn_label_dsc = (lv_draw_label_dsc_t ) {
                 .color = LV_COLOR_WHITE,
                 .opa = LV_OPA_COVER,
-                .font = &lv_font_montserrat_12,
+                .font = &lv_font_montserrat_14,
                 .flag = LV_TXT_FLAG_CENTER,
 
             };
@@ -130,7 +130,7 @@ void ysw_style_initialize()
     sel_sn_label_dsc = (lv_draw_label_dsc_t ) {
                 .color = LV_COLOR_BLACK,
                 .opa = LV_OPA_COVER,
-                .font = &lv_font_montserrat_12,
+                .font = &lv_font_montserrat_14,
                 .flag = LV_TXT_FLAG_CENTER,
 
             };
@@ -178,7 +178,7 @@ void ysw_style_initialize()
     hp_label_dsc = (lv_draw_label_dsc_t ) {
                 .color = LV_COLOR_BLACK,
                 .opa = LV_OPA_COVER,
-                .font = &lv_font_montserrat_12,
+                .font = &lv_font_montserrat_14,
                 .flag = LV_TXT_FLAG_CENTER,
 
             };
@@ -186,7 +186,7 @@ void ysw_style_initialize()
     sel_hp_label_dsc = (lv_draw_label_dsc_t ) {
                 .color = LV_COLOR_WHITE,
                 .opa = LV_OPA_COVER,
-                .font = &lv_font_montserrat_12,
+                .font = &lv_font_montserrat_14,
                 .flag = LV_TXT_FLAG_CENTER,
 
             };
@@ -241,7 +241,7 @@ void ysw_style_adjust_field_name(lv_obj_t *label)
 {
     lv_obj_set_style_local_pad_top(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 5);
     lv_obj_set_style_local_pad_bottom(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 1);
-    lv_obj_set_style_local_text_font(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, &lv_font_montserrat_12);
+    lv_obj_set_style_local_text_font(label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, &lv_font_montserrat_14);
 }
 
 void ysw_style_adjust_keyboard(lv_obj_t *kb)
@@ -287,13 +287,13 @@ void ysw_style_adjust_button_bar(lv_obj_t *bar)
     lv_color_t child_bg = ysw_style_adjust_obj(bar);
     lv_color_t btn_bg = lv_color_lighten(child_bg, LV_OPA_20);
     lv_obj_set_style_local_bg_color(bar, LV_BTNMATRIX_PART_BTN, LV_STATE_DEFAULT, btn_bg);
-    //lv_obj_set_style_local_text_font(bar, LV_BTNMATRIX_PART_BTN, LV_STATE_DEFAULT, &lv_font_montserrat_12);
+    //lv_obj_set_style_local_text_font(bar, LV_BTNMATRIX_PART_BTN, LV_STATE_DEFAULT, &lv_font_montserrat_14);
 }
 
 void ysw_style_adjust_checkbox(lv_obj_t *cb)
 {
     lv_color_t child_bg = ysw_style_lighten_background(cb);
-    lv_obj_set_style_local_text_font(cb, LV_CHECKBOX_PART_BG, LV_STATE_DEFAULT, &lv_font_montserrat_12);
+    lv_obj_set_style_local_text_font(cb, LV_CHECKBOX_PART_BG, LV_STATE_DEFAULT, &lv_font_montserrat_14);
     lv_obj_set_style_local_pad_left(cb, LV_CHECKBOX_PART_BG, LV_STATE_DEFAULT, 0);
     lv_obj_set_style_local_border_width(cb, LV_CHECKBOX_PART_BULLET, LV_STATE_DEFAULT, 0);
     lv_obj_set_style_local_bg_color(cb, LV_CHECKBOX_PART_BULLET, LV_STATE_DEFAULT, child_bg);

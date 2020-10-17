@@ -86,34 +86,7 @@ void initialize_synthesizer(ysw_bus_h bus)
 
 #if YSW_MAIN_DISPLAY_MODEL == 1
 
-#include "eli_ili9341_xpt2046.h"
-#include "lvgl/lvgl.h"
-#include "driver/spi_master.h"
-#include "esp_log.h"
-
-static void initialize_touch_screen(void)
-{
-    ESP_LOGD(TAG, "main: configuring model 1");
-    eli_ili9341_xpt2046_config_t new_config = {
-        .mosi = 21,
-        .clk = 22,
-        .ili9341_cs = 5,
-        .xpt2046_cs = 32,
-        .dc = 19,
-        .rst = 18,
-        .bckl = 23,
-        .miso = 27,
-        .irq = 14,
-        .x_min = 346,
-        .y_min = 235,
-        .x_max = 3919,
-        .y_max = 3883,
-        .spi_host = HSPI_HOST,
-    }
-    eli_ili9341_xpt2046_initialize(&new_config);
-}
-
-#elif YSW_MAIN_DISPLAY_MODEL == 2
+// Music Machine v01 - Confirmed with Schematic
 
 #include "eli_ili9341_xpt2046.h"
 #include "lvgl/lvgl.h"
@@ -122,7 +95,7 @@ static void initialize_touch_screen(void)
 
 static void initialize_touch_screen(void)
 {
-    ESP_LOGD(TAG, "main: configuring model 2");
+    ESP_LOGD(TAG, "main: configuring Music Machine v01");
     eli_ili9341_xpt2046_config_t new_config = {
         .mosi = 21,
         .clk = 19,
@@ -138,6 +111,43 @@ static void initialize_touch_screen(void)
         .x_max = 3919,
         .y_max = 3883,
         .spi_host = HSPI_HOST,
+    };
+    eli_ili9341_xpt2046_initialize(&new_config);
+}
+
+#elif YSW_MAIN_DISPLAY_MODEL == 2
+
+// Music Machine v02
+
+#include "eli_ili9341_xpt2046.h"
+#include "lvgl/lvgl.h"
+#include "driver/spi_master.h"
+#include "esp_log.h"
+
+static void initialize_touch_screen(void)
+{
+#if 0
+    ESP_LOGD(TAG, "main: waiting for display to power up");
+    wait_millis(1000);
+#endif
+
+    ESP_LOGD(TAG, "main: configuring Music Machine v02");
+    eli_ili9341_xpt2046_config_t new_config = {
+        .mosi = 5,
+        .clk = 18,
+        .ili9341_cs = 0,
+        .xpt2046_cs = 22,
+        .dc = 2,
+        .rst = -1,
+        .bckl = -1,
+        .miso = 19,
+        .irq = 21,
+        .x_min = 483,
+        .y_min = 416,
+        .x_max = 3829,
+        .y_max = 3655,
+        .is_invert_y = true,
+        .spi_host = VSPI_HOST,
     };
     eli_ili9341_xpt2046_initialize(&new_config);
 }
@@ -264,25 +274,20 @@ static void play_song()
 {
     ysw_bus_h bus = ysw_event_create_bus();
 
-    //initialize_touch_screen();
-
-    //lv_obj_t *staff = ysw_staff_create(lv_scr_act(), NULL);
-    //lv_obj_set_size(staff, 320, 240);
-    //lv_obj_align(staff, NULL, LV_ALIGN_CENTER, 0, 0);
-
+    initialize_touch_screen();
     initialize_synthesizer(bus);
 
-    //ysw_display_create_task(bus);
+    ysw_display_create_task(bus);
     ysw_sequencer_create_task(bus);
 
+#if 0
     zm_music_t *music = zm_read();
     zm_song_t *song = initialize_song(bus, music, 0);
     ysw_array_t *notes = zm_render_song(song);
 
-    //ysw_staff_set_notes(staff, notes);
-
     fire_loop(bus, true);
     fire_play(bus, notes, song->bpm);
+#endif
 }
 
 #ifdef IDF_VER

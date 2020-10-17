@@ -1,5 +1,6 @@
 /**
  * @file lv_conf.h
+ * Local configuration file for v7.6.1-dev
  *
  */
 
@@ -55,7 +56,7 @@
 /* Dot Per Inch: used to initialize default sizes.
  * E.g. a button with width = LV_DPI / 2 -> half inch wide
  * (Not so important, you can adjust it to modify default sizes and spaces)*/
-#define LV_DPI              50     /*[px]*/ //afs: bigger numbers increase padding
+#define LV_DPI              130     /*[px]*/ //afs: bigger numbers increase padding
 
 /* The the real width of the display changes some default values:
  * default object sizes, layout of examples, etc.
@@ -98,6 +99,10 @@ typedef int16_t lv_coord_t;
 #  define LV_MEM_CUSTOM_ALLOC   malloc       /*Wrapper to malloc*/
 #  define LV_MEM_CUSTOM_FREE    free         /*Wrapper to free*/
 #endif     /*LV_MEM_CUSTOM*/
+
+/* Use the standard memcpy and memset instead of LVGL's own functions.
+ * The standard functions might or might not be faster depending on their implementation. */
+#define LV_MEMCPY_MEMSET_STD    1
 
 /* Garbage Collector settings
  * Used if lvgl is binded to higher level language and the memory is managed by that language */
@@ -152,7 +157,7 @@ typedef void * lv_anim_user_data_t;
 
 #endif
 
-/* 1: Enable shadow drawing*/
+/* 1: Enable shadow drawing on rectangles*/
 #define LV_USE_SHADOW           1
 #if LV_USE_SHADOW
 /* Allow buffering some shadow calculation
@@ -161,6 +166,15 @@ typedef void * lv_anim_user_data_t;
  * Caching has LV_SHADOW_CACHE_SIZE^2 RAM cost*/
 #define LV_SHADOW_CACHE_SIZE    0
 #endif
+
+/*1: enable outline drawing on rectangles*/
+#define LV_USE_OUTLINE  1
+
+/*1: enable pattern drawing on rectangles*/
+#define LV_USE_PATTERN  1
+
+/*1: enable value string drawing on rectangles*/
+#define LV_USE_VALUE_STR    1
 
 /* 1: Use other blend modes than normal (`LV_BLEND_MODE_...`)*/
 #define LV_USE_BLEND_MODES      1
@@ -196,6 +210,7 @@ typedef void * lv_fs_drv_user_data_t;
 
 /*1: Use the functions and types from the older API if possible */
 #define LV_USE_API_EXTENSION_V6  1
+#define LV_USE_API_EXTENSION_V7  1
 
 /*========================
  * Image decoder and cache
@@ -221,6 +236,10 @@ typedef void * lv_img_decoder_user_data_t;
 /*=====================
  *  Compiler settings
  *====================*/
+
+/* For big endian systems set to 1 */
+#define LV_BIG_ENDIAN_SYSTEM    0
+
 /* Define a custom attribute to `lv_tick_inc` function */
 #define LV_ATTRIBUTE_TICK_INC IRAM_ATTR
 
@@ -332,15 +351,17 @@ typedef void * lv_indev_drv_user_data_t;            /*Type of user data in the i
 
 /* The built-in fonts contains the ASCII range and some Symbols with  4 bit-per-pixel.
  * The symbols are available via `LV_SYMBOL_...` defines
- * More info about fonts: https://docs.lvgl.com/#Fonts
+ * More info about fonts: https://docs.lvgl.io/v7/en/html/overview/font.html
  * To create a new font go to: https://lvgl.com/ttf-font-to-c-array
  */
 
 /* Montserrat fonts with bpp = 4
  * https://fonts.google.com/specimen/Montserrat  */
-#define LV_FONT_MONTSERRAT_12    1
-#define LV_FONT_MONTSERRAT_14    0
-#define LV_FONT_MONTSERRAT_16    1
+#define LV_FONT_MONTSERRAT_8     0
+#define LV_FONT_MONTSERRAT_10    0
+#define LV_FONT_MONTSERRAT_12    0
+#define LV_FONT_MONTSERRAT_14    1
+#define LV_FONT_MONTSERRAT_16    0
 #define LV_FONT_MONTSERRAT_18    0
 #define LV_FONT_MONTSERRAT_20    0
 #define LV_FONT_MONTSERRAT_22    0
@@ -381,11 +402,20 @@ typedef void * lv_indev_drv_user_data_t;            /*Type of user data in the i
  * but with > 10,000 characters if you see issues probably you need to enable it.*/
 #define LV_FONT_FMT_TXT_LARGE   0
 
+/* Enables/disables support for compressed fonts. If it's disabled, compressed
+ * glyphs cannot be processed by the library and won't be rendered.
+ */
+#define LV_USE_FONT_COMPRESSED 1
+
+/* Enable subpixel rendering */
+#define LV_USE_FONT_SUBPX 1
+#if LV_USE_FONT_SUBPX
 /* Set the pixel order of the display.
  * Important only if "subpx fonts" are used.
  * With "normal" font it doesn't matter.
  */
 #define LV_FONT_SUBPX_BGR    0
+#endif
 
 /*Declare the type of the user data of fonts (can be e.g. `void *`, `int`, `struct`)*/
 typedef void * lv_font_user_data_t;
@@ -398,17 +428,20 @@ typedef void * lv_font_user_data_t;
 
 /* No theme, you can apply your styles as you need
  * No flags. Set LV_THEME_DEFAULT_FLAG 0 */
-#define LV_USE_THEME_EMPTY       0
+#define LV_USE_THEME_EMPTY       1
 
 /*Simple to the create your theme based on it
  * No flags. Set LV_THEME_DEFAULT_FLAG 0 */
-#define LV_USE_THEME_TEMPLATE    0
+#define LV_USE_THEME_TEMPLATE    1
 
 /* A fast and impressive theme.
  * Flags:
  * LV_THEME_MATERIAL_FLAG_LIGHT: light theme
- * LV_THEME_MATERIAL_FLAG_DARK: dark theme*/
-#define LV_USE_THEME_MATERIAL    0
+ * LV_THEME_MATERIAL_FLAG_DARK: dark theme
+ * LV_THEME_MATERIAL_FLAG_NO_TRANSITION: disable transitions (state change animations)
+ * LV_THEME_MATERIAL_FLAG_NO_FOCUS: disable indication of focused state)
+ * */
+#define LV_USE_THEME_MATERIAL    1
 
 /* Mono-color theme for monochrome displays.
  * If LV_THEME_DEFAULT_COLOR_PRIMARY is LV_COLOR_BLACK the
@@ -418,14 +451,23 @@ typedef void * lv_font_user_data_t;
 #define LV_USE_THEME_MONO        1
 
 #define LV_THEME_DEFAULT_INCLUDE            <stdint.h>      /*Include a header for the init. function*/
-#define LV_THEME_DEFAULT_INIT               lv_theme_mono_init
-#define LV_THEME_DEFAULT_COLOR_PRIMARY      LV_COLOR_RED // strange logic in theme mono maps this to black
-#define LV_THEME_DEFAULT_COLOR_SECONDARY    LV_COLOR_WHITE // strange logic in theme mono ignores this
-#define LV_THEME_DEFAULT_FLAG               0
-#define LV_THEME_DEFAULT_FONT_SMALL         &lv_font_montserrat_12
-#define LV_THEME_DEFAULT_FONT_NORMAL        &lv_font_montserrat_16
-#define LV_THEME_DEFAULT_FONT_SUBTITLE      &lv_font_montserrat_16
-#define LV_THEME_DEFAULT_FONT_TITLE         &lv_font_montserrat_16
+#define LV_THEME_DEFAULT_INIT               lv_theme_material_init
+#define LV_THEME_DEFAULT_COLOR_PRIMARY      lv_color_hex(0x01a2b1)
+#define LV_THEME_DEFAULT_COLOR_SECONDARY    lv_color_hex(0x44d1b6)
+#define LV_THEME_DEFAULT_FLAG               LV_THEME_MATERIAL_FLAG_LIGHT
+#define LV_THEME_DEFAULT_FONT_SMALL         &lv_font_montserrat_14
+#define LV_THEME_DEFAULT_FONT_NORMAL        &lv_font_montserrat_14
+#define LV_THEME_DEFAULT_FONT_SUBTITLE      &lv_font_montserrat_14
+#define LV_THEME_DEFAULT_FONT_TITLE         &lv_font_montserrat_14
+
+//#define LV_THEME_DEFAULT_INIT               lv_theme_mono_init
+//#define LV_THEME_DEFAULT_COLOR_PRIMARY      LV_COLOR_RED // strange logic in theme mono maps this to black
+//#define LV_THEME_DEFAULT_COLOR_SECONDARY    LV_COLOR_WHITE // strange logic in theme mono ignores this
+//#define LV_THEME_DEFAULT_FLAG               0
+//#define LV_THEME_DEFAULT_FONT_SMALL         &lv_font_montserrat_12
+//#define LV_THEME_DEFAULT_FONT_NORMAL        &lv_font_montserrat_16
+//#define LV_THEME_DEFAULT_FONT_SUBTITLE      &lv_font_montserrat_16
+//#define LV_THEME_DEFAULT_FONT_TITLE         &lv_font_montserrat_16
 
 /*=================
  *  Text settings
@@ -500,7 +542,7 @@ typedef void * lv_obj_user_data_t;
 #endif
 #endif
 
-/*1: enable `lv_obj_realaign()` based on `lv_obj_align()` parameters*/
+/*1: enable `lv_obj_realign()` based on `lv_obj_align()` parameters*/
 #define LV_USE_OBJ_REALIGN          1
 
 /* Enable to make the object clickable on a larger area.
@@ -531,6 +573,9 @@ typedef void * lv_obj_user_data_t;
 
 /*Calendar (dependencies: -)*/
 #define LV_USE_CALENDAR 1
+#if LV_USE_CALENDAR
+#  define LV_CALENDAR_WEEK_STARTS_MONDAY    0
+#endif
 
 /*Canvas (dependencies: lv_img)*/
 #define LV_USE_CANVAS   1
@@ -541,7 +586,7 @@ typedef void * lv_obj_user_data_t;
 /*Chart (dependencies: -)*/
 #define LV_USE_CHART    1
 #if LV_USE_CHART
-#  define LV_CHART_AXIS_TICK_LABEL_MAX_LEN    20
+#  define LV_CHART_AXIS_TICK_LABEL_MAX_LEN    256
 #endif
 
 /*Container (dependencies: -*/

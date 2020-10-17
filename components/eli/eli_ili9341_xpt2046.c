@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
@@ -228,12 +229,12 @@ static void IRAM_ATTR lv_tick_task(void) {
     lv_tick_inc(portTICK_RATE_MS);
 }
 
-static void tp_spi_xchg(uint8_t data_send[], uint8_t data_recv[], uint8_t byte_count)
+static void tp_spi_xchg(uint8_t send_buffer[], uint8_t recv_buffer[], uint8_t byte_count)
 {
     spi_transaction_t t = {
         .length = byte_count * 8, // SPI transaction length is in bits
-        .tx_buffer = data_send,
-        .rx_buffer = data_recv};
+        .tx_buffer = send_buffer,
+        .rx_buffer = recv_buffer};
 
     $(spi_device_transmit(xpt2046_spi, &t));
 }
@@ -264,6 +265,13 @@ static void xpt2046_corr(int16_t *x, int16_t *y)
 
     *x =  LV_HOR_RES - *x;
     *y =  LV_VER_RES - *y;
+
+    if (config.is_invert_x) {
+        *x = LV_HOR_RES - *x;
+    }
+    if (config.is_invert_y) {
+        *y = LV_VER_RES - *y;
+    }
 }
 
 static void xpt2046_avg(int16_t *x, int16_t *y)
@@ -293,6 +301,15 @@ static void xpt2046_avg(int16_t *x, int16_t *y)
     *y = (int32_t)y_sum / avg_last;
 }
 
+// https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/general-notes.html
+
+// "Most DMA controllers (e.g. SPI, sdmmc, etc.) have requirements that sending/receiving buffers
+// should be placed in DRAM and word-aligned. We suggest to place DMA buffers in static variables
+// rather than in the stack."
+
+static DMA_ATTR uint8_t send_buffer[5];
+static DMA_ATTR uint8_t recv_buffer[5];
+
 static bool xpt2046_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
 {
     static int16_t last_x = 0;
@@ -305,21 +322,43 @@ static bool xpt2046_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
     uint8_t data_ready = gpio_get_level(config.irq) == LOW;
 
     if (data_ready) {
-        uint8_t data_send[] = {
-            CMD_X_READ,
-            0,
-            CMD_Y_READ,
-            0,
-            0
-        };
-        uint8_t data_recv[sizeof(data_send)] = {};
-        tp_spi_xchg(data_send, data_recv, sizeof(data_send));
-        x = data_recv[1] << 8 | data_recv[2];
-        y = data_recv[3] << 8 | data_recv[4];
+        send_buffer[0] = CMD_X_READ;
+        send_buffer[1] = 0;
+        send_buffer[2] = CMD_Y_READ;
+        send_buffer[3] = 0;
+        send_buffer[4] = 0;
+
+        tp_spi_xchg(send_buffer, recv_buffer, sizeof(send_buffer));
+        x = recv_buffer[1] << 8 | recv_buffer[2];
+        y = recv_buffer[3] << 8 | recv_buffer[4];
 
         /*Normalize Data*/
         x = x >> 3;
         y = y >> 3;
+
+        if (config.is_log_min_max) {
+            static int16_t min_x = SHRT_MAX;
+            static int16_t min_y = SHRT_MAX;
+            static int16_t max_x = SHRT_MIN;
+            static int16_t max_y = SHRT_MIN;
+            if (x < min_x) {
+                min_x = x;
+                ESP_LOGI(TAG, "min_x=%d", min_x);
+            }
+            if (x > max_x) {
+                max_x = x;
+                ESP_LOGI(TAG, "max_x=%d", max_x);
+            }
+            if (y < min_y) {
+                min_y = y;
+                ESP_LOGI(TAG, "min_y=%d", min_y);
+            }
+            if (y > max_y) {
+                max_y = y;
+                ESP_LOGI(TAG, "max_y=%d", max_y);
+            }
+        }
+
         xpt2046_corr(&x, &y);
         //xpt2046_avg(&x, &y);
         last_x = x;
