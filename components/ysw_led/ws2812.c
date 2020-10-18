@@ -7,23 +7,17 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-/* Created 19 Nov 2016 by Chris Osborn <fozztexx@fozztexx.com>
- * http://insentricity.com
- *
- * Uses the RMT peripheral on the ESP32 for very accurate timing of
- * signals sent to the WS2812 LEDs.
- *
- * This code is placed in the public domain (or CC0 licensed, at your option).
- */
+// Derived from Chris Osborn's public domain ws2812.c
 
 #include "ws2812.h"
+#include "ysw_heap.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <soc/rmt_struct.h>
 #include <soc/dport_reg.h>
 #include <driver/gpio.h>
 #include <soc/gpio_sig_map.h>
-#include <esp_intr.h>
+#include <esp_intr_alloc.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,6 +51,7 @@ typedef union {
 } rmtPulsePair;
 
 static uint8_t *ws2812_buffer = NULL;
+static uint8_t ws2812_max_power = 16;
 static unsigned int ws2812_pos, ws2812_len, ws2812_half;
 static xSemaphoreHandle ws2812_sem = NULL;
 static intr_handle_t rmt_intr_handle = NULL;
@@ -134,12 +129,16 @@ void ws2812_handleInterrupt(void *arg)
   return;
 }
 
-void ws2812_init(int gpioNum)
+void ws2812_initialize(int gpio, int length, uint8_t max_power)
 {
+  ws2812_len = (length * 3) * sizeof(uint8_t);
+  ws2812_buffer = ysw_heap_allocate(ws2812_len);
+  ws2812_max_power = max_power;
+
   DPORT_SET_PERI_REG_MASK(DPORT_PERIP_CLK_EN_REG, DPORT_RMT_CLK_EN);
   DPORT_CLEAR_PERI_REG_MASK(DPORT_PERIP_RST_EN_REG, DPORT_RMT_RST);
 
-  rmt_set_pin((rmt_channel_t)RMTCHANNEL, RMT_MODE_TX, (gpio_num_t)gpioNum);
+  rmt_set_pin((rmt_channel_t)RMTCHANNEL, RMT_MODE_TX, (gpio_num_t)gpio);
 
   ws2812_initRMTChannel(RMTCHANNEL);
 
@@ -161,20 +160,8 @@ void ws2812_init(int gpioNum)
   return;
 }
 
-void ws2812_setColors(unsigned int length, rgbVal *array)
+void ws2812_update_display(void)
 {
-  unsigned int i;
-
-
-  ws2812_len = (length * 3) * sizeof(uint8_t);
-  ws2812_buffer = malloc(ws2812_len);
-
-  for (i = 0; i < length; i++) {
-    ws2812_buffer[0 + i * 3] = array[i].g;
-    ws2812_buffer[1 + i * 3] = array[i].r;
-    ws2812_buffer[2 + i * 3] = array[i].b;
-  }
-
   ws2812_pos = 0;
   ws2812_half = 0;
 
@@ -192,7 +179,20 @@ void ws2812_setColors(unsigned int length, rgbVal *array)
   vSemaphoreDelete(ws2812_sem);
   ws2812_sem = NULL;
 
-  free(ws2812_buffer);
-
   return;
 }
+
+static uint8_t scalePower(uint8_t value)
+{
+    return (value * ws2812_max_power) / 256;
+}
+
+void ws2812_set_color(int led, ws2812_color_t color)
+{
+    assert(ws2812_buffer);
+    assert(((led + 1) * 3) <= ws2812_len);
+    ws2812_buffer[led * 3 + 0] = scalePower(color.g);
+    ws2812_buffer[led * 3 + 1] = scalePower(color.r);
+    ws2812_buffer[led * 3 + 2] = scalePower(color.b);
+}
+
