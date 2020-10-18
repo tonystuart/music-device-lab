@@ -32,7 +32,7 @@ static lv_design_res_t ysw_staff_design(lv_obj_t *staff, const lv_area_t *clip_a
         return ancestor_design(staff, clip_area, mode);
     } else if (mode == LV_DESIGN_DRAW_MAIN) {
         ancestor_design(staff, clip_area, mode);
-        ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
+        //ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
 
         ESP_LOGD(TAG, "drawing Hello, world");
 

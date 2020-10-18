@@ -156,12 +156,12 @@ static inline void adjust_playback_start_millis(context_t *context)
 
     uint32_t old_elapsed_millis = t2ms(context, tick);
     uint32_t new_elapsed_millis = (100 * old_elapsed_millis) / context->playback_speed;
-    context->start_millis = get_millis() - new_elapsed_millis;
+    context->start_millis = ysw_get_millis() - new_elapsed_millis;
 }
 
 static uint32_t get_current_playback_millis(context_t *context)
 {
-    uint32_t current_millis = get_millis();
+    uint32_t current_millis = ysw_get_millis();
     uint32_t elapsed_millis = current_millis - context->start_millis;
     uint32_t playback_millis = (elapsed_millis * context->playback_speed) / 100;
     return playback_millis;
@@ -363,13 +363,13 @@ static TickType_t process_notes(context_t *context)
                 time_of_next_event = note_start_time;
             }
             uint32_t delay_millis = time_of_next_event - playback_millis;
-            ticks_to_wait = to_ticks(delay_millis);
+            ticks_to_wait = ysw_millis_to_ticks(delay_millis);
         }
     } else {
         if (next_note_to_end) {
             ESP_LOGD(TAG, "song complete, waiting for notes to end");
             uint32_t delay_millis = next_note_to_end->end_time - playback_millis;
-            ticks_to_wait = to_ticks(delay_millis);
+            ticks_to_wait = ysw_millis_to_ticks(delay_millis);
         } else if (context->loop) {
             ESP_LOGD(TAG, "loop complete, looping to start");
             fire_loop_done(context);
@@ -429,7 +429,7 @@ static void process_event(void *caller_context, ysw_event_t *event)
             fire_idle(context);
         }
     }
-    ysw_task_set_wait_ticks(context->task, ticks_to_wait);
+    ysw_task_set_wait_millis(context->task, ticks_to_wait);
 }
 
 void ysw_sequencer_create_task(ysw_bus_h bus)

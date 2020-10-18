@@ -11,21 +11,10 @@
 #include "ysw_common.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
-#include "ysw_midi.h"
 #include "ysw_staff.h"
 #include "ysw_task.h"
-#include "zm_music.h"
 #include "lvgl.h"
 #include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "assert.h"
-#include "fcntl.h"
-#include "limits.h"
-#include "stdlib.h"
-#include "unistd.h"
-#include "sys/types.h"
-#include "sys/stat.h"
 
 #define TAG "DISPLAY"
 
@@ -58,7 +47,7 @@ void ysw_display_create_task(ysw_bus_h bus)
 {
     context_t *context = ysw_heap_allocate(sizeof(context_t));
 
-#if 1
+#if 0
     context->staff = ysw_staff_create(lv_scr_act());
     lv_obj_set_size(context->staff, 320, 240);
     lv_obj_align(context->staff, NULL, LV_ALIGN_CENTER, 0, 0);
@@ -73,7 +62,7 @@ void ysw_display_create_task(ysw_bus_h bus)
     config.bus = bus;
     config.event_handler = process_event;
     config.caller_context = context;
-    config.wait_ticks = 5;
+    config.wait_millis = 5;
 
     ysw_task_h task = ysw_task_create(&config);
     ysw_task_subscribe(task, YSW_ORIGIN_COMMAND);

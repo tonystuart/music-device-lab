@@ -10,6 +10,8 @@
 #include "ysw_display.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
+#include "ysw_keyboard.h"
+#include "ysw_led.h"
 #include "ysw_sequencer.h"
 #include "ysw_staff.h"
 #include "ysw_synth_mod.h"
@@ -128,7 +130,7 @@ static void initialize_touch_screen(void)
 {
 #if 0
     ESP_LOGD(TAG, "main: waiting for display to power up");
-    wait_millis(1000);
+    ysw_wait_millis(1000);
 #endif
 
     ESP_LOGD(TAG, "main: configuring Music Machine v02");
@@ -270,8 +272,18 @@ static zm_song_t *initialize_song(ysw_bus_h bus, zm_music_t *music, uint32_t ind
 }
 
 
-static void play_song()
+#ifdef IDF_VER
+#include "ysw_spiffs.h"
+void app_main()
 {
+    esp_log_level_set("efuse", ESP_LOG_INFO);
+    esp_log_level_set("TRACE_HEAP", ESP_LOG_INFO);
+    ysw_spiffs_initialize(YSW_MUSIC_PARTITION);
+#else
+int main(int argc, char *argv[])
+{
+#endif
+
     ysw_bus_h bus = ysw_event_create_bus();
 
     initialize_touch_screen();
@@ -280,40 +292,30 @@ static void play_song()
     ysw_display_create_task(bus);
     ysw_sequencer_create_task(bus);
 
-#if 0
+#ifdef IDF_VER
+    ysw_led_config_t led_config = {
+        .gpio = 4,
+    };
+    ysw_led_create_task(bus, &led_config);
+
+    ysw_keyboard_config_t keyboard_config = {
+        .rows = ysw_array_load(6, 33, 32, 35, 34, 39, 36),
+        .columns = ysw_array_load(7, 15, 13, 12, 14, 27, 26, 23),
+    };
+    ysw_keyboard_create_task(bus, &keyboard_config);
+#endif
+
     zm_music_t *music = zm_read();
     zm_song_t *song = initialize_song(bus, music, 0);
     ysw_array_t *notes = zm_render_song(song);
 
-    fire_loop(bus, true);
-    fire_play(bus, notes, song->bpm);
-#endif
-}
+    //fire_loop(bus, true);
+    //fire_play(bus, notes, song->bpm);
 
 #ifdef IDF_VER
-
-#include "ysw_spiffs.h"
-
-void app_main()
-{
-    esp_log_level_set("efuse", ESP_LOG_INFO);
-    esp_log_level_set("TRACE_HEAP", ESP_LOG_INFO);
-    ysw_spiffs_initialize(YSW_MUSIC_PARTITION);
-
-    play_song();
-}
-
 #else
-
-#include "ysw_lvgl.h"
-
-int main(int argc, char *argv[])
-{
-    play_song();
     int c = getchar();
     ESP_LOGI(TAG, "terminating");
-}
-
 #endif
-
+}
 

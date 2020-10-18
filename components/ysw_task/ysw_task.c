@@ -22,7 +22,7 @@ typedef struct {
     QueueHandle_t queue;
     ysw_task_event_handler_t event_handler;
     void *caller_context;
-    uint32_t wait_ticks;
+    uint32_t wait_millis;
 } context_t;
 
 static void ysw_task_event_handler(void *parameter)
@@ -31,7 +31,8 @@ static void ysw_task_event_handler(void *parameter)
     for (;;) {
         ysw_event_t item;
         ysw_event_t *event = NULL;
-        BaseType_t is_message = xQueueReceive(context->queue, &item, context->wait_ticks);
+        TickType_t wait_ticks = ysw_millis_to_ticks(context->wait_millis);
+        BaseType_t is_message = xQueueReceive(context->queue, &item, wait_ticks);
         if (is_message) {
             event = &item;
         } 
@@ -45,7 +46,7 @@ const ysw_task_config_t ysw_task_default_config = {
     .priority = YSW_TASK_DEFAULT_PRIORITY,
     .queue_size = YSW_TASK_DEFAULT_QUEUE_SIZE,
     .item_size = sizeof(ysw_event_t),
-    .wait_ticks = -1, // portDELAY_MAX,
+    .wait_millis = -1, // portDELAY_MAX,
 };
 
 ysw_task_h ysw_task_create(ysw_task_config_t *config)
@@ -59,7 +60,7 @@ ysw_task_h ysw_task_create(ysw_task_config_t *config)
     }
 
     context->bus = config->bus;
-    context->wait_ticks = config->wait_ticks;
+    context->wait_millis = config->wait_millis;
 
     TaskFunction_t function = NULL;
     void *parameter = NULL;
@@ -116,12 +117,12 @@ void ysw_task_subscribe(ysw_task_h task, ysw_origin_t origin)
     ysw_bus_subscribe(context->bus, origin, context->queue);
 }
 
-void ysw_task_set_wait_ticks(ysw_task_h task, uint32_t wait_ticks)
+void ysw_task_set_wait_millis(ysw_task_h task, uint32_t wait_millis)
 {
     context_t *context = task;
 
     assert(context);
 
-    context->wait_ticks = wait_ticks;
+    context->wait_millis = wait_millis;
 }
 

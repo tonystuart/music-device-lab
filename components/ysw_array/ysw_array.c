@@ -12,6 +12,7 @@
 #include "ysw_heap.h"
 #include "esp_log.h"
 #include "assert.h"
+#include "stdarg.h"
 #include "stdlib.h"
 
 #define TAG "YSW_ARRAY"
@@ -47,6 +48,20 @@ void *ysw_array_pop(ysw_array_t *array)
     assert(array->count);
     uint32_t index = --array->count;
     return array->data[index];
+}
+
+void *ysw_array_load(uint32_t count, ...)
+{
+    ysw_array_t *array = ysw_array_create(count);
+    va_list arguments;
+    va_start(arguments, count);
+    for (uint32_t i = 0; i < count; i++) {
+        uintptr_t value = va_arg(arguments, uintptr_t);
+        ESP_LOGD(TAG, "ysw_array_load count=%d, i=%d, value=%d", count, i, (int)value);
+        ysw_array_set(array, i, (void *)value);
+    }
+    va_end(arguments);
+    return array;
 }
 
 void ysw_array_truncate(ysw_array_t *array, uint32_t new_count)
@@ -95,7 +110,10 @@ void *ysw_array_get(ysw_array_t *array, uint32_t index)
 void ysw_array_set(ysw_array_t *array, uint32_t index, void *value)
 {
     assert(array);
-    assert(index < array->count);
+    assert(index < array->size);
+    if (array->count <= index) {
+        array->count = index + 1;
+    }
     array->data[index] = value;
 }
 

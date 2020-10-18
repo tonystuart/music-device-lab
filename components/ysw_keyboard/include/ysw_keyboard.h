@@ -9,14 +9,12 @@
 
 #pragma once
 
-#include "ysw_ticks.h"
+#include "ysw_array.h"
+#include "ysw_bus.h"
 
-#define YSW_TICKS_DEFAULT_TPM 1024 // ticks per measure
-#define YSW_TICKS_DEFAULT_TPQN 256 // ticks per quarter note
-#define YSW_TICKS_DEFAULT_BPQN 120 // beats per quarter note
+typedef struct {
+    ysw_array_t *rows;
+    ysw_array_t *columns;
+} ysw_keyboard_config_t;
 
-static inline uint32_t ysw_ticks_to_millis_by_tpqn(uint32_t ticks, uint8_t qnpm, uint32_t tpqn)
-{
-    return (ticks * 60000) / (qnpm * tpqn);
-}
-
+void ysw_keyboard_create_task(ysw_bus_h bus, ysw_keyboard_config_t *keyboard_config);

@@ -7,6 +7,8 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
+// Inspired by Jean-François del Nero's public domain hxcmod.c
+
 #include "ysw_synth_mod.h"
 #include "ysw_common.h"
 #include "ysw_event.h"
@@ -29,8 +31,6 @@
 
 #define MAX_VOICES 32
 #define MAX_SAMPLES 32
-
-// Inspired by HxCModPlayer by Jean-François DEL NERO
 
 // Basic type
 typedef unsigned char   muchar;

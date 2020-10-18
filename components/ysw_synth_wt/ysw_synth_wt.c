@@ -81,7 +81,7 @@ static void run_synth(void* parameters)
     for (;;) { 
         int32_t value = 0;
         enter_critical_section();
-        int32_t time = get_millis();
+        int32_t time = ysw_get_millis();
         for ( uint8_t osc = 0; osc < OSCILLATOR_COUNT; ++osc ) {
             if (end_times[osc] != 0 && end_times[osc] <= time) {
                 increments_pot[ osc ] = 0;
@@ -176,7 +176,7 @@ static void play(uint8_t channel, uint8_t midi_key, uint8_t velocity, uint16_t m
     phase_accu_pot[ next_osc ] = 0;
     envelope_positions_envpot[ next_osc ] = 0;
     if (millis) {
-        end_times[next_osc] = get_millis() + millis;
+        end_times[next_osc] = ysw_get_millis() + millis;
     } else {
         end_times[next_osc] = 0;
     }

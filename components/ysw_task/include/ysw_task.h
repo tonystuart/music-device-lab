@@ -33,7 +33,7 @@ typedef void (*ysw_task_event_handler_t)(void *caller_context, ysw_event_t *even
 // 8. Specify non-transient (i.e. not stack) address for task or queue
 
 typedef struct {
-    char *name;
+    const char *name;
     ysw_bus_h bus;
     ysw_task_h *task;
     TaskFunction_t function;
@@ -44,7 +44,7 @@ typedef struct {
     QueueHandle_t *queue;
     UBaseType_t queue_size;
     UBaseType_t item_size;
-    uint32_t wait_ticks;
+    uint32_t wait_millis;
 } ysw_task_config_t;
 
 extern const ysw_task_config_t ysw_task_default_config;
@@ -53,5 +53,5 @@ ysw_task_h ysw_task_create(ysw_task_config_t *config);
 
 void ysw_task_subscribe(ysw_task_h task, ysw_origin_t origin);
 
-void ysw_task_set_wait_ticks(ysw_task_h task, uint32_t wait_ticks);
+void ysw_task_set_wait_millis(ysw_task_h task, uint32_t wait_millis);
 

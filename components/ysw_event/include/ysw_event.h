@@ -31,6 +31,9 @@ typedef enum {
     YSW_EVENT_PLAY_DONE,
     YSW_EVENT_IDLE,
     YSW_EVENT_NOTE_STATUS,
+    YSW_EVENT_KEY_DOWN,
+    YSW_EVENT_KEY_PRESSED,
+    YSW_EVENT_KEY_UP,
 } ysw_event_type_t;
 
 typedef struct {
@@ -96,6 +99,20 @@ typedef struct {
 } ysw_event_sample_load_t;
 
 typedef struct {
+    uint8_t key;
+} ysw_event_key_down_t;
+
+typedef struct {
+    uint8_t key;
+    uint32_t repeat_count;
+} ysw_event_key_pressed_t;
+
+typedef struct {
+    uint8_t key;
+    uint32_t repeat_count;
+} ysw_event_key_up_t;
+
+typedef struct {
     ysw_event_header_t header;
     union {
         ysw_event_play_t play;
@@ -107,6 +124,9 @@ typedef struct {
         ysw_event_note_off_t note_off;
         ysw_event_program_change_t program_change;
         ysw_event_sample_load_t sample_load;
+        ysw_event_key_down_t key_down;
+        ysw_event_key_pressed_t key_pressed;
+        ysw_event_key_up_t key_up;
     };
 } ysw_event_t;
 

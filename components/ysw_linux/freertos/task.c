@@ -16,27 +16,27 @@
 
 #define TAG "TASK"
 
-static int to_millis(int ticks)
+static int ysw_ticks_to_millis(int ticks)
 {
     return ticks * portTICK_PERIOD_MS;
 }
 
-static int to_ticks(int millis)
+static int ysw_millis_to_ticks(int millis)
 {
     if (millis && (millis < portTICK_PERIOD_MS)) {
-        ESP_LOGW(TAG, "to_ticks millis=%d < portTICK_PERIOD_MS=%d", millis, portTICK_PERIOD_MS);
+        ESP_LOGW(TAG, "ysw_millis_to_ticks millis=%d < portTICK_PERIOD_MS=%d", millis, portTICK_PERIOD_MS);
     }
     return millis / portTICK_PERIOD_MS;
 }
 
 int xTaskGetTickCount()
 {
-    return to_ticks(ysw_system_get_reference_time_in_millis());
+    return ysw_millis_to_ticks(ysw_system_get_reference_time_in_millis());
 }
 
 void vTaskDelay(int ticks)
 {
-    usleep(to_millis(ticks) * 1000);
+    usleep(ysw_ticks_to_millis(ticks) * 1000);
 }
 
 char *pcTaskGetTaskName(TaskHandle_t handle)

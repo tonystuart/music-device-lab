@@ -9,4 +9,10 @@
 
 #pragma once
 
-void ysw_lvgl_hal_init(void);
+#include "ysw_bus.h"
+
+typedef struct {
+    uint8_t gpio;
+} ysw_led_config_t;
+
+void ysw_led_create_task(ysw_bus_h bus, ysw_led_config_t *config);

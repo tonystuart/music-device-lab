@@ -48,22 +48,22 @@ static inline int max(int x, int y)
     return x > y ? x : y;
 }
 
-static inline int range(int x, int first, int last)
+static inline int ysw_enforce_bounds(int x, int first, int last)
 {
     return x < first ? first : x > last ? last : x;
 }
 
-static inline int to_count(int index)
+static inline int ysw_to_count(int index)
 {
     return index + 1;
 }
 
-static inline int to_index(int count)
+static inline int ysw_to_index(int count)
 {
     return count - 1;
 }
 
-static inline bool match(char *left, char *right)
+static inline bool ysw_is_match(char *left, char *right)
 {
     return left && right ? strcmp(left, right) == 0 : 0;
 }
@@ -73,10 +73,10 @@ static inline uint32_t ysw_common_muldiv(int32_t multiplicand, int32_t multiplie
     return (multiplicand * multiplier) / divisor;
 }
 
-uint32_t get_millis();
-void wait_millis(int millis);
-uint32_t to_millis(uint32_t ticks);
-uint32_t to_ticks(uint32_t millis);
+uint32_t ysw_get_millis();
+void ysw_wait_millis(int millis);
+uint32_t ysw_ticks_to_millis(uint32_t ticks);
+uint32_t ysw_millis_to_ticks(uint32_t millis);
 
 char *ysw_itoa(int input_value, char *buffer, int buffer_size);
 void ysw_copy(char *destination, const char* source, size_t size);

@@ -73,8 +73,6 @@ void ws2812_initRMTChannel(int rmtChannel)
   RMT.conf_ch[rmtChannel].conf1.ref_always_on = 1;    // use apb clock: 80M
   RMT.conf_ch[rmtChannel].conf1.idle_out_en = 1;
   RMT.conf_ch[rmtChannel].conf1.idle_out_lv = 0;
-
-  return;
 }
 
 void ws2812_copy()
@@ -109,7 +107,6 @@ void ws2812_copy()
     RMTMEM.chan[RMTCHANNEL].data32[i + offset].val = 0;
 
   ws2812_pos += len;
-  return;
 }
 
 void ws2812_handleInterrupt(void *arg)
@@ -125,12 +122,12 @@ void ws2812_handleInterrupt(void *arg)
     xSemaphoreGiveFromISR(ws2812_sem, &taskAwoken);
     RMT.int_clr.ch0_tx_end = 1;
   }
-
-  return;
 }
 
 void ws2812_initialize(int gpio, int length, uint8_t max_power)
 {
+  assert(max_power <= 16); // for 40 LED Music Machine v02
+
   ws2812_len = (length * 3) * sizeof(uint8_t);
   ws2812_buffer = ysw_heap_allocate(ws2812_len);
   ws2812_max_power = max_power;
@@ -157,7 +154,7 @@ void ws2812_initialize(int gpio, int length, uint8_t max_power)
 
   esp_intr_alloc(ETS_RMT_INTR_SOURCE, 0, ws2812_handleInterrupt, NULL, &rmt_intr_handle);
 
-  return;
+  ws2812_update_display();
 }
 
 void ws2812_update_display(void)
@@ -178,8 +175,6 @@ void ws2812_update_display(void)
   xSemaphoreTake(ws2812_sem, portMAX_DELAY);
   vSemaphoreDelete(ws2812_sem);
   ws2812_sem = NULL;
-
-  return;
 }
 
 static uint8_t scalePower(uint8_t value)
