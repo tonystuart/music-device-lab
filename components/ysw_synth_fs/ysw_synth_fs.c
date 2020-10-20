@@ -107,5 +107,5 @@ void ysw_synth_fs_create_task(ysw_bus_h bus, const char *sf_filename)
 
     ysw_task_h task = ysw_task_create(&config);
 
-    ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);
+    ysw_task_subscribe(task, YSW_ORIGIN_NOTE);
 }

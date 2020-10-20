@@ -466,7 +466,7 @@ void ysw_synth_mod_create_task(ysw_bus_h bus)
 
     ysw_task_h task = ysw_task_create(&config);
 
-    ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);
+    ysw_task_subscribe(task, YSW_ORIGIN_NOTE);
     ysw_task_subscribe(task, YSW_ORIGIN_SAMPLER);
-    ysw_task_subscribe(task, YSW_ORIGIN_AUDIO_SINK);
+    ysw_task_subscribe(task, YSW_ORIGIN_SINK);
 }

@@ -146,4 +146,10 @@ void ysw_event_fire_loop_done(ysw_bus_h bus);
 void ysw_event_fire_play_done(ysw_bus_h bus);
 void ysw_event_fire_idle(ysw_bus_h bus);
 void ysw_event_fire_note_status(ysw_bus_h bus, ysw_note_t *note);
+void ysw_event_fire_key_down(ysw_bus_h bus, ysw_event_key_down_t *key_down);
+void ysw_event_fire_key_pressed(ysw_bus_h bus, ysw_event_key_pressed_t *key_pressed);
+void ysw_event_fire_key_up(ysw_bus_h bus, ysw_event_key_up_t *key_up);
+void ysw_event_fire_loop(ysw_bus_h bus, bool loop);
+void ysw_event_fire_play(ysw_bus_h bus, ysw_array_t *notes, uint8_t bpm);
+void ysw_event_fire_sample_load(ysw_bus_h bus, ysw_event_sample_load_t *sample_load);
 

@@ -36,46 +36,6 @@ typedef struct {
     state_t state[];
 } context_t;
 
-static void fire_key_down(ysw_bus_h bus, uint8_t key, uint32_t time)
-{
-    ESP_LOGD(TAG, "fire_key_down key=%d", key);
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_KEYBOARD,
-        .header.type = YSW_EVENT_KEY_DOWN,
-        .key_down.key = key,
-        .key_down.time = time,
-    };
-    ysw_event_publish(bus, &event);
-}
-
-static void fire_key_pressed(ysw_bus_h bus, uint8_t key, uint32_t time, uint32_t duration, uint32_t repeat_count)
-{
-    ESP_LOGD(TAG, "fire_key_pressed key=%d, duration=%d, repeat_count=%d", key, duration, repeat_count);
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_KEYBOARD,
-        .header.type = YSW_EVENT_KEY_PRESSED,
-        .key_pressed.key = key,
-        .key_pressed.time = time,
-        .key_pressed.duration = duration,
-        .key_pressed.repeat_count = repeat_count,
-    };
-    ysw_event_publish(bus, &event);
-}
-
-static void fire_key_up(ysw_bus_h bus, uint8_t key, uint32_t time, uint32_t duration, uint32_t repeat_count)
-{
-    ESP_LOGD(TAG, "fire_key_up key=%d, duration=%d, repeat_count=%d", key, duration, repeat_count);
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_KEYBOARD,
-        .header.type = YSW_EVENT_KEY_UP,
-        .key_up.key = key,
-        .key_up.time = time,
-        .key_up.duration = duration,
-        .key_up.repeat_count = repeat_count,
-    };
-    ysw_event_publish(bus, &event);
-}
-
 static void configure_row(uint8_t gpio)
 {
     ESP_LOGD(TAG, "configure_row gpio=%d", gpio);
@@ -112,11 +72,20 @@ static void on_key_pressed(ysw_bus_h bus, uint8_t key, state_t *state)
     if (!state->down_time) {
         state->repeat_count = 0;
         state->down_time = current_millis;
-        fire_key_down(bus, key, state->down_time);
+        ysw_event_key_down_t key_down = {
+            .key = key,
+            .time = time,
+        };
+        ysw_event_fire_key_down(bus, &key_down);
     } else if (state->down_time + ((state->repeat_count + 1) * 250) < current_millis) {
         state->repeat_count++;
-        uint32_t duration = current_millis - state->down_time;
-        fire_key_pressed(bus, key, state->down_time, duration, state->repeat_count);
+        ysw_event_key_pressed_t key_pressed = {
+            .key = key,
+            .time = time,
+            .duration = current_millis - state->down_time;
+            .repeat_count = repeat_count,
+        };
+        ysw_event_fire_key_pressed(bus, &key_pressed);
     }
 }
 
@@ -125,9 +94,21 @@ static void on_key_released(ysw_bus_h bus, uint8_t key, state_t *state)
     uint32_t current_millis = ysw_get_millis();
     uint32_t duration = current_millis - state->down_time;
     if (!state->repeat_count) {
-        fire_key_pressed(bus, key, state->down_time, duration, state->repeat_count);
+        ysw_event_key_pressed_t key_pressed = {
+            .key = key,
+            .time = time,
+            .duration = duration,
+            .repeat_count = repeat_count,
+        };
+        ysw_event_fire_key_pressed(bus, &key_pressed);
     }
-    fire_key_up(bus, key, state->down_time, duration, state->repeat_count);
+    ysw_event_key_up_t key_up = {
+        .key = key,
+        .time = time,
+        .duration = duration,
+        .repeat_count = repeat_count,
+    };
+    ysw_event_fire_key_up(bus, &key_up);
     state->down_time = 0;
 }
 

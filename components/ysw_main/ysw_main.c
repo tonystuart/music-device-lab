@@ -10,9 +10,6 @@
 #include "ysw_display.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
-#include "ysw_input.h"
-#include "ysw_keyboard.h"
-#include "ysw_led.h"
 #include "ysw_sequencer.h"
 #include "ysw_staff.h"
 #include "ysw_synth_mod.h"
@@ -219,45 +216,6 @@ static void initialize_touch_screen(void)
 #endif
 
 
-static void fire_loop(ysw_bus_h bus, bool loop)
-{
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_COMMAND,
-        .header.type = YSW_EVENT_LOOP,
-        .loop.loop = loop,
-    };
-    ysw_event_publish(bus, &event);
-}
-
-static void fire_play(ysw_bus_h bus, ysw_array_t *notes, uint8_t bpm)
-{
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_COMMAND,
-        .header.type = YSW_EVENT_PLAY,
-        .play.type = YSW_EVENT_PLAY_NOW,
-        .play.clip.notes = notes,
-        .play.clip.tempo = bpm,
-    };
-    ESP_LOGD(TAG, "fire_play event.play.tempo=%d", event.play.clip.tempo);
-    ysw_event_publish(bus, &event);
-}
-
-static void fire_sample_load(ysw_bus_h bus, zm_medium_t index, zm_sample_t *sample)
-{
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_SAMPLER,
-        .header.type = YSW_EVENT_SAMPLE_LOAD,
-        .sample_load.index = index,
-        .sample_load.reppnt = sample->reppnt,
-        .sample_load.replen = sample->replen,
-        .sample_load.volume = sample->volume,
-        .sample_load.pan = sample->pan,
-    };
-    snprintf(event.sample_load.name, sizeof(event.sample_load.name),
-        "%s/samples/%s", YSW_MUSIC_PARTITION, sample->name);
-    ysw_event_publish(bus, &event);
-}
-
 static zm_song_t *initialize_song(ysw_bus_h bus, zm_music_t *music, uint32_t index)
 {
     zm_song_t *song = ysw_array_get(music->songs, index);
@@ -266,14 +224,25 @@ static zm_song_t *initialize_song(ysw_bus_h bus, zm_music_t *music, uint32_t ind
     for (zm_small_t i = 0; i < part_count; i++) {
         zm_part_t  *part = ysw_array_get(song->parts, i);
         zm_sample_t *sample = ysw_array_get(music->samples, part->pattern->sample_index);
-        fire_sample_load(bus, part->pattern->sample_index, sample);
-    }
-
+        ysw_event_sample_load_t sample_load = {
+            .index = index,
+            .reppnt = sample->reppnt,
+            .replen = sample->replen,
+            .volume = sample->volume,
+            .pan = sample->pan,
+        };
+        snprintf(sample_load.name, sizeof(sample_load.name),
+                "%s/samples/%s", YSW_MUSIC_PARTITION, sample->name);
+        ysw_event_fire_sample_load(bus, &sample_load);
+    };
     return song;
 }
 
 
 #ifdef IDF_VER
+#include "ysw_input.h"
+#include "ysw_keyboard.h"
+#include "ysw_led.h"
 #include "ysw_spiffs.h"
 void app_main()
 {
@@ -292,7 +261,6 @@ int main(int argc, char *argv[])
 
     ysw_display_create_task(bus);
     ysw_sequencer_create_task(bus);
-    ysw_input_create_task(bus);
 
 #if 1
 #ifdef IDF_VER
@@ -306,18 +274,25 @@ int main(int argc, char *argv[])
         .columns = ysw_array_load(7, 15, 13, 12, 14, 27, 26, 23),
     };
     ysw_keyboard_create_task(bus, &keyboard_config);
+    ysw_input_create_task(bus);
 #endif
 
     zm_music_t *music = zm_read();
     zm_song_t *song = initialize_song(bus, music, 0);
     ysw_array_t *notes = zm_render_song(song);
 
-    //fire_loop(bus, true);
-    //fire_play(bus, notes, song->bpm);
+    //ysw_event_fire_loop(bus, true);
+    //ysw_event_fire_play(bus, notes, song->bpm);
 
 #ifdef IDF_VER
 #else
-    int c = getchar();
+    int c;
+    while ((c = getchar()) != -1) {
+        switch (c) {
+            case 'z':
+                break;
+        }
+    }
     ESP_LOGI(TAG, "terminating");
 #endif
 #endif
