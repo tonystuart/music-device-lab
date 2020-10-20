@@ -100,15 +100,21 @@ typedef struct {
 
 typedef struct {
     uint8_t key;
+    uint32_t time;
+    uint32_t duration;
 } ysw_event_key_down_t;
 
 typedef struct {
     uint8_t key;
+    uint32_t time;
+    uint32_t duration;
     uint32_t repeat_count;
 } ysw_event_key_pressed_t;
 
 typedef struct {
     uint8_t key;
+    uint32_t time;
+    uint32_t duration;
     uint32_t repeat_count;
 } ysw_event_key_up_t;
 
@@ -132,4 +138,12 @@ typedef struct {
 
 ysw_bus_h ysw_event_create_bus();
 void ysw_event_publish(ysw_bus_h bus, ysw_event_t *event);
+
+void ysw_event_fire_note_on(ysw_bus_h bus, uint8_t channel, uint8_t midi_note, uint8_t velocity);
+void ysw_event_fire_note_off(ysw_bus_h bus, uint8_t channel, uint8_t midi_note);
+void ysw_event_fire_program_change(ysw_bus_h bus, uint8_t channel, uint8_t program);
+void ysw_event_fire_loop_done(ysw_bus_h bus);
+void ysw_event_fire_play_done(ysw_bus_h bus);
+void ysw_event_fire_idle(ysw_bus_h bus);
+void ysw_event_fire_note_status(ysw_bus_h bus, ysw_note_t *note);
 

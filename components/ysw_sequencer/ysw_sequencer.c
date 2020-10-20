@@ -40,77 +40,6 @@ typedef struct {
     bool loop;
 } context_t;
 
-static void fire_note_on(context_t *context, uint8_t channel, uint8_t midi_note, uint8_t velocity)
-{
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_SEQUENCER,
-        .header.type = YSW_EVENT_NOTE_ON,
-        .note_on.channel = channel,
-        .note_on.midi_note = midi_note,
-        .note_on.velocity = velocity,
-    };
-    ysw_event_publish(context->bus, &event);
-}
-
-static void fire_note_off(context_t *context, uint8_t channel, uint8_t midi_note)
-{
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_SEQUENCER,
-        .header.type = YSW_EVENT_NOTE_OFF,
-        .note_off.channel = channel,
-        .note_off.midi_note = midi_note,
-    };
-    ysw_event_publish(context->bus, &event);
-}
-
-static void fire_program_change(context_t *context, uint8_t channel, uint8_t program)
-{
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_SEQUENCER,
-        .header.type = YSW_EVENT_PROGRAM_CHANGE,
-        .program_change.channel = channel,
-        .program_change.program = program,
-    };
-    ysw_event_publish(context->bus, &event);
-}
-
-static void fire_loop_done(context_t *context)
-{
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_SEQUENCER,
-        .header.type = YSW_EVENT_LOOP_DONE,
-    };
-    ysw_event_publish(context->bus, &event);
-}
-
-static void fire_play_done(context_t *context)
-{
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_SEQUENCER,
-        .header.type = YSW_EVENT_PLAY_DONE,
-    };
-    ysw_event_publish(context->bus, &event);
-}
-
-static void fire_idle(context_t *context)
-{
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_SEQUENCER,
-        .header.type = YSW_EVENT_IDLE,
-    };
-    ysw_event_publish(context->bus, &event);
-}
-
-static void fire_note_status(context_t *context, ysw_note_t *note)
-{
-    ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_SEQUENCER,
-        .header.type = YSW_EVENT_NOTE_STATUS,
-        .note_status.note = *note,
-    };
-    ysw_event_publish(context->bus, &event);
-}
-
 static inline time_t t2ms(context_t *context, uint32_t ticks)
 {
     return ysw_ticks_to_millis_by_tpqn(ticks, context->clip.tempo, YSW_TICKS_DEFAULT_TPQN);
@@ -125,7 +54,7 @@ static void release_notes(context_t *context)
 {
     for (uint8_t i = 0; i < context->active_count; i++) {
         active_note_t *active_note = &context->active_notes[i];
-        fire_note_off(context, active_note->channel, active_note->midi_note);
+        ysw_event_fire_note_off(context->bus, active_note->channel, active_note->midi_note);
     }
     context->active_count = 0;
 }
@@ -276,12 +205,12 @@ static void on_play(context_t *context, ysw_event_play_t *event)
 static void play_note(context_t *context, ysw_note_t *note, int next_note_index)
 {
     if (note->instrument != context->programs[note->channel]) {
-        fire_program_change(context, note->channel, note->instrument);
+        ysw_event_fire_program_change(context->bus, note->channel, note->instrument);
         context->programs[note->channel] = note->instrument;
     }
 
     if (next_note_index != -1) {
-        fire_note_off(context, note->channel, note->midi_note);
+        ysw_event_fire_note_off(context->bus, note->channel, note->midi_note);
     } else {
         if (context->active_count < MAX_POLYPHONY) {
             next_note_index = context->active_count++;
@@ -290,9 +219,9 @@ static void play_note(context_t *context, ysw_note_t *note, int next_note_index)
 
     if (next_note_index != -1) {
         if (note->channel == YSW_MIDI_STATUS_CHANNEL) {
-            fire_note_status(context, note);
+            ysw_event_fire_note_status(context->bus, note);
         } else {
-            fire_note_on(context, note->channel, note->midi_note, note->velocity);
+            ysw_event_fire_note_on(context->bus, note->channel, note->midi_note, note->velocity);
             context->active_notes[next_note_index].channel = note->channel;
             context->active_notes[next_note_index].midi_note = note->midi_note;
             context->active_notes[next_note_index].end_time = t2ms(context, note->start) + t2ms(context, note->duration);
@@ -322,7 +251,7 @@ static TickType_t process_notes(context_t *context)
     while (index < context->active_count) {
         active_note_t *active_note = &context->active_notes[index];
         if (active_note->end_time <= playback_millis) {
-            fire_note_off(context, active_note->channel, active_note->midi_note);
+            ysw_event_fire_note_off(context->bus, active_note->channel, active_note->midi_note);
             if (index + 1 < context->active_count) {
                 // replaced expired note with last one in array
                 context->active_notes[index] = context->active_notes[context->active_count - 1];
@@ -372,7 +301,7 @@ static TickType_t process_notes(context_t *context)
             ticks_to_wait = ysw_millis_to_ticks(delay_millis);
         } else if (context->loop) {
             ESP_LOGD(TAG, "loop complete, looping to start");
-            fire_loop_done(context);
+            ysw_event_fire_loop_done(context->bus);
             context->next_note = 0;
             resume_clip(context);
             ticks_to_wait = 0;
@@ -384,7 +313,7 @@ static TickType_t process_notes(context_t *context)
             ESP_LOGD(TAG, "playback complete, nothing more to do");
             context->next_note = 0;
             context->start_millis = 0;
-            fire_play_done(context);
+            ysw_event_fire_play_done(context->bus);
         }
     }
 
@@ -426,7 +355,7 @@ static void process_event(void *caller_context, ysw_event_t *event)
         ticks_to_wait = process_notes(context);
         if (ticks_to_wait == portMAX_DELAY) {
             ESP_LOGD(TAG, "sequencer idle");
-            fire_idle(context);
+            ysw_event_fire_idle(context->bus);
         }
     }
     ysw_task_set_wait_millis(context->task, ticks_to_wait);

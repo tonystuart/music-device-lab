@@ -10,6 +10,7 @@
 #include "ysw_display.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
+#include "ysw_input.h"
 #include "ysw_keyboard.h"
 #include "ysw_led.h"
 #include "ysw_sequencer.h"
@@ -291,7 +292,9 @@ int main(int argc, char *argv[])
 
     ysw_display_create_task(bus);
     ysw_sequencer_create_task(bus);
+    ysw_input_create_task(bus);
 
+#if 1
 #ifdef IDF_VER
     ysw_led_config_t led_config = {
         .gpio = 4,
@@ -316,6 +319,7 @@ int main(int argc, char *argv[])
 #else
     int c = getchar();
     ESP_LOGI(TAG, "terminating");
+#endif
 #endif
 }
 

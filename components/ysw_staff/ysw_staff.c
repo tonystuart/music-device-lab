@@ -22,8 +22,6 @@
 static lv_design_cb_t ancestor_design;
 static lv_signal_cb_t ancestor_signal;
 
-LV_FONT_DECLARE(MusiQwik_48)
-
 #define TAG "STAFF"
 
 static lv_design_res_t ysw_staff_design(lv_obj_t *staff, const lv_area_t *clip_area, lv_design_mode_t mode)
