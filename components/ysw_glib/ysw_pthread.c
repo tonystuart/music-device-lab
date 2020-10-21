@@ -14,7 +14,7 @@
 
 int pthread_setschedparam(pthread_t thread, int policy, const struct sched_param *param)
 {
-    ESP_LOGE(TAG, "pthread_setschedparam thread=%d", thread);
+    ESP_LOGE(TAG, "pthread_setschedparam thread=%p", thread);
     return 0;
 }
 

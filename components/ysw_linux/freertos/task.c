@@ -60,6 +60,7 @@ BaseType_t xTaskCreate(TaskFunction_t pvTaskCode, const char *const pcName, conf
     pthread_t tid;
     int rc = pthread_create(&tid, NULL, pvTaskCode, pvParameters);
     if (rc == 0) {
+        pthread_detach(tid);
         rc = pdPASS;
     } else {
         rc = errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;

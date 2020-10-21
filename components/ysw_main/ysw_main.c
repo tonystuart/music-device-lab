@@ -8,6 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_display.h"
+#include "ysw_editor.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
 #include "ysw_sequencer.h"
@@ -240,7 +241,6 @@ static zm_song_t *initialize_song(ysw_bus_h bus, zm_music_t *music, uint32_t ind
 
 
 #ifdef IDF_VER
-#include "ysw_input.h"
 #include "ysw_keyboard.h"
 #include "ysw_led.h"
 #include "ysw_spiffs.h"
@@ -250,6 +250,7 @@ void app_main()
     esp_log_level_set("TRACE_HEAP", ESP_LOG_INFO);
     ysw_spiffs_initialize(YSW_MUSIC_PARTITION);
 #else
+#include <ysw_simulator.h>
 int main(int argc, char *argv[])
 {
 #endif
@@ -261,8 +262,8 @@ int main(int argc, char *argv[])
 
     ysw_display_create_task(bus);
     ysw_sequencer_create_task(bus);
+    ysw_editor_create_task(bus);
 
-#if 1
 #ifdef IDF_VER
     ysw_led_config_t led_config = {
         .gpio = 4,
@@ -274,7 +275,6 @@ int main(int argc, char *argv[])
         .columns = ysw_array_load(7, 15, 13, 12, 14, 27, 26, 23),
     };
     ysw_keyboard_create_task(bus, &keyboard_config);
-    ysw_input_create_task(bus);
 #endif
 
     zm_music_t *music = zm_read();
@@ -286,15 +286,8 @@ int main(int argc, char *argv[])
 
 #ifdef IDF_VER
 #else
-    int c;
-    while ((c = getchar()) != -1) {
-        switch (c) {
-            case 'z':
-                break;
-        }
-    }
-    ESP_LOGI(TAG, "terminating");
-#endif
+    ysw_simulator_initialize(bus);
+    pthread_exit(0);
 #endif
 }
 

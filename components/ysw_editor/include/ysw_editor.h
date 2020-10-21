@@ -11,4 +11,4 @@
 
 #include "ysw_bus.h"
 
-void ysw_input_create_task(ysw_bus_h bus);
+void ysw_editor_create_task(ysw_bus_h bus);

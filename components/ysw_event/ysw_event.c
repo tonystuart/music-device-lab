@@ -96,6 +96,8 @@ void ysw_event_fire_note_status(ysw_bus_h bus, ysw_note_t *note)
 
 void ysw_event_fire_key_down(ysw_bus_h bus, ysw_event_key_down_t *key_down)
 {
+    ESP_LOGD(TAG, "key_down.key=%d, time=%d, duration=%d",
+            key_down->key, key_down->time, key_down->duration);
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_KEYBOARD,
         .header.type = YSW_EVENT_KEY_DOWN,
@@ -106,6 +108,8 @@ void ysw_event_fire_key_down(ysw_bus_h bus, ysw_event_key_down_t *key_down)
 
 void ysw_event_fire_key_pressed(ysw_bus_h bus, ysw_event_key_pressed_t *key_pressed)
 {
+    ESP_LOGD(TAG, "key_pressed.key=%d, time=%d, duration=%d, repeat_count=%d",
+            key_pressed->key, key_pressed->time, key_pressed->duration, key_pressed->repeat_count);
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_KEYBOARD,
         .header.type = YSW_EVENT_KEY_PRESSED,
@@ -116,6 +120,8 @@ void ysw_event_fire_key_pressed(ysw_bus_h bus, ysw_event_key_pressed_t *key_pres
 
 void ysw_event_fire_key_up(ysw_bus_h bus, ysw_event_key_up_t *key_up)
 {
+    ESP_LOGD(TAG, "key_up.key=%d, time=%d, duration=%d, repeat_count=%d",
+            key_up->key, key_up->time, key_up->duration, key_up->repeat_count);
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_KEYBOARD,
         .header.type = YSW_EVENT_KEY_UP,
