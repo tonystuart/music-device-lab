@@ -226,7 +226,7 @@ static zm_song_t *initialize_song(ysw_bus_h bus, zm_music_t *music, uint32_t ind
         zm_part_t  *part = ysw_array_get(song->parts, i);
         zm_sample_t *sample = ysw_array_get(music->samples, part->pattern->sample_index);
         ysw_event_sample_load_t sample_load = {
-            .index = index,
+            .index = part->pattern->sample_index,
             .reppnt = sample->reppnt,
             .replen = sample->replen,
             .volume = sample->volume,
