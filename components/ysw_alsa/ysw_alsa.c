@@ -35,7 +35,12 @@ void ysw_alsa_initialize(esp_a2d_source_data_cb_t data_cb)
         if (rc == -EBUSY) {
             ESP_LOGE(TAG, "use 'pacmd suspend true' to suspend pulseaudio so that you can open the hw device");
         }
-        abort();
+        ESP_LOGW(TAG, "falling back to device=%s, latency may be significant", ALSA_DEVICE);
+        int rc = snd_pcm_open(&alsa, ALSA_DEVICE, SND_PCM_STREAM_PLAYBACK, 0);
+        if (rc < 0) {
+            ESP_LOGE(TAG, "fallback failed, terminating");
+            abort();
+        }
     }
 
     snd_pcm_hw_params_t *params;

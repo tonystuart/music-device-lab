@@ -44,8 +44,8 @@ static const keycode_map_t keycode_map[] = {
     { 'e', 11 },
     { 'r', 12 },
     { 't', 13 },
-    { 'u', 14 },
-    { 'i', 15 },
+    { 'y', 14 },
+    { 'u', 15 },
     { 's', 20 },
     { 'd', 21 },
     { 'g', 22 },
@@ -70,10 +70,10 @@ static const keycode_map_t keycode_map[] = {
     { '0', 37 },
     { ',', 8 },
     { '.', 19 },
-    { 'P', 8 }, // up arrow
-    { 'O', 19 }, // down arrow
+    { 'R', 8 }, // up arrow
+    { 'Q', 19 }, // down arrow
     { 'P', 28 }, // left arrow
-    { 'Q', 39 }, // right arrow
+    { 'O', 39 }, // right arrow
 };
 
 #define KEYCODE_MAP_SZ (sizeof(keycode_map) / sizeof(keycode_map[0]))
@@ -91,10 +91,20 @@ static int find_key(char input)
 static void on_key_down(uint8_t code, uint32_t time, uint8_t repeat)
 {
     ESP_LOGD(TAG, "on_key_down code=%d (%c), time=%d, repeat=%d", code, code, time, repeat);
-    if (repeat) {
-    } else {
-        int key = find_key(code);
-        if (key != -1) {
+    int key = find_key(code);
+    if (key != -1) {
+        if (repeat) {
+            // TODO: add state to provide accurate time, duration, repeat_count -- if neccessary
+            uint32_t current_millis = ysw_get_millis();
+            uint32_t duration = current_millis - down_time;
+            ysw_event_key_pressed_t key_pressed = {
+                .key = key,
+                .time = down_time,
+                .duration = duration,
+                .repeat_count = repeat,
+            };
+            ysw_event_fire_key_pressed(cb_bus, &key_pressed);
+        } else {
             down_time = ysw_get_millis(); // doesn't support n-key rollover
             ysw_event_key_down_t key_down = {
                 .key = key,

@@ -163,3 +163,13 @@ void ysw_event_fire_sample_load(ysw_bus_h bus, ysw_event_sample_load_t *sample_l
     ysw_event_publish(bus, &event);
 }
 
+void ysw_event_fire_passage_update(ysw_bus_h bus, ysw_event_passage_update_t *passage_update)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_EDITOR,
+        .header.type = YSW_EVENT_PASSAGE_UPDATE,
+        .passage_update = *passage_update,
+    };
+    ysw_event_publish(bus, &event);
+}
+

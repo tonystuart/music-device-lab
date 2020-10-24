@@ -102,6 +102,8 @@ typedef struct {
 typedef struct {
     char *name;
     zm_small_t bpm;
+    // key signature
+    // time signature
     ysw_array_t *parts;
 } zm_song_t;
 
@@ -110,6 +112,31 @@ typedef struct {
     zm_when_t when;
     zm_fit_t fit;
 } zm_part_t;
+
+typedef struct {
+    zm_note_t note; // Use 0 for rest
+    zm_duration_t duration;
+} zm_tone_t;
+
+typedef struct {
+    char *name;
+    ysw_array_t *patterns;
+    zm_duration_t duration;
+} zm_rhythm_t;
+
+typedef struct {
+    zm_tone_t tone;
+    zm_step_t chord;
+    zm_rhythm_t rhythm;
+} zm_beat_t;
+
+typedef struct {
+    char *name;
+    zm_small_t bpm;
+    // key signature
+    // time signature
+    ysw_array_t *beats;
+} zm_passage_t;
 
 typedef struct {
     ysw_array_t *samples;
