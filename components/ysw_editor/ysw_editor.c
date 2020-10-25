@@ -66,7 +66,7 @@ static void on_key_down(context_t *context, ysw_event_key_down_t *event)
 {
     assert(event->key < KEY_MAP_SZ);
     uint8_t value = key_map[event->key];
-    ESP_LOGD(TAG, "key=%d, value=%d", event->key, value);
+    //ESP_LOGD(TAG, "on_key_down key=%d, value=%d", event->key, value);
     if (value < 24) {
         ysw_event_fire_note_on(context->bus, 0, 60 + value, 80);
     }
@@ -85,7 +85,7 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
 {
     assert(event->key < KEY_MAP_SZ);
     uint8_t value = key_map[event->key];
-    ESP_LOGD(TAG, "key=%d, value=%d", event->key, value);
+    //ESP_LOGD(TAG, "on_key_pressed key=%d, value=%d", event->key, value);
     if (value < 24) {
         int32_t beat_index = context->position / 2;
         if (context->position % 2 == 0) {
@@ -120,9 +120,6 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
 
 static void on_play(context_t *context, ysw_event_play_t *event)
 {
-#if 0
-    ysw_staff_set_notes(context->staff, event->clip.notes);
-#endif
 }
 
 static void process_event(void *caller_context, ysw_event_t *event)

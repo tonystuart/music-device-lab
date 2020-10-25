@@ -23,7 +23,7 @@ extern "C" {
 typedef struct {
     zm_passage_t *passage;
     uint32_t position;
-    lv_point_t point;
+    lv_coord_t last_x;
 } ysw_staff_ext_t;
 
 enum {

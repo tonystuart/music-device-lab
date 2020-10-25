@@ -80,7 +80,6 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
     for (int i = 0; i <= symbol_count; i++) { // = to get trailing space
         if (i == ext->position) {
             if (vc->visit_type == VT_MEASURE) {
-                ESP_LOGD(TAG, "current x=%d", vc->point.x);
                 return;
             }
             vc->color = LV_COLOR_RED;
@@ -118,23 +117,25 @@ static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
         return;
     }
 
-    visit_context_t *vc = &(visit_context_t){
-        .point.x = 0,
-            .point.y = 60,
-            .color = LV_COLOR_WHITE,
-            .clip_area = clip_area,
-            .font = &MusiQwik_48,
-            .visit_type = VT_MEASURE,
+    visit_context_t vc = {
+        .point.y = 60,
+        .color = LV_COLOR_WHITE,
+        .clip_area = clip_area,
+        .font = &MusiQwik_48,
     };
 
-    ESP_LOGD(TAG, "draw_main measuring");
-    visit_all(ext, vc);
+    if (ext->last_x) {
+        vc.point.x = ext->last_x;
+    } else {
+        vc.point.x = 0;
+        vc.visit_type = VT_MEASURE;
+        visit_all(ext, &vc);
+        vc.point.x = 160 - vc.point.x;
+        ext->last_x = vc.point.x;
+    }
 
-    vc->point.x = 160 - vc->point.x;
-    vc->visit_type = VT_DRAW;
-
-    ESP_LOGD(TAG, "draw_main drawing");
-    visit_all(ext, vc);
+    vc.visit_type = VT_DRAW;
+    visit_all(ext, &vc);
 }
 
 static lv_design_res_t on_design(lv_obj_t *staff, const lv_area_t *clip_area, lv_design_mode_t mode)
@@ -203,7 +204,7 @@ void ysw_staff_set_passage(lv_obj_t *staff, zm_passage_t *passage)
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
     ext->passage = passage;
-    ext->point.x = 0;
+    ext->last_x = 0;
     lv_obj_invalidate(staff);
 }
 
@@ -212,7 +213,7 @@ void ysw_staff_set_position(lv_obj_t *staff, uint32_t position)
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
     ext->position = position;
-    ext->point.x = 0;
+    ext->last_x = 0;
     lv_obj_invalidate(staff);
 }
 
