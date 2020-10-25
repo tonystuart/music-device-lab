@@ -35,7 +35,6 @@ typedef enum {
     YSW_EVENT_KEY_DOWN,
     YSW_EVENT_KEY_PRESSED,
     YSW_EVENT_KEY_UP,
-    YSW_EVENT_PASSAGE_UPDATE,
 } ysw_event_type_t;
 
 typedef struct {
@@ -121,11 +120,6 @@ typedef struct {
 } ysw_event_key_up_t;
 
 typedef struct {
-    zm_passage_t *passage;
-    uint32_t position;
-} ysw_event_passage_update_t;
-
-typedef struct {
     ysw_event_header_t header;
     union {
         ysw_event_play_t play;
@@ -140,7 +134,6 @@ typedef struct {
         ysw_event_key_down_t key_down;
         ysw_event_key_pressed_t key_pressed;
         ysw_event_key_up_t key_up;
-        ysw_event_passage_update_t passage_update;
     };
 } ysw_event_t;
 
@@ -160,5 +153,4 @@ void ysw_event_fire_key_up(ysw_bus_h bus, ysw_event_key_up_t *key_up);
 void ysw_event_fire_loop(ysw_bus_h bus, bool loop);
 void ysw_event_fire_play(ysw_bus_h bus, ysw_array_t *notes, uint8_t bpm);
 void ysw_event_fire_sample_load(ysw_bus_h bus, ysw_event_sample_load_t *sample_load);
-void ysw_event_fire_passage_update(ysw_bus_h bus, ysw_event_passage_update_t *passage_update);
 

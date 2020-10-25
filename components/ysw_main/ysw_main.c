@@ -7,7 +7,6 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_display.h"
 #include "ysw_editor.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
@@ -260,7 +259,6 @@ int main(int argc, char *argv[])
     initialize_touch_screen();
     initialize_synthesizer(bus);
 
-    ysw_display_create_task(bus);
     ysw_sequencer_create_task(bus);
     ysw_editor_create_task(bus);
 
