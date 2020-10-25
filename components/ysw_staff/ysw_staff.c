@@ -29,8 +29,8 @@ static lv_signal_cb_t ancestor_signal;
 
 static const char *lookup[] = {
     // C,      #C,   D,        #D,   E,   F,         #F,    G,        #G,   A,        #A,   B
-    "R", "\u00d2R", "S", "\u00d3S", "T", "U",  "\u00d5U",  "V", "\u00d6V", "W", "\u00d7W", "X",
-    "Y", "\u00d9Y", "Z", "\u00daZ", "[", "\\", "\u00dc\\", "]", "\u00dd]", "^", "\u00de^", "_",
+    "R", "\u00d2R", "S", "\u00d3S", "T", "U",  "\u00d5U",  "V", "\u00d6V", "W", "\u00d7W", "_",
+    "Y", "\u00d9Y", "Z", "\u00daZ", "[", "\\", "\u00dc\\", "]", "\u00dd]", "^", "\u00de^", "\u2030",
 };
 
 typedef enum {
@@ -74,6 +74,7 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
     visit_letter(vc, '='); // key signature
     visit_letter(vc, '4'); // time signature
 
+    uint32_t ticks_in_measure = 0;
     uint32_t beat_count = ysw_array_get_count(ext->passage->beats);
     uint32_t symbol_count = beat_count * 2;
 
@@ -89,6 +90,7 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
         } else {
             uint32_t beat_index = i / 2;
             zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);
+            ticks_in_measure += beat->tone.duration;
             if (beat->tone.note) {
                 visit_string(vc, lookup[beat->tone.note - 60]);
             } else {
@@ -97,6 +99,10 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
         }
         if (i == ext->position) {
             vc->color = LV_COLOR_WHITE;
+        }
+        if (ticks_in_measure >= 1024) {
+            visit_letter(vc, '!');
+            ticks_in_measure = 0;
         }
     }
 }

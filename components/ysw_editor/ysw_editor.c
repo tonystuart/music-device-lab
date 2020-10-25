@@ -91,6 +91,7 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
         if (context->position % 2 == 0) {
             zm_beat_t *beat = ysw_heap_allocate(sizeof(zm_beat_t));
             beat->tone.note = 60 + value;
+            beat->tone.duration = 256;
             ysw_array_insert(context->passage->beats, beat_index, beat);
             if (context->is_insert) {
                 context->position += 2; // move from space to next space
