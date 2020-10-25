@@ -33,33 +33,76 @@ static const char *lookup[] = {
     "Y", "\u00d9Y", "Z", "\u00daZ", "[", "\\", "\u00dc\\", "]", "\u00dd]", "^", "\u00de^", "_",
 };
 
+typedef enum {
+    VT_MEASURE,
+    VT_DRAW,
+} visit_type_t;
+
 typedef struct {
     lv_point_t point;
     lv_color_t color;
     const lv_area_t *clip_area;
     const lv_font_t *font;
-} draw_context_t;
+    visit_type_t visit_type;
+} visit_context_t;
 
 void ysw_draw_letter(const lv_point_t * pos_p, const lv_area_t * clip_area, const lv_font_t * font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode);
 
-static void draw_char(draw_context_t *dc, uint32_t letter)
+static void visit_letter(visit_context_t *vc, uint32_t letter)
 {
     lv_font_glyph_dsc_t g;
-    if (lv_font_get_glyph_dsc(dc->font, &g, letter, '\0')) {
-        ysw_draw_letter(&dc->point, dc->clip_area, dc->font, letter, dc->color, OPA, BLEND);
-        dc->point.x += g.adv_w;
+    if (lv_font_get_glyph_dsc(vc->font, &g, letter, '\0')) {
+        if (vc->visit_type == VT_DRAW) {
+            ysw_draw_letter(&vc->point, vc->clip_area, vc->font, letter, vc->color, OPA, BLEND);
+        }
+        vc->point.x += g.adv_w;
     }
 }
 
-static void draw_string(draw_context_t *dc, const char *string)
+static void visit_string(visit_context_t *vc, const char *string)
 {
     const char *p = string;
     while (*p) {
-        draw_char(dc, *p++);
+        visit_letter(vc, *p++);
     }
 }
 
-static lv_design_res_t draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
+static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
+{
+    visit_letter(vc, '\'');
+    visit_letter(vc, '&');
+    visit_letter(vc, '='); // key signature
+    visit_letter(vc, '4'); // time signature
+
+    uint32_t beat_count = ysw_array_get_count(ext->passage->beats);
+    uint32_t symbol_count = beat_count * 2;
+
+    for (int i = 0; i <= symbol_count; i++) { // = to get trailing space
+        if (i == ext->position) {
+            if (vc->visit_type == VT_MEASURE) {
+                ESP_LOGD(TAG, "current x=%d", vc->point.x);
+                return;
+            }
+            vc->color = LV_COLOR_RED;
+        }
+        if (i % 2 == 0) {
+            visit_letter(vc, '=');
+        } else {
+            uint32_t beat_index = i / 2;
+            zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);
+            if (beat->tone.note) {
+                visit_string(vc, lookup[beat->tone.note - 60]);
+            } else {
+                // rest
+            }
+        }
+        if (i == ext->position) {
+            vc->color = LV_COLOR_WHITE;
+        }
+    }
+}
+
+static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
 {
     lv_draw_rect_dsc_t rect_dsc = {
         .bg_color = LV_COLOR_BLACK,
@@ -71,41 +114,27 @@ static lv_design_res_t draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
 
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
 
-    draw_context_t *dc = &(draw_context_t){
+    if (!ext->passage) {
+        return;
+    }
+
+    visit_context_t *vc = &(visit_context_t){
         .point.x = 0,
             .point.y = 60,
             .color = LV_COLOR_WHITE,
             .clip_area = clip_area,
             .font = &MusiQwik_48,
+            .visit_type = VT_MEASURE,
     };
 
-    draw_char(dc, '\'');
-    draw_char(dc, '&');
-    draw_char(dc, '='); // key signature
-    draw_char(dc, '4'); // time signature
+    ESP_LOGD(TAG, "draw_main measuring");
+    visit_all(ext, vc);
 
-    uint32_t beat_count = ysw_array_get_count(ext->passage->beats);
-    uint32_t symbol_count = beat_count * 2;
+    vc->point.x = 160 - vc->point.x;
+    vc->visit_type = VT_DRAW;
 
-    for (int i = 0; i <= symbol_count; i++) { // = to get trailing space
-        if (i == ext->position) {
-            dc->color = LV_COLOR_RED;
-        }
-        if (i % 2 == 0) {
-            draw_char(dc, '=');
-        } else {
-            uint32_t beat_index = i / 2;
-            zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);
-            if (beat->tone.note) {
-                draw_string(dc, lookup[beat->tone.note - 60]);
-            } else {
-                // rest
-            }
-        }
-        if (i == ext->position) {
-            dc->color = LV_COLOR_WHITE;
-        }
-    }
+    ESP_LOGD(TAG, "draw_main drawing");
+    visit_all(ext, vc);
 }
 
 static lv_design_res_t on_design(lv_obj_t *staff, const lv_area_t *clip_area, lv_design_mode_t mode)
@@ -174,6 +203,7 @@ void ysw_staff_set_passage(lv_obj_t *staff, zm_passage_t *passage)
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
     ext->passage = passage;
+    ext->point.x = 0;
     lv_obj_invalidate(staff);
 }
 
@@ -182,6 +212,7 @@ void ysw_staff_set_position(lv_obj_t *staff, uint32_t position)
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
     ext->position = position;
+    ext->point.x = 0;
     lv_obj_invalidate(staff);
 }
 

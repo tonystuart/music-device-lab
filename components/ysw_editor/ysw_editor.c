@@ -116,7 +116,6 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
         return;
     }
     ysw_staff_set_position(context->staff, context->position);
-    lv_obj_invalidate(context->staff);
 }
 
 static void on_play(context_t *context, ysw_event_play_t *event)
@@ -171,10 +170,6 @@ void ysw_editor_create_task(ysw_bus_h bus)
     ysw_staff_set_passage(context->staff, context->passage);
     lv_obj_set_size(context->staff, 320, 240);
     lv_obj_align(context->staff, NULL, LV_ALIGN_CENTER, 0, 0);
-#if 0
-    extern void lv_demo_widgets(void);
-    lv_demo_widgets();
-#endif
 
     ysw_task_config_t config = ysw_task_default_config;
 

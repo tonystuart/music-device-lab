@@ -12,7 +12,7 @@
 #include "esp_log.h"
 #include "stdint.h"
 
-#define TAG "KEYBOARD"
+#define TAG "SIMULATOR"
 
 typedef void (*lv_key_handler)(uint8_t key, uint32_t time, uint8_t repeat);
 extern lv_key_handler lv_key_down_handler;
@@ -90,7 +90,7 @@ static int find_key(char input)
 
 static void on_key_down(uint8_t code, uint32_t time, uint8_t repeat)
 {
-    ESP_LOGD(TAG, "on_key_down code=%d (%c), time=%d, repeat=%d", code, code, time, repeat);
+    //ESP_LOGD(TAG, "on_key_down code=%d (%c), time=%d, repeat=%d", code, code, time, repeat);
     int key = find_key(code);
     if (key != -1) {
         if (repeat) {
@@ -117,7 +117,7 @@ static void on_key_down(uint8_t code, uint32_t time, uint8_t repeat)
 
 static void on_key_up(uint8_t code, uint32_t time, uint8_t repeat)
 {
-    ESP_LOGD(TAG, "on_key_up code=%d (%c), time=%d, repeat=%d", code, code, time, repeat);
+    //ESP_LOGD(TAG, "on_key_up code=%d (%c), time=%d, repeat=%d", code, code, time, repeat);
     int key = find_key(code);
     if (key != -1) {
         uint32_t current_millis = ysw_get_millis();
