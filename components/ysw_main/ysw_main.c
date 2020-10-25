@@ -166,6 +166,7 @@ static void initialize_touch_screen(void)
 #include "lv_examples/lv_examples.h"
 #include "esp_log.h"
 
+// TODO: move lv_tick_inc to ysw_editor and remove this if it is not necessary
 static int tick_thread(void *data)
 {
     while (1) {

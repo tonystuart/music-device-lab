@@ -14,11 +14,15 @@ extern "C" {
 #endif
 
 #include "ysw_array.h"
-#include "../lv_conf_internal.h"
-#include "../lv_core/lv_obj.h"
+#include "zm_music.h"
+#include "lvgl.h"
+
+//#include "../lv_conf_internal.h"
+//#include "../lv_core/lv_obj.h"
 
 typedef struct {
-    ysw_array_t *notes;
+    zm_passage_t *passage;
+    uint32_t position;
 } ysw_staff_ext_t;
 
 enum {
@@ -28,8 +32,10 @@ enum {
 typedef uint8_t ysw_staff_part_t;
 
 lv_obj_t *ysw_staff_create(lv_obj_t *par);
-void ysw_staff_set_notes(lv_obj_t *staff, ysw_array_t *notes);
-ysw_array_t *ysw_staff_get_notes(const lv_obj_t *staff);
+void ysw_staff_set_passage(lv_obj_t *staff, zm_passage_t *passage);
+void ysw_staff_set_position(lv_obj_t *staff, uint32_t position);
+zm_passage_t *ysw_staff_get_passage(lv_obj_t *staff);
+uint32_t ysw_staff_get_position(lv_obj_t *staff);
 
 #ifdef __cplusplus
 } /* extern "C" */

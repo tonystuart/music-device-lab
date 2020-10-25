@@ -10,6 +10,7 @@
 #include "ysw_staff.h"
 #include "ysw_array.h"
 #include "ysw_note.h"
+#include "ysw_style.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include "assert.h"
@@ -23,66 +24,101 @@ static lv_design_cb_t ancestor_design;
 static lv_signal_cb_t ancestor_signal;
 
 #define TAG "STAFF"
+#define OPA LV_OPA_100
+#define BLEND LV_BLEND_MODE_NORMAL
 
-static lv_design_res_t ysw_staff_design(lv_obj_t *staff, const lv_area_t *clip_area, lv_design_mode_t mode)
+static const char *lookup[] = {
+    // C,      #C,   D,        #D,   E,   F,         #F,    G,        #G,   A,        #A,   B
+    "R", "\u00d2R", "S", "\u00d3S", "T", "U",  "\u00d5U",  "V", "\u00d6V", "W", "\u00d7W", "X",
+    "Y", "\u00d9Y", "Z", "\u00daZ", "[", "\\", "\u00dc\\", "]", "\u00dd]", "^", "\u00de^", "_",
+};
+
+typedef struct {
+    lv_point_t point;
+    lv_color_t color;
+    const lv_area_t *clip_area;
+    const lv_font_t *font;
+} draw_context_t;
+
+void ysw_draw_letter(const lv_point_t * pos_p, const lv_area_t * clip_area, const lv_font_t * font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode);
+
+static void draw_char(draw_context_t *dc, uint32_t letter)
+{
+    lv_font_glyph_dsc_t g;
+    if (lv_font_get_glyph_dsc(dc->font, &g, letter, '\0')) {
+        ysw_draw_letter(&dc->point, dc->clip_area, dc->font, letter, dc->color, OPA, BLEND);
+        dc->point.x += g.adv_w;
+    }
+}
+
+static void draw_string(draw_context_t *dc, const char *string)
+{
+    const char *p = string;
+    while (*p) {
+        draw_char(dc, *p++);
+    }
+}
+
+static lv_design_res_t draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
+{
+    lv_draw_rect_dsc_t rect_dsc = {
+        .bg_color = LV_COLOR_BLACK,
+        .bg_opa = LV_OPA_COVER,
+    };
+    lv_area_t coords;
+    lv_obj_get_coords(staff, &coords);
+    lv_draw_rect(&coords, clip_area, &rect_dsc);
+
+    ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
+
+    draw_context_t *dc = &(draw_context_t){
+        .point.x = 0,
+            .point.y = 60,
+            .color = LV_COLOR_WHITE,
+            .clip_area = clip_area,
+            .font = &MusiQwik_48,
+    };
+
+    draw_char(dc, '\'');
+    draw_char(dc, '&');
+    draw_char(dc, '='); // key signature
+    draw_char(dc, '4'); // time signature
+
+    uint32_t beat_count = ysw_array_get_count(ext->passage->beats);
+    uint32_t symbol_count = beat_count * 2;
+
+    for (int i = 0; i <= symbol_count; i++) { // = to get trailing space
+        if (i == ext->position) {
+            dc->color = LV_COLOR_RED;
+        }
+        if (i % 2 == 0) {
+            draw_char(dc, '=');
+        } else {
+            uint32_t beat_index = i / 2;
+            zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);
+            if (beat->tone.note) {
+                draw_string(dc, lookup[beat->tone.note - 60]);
+            } else {
+                // rest
+            }
+        }
+        if (i == ext->position) {
+            dc->color = LV_COLOR_WHITE;
+        }
+    }
+}
+
+static lv_design_res_t on_design(lv_obj_t *staff, const lv_area_t *clip_area, lv_design_mode_t mode)
 {
     if (mode == LV_DESIGN_COVER_CHK) {
         return ancestor_design(staff, clip_area, mode);
     } else if (mode == LV_DESIGN_DRAW_MAIN) {
-        ancestor_design(staff, clip_area, mode);
-        //ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
-
-        ESP_LOGD(TAG, "drawing Hello, world");
-
-        lv_area_t txt_coords = {
-            .x1 = 25,
-            .x2 = 340,
-            .y1 = 50,
-            .y2 = 200,
-        };
-
-        lv_area_t txt_clip = *clip_area;
-
-        lv_draw_label_dsc_t label_draw_dsc;
-        lv_draw_label_dsc_init(&label_draw_dsc);
-        label_draw_dsc.font = &MusiQwik_48;
-        label_draw_dsc.color = LV_COLOR_YELLOW;
-
-        lv_draw_label_hint_t *hint = NULL;
-        lv_draw_label(&txt_coords, &txt_clip, &label_draw_dsc, "'&\u00A24=A=B=C=D=E=F=G=H=!", hint);
-
-#if 0
-        if (ext->notes) {
-            lv_draw_rect_dsc_t rect_dsc;
-            lv_draw_rect_dsc_init(&rect_dsc);
-            lv_obj_init_draw_rect_dsc(staff, YSW_STAFF_PART_MAIN, &rect_dsc);
-
-            rect_dsc.bg_color = LV_COLOR_RED;
-            rect_dsc.bg_grad_color = LV_COLOR_BLUE;
-            rect_dsc.border_color = LV_COLOR_PURPLE;
-            rect_dsc.shadow_color = LV_COLOR_GRAY;
-
-            rect_dsc.shadow_width = 0;
-            rect_dsc.shadow_spread = 0;
-
-            uint16_t note_count = ysw_array_get_count(ext->notes);
-            for (uint16_t i = 0; i < note_count; i++) {
-                ysw_note_t *note = ysw_array_get(ext->notes, i);
-                lv_area_t coords = {
-                    .x1 = note->start / 8,
-                    .y1 = note->midi_note * 2 - 5,
-                    .x2 = note->start / 8 + 10,
-                    .y2 = note->midi_note * 2 + 5
-                };
-                lv_draw_rect(&coords, clip_area, &rect_dsc);
-            }
-        }
-#endif
+        draw_main(staff, clip_area);
     }
     return LV_DESIGN_RES_OK;
 }
 
-static lv_res_t ysw_staff_signal(lv_obj_t *staff, lv_signal_t sign, void *param)
+static lv_res_t on_signal(lv_obj_t *staff, lv_signal_t sign, void *param)
 {
     lv_res_t res;
 
@@ -124,8 +160,8 @@ lv_obj_t *ysw_staff_create(lv_obj_t *par)
 
     memset(ext, 0, sizeof(ysw_staff_ext_t));
 
-    lv_obj_set_signal_cb(staff, ysw_staff_signal);
-    lv_obj_set_design_cb(staff, ysw_staff_design);
+    lv_obj_set_signal_cb(staff, on_signal);
+    lv_obj_set_design_cb(staff, on_design);
 
     lv_obj_set_size(staff, LED_WIDTH_DEF, LED_HEIGHT_DEF);
     lv_theme_apply(staff, LV_THEME_LED);
@@ -133,20 +169,33 @@ lv_obj_t *ysw_staff_create(lv_obj_t *par)
     return staff;
 }
 
-void ysw_staff_set_notes(lv_obj_t *staff, ysw_array_t *notes)
+void ysw_staff_set_passage(lv_obj_t *staff, zm_passage_t *passage)
 {
     assert(staff);
-
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
-    ext->notes = notes;
+    ext->passage = passage;
     lv_obj_invalidate(staff);
 }
 
-ysw_array_t *ysw_staff_get_notes(const lv_obj_t *staff)
+void ysw_staff_set_position(lv_obj_t *staff, uint32_t position)
 {
     assert(staff);
-
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
-    return ext->notes;
+    ext->position = position;
+    lv_obj_invalidate(staff);
+}
+
+zm_passage_t *ysw_staff_get_passage(lv_obj_t *staff)
+{
+    assert(staff);
+    ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
+    return ext->passage;
+}
+
+uint32_t ysw_staff_get_position(lv_obj_t *staff)
+{
+    assert(staff);
+    ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
+    return ext->position;
 }
 
