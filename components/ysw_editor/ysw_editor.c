@@ -105,6 +105,20 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
                 context->position += 1;
             }
         }
+    } else if (value == 34) { // Keypad 9 -- Delete Note
+        if (context->position % 2 == 1) {
+            uint32_t beat_index = context->position / 2;
+            zm_beat_t *beat = ysw_array_remove(context->passage->beats, beat_index);
+            ysw_heap_free(beat);
+            uint32_t beat_count = ysw_array_get_count(context->passage->beats);
+            if (beat_index == beat_count) {
+                if (beat_count) {
+                    context->position -= 2;
+                } else {
+                    context->position = 0;
+                }
+            }
+        }
     } else if (value == 35) {
         if (context->position > 0) {
             context->position--;
