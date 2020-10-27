@@ -27,12 +27,11 @@ typedef bool zm_yesno_t;
 typedef zm_medium_t zm_index_t;
 
 typedef enum {
-    ZM_DURATION_32ND = 32,
-    ZM_DURATION_16TH = 64,
-    ZM_DURATION_8TH = 128,
-    ZM_DURATION_4TH = 256,
-    ZM_DURATION_HALF = 512,
-    ZM_DURATION_WHOLE = 1024,
+    ZM_SIXTEENTH = 64,
+    ZM_EIGHTH = 128,
+    ZM_QUARTER = 256,
+    ZM_HALF = 512,
+    ZM_WHOLE = 1024,
 } zm_duration_t;
 
 typedef enum {

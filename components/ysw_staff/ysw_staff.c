@@ -92,7 +92,20 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
             zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);
             ticks_in_measure += beat->tone.duration;
             if (beat->tone.note) {
-                visit_string(vc, lookup[beat->tone.note - 60]);
+                const char *symbol = NULL;
+                uint8_t note = beat->tone.note - 60;
+                if (beat->tone.duration <= ZM_SIXTEENTH) {
+                    symbol = lookup[note];
+                } else if (beat->tone.duration <= ZM_EIGHTH) {
+                    symbol = lookup[note];
+                } else if (beat->tone.duration <= ZM_QUARTER) {
+                    symbol = lookup[note];
+                } else if (beat->tone.duration <= ZM_HALF) {
+                    symbol = lookup[note];
+                } else {
+                    symbol = lookup[note];
+                }
+                visit_string(vc, symbol);
             } else {
                 // rest
             }

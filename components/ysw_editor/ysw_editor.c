@@ -105,6 +105,22 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
                 context->position += 1;
             }
         }
+    } else if (value == 28) { // Keypad 4 -- Cycle Duration
+        if (context->position % 2 == 1) {
+            uint32_t beat_index = context->position / 2;
+            zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
+            if (beat->tone.duration <= ZM_SIXTEENTH) {
+                beat->tone.duration = ZM_EIGHTH;
+            } else if (beat->tone.duration <= ZM_EIGHTH) {
+                beat->tone.duration = ZM_QUARTER;
+            } else if (beat->tone.duration <= ZM_QUARTER) {
+                beat->tone.duration = ZM_HALF;
+            } else if (beat->tone.duration <= ZM_HALF) {
+                beat->tone.duration = ZM_WHOLE;
+            } else {
+                beat->tone.duration = ZM_SIXTEENTH;
+            }
+        }
     } else if (value == 34) { // Keypad 9 -- Delete Note
         if (context->position % 2 == 1) {
             uint32_t beat_index = context->position / 2;
@@ -128,6 +144,7 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
             context->position++;
         }
     } else {
+        ESP_LOGD(TAG, "on_key_pressed unrecognized key=%d, value=%d", event->key, value);
         return;
     }
     ysw_staff_set_position(context->staff, context->position);
