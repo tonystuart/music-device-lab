@@ -51,6 +51,7 @@ static const uint8_t key_map[] = {
 
 typedef struct {
     ysw_bus_h bus;
+    zm_duration_t duration;
     zm_passage_t *passage;
     uint32_t position;
     bool is_insert;
@@ -91,7 +92,7 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
         if (context->position % 2 == 0) {
             zm_beat_t *beat = ysw_heap_allocate(sizeof(zm_beat_t));
             beat->tone.note = 60 + value;
-            beat->tone.duration = 256;
+            beat->tone.duration = context->duration;
             ysw_array_insert(context->passage->beats, beat_index, beat);
             if (context->is_insert) {
                 context->position += 2; // move from space to next space
@@ -106,20 +107,21 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
             }
         }
     } else if (value == 28) { // Keypad 4 -- Cycle Duration
+        if (context->duration <= ZM_SIXTEENTH) {
+            context->duration = ZM_EIGHTH;
+        } else if (context->duration <= ZM_EIGHTH) {
+            context->duration = ZM_QUARTER;
+        } else if (context->duration <= ZM_QUARTER) {
+            context->duration = ZM_HALF;
+        } else if (context->duration <= ZM_HALF) {
+            context->duration = ZM_WHOLE;
+        } else {
+            context->duration = ZM_SIXTEENTH;
+        }
         if (context->position % 2 == 1) {
             uint32_t beat_index = context->position / 2;
             zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
-            if (beat->tone.duration <= ZM_SIXTEENTH) {
-                beat->tone.duration = ZM_EIGHTH;
-            } else if (beat->tone.duration <= ZM_EIGHTH) {
-                beat->tone.duration = ZM_QUARTER;
-            } else if (beat->tone.duration <= ZM_QUARTER) {
-                beat->tone.duration = ZM_HALF;
-            } else if (beat->tone.duration <= ZM_HALF) {
-                beat->tone.duration = ZM_WHOLE;
-            } else {
-                beat->tone.duration = ZM_SIXTEENTH;
-            }
+            beat->tone.duration = context->duration;
         }
     } else if (value == 34) { // Keypad 9 -- Delete Note
         if (context->position % 2 == 1) {
@@ -186,6 +188,7 @@ void ysw_editor_create_task(ysw_bus_h bus)
     context_t *context = ysw_heap_allocate(sizeof(context_t));
 
     context->bus = bus;
+    context->duration = ZM_QUARTER;
     context->passage = ysw_heap_allocate(sizeof(zm_passage_t));
     context->passage->beats = ysw_array_create(64);
     context->position = 0;

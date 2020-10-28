@@ -27,10 +27,36 @@ static lv_signal_cb_t ancestor_signal;
 #define OPA LV_OPA_100
 #define BLEND LV_BLEND_MODE_NORMAL
 
-static const char *lookup[] = {
-    // C,      #C,   D,        #D,   E,   F,         #F,    G,        #G,   A,        #A,   B
-    "R", "\u00d2R", "S", "\u00d3S", "T", "U",  "\u00d5U",  "V", "\u00d6V", "W", "\u00d7W", "_",
-    "Y", "\u00d9Y", "Z", "\u00daZ", "[", "\\", "\u00dc\\", "]", "\u00dd]", "^", "\u00de^", "\u2030",
+typedef struct {
+    uint8_t step;
+    bool half;
+} semitones_t;
+
+static const semitones_t semitones[] = {
+    { 0, false },  // C   0
+    { 0, true },   // C#  1
+    { 1, false },  // D   2
+    { 1, true },   // D#  3
+    { 2, false },  // E   4
+    { 3, false },  // F   5
+    { 3, true },   // F#  6
+    { 4, false },  // G   7
+    { 4, true },   // G#  8
+    { 5, false },  // A   9
+    { 5, true },   // A#  10
+    { 6, false },  // B   11
+    { 7, false },  // C   12
+    { 7, true },   // C#  13
+    { 8, false },  // D   14
+    { 8, true },   // D#  15
+    { 9, false },  // E   16
+    { 10, false }, // F   17
+    { 10, true },  // F#  18
+    { 11, false }, // G   19
+    { 11, true },  // G#  20
+    { 12, false }, // A   21
+    { 12, true },  // A#  22
+    { 13, false }, // B   23
 };
 
 typedef enum {
@@ -92,20 +118,22 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
             zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);
             ticks_in_measure += beat->tone.duration;
             if (beat->tone.note) {
-                const char *symbol = NULL;
-                uint8_t note = beat->tone.note - 60;
-                if (beat->tone.duration <= ZM_SIXTEENTH) {
-                    symbol = lookup[note];
-                } else if (beat->tone.duration <= ZM_EIGHTH) {
-                    symbol = lookup[note];
-                } else if (beat->tone.duration <= ZM_QUARTER) {
-                    symbol = lookup[note];
-                } else if (beat->tone.duration <= ZM_HALF) {
-                    symbol = lookup[note];
-                } else {
-                    symbol = lookup[note];
+                uint8_t note = (beat->tone.note - 60) % 24;
+                uint8_t step = semitones[note].step;
+                if (semitones[note].half) {
+                    visit_letter(vc, 0xd2 + step);
                 }
-                visit_string(vc, symbol);
+                if (beat->tone.duration <= ZM_SIXTEENTH) {
+                    visit_letter(vc, 0x82 + step);
+                } else if (beat->tone.duration <= ZM_EIGHTH) {
+                    visit_letter(vc, 'B' + step);
+                } else if (beat->tone.duration <= ZM_QUARTER) {
+                    visit_letter(vc, 'R' + step);
+                } else if (beat->tone.duration <= ZM_HALF) {
+                    visit_letter(vc, 'b' + step);
+                } else {
+                    visit_letter(vc, 'r' + step);
+                }
             } else {
                 // rest
             }
