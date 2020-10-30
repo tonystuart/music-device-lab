@@ -37,6 +37,12 @@
 #define YSW_DOT_BASE 0x66
 #define YSW_SHARP_BASE 0x74
 #define YSW_FLAT_BASE 0x82
+#define YSW_16_REST 0xa0
+#define YSW_8_REST 0xa1
+#define YSW_4_REST 0xa2
+#define YSW_2_REST 0xa3
+#define YSW_1_REST 0xa4
+
 
 #define OPA LV_OPA_100
 #define BLEND LV_BLEND_MODE_NORMAL
@@ -156,7 +162,17 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
                     visit_letter(vc, YSW_1_BASE + step);
                 }
             } else {
-                // rest
+                if (beat->tone.duration <= ZM_SIXTEENTH) {
+                    visit_letter(vc, YSW_16_REST);
+                } else if (beat->tone.duration <= ZM_EIGHTH) {
+                    visit_letter(vc, YSW_8_REST);
+                } else if (beat->tone.duration <= ZM_QUARTER) {
+                    visit_letter(vc, YSW_4_REST);
+                } else if (beat->tone.duration <= ZM_HALF) {
+                    visit_letter(vc, YSW_2_REST);
+                } else {
+                    visit_letter(vc, YSW_1_REST);
+                }
             }
         }
         if (i == ext->position) {

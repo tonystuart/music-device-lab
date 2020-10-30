@@ -87,11 +87,11 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
     assert(event->key < KEY_MAP_SZ);
     uint8_t value = key_map[event->key];
     //ESP_LOGD(TAG, "on_key_pressed key=%d, value=%d", event->key, value);
-    if (value < 24) {
+    if (value < 24 || value == 32) { // 32 == keypad 7 == rest
         int32_t beat_index = context->position / 2;
         if (context->position % 2 == 0) {
             zm_beat_t *beat = ysw_heap_allocate(sizeof(zm_beat_t));
-            beat->tone.note = 60 + value;
+            beat->tone.note = value == 32 ? 0 : 60 + value;
             beat->tone.duration = context->duration;
             ysw_array_insert(context->passage->beats, beat_index, beat);
             if (context->is_insert) {
@@ -100,8 +100,10 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
                 context->position += 1; // move from space to note
             }
         } else {
+            // TODO: consider merging with above
             zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
-            beat->tone.note = 60 + value;
+            beat->tone.note = value == 32 ? 0 : 60 + value;
+            beat->tone.duration = context->duration; // retain old duration or use new?
             if (context->is_insert) {
                 context->position += 1;
             }
