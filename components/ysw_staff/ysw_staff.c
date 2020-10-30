@@ -15,17 +15,34 @@
 #include "esp_log.h"
 #include "assert.h"
 
+#define TAG "STAFF"
 #define LV_OBJX_NAME "ysw_staff"
 
-#define LED_WIDTH_DEF (LV_DPI / 3)
-#define LED_HEIGHT_DEF (LV_DPI / 3)
+#define YSW_TREBLE_CLEF 0x01
+#define YSW_STAFF_SPACE 0x02
+#define YSW_LEFT_BAR 0x03
+#define YSW_RIGHT_BAR 0x04
+#define YSW_C_MAJOR YSW_STAFF_SPACE
+#define YSW_2_2_TIME 0x18
+#define YSW_2_4_TIME 0x19
+#define YSW_3_4_TIME 0x1a
+#define YSW_4_4_TIME 0x1b
+#define YSW_3_2_TIME 0x1c
+#define YSW_6_8_TIME 0x1d
+#define YSW_16_BASE 0x20
+#define YSW_8_BASE 0x2e
+#define YSW_4_BASE 0x3c
+#define YSW_2_BASE 0x4a
+#define YSW_1_BASE 0x58
+#define YSW_DOT_BASE 0x66
+#define YSW_SHARP_BASE 0x74
+#define YSW_FLAT_BASE 0x82
+
+#define OPA LV_OPA_100
+#define BLEND LV_BLEND_MODE_NORMAL
 
 static lv_design_cb_t ancestor_design;
 static lv_signal_cb_t ancestor_signal;
-
-#define TAG "STAFF"
-#define OPA LV_OPA_100
-#define BLEND LV_BLEND_MODE_NORMAL
 
 typedef struct {
     uint8_t step;
@@ -95,10 +112,12 @@ static void visit_string(visit_context_t *vc, const char *string)
 
 static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
 {
-    visit_letter(vc, '\'');
-    visit_letter(vc, '&');
-    visit_letter(vc, '='); // key signature
-    visit_letter(vc, '4'); // time signature
+    visit_letter(vc, YSW_LEFT_BAR);
+    visit_letter(vc, YSW_TREBLE_CLEF);
+#if 1
+    visit_letter(vc, YSW_C_MAJOR);
+#endif
+    visit_letter(vc, YSW_4_4_TIME);
 
     uint32_t ticks_in_measure = 0;
     uint32_t beat_count = ysw_array_get_count(ext->passage->beats);
@@ -112,7 +131,9 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
             vc->color = LV_COLOR_RED;
         }
         if (i % 2 == 0) {
-            visit_letter(vc, '=');
+#if 1
+            visit_letter(vc, YSW_STAFF_SPACE);
+#endif
         } else {
             uint32_t beat_index = i / 2;
             zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);
@@ -121,18 +142,18 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
                 uint8_t note = (beat->tone.note - 60) % 24;
                 uint8_t step = semitones[note].step;
                 if (semitones[note].half) {
-                    visit_letter(vc, 0xd2 + step);
+                    visit_letter(vc, YSW_SHARP_BASE + step);
                 }
                 if (beat->tone.duration <= ZM_SIXTEENTH) {
-                    visit_letter(vc, 0x82 + step);
+                    visit_letter(vc, YSW_16_BASE + step);
                 } else if (beat->tone.duration <= ZM_EIGHTH) {
-                    visit_letter(vc, 'B' + step);
+                    visit_letter(vc, YSW_8_BASE + step);
                 } else if (beat->tone.duration <= ZM_QUARTER) {
-                    visit_letter(vc, 'R' + step);
+                    visit_letter(vc, YSW_4_BASE + step);
                 } else if (beat->tone.duration <= ZM_HALF) {
-                    visit_letter(vc, 'b' + step);
+                    visit_letter(vc, YSW_2_BASE + step);
                 } else {
-                    visit_letter(vc, 'r' + step);
+                    visit_letter(vc, YSW_1_BASE + step);
                 }
             } else {
                 // rest
@@ -142,7 +163,7 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
             vc->color = LV_COLOR_WHITE;
         }
         if (ticks_in_measure >= 1024) {
-            visit_letter(vc, '!');
+            visit_letter(vc, YSW_RIGHT_BAR);
             ticks_in_measure = 0;
         }
     }
@@ -240,7 +261,7 @@ lv_obj_t *ysw_staff_create(lv_obj_t *par)
     lv_obj_set_signal_cb(staff, on_signal);
     lv_obj_set_design_cb(staff, on_design);
 
-    lv_obj_set_size(staff, LED_WIDTH_DEF, LED_HEIGHT_DEF);
+    lv_obj_set_size(staff, 320, 120);
     lv_theme_apply(staff, LV_THEME_LED);
 
     return staff;
