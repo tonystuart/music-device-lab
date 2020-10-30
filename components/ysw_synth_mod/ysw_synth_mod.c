@@ -236,6 +236,7 @@ static uint8_t allocate_voice(context_t *context, uint8_t channel, uint8_t midi_
 {
     voice_t *voice = NULL;
     uint8_t voice_index = 0;
+    // TODO: use stealing logic to free any voices that have reached end of sample
     if (context->voice_count < MAX_VOICES) {
         voice_index = context->voice_count++;
         voice = &context->voices[voice_index];

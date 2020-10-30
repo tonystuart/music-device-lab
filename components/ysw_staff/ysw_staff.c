@@ -22,7 +22,6 @@
 #define YSW_STAFF_SPACE 0x02
 #define YSW_LEFT_BAR 0x03
 #define YSW_RIGHT_BAR 0x04
-#define YSW_C_MAJOR YSW_STAFF_SPACE
 #define YSW_2_2_TIME 0x18
 #define YSW_2_4_TIME 0x19
 #define YSW_3_4_TIME 0x1a
@@ -42,7 +41,6 @@
 #define YSW_4_REST 0xa2
 #define YSW_2_REST 0xa3
 #define YSW_1_REST 0xa4
-
 
 #define OPA LV_OPA_100
 #define BLEND LV_BLEND_MODE_NORMAL
@@ -120,9 +118,17 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
 {
     visit_letter(vc, YSW_LEFT_BAR);
     visit_letter(vc, YSW_TREBLE_CLEF);
-#if 1
-    visit_letter(vc, YSW_C_MAJOR);
-#endif
+
+    zm_key_t *key = zm_get_key(ext->passage->key);
+    if (key->sharps) {
+        visit_letter(vc, 0x0a + key->sharps - 1);
+    } else if (key->flats) {
+        visit_letter(vc, YSW_STAFF_SPACE);
+        visit_letter(vc, 0x11 + key->flats - 1);
+    } else {
+        visit_letter(vc, YSW_STAFF_SPACE);
+    }
+
     visit_letter(vc, YSW_4_4_TIME);
 
     uint32_t ticks_in_measure = 0;
@@ -137,9 +143,7 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
             vc->color = LV_COLOR_RED;
         }
         if (i % 2 == 0) {
-#if 1
             visit_letter(vc, YSW_STAFF_SPACE);
-#endif
         } else {
             uint32_t beat_index = i / 2;
             zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);

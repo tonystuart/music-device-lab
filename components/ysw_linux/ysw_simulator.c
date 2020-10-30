@@ -27,17 +27,30 @@ static ysw_bus_h cb_bus;
 //   20, 21,     22, 23, 24,     25, 26, 27, 28,
 // 29, 30, 31, 32, 33, 34, 35,   36, 37, 38, 39,
 
+// We try to map to a PC keyboard as closely as possible
+// NB: digits are in phone order on Music Machine v02 and keypad order on PC keyboard
+//
+// T = top row of digits
+// N = numeric keypad digits
+//
+//   T2, T3,     T4, T5, T6,     N7, N8, N9, UP,
+//  Q,  W,  E,  R,  T,  Y,  Y,   N4, N5, N6, DN,
+//    S,  D,      G,  H,  I,     N1, N2, N3, LT,
+//  Z,  X,  C,  V,  B,  N,  M,   36, 37, 38, RT,
+//
+
 typedef struct {
     char input;
     uint8_t key;
 } keycode_map_t;
 
 static const keycode_map_t keycode_map[] = {
-    { '@', 0 }, // C#
-    { '#', 1 }, // D#
-    { '%', 2 }, // F#
-    { '^', 3 }, // G#
-    { '&', 4 }, // A#
+    { 2, 0 }, // C#
+    { 3, 1 }, // D#
+    { 5, 2 }, // F#
+    { 6, 3 }, // G#
+    { 7, 4 }, // A#
+
     { 'q', 9 }, // C
     { 'w', 10 }, // D
     { 'e', 11 }, // E
@@ -45,11 +58,13 @@ static const keycode_map_t keycode_map[] = {
     { 't', 13 }, // G
     { 'y', 14 }, // A
     { 'u', 15 }, // B
+
     { 's', 20 }, // C#
     { 'd', 21 }, // D#
     { 'g', 22 }, // F#
     { 'h', 23 }, // G#
     { 'j', 24 }, // A#
+
     { 'z', 29 }, // C
     { 'x', 30 }, // D
     { 'c', 31 }, // E
@@ -57,20 +72,22 @@ static const keycode_map_t keycode_map[] = {
     { 'b', 33 }, // G
     { 'n', 34 }, // A
     { 'm', 35 }, // B
-    { '1', 5 }, // Top Row 1
-    { '2', 6 }, // Top Row 2
-    { '3', 7 }, // Top Row 3
-    { '4', 16 }, // Top Row 4
-    { '5', 17 }, // Top Row 5
-    { '6', 18 }, // Top Row 6
-    { '7', 25 }, // Top Row 7
-    { '8', 26 }, // Top Row 8
-    { '9', 27 }, // Top Row 9
-    { '0', 37 }, // Top Row 0
-    { 'R', 8 }, // Up Arrow
-    { 'Q', 19 }, // Down Arrow
-    { 'P', 28 }, // Left Arrow
-    { 'O', 39 }, // Right Arrow
+
+    { 79, 39 }, // Right Arrow
+    { 80, 28 }, // Left Arrow
+    { 81, 19 }, // Down Arrow
+    { 82, 8 }, // Up Arrow
+
+    { 89, 25 }, // N1
+    { 90, 26 }, // N2
+    { 91, 27 }, // N3
+    { 92, 16 }, // N4
+    { 93, 17 }, // N5
+    { 94, 18 }, // N6
+    { 95, 5 }, // N7
+    { 96, 6 }, // N8
+    { 97, 7 }, // N9
+
     { 99, 27 }, // Keypad Delete
     { 127, 27 }, // Delete Button
 };
@@ -89,7 +106,7 @@ static int find_key(char input)
 
 static void on_key_down(uint8_t code, uint32_t time, uint8_t repeat)
 {
-    //ESP_LOGD(TAG, "on_key_down code=%d (%c), time=%d, repeat=%d", code, code, time, repeat);
+    ESP_LOGD(TAG, "on_key_down code=%d (%c), time=%d, repeat=%d", code, code, time, repeat);
     int key = find_key(code);
     if (key != -1) {
         if (repeat) {

@@ -26,6 +26,34 @@ typedef bool zm_yesno_t;
 
 typedef zm_medium_t zm_index_t;
 
+typedef uint8_t zm_bpm_x;
+typedef uint8_t zm_key_x;
+
+typedef uint16_t zm_quality_x;
+typedef uint16_t zm_style_x;
+
+typedef struct {
+    const char *name;
+    const uint8_t sharps;
+    const uint8_t flats;
+    const uint8_t sharp_indexes[7];
+    const uint8_t flat_index[7];
+} zm_key_t;
+
+typedef struct {
+    zm_key_x index;
+    char name[32];
+} zm_key_signature_t;
+
+typedef enum {
+    ZM_TIME_2_2,
+    ZM_TIME_2_4,
+    ZM_TIME_3_4,
+    ZM_TIME_4_4,
+    ZM_TIME_3_2,
+    ZM_TIME_6_8,
+} zm_time_t;
+
 typedef enum {
     ZM_SIXTEENTH = 64,
     ZM_EIGHTH = 128,
@@ -131,9 +159,9 @@ typedef struct {
 
 typedef struct {
     char *name;
-    zm_small_t bpm;
-    // key signature
-    // time signature
+    zm_bpm_x bpm;
+    zm_key_x key;
+    zm_time_t time;
     ysw_array_t *beats;
 } zm_passage_t;
 
@@ -150,3 +178,6 @@ zm_music_t *zm_read_from_file(FILE *file);
 zm_music_t *zm_read(void);
 zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large_t start_time, zm_small_t channel);
 ysw_array_t *zm_render_song(zm_song_t *song);
+void zm_get_key_signature(zm_key_x key_index, zm_key_signature_t *key_signature);
+zm_key_t *zm_get_key(zm_key_x key_index);
+zm_key_x zm_get_next_key_index(zm_key_x key_index);

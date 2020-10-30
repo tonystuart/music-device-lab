@@ -433,3 +433,50 @@ ysw_array_t *zm_render_song(zm_song_t *song)
     return notes;
 }
 
+// https://en.wikipedia.org/wiki/Key_signature
+
+static const zm_key_t keys[] = {
+    //              C  D  E  F  G  A  B
+    { "C",  0, 0, { 0, 0, 0, 0, 0, 0, 0 }, { 0 } },
+    //
+    { "G",  1, 0, { 0, 0, 0, 1, 0, 0, 0 }, { 0 } },
+    { "D",  2, 0, { 1, 0, 0, 1, 0, 0, 0 }, { 0 } },
+    { "A",  3, 0, { 1, 0, 0, 1, 1, 0, 0 }, { 0 } },
+    { "E",  4, 0, { 1, 1, 0, 1, 1, 0, 0 }, { 0 } },
+    { "B",  5, 0, { 1, 1, 0, 1, 1, 1, 0 }, { 0 } },
+    { "F#", 6, 0, { 1, 1, 1, 1, 1, 1, 0 }, { 0 } },
+    //                     C  D  E  F  G  A  B
+    { "F",  0, 1, { 0 }, { 0, 0, 0, 0, 0, 0, 1 } },
+    { "Bb", 0, 2, { 0 }, { 0, 0, 1, 0, 0, 0, 1 } },
+    { "Eb", 0, 3, { 0 }, { 0, 0, 1, 0, 0, 1, 1 } },
+    { "Ab", 0, 4, { 0 }, { 0, 1, 1, 0, 0, 1, 1 } },
+    { "Db", 0, 5, { 0 }, { 0, 1, 1, 0, 1, 1, 1 } },
+    { "Gb", 0, 6, { 0 }, { 1, 1, 1, 0, 1, 1, 1 } },
+};
+
+#define ZM_KEY_SZ (sizeof(keys) / sizeof(keys[0]))
+
+zm_key_t *zm_get_key(zm_key_x key_index)
+{
+    return &keys[key_index % ZM_KEY_SZ];
+}
+
+zm_key_x zm_get_next_key_index(zm_key_x key_index)
+{
+    return (key_index + 1) % ZM_KEY_SZ;
+}
+
+void zm_get_key_signature(zm_key_x key_index, zm_key_signature_t *key_signature)
+{
+    const zm_key_t *key = &keys[key_index];
+    key_signature->index = key_index;
+    if (key->sharps) {
+        snprintf(key_signature->name, sizeof(key_signature->name), "%s (%d %s)",
+                key->name, key->sharps, key->sharps == 1 ? "sharp" : "sharps");
+    } else if (key->flats) {
+        snprintf(key_signature->name, sizeof(key_signature->name), "%s (%d %s)",
+                key->name, key->flats, key->flats == 1 ? "flat" : "flats");
+    } else {
+        snprintf(key_signature->name, sizeof(key_signature->name), "%s", key->name);
+    }
+}

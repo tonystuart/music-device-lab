@@ -255,13 +255,14 @@ int main(int argc, char *argv[])
 {
 #endif
 
+    zm_music_t *music = zm_read();
     ysw_bus_h bus = ysw_event_create_bus();
 
     initialize_touch_screen();
     initialize_synthesizer(bus);
 
     ysw_sequencer_create_task(bus);
-    ysw_editor_create_task(bus);
+    ysw_editor_create_task(bus, music);
 
 #ifdef IDF_VER
     ysw_led_config_t led_config = {
@@ -276,7 +277,6 @@ int main(int argc, char *argv[])
     ysw_keyboard_create_task(bus, &keyboard_config);
 #endif
 
-    zm_music_t *music = zm_read();
     zm_song_t *song = initialize_song(bus, music, 0);
     ysw_array_t *notes = zm_render_song(song);
 

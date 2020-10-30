@@ -10,5 +10,6 @@
 #pragma once
 
 #include "ysw_bus.h"
+#include "zm_music.h"
 
-void ysw_editor_create_task(ysw_bus_h bus);
+void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music);
