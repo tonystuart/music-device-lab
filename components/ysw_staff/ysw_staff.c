@@ -119,7 +119,7 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
     visit_letter(vc, YSW_LEFT_BAR);
     visit_letter(vc, YSW_TREBLE_CLEF);
 
-    zm_key_t *key = zm_get_key(ext->passage->key);
+    const zm_key_t *key = zm_get_key(ext->passage->key);
     if (key->sharps) {
         visit_letter(vc, 0x0a + key->sharps - 1);
     } else if (key->flats) {
@@ -209,7 +209,7 @@ static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
         .point.y = 60,
         .color = LV_COLOR_WHITE,
         .clip_area = clip_area,
-        .font = &MusiQwik_48,
+        .font = &MusiQwikT_48,
     };
 
     if (ext->last_x) {
@@ -296,7 +296,16 @@ void ysw_staff_set_passage(lv_obj_t *staff, zm_passage_t *passage)
     lv_obj_invalidate(staff);
 }
 
-void ysw_staff_set_position(lv_obj_t *staff, uint32_t position)
+void ysw_staff_update_position(lv_obj_t *staff, uint32_t position)
+{
+    assert(staff);
+    ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
+    ext->position = position;
+    ext->last_x = 0;
+    lv_obj_invalidate(staff);
+}
+
+void ysw_staff_update_all(lv_obj_t *staff, uint32_t position)
 {
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);

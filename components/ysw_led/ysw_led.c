@@ -46,10 +46,6 @@ static uint8_t semitone_leds[] = {
 typedef struct {
 } context_t;
 
-static void on_play(context_t *context, ysw_event_play_t *event)
-{
-}
-
 static void control_led(uint8_t channel, uint8_t midi_note, bool on)
 {
     if (midi_note < 36 || midi_note > 83 || channel > 2) {
@@ -85,9 +81,6 @@ static void process_event(void *caller_context, ysw_event_t *event)
     context_t *context = caller_context;
     if (event) {
         switch (event->header.type) {
-            case YSW_EVENT_PLAY:
-                on_play(context, &event->play);
-                break;
             case YSW_EVENT_NOTE_ON:
                 on_note_on(context, &event->note_on);
                 break;
@@ -113,6 +106,6 @@ void ysw_led_create_task(ysw_bus_h bus, ysw_led_config_t *led_config)
     config.caller_context = context;
 
     ysw_task_h task = ysw_task_create(&config);
-    ysw_task_subscribe(task, YSW_ORIGIN_COMMAND);
-    ysw_task_subscribe(task, YSW_ORIGIN_NOTE);
+    ysw_task_subscribe(task, YSW_ORIGIN_EDITOR);
+    ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);
 }

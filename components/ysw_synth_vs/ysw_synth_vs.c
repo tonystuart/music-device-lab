@@ -75,5 +75,6 @@ void ysw_synth_vs_create_task(ysw_bus_h bus, ysw_vs1053_config_t *vs1053_config)
 
     ysw_task_h task = ysw_task_create(&config);
 
-    ysw_task_subscribe(task, YSW_ORIGIN_NOTE);
+    ysw_task_subscribe(task, YSW_ORIGIN_EDITOR);
+    ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);
 }

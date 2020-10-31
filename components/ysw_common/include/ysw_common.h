@@ -75,8 +75,8 @@ static inline uint32_t ysw_common_muldiv(int32_t multiplicand, int32_t multiplie
 
 uint32_t ysw_get_millis();
 void ysw_wait_millis(int millis);
-uint32_t ysw_ticks_to_millis(uint32_t ticks);
-uint32_t ysw_millis_to_ticks(uint32_t millis);
+uint32_t ysw_rtos_ticks_to_millis(uint32_t ticks);
+uint32_t ysw_millis_to_rtos_ticks(uint32_t millis);
 
 char *ysw_itoa(int input_value, char *buffer, int buffer_size);
 void ysw_copy(char *destination, const char* source, size_t size);

@@ -42,7 +42,7 @@ typedef struct {
 
 static inline time_t t2ms(context_t *context, uint32_t ticks)
 {
-    return ysw_ticks_to_millis_by_tpqn(ticks, context->clip.tempo, YSW_TICKS_DEFAULT_TPQN);
+    return ysw_ticks_to_millis(ticks, context->clip.bpm);
 }
 
 static inline bool is_clip_playing(context_t *context)
@@ -54,7 +54,11 @@ static void release_notes(context_t *context)
 {
     for (uint8_t i = 0; i < context->active_count; i++) {
         active_note_t *active_note = &context->active_notes[i];
-        ysw_event_fire_note_off(context->bus, active_note->channel, active_note->midi_note);
+        ysw_event_note_off_t note_off = {
+            .channel = active_note->channel,
+            .midi_note = active_note->midi_note,
+        };
+        ysw_event_fire_note_off(context->bus, YSW_ORIGIN_SEQUENCER, &note_off);
     }
     context->active_count = 0;
 }
@@ -68,7 +72,7 @@ static void free_clip(context_t *context)
 {
     ysw_array_free(context->clip.notes);
     context->clip.notes = NULL;
-    context->clip.tempo = 0;
+    context->clip.bpm = 0;
 }
 
 static inline void adjust_playback_start_millis(context_t *context)
@@ -98,7 +102,7 @@ static uint32_t get_current_playback_millis(context_t *context)
 
 static void play_clip(context_t *context, ysw_event_clip_t *new_clip)
 {
-    ESP_LOGD(TAG, "play_clip tempo=%d", new_clip->tempo);
+    ESP_LOGD(TAG, "play_clip bpm=%d", new_clip->bpm);
     if (is_clip_playing(context)) {
         release_notes(context);
     }
@@ -143,10 +147,10 @@ static void resume_clip(context_t *context)
     }
 }
 
-static void set_tempo(context_t *context, uint8_t new_tempo)
+static void set_tempo(context_t *context, uint8_t bpm)
 {
-    ESP_LOGW(TAG, "set_tempo tempo=%d", new_tempo);
-    context->clip.tempo = new_tempo;
+    ESP_LOGW(TAG, "set_tempo bpm=%d", bpm);
+    context->clip.bpm = bpm;
 }
 
 static void set_loop(context_t *context, bool new_value)
@@ -204,13 +208,21 @@ static void on_play(context_t *context, ysw_event_play_t *event)
 
 static void play_note(context_t *context, ysw_note_t *note, int next_note_index)
 {
-    if (note->instrument != context->programs[note->channel]) {
-        ysw_event_fire_program_change(context->bus, note->channel, note->instrument);
-        context->programs[note->channel] = note->instrument;
+    if (note->program != context->programs[note->channel]) {
+        ysw_event_program_change_t program_change = {
+            .channel = note->channel,
+            .program = note->program,
+        };
+        ysw_event_fire_program_change(context->bus, YSW_ORIGIN_EDITOR, &program_change);
+        context->programs[note->channel] = note->program;
     }
 
     if (next_note_index != -1) {
-        ysw_event_fire_note_off(context->bus, note->channel, note->midi_note);
+        ysw_event_note_off_t note_off = {
+            .channel = note->channel,
+            .midi_note = note->midi_note,
+        };
+        ysw_event_fire_note_off(context->bus, YSW_ORIGIN_SEQUENCER, &note_off);
     } else {
         if (context->active_count < MAX_POLYPHONY) {
             next_note_index = context->active_count++;
@@ -218,15 +230,17 @@ static void play_note(context_t *context, ysw_note_t *note, int next_note_index)
     }
 
     if (next_note_index != -1) {
-        if (note->channel == YSW_MIDI_STATUS_CHANNEL) {
-            ysw_event_fire_note_status(context->bus, note);
-        } else {
-            ysw_event_fire_note_on(context->bus, note->channel, note->midi_note, note->velocity);
-            context->active_notes[next_note_index].channel = note->channel;
-            context->active_notes[next_note_index].midi_note = note->midi_note;
-            context->active_notes[next_note_index].end_time = t2ms(context, note->start) + t2ms(context, note->duration);
-            //ESP_LOGD(TAG, "active_notes[%d].end_time=%ld", next_note_index, context->active_notes[next_note_index].end_time);
-        }
+        ysw_event_fire_note_status(context->bus, note);
+        ysw_event_note_on_t note_on = {
+            .channel = note->channel,
+            .midi_note = note->midi_note,
+            .velocity = note->velocity,
+        };
+        ysw_event_fire_note_on(context->bus, YSW_ORIGIN_SEQUENCER, &note_on);
+        context->active_notes[next_note_index].channel = note->channel;
+        context->active_notes[next_note_index].midi_note = note->midi_note;
+        context->active_notes[next_note_index].end_time =
+            t2ms(context, note->start) + t2ms(context, note->duration);
     } else {
         ESP_LOGE(TAG, "Maximum polyphony exceeded, active_count=%d", context->active_count);
     }
@@ -251,7 +265,11 @@ static TickType_t process_notes(context_t *context)
     while (index < context->active_count) {
         active_note_t *active_note = &context->active_notes[index];
         if (active_note->end_time <= playback_millis) {
-            ysw_event_fire_note_off(context->bus, active_note->channel, active_note->midi_note);
+            ysw_event_note_off_t note_off = {
+                .channel = active_note->channel,
+                .midi_note = active_note->midi_note,
+            };
+            ysw_event_fire_note_off(context->bus, YSW_ORIGIN_SEQUENCER, &note_off);
             if (index + 1 < context->active_count) {
                 // replaced expired note with last one in array
                 context->active_notes[index] = context->active_notes[context->active_count - 1];
@@ -292,13 +310,13 @@ static TickType_t process_notes(context_t *context)
                 time_of_next_event = note_start_time;
             }
             uint32_t delay_millis = time_of_next_event - playback_millis;
-            ticks_to_wait = ysw_millis_to_ticks(delay_millis);
+            ticks_to_wait = ysw_millis_to_rtos_ticks(delay_millis);
         }
     } else {
         if (next_note_to_end) {
             ESP_LOGD(TAG, "song complete, waiting for notes to end");
             uint32_t delay_millis = next_note_to_end->end_time - playback_millis;
-            ticks_to_wait = ysw_millis_to_ticks(delay_millis);
+            ticks_to_wait = ysw_millis_to_rtos_ticks(delay_millis);
         } else if (context->loop) {
             ESP_LOGD(TAG, "loop complete, looping to start");
             ysw_event_fire_loop_done(context->bus);
@@ -338,7 +356,7 @@ static void process_event(void *caller_context, ysw_event_t *event)
                 stop_clip(context);
                 break;
             case YSW_EVENT_TEMPO:
-                set_tempo(context, event->tempo.qnpm);
+                set_tempo(context, event->tempo.bpm);
                 break;
             case YSW_EVENT_LOOP:
                 set_loop(context, event->loop.loop);

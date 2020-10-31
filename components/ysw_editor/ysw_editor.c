@@ -14,6 +14,7 @@
 #include "ysw_heap.h"
 #include "ysw_staff.h"
 #include "ysw_task.h"
+#include "ysw_ticks.h"
 #include "zm_music.h"
 #include "lvgl.h"
 #include "esp_log.h"
@@ -90,7 +91,7 @@ typedef struct {
     zm_style_x style;
 
     uint32_t position;
-    bool is_insert;
+    uint8_t advance;
     lv_obj_t *container;
     lv_obj_t *header;
     lv_obj_t *staff;
@@ -123,63 +124,41 @@ static void update_footer(context_t *context)
     }
 }
 
-static void on_note_on(context_t *context, ysw_event_note_on_t *event)
+static void update_details(context_t *context)
 {
+    update_header(context);
+    update_footer(context);
 }
 
-static void on_key_down(context_t *context, ysw_event_key_down_t *event)
+static void process_note(context_t *context, ysw_event_key_up_t *event)
 {
-    assert(event->key < KEY_MAP_SZ);
-    uint8_t value = key_map[event->key];
-    //ESP_LOGD(TAG, "on_key_down key=%d, value=%d", event->key, value);
-    if (value < YSW_EDITOR_NOTES) {
-        ysw_event_fire_note_on(context->bus, 0, 60 + value, 80);
+    zm_beat_t *beat = NULL;
+    int32_t beat_index = context->position / 2;
+    if (context->position % 2 == 0) {
+        beat = ysw_heap_allocate(sizeof(zm_beat_t));
+        ysw_array_insert(context->passage->beats, beat_index, beat);
+    } else {
+        beat = ysw_array_get(context->passage->beats, beat_index);
     }
-}
-
-static void on_key_up(context_t *context, ysw_event_key_up_t *event)
-{
-    assert(event->key < KEY_MAP_SZ);
     uint8_t value = key_map[event->key];
-    if (value < YSW_EDITOR_NOTES) {
-        ysw_event_fire_note_off(context->bus, 0, 60 + value);
+    beat->tone.note = value == YSW_EDITOR_REST ? 0 : 60 + value;
+    if (context->duration == ZM_AS_PLAYED) {
+        beat->tone.duration = ysw_millis_to_ticks(event->duration, context->passage->bpm);
+    } else {
+        beat->tone.duration = context->duration;
     }
+    uint32_t beat_count = ysw_array_get_count(context->passage->beats);
+    context->position = min(context->position + context->advance, beat_count * 2);
+    ysw_staff_update_all(context->staff, context->position);
+    update_details(context);
 }
 
-static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
+static void process_duration(context_t *context)
 {
-    assert(event->key < KEY_MAP_SZ);
-    uint8_t value = key_map[event->key];
-    //ESP_LOGD(TAG, "on_key_pressed key=%d, value=%d", event->key, value);
-    if (value < YSW_EDITOR_NOTES || value == YSW_EDITOR_REST) {
-        int32_t beat_index = context->position / 2;
-        if (context->position % 2 == 0) {
-            zm_beat_t *beat = ysw_heap_allocate(sizeof(zm_beat_t));
-            beat->tone.note = value == YSW_EDITOR_REST ? 0 : 60 + value;
-            beat->tone.duration = context->duration;
-            ysw_array_insert(context->passage->beats, beat_index, beat);
-            if (context->is_insert) {
-                context->position += 2; // move from space to next space
-            } else {
-                context->position += 1; // move from space to note
-            }
-        } else {
-            // TODO: consider merging with above
-            zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
-            beat->tone.note = value == YSW_EDITOR_REST ? 0 : 60 + value;
-            beat->tone.duration = context->duration; // retain old duration or use new?
-            if (context->is_insert) {
-                context->position += 1;
-            }
-        }
-    } else if (value == YSW_EDITOR_NOTE) {
-        context->mode = YSW_EDITOR_MODE_NOTE;
-    } else if (value == YSW_EDITOR_CHORD) {
-        context->mode = YSW_EDITOR_MODE_CHORD;
-    } else if (value == YSW_EDITOR_DRUM) {
-        context->mode = YSW_EDITOR_MODE_DRUM;
-    } else if (value == YSW_EDITOR_DURATION) {
-        if (context->duration <= ZM_SIXTEENTH) {
+    if (context->position % 2 == 0) {
+        if (context->duration == ZM_AS_PLAYED) {
+            context->duration = ZM_SIXTEENTH;
+        } else if (context->duration <= ZM_SIXTEENTH) {
             context->duration = ZM_EIGHTH;
         } else if (context->duration <= ZM_EIGHTH) {
             context->duration = ZM_QUARTER;
@@ -188,50 +167,133 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
         } else if (context->duration <= ZM_HALF) {
             context->duration = ZM_WHOLE;
         } else {
-            context->duration = ZM_SIXTEENTH;
+            context->duration = ZM_AS_PLAYED;
         }
-        if (context->position % 2 == 1) {
-            uint32_t beat_index = context->position / 2;
-            zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
-            beat->tone.duration = context->duration;
-        }
-    // TODO: handle note mode buttons only in note mode
-    } else if (value == YSW_EDITOR_KEY) {
-        context->passage->key = zm_get_next_key_index(context->passage->key);
-    } else if (value == YSW_EDITOR_DELETE) {
-        if (context->position % 2 == 1) {
-            uint32_t beat_index = context->position / 2;
-            zm_beat_t *beat = ysw_array_remove(context->passage->beats, beat_index);
-            ysw_heap_free(beat);
-            uint32_t beat_count = ysw_array_get_count(context->passage->beats);
-            if (beat_index == beat_count) {
-                if (beat_count) {
-                    context->position -= 2;
-                } else {
-                    context->position = 0;
-                }
-            }
-        }
-    } else if (value == YSW_EDITOR_LEFT) {
-        if (context->position > 0) {
-            context->position--;
-        }
-    } else if (value == YSW_EDITOR_RIGHT) {
-        if (context->position < (ysw_array_get_count(context->passage->beats) * 2)) {
-            context->position++;
-        }
+        update_details(context);
     } else {
-        ESP_LOGD(TAG, "on_key_pressed unrecognized key=%d, value=%d", event->key, value);
-        return;
+        uint32_t beat_index = context->position / 2;
+        zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
+        beat->tone.duration = context->duration;
+        ysw_staff_update_all(context->staff, context->position);
     }
-    // TODO: update / invalidate only what is needed
-    ysw_staff_set_position(context->staff, context->position);
-    update_header(context);
-    update_footer(context);
 }
 
-static void on_play(context_t *context, ysw_event_play_t *event)
+static void process_delete(context_t *context)
 {
+    if (context->position % 2 == 1) {
+        uint32_t beat_index = context->position / 2;
+        zm_beat_t *beat = ysw_array_remove(context->passage->beats, beat_index);
+        ysw_heap_free(beat);
+        uint32_t beat_count = ysw_array_get_count(context->passage->beats);
+        if (beat_index == beat_count) {
+            if (beat_count) {
+                context->position -= 2;
+            } else {
+                context->position = 0;
+            }
+        }
+        ysw_staff_update_all(context->staff, context->position);
+    }
+}
+
+static void process_left(context_t *context)
+{
+    if (context->position > 0) {
+        context->position--;
+        ysw_staff_update_position(context->staff, context->position);
+    }
+}
+
+static void process_right(context_t *context)
+{
+    if (context->position < (ysw_array_get_count(context->passage->beats) * 2)) {
+        context->position++;
+        ysw_staff_update_position(context->staff, context->position);
+    }
+}
+
+static void on_key_down(context_t *context, ysw_event_key_down_t *event)
+{
+    assert(event->key < KEY_MAP_SZ);
+    uint8_t value = key_map[event->key];
+    //ESP_LOGD(TAG, "on_key_down key=%d, value=%d", event->key, value);
+    if (value < YSW_EDITOR_NOTES) {
+        ysw_event_note_on_t note_on = {
+            .channel = 0,
+            .midi_note = 60 + value,
+            .velocity = 80,
+        };
+        ysw_event_fire_note_on(context->bus, YSW_ORIGIN_EDITOR, &note_on);
+    }
+}
+
+static void on_key_up(context_t *context, ysw_event_key_up_t *event)
+{
+    assert(event->key < KEY_MAP_SZ);
+    uint8_t value = key_map[event->key];
+    if (value < YSW_EDITOR_NOTES) {
+        ysw_event_note_off_t note_off = {
+            .channel = 0,
+            .midi_note = 60 + value,
+        };
+        ysw_event_fire_note_off(context->bus, YSW_ORIGIN_EDITOR, &note_off);
+    }
+    if (value < YSW_EDITOR_NOTES || value == YSW_EDITOR_REST) {
+        switch (context->mode) {
+            case YSW_EDITOR_MODE_NOTE:
+                process_note(context, event);
+                break;
+            case YSW_EDITOR_MODE_CHORD:
+                break;
+            case YSW_EDITOR_MODE_DRUM:
+                break;
+        }
+    }
+}
+
+static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
+{
+    assert(event->key < KEY_MAP_SZ);
+    uint8_t value = key_map[event->key];
+    ESP_LOGD(TAG, "on_key_pressed key=%d, value=%d", event->key, value);
+    switch (value) {
+        case YSW_EDITOR_NOTE:
+            context->mode = YSW_EDITOR_MODE_NOTE;
+            update_details(context);
+            break;
+        case YSW_EDITOR_CHORD:
+            //context->mode = YSW_EDITOR_MODE_CHORD;
+            update_details(context);
+            break;
+        case YSW_EDITOR_DRUM:
+            //context->mode = YSW_EDITOR_MODE_DRUM;
+            update_details(context);
+            break;
+        case YSW_EDITOR_DURATION:
+            process_duration(context);
+            break;
+        case YSW_EDITOR_KEY:
+            context->passage->key = zm_get_next_key_index(context->passage->key);
+            ysw_staff_update_all(context->staff, context->position);
+            update_details(context);
+            break;
+        case YSW_EDITOR_DELETE:
+            process_delete(context);
+            break;
+        case YSW_EDITOR_LEFT:
+            process_left(context);
+            break;
+        case YSW_EDITOR_RIGHT:
+            process_right(context);
+            break;
+        default:
+            break;
+    }
+}
+
+static void on_note_on(context_t *context, ysw_event_t *event)
+{
+    assert(event->header.origin == YSW_ORIGIN_SEQUENCER); // i.e. not from us
 }
 
 static void process_event(void *caller_context, ysw_event_t *event)
@@ -248,11 +310,8 @@ static void process_event(void *caller_context, ysw_event_t *event)
             case YSW_EVENT_KEY_PRESSED:
                 on_key_pressed(context, &event->key_pressed);
                 break;
-            case YSW_EVENT_PLAY:
-                on_play(context, &event->play);
-                break;
             case YSW_EVENT_NOTE_ON:
-                on_note_on(context, &event->note_on);
+                on_note_on(context, event);
                 break;
             default:
                 break;
@@ -267,18 +326,18 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music)
 
     context->bus = bus;
     context->music = music;
-    context->duration = ZM_QUARTER;
+    context->duration = ZM_AS_PLAYED;
     context->quality = 0;
     context->style = 0;
     context->position = 0;
-    context->is_insert = true;
+    context->advance = 2;
+    context->mode = YSW_EDITOR_MODE_NOTE;
 
     context->passage = ysw_heap_allocate(sizeof(zm_passage_t));
     context->passage->beats = ysw_array_create(64);
     context->passage->bpm = 100;
     context->passage->key = 0;
     context->passage->time = ZM_TIME_4_4;
-
 
     context->container = lv_obj_create(lv_scr_act(), NULL);
     assert(context->container);
@@ -317,7 +376,6 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music)
     ysw_task_h task = ysw_task_create(&config);
 
     ysw_task_subscribe(task, YSW_ORIGIN_KEYBOARD);
-    ysw_task_subscribe(task, YSW_ORIGIN_COMMAND);
-    ysw_task_subscribe(task, YSW_ORIGIN_NOTE);
+    ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);
 }
 

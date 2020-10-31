@@ -88,8 +88,8 @@ static const keycode_map_t keycode_map[] = {
     { 96, 6 }, // N8
     { 97, 7 }, // N9
 
-    { 99, 27 }, // Keypad Delete
-    { 127, 27 }, // Delete Button
+    { 99, 25 }, // Keypad Delete
+    { 127, 25 }, // Delete Button
 };
 
 #define KEYCODE_MAP_SZ (sizeof(keycode_map) / sizeof(keycode_map[0]))

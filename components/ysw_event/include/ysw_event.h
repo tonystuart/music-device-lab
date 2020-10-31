@@ -44,7 +44,7 @@ typedef struct {
 
 typedef struct {
     ysw_array_t *notes; // must remain accessible for duration of playback
-    uint8_t tempo;
+    uint8_t bpm;
 } ysw_event_clip_t;
 
 typedef enum {
@@ -59,7 +59,7 @@ typedef struct {
 } ysw_event_play_t;
 
 typedef struct {
-    uint8_t qnpm;
+    uint8_t bpm;
 } ysw_event_tempo_t;
 
 typedef struct {
@@ -140,9 +140,9 @@ typedef struct {
 ysw_bus_h ysw_event_create_bus();
 void ysw_event_publish(ysw_bus_h bus, ysw_event_t *event);
 
-void ysw_event_fire_note_on(ysw_bus_h bus, uint8_t channel, uint8_t midi_note, uint8_t velocity);
-void ysw_event_fire_note_off(ysw_bus_h bus, uint8_t channel, uint8_t midi_note);
-void ysw_event_fire_program_change(ysw_bus_h bus, uint8_t channel, uint8_t program);
+void ysw_event_fire_note_on(ysw_bus_h bus, ysw_origin_t origin, ysw_event_note_on_t *note_on);
+void ysw_event_fire_note_off(ysw_bus_h bus, ysw_origin_t origin, ysw_event_note_off_t *note_off);
+void ysw_event_fire_program_change(ysw_bus_h bus, ysw_origin_t origin, ysw_event_program_change_t *program);
 void ysw_event_fire_loop_done(ysw_bus_h bus);
 void ysw_event_fire_play_done(ysw_bus_h bus);
 void ysw_event_fire_idle(ysw_bus_h bus);

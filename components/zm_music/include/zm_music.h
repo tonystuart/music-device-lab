@@ -55,6 +55,7 @@ typedef enum {
 } zm_time_t;
 
 typedef enum {
+    ZM_AS_PLAYED = 0,
     ZM_SIXTEENTH = 64,
     ZM_EIGHTH = 128,
     ZM_QUARTER = 256,
@@ -179,5 +180,5 @@ zm_music_t *zm_read(void);
 zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large_t start_time, zm_small_t channel);
 ysw_array_t *zm_render_song(zm_song_t *song);
 void zm_get_key_signature(zm_key_x key_index, zm_key_signature_t *key_signature);
-zm_key_t *zm_get_key(zm_key_x key_index);
+const zm_key_t *zm_get_key(zm_key_x key_index);
 zm_key_x zm_get_next_key_index(zm_key_x key_index);

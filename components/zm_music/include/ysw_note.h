@@ -18,6 +18,6 @@ typedef struct PACKED note {
     uint8_t channel;
     uint8_t midi_note;
     uint8_t velocity;
-    uint8_t instrument;
+    uint8_t program;
 } ysw_note_t;
 

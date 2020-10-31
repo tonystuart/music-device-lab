@@ -31,7 +31,7 @@ static void ysw_task_event_handler(void *parameter)
     for (;;) {
         ysw_event_t item;
         ysw_event_t *event = NULL;
-        TickType_t wait_ticks = ysw_millis_to_ticks(context->wait_millis);
+        TickType_t wait_ticks = ysw_millis_to_rtos_ticks(context->wait_millis);
         BaseType_t is_message = xQueueReceive(context->queue, &item, wait_ticks);
         if (is_message) {
             event = &item;

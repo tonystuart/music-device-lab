@@ -23,36 +23,32 @@ void ysw_event_publish(ysw_bus_h bus, ysw_event_t *event)
     ysw_bus_publish(bus, event->header.origin, event, sizeof(ysw_event_t));
 }
 
-void ysw_event_fire_note_on(ysw_bus_h bus, uint8_t channel, uint8_t midi_note, uint8_t velocity)
+void ysw_event_fire_note_on(ysw_bus_h bus, ysw_origin_t origin, ysw_event_note_on_t *note_on)
 {
     ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_NOTE,
+        .header.origin = origin,
         .header.type = YSW_EVENT_NOTE_ON,
-        .note_on.channel = channel,
-        .note_on.midi_note = midi_note,
-        .note_on.velocity = velocity,
+        .note_on = *note_on,
     };
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_note_off(ysw_bus_h bus, uint8_t channel, uint8_t midi_note)
+void ysw_event_fire_note_off(ysw_bus_h bus, ysw_origin_t origin, ysw_event_note_off_t *note_off)
 {
     ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_NOTE,
+        .header.origin = origin,
         .header.type = YSW_EVENT_NOTE_OFF,
-        .note_off.channel = channel,
-        .note_off.midi_note = midi_note,
+        .note_off = *note_off,
     };
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_program_change(ysw_bus_h bus, uint8_t channel, uint8_t program)
+void ysw_event_fire_program_change(ysw_bus_h bus, ysw_origin_t origin, ysw_event_program_change_t *program)
 {
     ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_NOTE,
+        .header.origin = origin,
         .header.type = YSW_EVENT_PROGRAM_CHANGE,
-        .program_change.channel = channel,
-        .program_change.program = program,
+        .program_change = *program,
     };
     ysw_event_publish(bus, &event);
 }
@@ -60,7 +56,7 @@ void ysw_event_fire_program_change(ysw_bus_h bus, uint8_t channel, uint8_t progr
 void ysw_event_fire_loop_done(ysw_bus_h bus)
 {
     ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_NOTE,
+        .header.origin = YSW_ORIGIN_SEQUENCER,
         .header.type = YSW_EVENT_LOOP_DONE,
     };
     ysw_event_publish(bus, &event);
@@ -69,7 +65,7 @@ void ysw_event_fire_loop_done(ysw_bus_h bus)
 void ysw_event_fire_play_done(ysw_bus_h bus)
 {
     ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_NOTE,
+        .header.origin = YSW_ORIGIN_SEQUENCER,
         .header.type = YSW_EVENT_PLAY_DONE,
     };
     ysw_event_publish(bus, &event);
@@ -78,7 +74,7 @@ void ysw_event_fire_play_done(ysw_bus_h bus)
 void ysw_event_fire_idle(ysw_bus_h bus)
 {
     ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_NOTE,
+        .header.origin = YSW_ORIGIN_SEQUENCER,
         .header.type = YSW_EVENT_IDLE,
     };
     ysw_event_publish(bus, &event);
@@ -87,7 +83,7 @@ void ysw_event_fire_idle(ysw_bus_h bus)
 void ysw_event_fire_note_status(ysw_bus_h bus, ysw_note_t *note)
 {
     ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_NOTE,
+        .header.origin = YSW_ORIGIN_SEQUENCER,
         .header.type = YSW_EVENT_NOTE_STATUS,
         .note_status.note = *note,
     };
@@ -141,7 +137,7 @@ void ysw_event_fire_play(ysw_bus_h bus, ysw_array_t *notes, uint8_t bpm)
         .header.type = YSW_EVENT_PLAY,
         .play.type = YSW_EVENT_PLAY_NOW,
         .play.clip.notes = notes,
-        .play.clip.tempo = bpm,
+        .play.clip.bpm = bpm,
     };
     ysw_event_publish(bus, &event);
 }

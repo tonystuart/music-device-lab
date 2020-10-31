@@ -333,8 +333,6 @@ zm_music_t *zm_read(void)
 #include "ysw_note.h"
 #include "ysw_ticks.h"
 
-#define ZM_TPU YSW_TICKS_DEFAULT_TPM // ticks per unit
-
 int zm_note_compare(const void *left, const void *right)
 {
     const ysw_note_t *left_note = *(ysw_note_t * const *)left;
@@ -349,7 +347,7 @@ int zm_note_compare(const void *left, const void *right)
                 if (!delta) {
                     delta = left_note->velocity - right_note->velocity;
                     if (!delta) {
-                        delta = left_note->instrument - right_note->instrument;
+                        delta = left_note->program - right_note->program;
                     }
                 }
             }
@@ -377,12 +375,12 @@ zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large
                 ysw_note_t *note = ysw_heap_allocate(sizeof(ysw_note_t));
                 note->channel = channel;
                 note->midi_note = step->root + semitone;
-                note->start = step_start + (sound->start * step->duration) / ZM_TPU;
-                note->duration = (sound->duration * step->duration) / ZM_TPU;
+                note->start = step_start + (sound->start * step->duration) / YSW_TICKS_PER_MEASURE;
+                note->duration = (sound->duration * step->duration) / YSW_TICKS_PER_MEASURE;
                 note->velocity = sound->velocity;
-                note->instrument = pattern->sample_index;
+                note->program = pattern->sample_index;
                 ysw_array_push(notes, note);
-                //ESP_LOGD(TAG, "step_start=%d, midi_note=%d, start=%d, duration=%d, velocity=%d, channel=%d, sample=%d", step_start, note->midi_note, note->start, note->duration, note->velocity, note->channel, note->instrument);
+                //ESP_LOGD(TAG, "step_start=%d, midi_note=%d, start=%d, duration=%d, velocity=%d, channel=%d, sample=%d", step_start, note->midi_note, note->start, note->duration, note->velocity, note->channel, note->program);
             }
         }
         step_start += step->duration;
@@ -456,7 +454,7 @@ static const zm_key_t keys[] = {
 
 #define ZM_KEY_SZ (sizeof(keys) / sizeof(keys[0]))
 
-zm_key_t *zm_get_key(zm_key_x key_index)
+const zm_key_t *zm_get_key(zm_key_x key_index)
 {
     return &keys[key_index % ZM_KEY_SZ];
 }

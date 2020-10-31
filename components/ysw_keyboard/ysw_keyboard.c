@@ -141,18 +141,11 @@ static void scan_keyboard(context_t *context)
     }
 }
 
-static void on_play(context_t *context, ysw_event_play_t *event)
-{
-}
-
 static void process_event(void *caller_context, ysw_event_t *event)
 {
     context_t *context = caller_context;
     if (event) {
         switch (event->header.type) {
-            case YSW_EVENT_PLAY:
-                on_play(context, &event->play);
-                break;
             default:
                 break;
         }
@@ -192,5 +185,4 @@ void ysw_keyboard_create_task(ysw_bus_h bus, ysw_keyboard_config_t *keyboard_con
     config.wait_millis = 10;
 
     ysw_task_h task = ysw_task_create(&config);
-    ysw_task_subscribe(task, YSW_ORIGIN_COMMAND);
 }

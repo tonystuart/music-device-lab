@@ -13,24 +13,24 @@
 #include "freertos/task.h"
 #include "stdio.h"
 
-uint32_t ysw_ticks_to_millis(uint32_t ticks)
+uint32_t ysw_rtos_ticks_to_millis(uint32_t ticks)
 {
     return ticks * portTICK_PERIOD_MS;
 }
 
-uint32_t ysw_millis_to_ticks(uint32_t millis)
+uint32_t ysw_millis_to_rtos_ticks(uint32_t millis)
 {
     return millis / portTICK_PERIOD_MS;
 }
 
 uint32_t ysw_get_millis()
 {
-    return ysw_ticks_to_millis(xTaskGetTickCount());
+    return ysw_rtos_ticks_to_millis(xTaskGetTickCount());
 }
 
 void ysw_wait_millis(int millis)
 {
-    vTaskDelay(ysw_millis_to_ticks(millis));
+    vTaskDelay(ysw_millis_to_rtos_ticks(millis));
 }
 
 char *ysw_itoa(int input_value, char *buffer, int buffer_size)
