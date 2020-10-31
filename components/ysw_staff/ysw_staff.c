@@ -114,6 +114,24 @@ static void visit_string(visit_context_t *vc, const char *string)
     }
 }
 
+static zm_duration_t round_duration(zm_duration_t duration)
+{
+    // Ugly, but efficient. It may not be perfect, but what would be better?
+    zm_duration_t rounded_duration = 0;
+    if (duration <= (ZM_SIXTEENTH + ((ZM_EIGHTH - ZM_SIXTEENTH) / 2))) {  // 64 + 32
+        rounded_duration = ZM_SIXTEENTH;
+    } else if (duration <= (ZM_EIGHTH + ((ZM_QUARTER - ZM_EIGHTH) / 2))) { // 128 + 64
+        rounded_duration = ZM_EIGHTH;
+    } else if (duration <= (ZM_QUARTER + ((ZM_HALF - ZM_QUARTER) / 2))) { // 256 + 128
+        rounded_duration = ZM_QUARTER;
+    } else if (duration <= (ZM_HALF + ((ZM_WHOLE - ZM_HALF) / 2 ))) {     // 512 + 256
+        rounded_duration = ZM_HALF;
+    } else {
+        rounded_duration = ZM_WHOLE;
+    }
+    return rounded_duration;
+}
+
 static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
 {
     visit_letter(vc, YSW_LEFT_BAR);
@@ -147,32 +165,33 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
         } else {
             uint32_t beat_index = i / 2;
             zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);
-            ticks_in_measure += beat->tone.duration;
+            zm_duration_t duration = round_duration(beat->tone.duration);
+            ticks_in_measure += duration;
             if (beat->tone.note) {
                 uint8_t note = (beat->tone.note - 60) % 24;
                 uint8_t step = semitones[note].step;
                 if (semitones[note].half) {
                     visit_letter(vc, YSW_SHARP_BASE + step);
                 }
-                if (beat->tone.duration <= ZM_SIXTEENTH) {
+                if (duration <= ZM_SIXTEENTH) {
                     visit_letter(vc, YSW_16_BASE + step);
-                } else if (beat->tone.duration <= ZM_EIGHTH) {
+                } else if (duration <= ZM_EIGHTH) {
                     visit_letter(vc, YSW_8_BASE + step);
-                } else if (beat->tone.duration <= ZM_QUARTER) {
+                } else if (duration <= ZM_QUARTER) {
                     visit_letter(vc, YSW_4_BASE + step);
-                } else if (beat->tone.duration <= ZM_HALF) {
+                } else if (duration <= ZM_HALF) {
                     visit_letter(vc, YSW_2_BASE + step);
                 } else {
                     visit_letter(vc, YSW_1_BASE + step);
                 }
             } else {
-                if (beat->tone.duration <= ZM_SIXTEENTH) {
+                if (duration <= ZM_SIXTEENTH) {
                     visit_letter(vc, YSW_16_REST);
-                } else if (beat->tone.duration <= ZM_EIGHTH) {
+                } else if (duration <= ZM_EIGHTH) {
                     visit_letter(vc, YSW_8_REST);
-                } else if (beat->tone.duration <= ZM_QUARTER) {
+                } else if (duration <= ZM_QUARTER) {
                     visit_letter(vc, YSW_4_REST);
-                } else if (beat->tone.duration <= ZM_HALF) {
+                } else if (duration <= ZM_HALF) {
                     visit_letter(vc, YSW_2_REST);
                 } else {
                     visit_letter(vc, YSW_1_REST);
