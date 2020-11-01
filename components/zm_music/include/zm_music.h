@@ -26,11 +26,27 @@ typedef bool zm_yesno_t;
 
 typedef zm_medium_t zm_index_t;
 
-typedef uint8_t zm_bpm_x;
 typedef uint8_t zm_key_x;
+typedef uint8_t zm_bpm_x;
 
 typedef uint16_t zm_quality_x;
 typedef uint16_t zm_style_x;
+
+typedef enum {
+    ZM_KEY_C,
+    ZM_KEY_G,
+    ZM_KEY_D,
+    ZM_KEY_A,
+    ZM_KEY_E,
+    ZM_KEY_B,
+    ZM_KEY_F_SHARP,
+    ZM_KEY_F,
+    ZM_KEY_B_FLAT,
+    ZM_KEY_E_FLAT,
+    ZM_KEY_A_FLAT,
+    ZM_KEY_D_FLAT,
+    ZM_KEY_G_FLAT,
+} zm_key_t;
 
 typedef struct {
     const char *name;
@@ -38,21 +54,8 @@ typedef struct {
     const uint8_t flats;
     const uint8_t sharp_indexes[7];
     const uint8_t flat_index[7];
-} zm_key_t;
-
-typedef struct {
-    zm_key_x index;
-    char name[32];
+    const char *label;
 } zm_key_signature_t;
-
-typedef enum {
-    ZM_TIME_2_2,
-    ZM_TIME_2_4,
-    ZM_TIME_3_4,
-    ZM_TIME_4_4,
-    ZM_TIME_3_2,
-    ZM_TIME_6_8,
-} zm_time_t;
 
 typedef enum {
     ZM_AS_PLAYED = 0,
@@ -62,6 +65,35 @@ typedef enum {
     ZM_HALF = 512,
     ZM_WHOLE = 1024,
 } zm_duration_t;
+
+typedef enum {
+    ZM_TIME_2_2,
+    ZM_TIME_2_4,
+    ZM_TIME_3_4,
+    ZM_TIME_4_4,
+    ZM_TIME_6_8,
+} zm_time_t;
+
+typedef struct {
+    const char *name;
+    const zm_small_t count;
+    const zm_duration_t unit;
+} zm_time_signature_t;
+
+typedef enum {
+    ZM_TEMPO_50,
+    ZM_TEMPO_80,
+    ZM_TEMPO_100,
+    ZM_TEMPO_120,
+    ZM_TEMPO_150,
+    ZM_TEMPO_180,
+} zm_tempo_t;
+
+typedef struct {
+    const char *name;
+    const char *label;
+    const zm_bpm_x bpm;
+} zm_tempo_signature_t;
 
 typedef enum {
     ZM_FIT_ONCE,
@@ -160,7 +192,7 @@ typedef struct {
 
 typedef struct {
     char *name;
-    zm_bpm_x bpm;
+    zm_tempo_t tempo;
     zm_key_x key;
     zm_time_t time;
     ysw_array_t *beats;
@@ -179,6 +211,12 @@ zm_music_t *zm_read_from_file(FILE *file);
 zm_music_t *zm_read(void);
 zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large_t start_time, zm_small_t channel);
 ysw_array_t *zm_render_song(zm_song_t *song);
-void zm_get_key_signature(zm_key_x key_index, zm_key_signature_t *key_signature);
-const zm_key_t *zm_get_key(zm_key_x key_index);
+
+const zm_key_signature_t *zm_get_key_signature(zm_key_x key_index);
 zm_key_x zm_get_next_key_index(zm_key_x key_index);
+
+zm_time_t zm_get_next_time_index(zm_time_t time_index);
+const zm_time_signature_t *zm_get_time_signature(zm_time_t time_index);
+
+zm_tempo_t zm_get_next_tempo_index(zm_tempo_t tempo_index);
+const zm_tempo_signature_t *zm_get_tempo_signature(zm_tempo_t tempo_index);

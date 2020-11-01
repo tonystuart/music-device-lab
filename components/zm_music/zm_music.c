@@ -433,48 +433,78 @@ ysw_array_t *zm_render_song(zm_song_t *song)
 
 // https://en.wikipedia.org/wiki/Key_signature
 
-static const zm_key_t keys[] = {
+static const zm_key_signature_t zm_key_signatures[] = {
+    { "C",  0, 0, { 0, 0, 0, 0, 0, 0, 0 }, { 0 }, "C" },
     //              C  D  E  F  G  A  B
-    { "C",  0, 0, { 0, 0, 0, 0, 0, 0, 0 }, { 0 } },
-    //
-    { "G",  1, 0, { 0, 0, 0, 1, 0, 0, 0 }, { 0 } },
-    { "D",  2, 0, { 1, 0, 0, 1, 0, 0, 0 }, { 0 } },
-    { "A",  3, 0, { 1, 0, 0, 1, 1, 0, 0 }, { 0 } },
-    { "E",  4, 0, { 1, 1, 0, 1, 1, 0, 0 }, { 0 } },
-    { "B",  5, 0, { 1, 1, 0, 1, 1, 1, 0 }, { 0 } },
-    { "F#", 6, 0, { 1, 1, 1, 1, 1, 1, 0 }, { 0 } },
+    { "G",  1, 0, { 0, 0, 0, 1, 0, 0, 0 }, { 0 }, "G (1 sharp)" },
+    { "D",  2, 0, { 1, 0, 0, 1, 0, 0, 0 }, { 0 }, "D (2 sharps)" },
+    { "A",  3, 0, { 1, 0, 0, 1, 1, 0, 0 }, { 0 }, "A (3 sharps)" },
+    { "E",  4, 0, { 1, 1, 0, 1, 1, 0, 0 }, { 0 }, "E (4 sharps)" },
+    { "B",  5, 0, { 1, 1, 0, 1, 1, 1, 0 }, { 0 }, "B (5 sharps)" },
+    { "F#", 6, 0, { 1, 1, 1, 1, 1, 1, 0 }, { 0 }, "F# (6 sharps)" },
     //                     C  D  E  F  G  A  B
-    { "F",  0, 1, { 0 }, { 0, 0, 0, 0, 0, 0, 1 } },
-    { "Bb", 0, 2, { 0 }, { 0, 0, 1, 0, 0, 0, 1 } },
-    { "Eb", 0, 3, { 0 }, { 0, 0, 1, 0, 0, 1, 1 } },
-    { "Ab", 0, 4, { 0 }, { 0, 1, 1, 0, 0, 1, 1 } },
-    { "Db", 0, 5, { 0 }, { 0, 1, 1, 0, 1, 1, 1 } },
-    { "Gb", 0, 6, { 0 }, { 1, 1, 1, 0, 1, 1, 1 } },
+    { "F",  0, 1, { 0 }, { 0, 0, 0, 0, 0, 0, 1 }, "F (1 flat)" },
+    { "Bb", 0, 2, { 0 }, { 0, 0, 1, 0, 0, 0, 1 }, "Bb (2 flats)" },
+    { "Eb", 0, 3, { 0 }, { 0, 0, 1, 0, 0, 1, 1 }, "Eb (3 flats)" },
+    { "Ab", 0, 4, { 0 }, { 0, 1, 1, 0, 0, 1, 1 }, "Ab (4 flats)" },
+    { "Db", 0, 5, { 0 }, { 0, 1, 1, 0, 1, 1, 1 }, "Db (5 flats)" },
+    { "Gb", 0, 6, { 0 }, { 1, 1, 1, 0, 1, 1, 1 }, "Gb (6 flats)" },
 };
 
-#define ZM_KEY_SZ (sizeof(keys) / sizeof(keys[0]))
-
-const zm_key_t *zm_get_key(zm_key_x key_index)
-{
-    return &keys[key_index % ZM_KEY_SZ];
-}
+#define ZM_KEY_SIGNATURES (sizeof(zm_key_signatures) / sizeof(zm_key_signatures[0]))
 
 zm_key_x zm_get_next_key_index(zm_key_x key_index)
 {
-    return (key_index + 1) % ZM_KEY_SZ;
+    return (key_index + 1) % ZM_KEY_SIGNATURES;
 }
 
-void zm_get_key_signature(zm_key_x key_index, zm_key_signature_t *key_signature)
+const zm_key_signature_t *zm_get_key_signature(zm_key_x key_index)
 {
-    const zm_key_t *key = &keys[key_index];
-    key_signature->index = key_index;
-    if (key->sharps) {
-        snprintf(key_signature->name, sizeof(key_signature->name), "%s (%d %s)",
-                key->name, key->sharps, key->sharps == 1 ? "sharp" : "sharps");
-    } else if (key->flats) {
-        snprintf(key_signature->name, sizeof(key_signature->name), "%s (%d %s)",
-                key->name, key->flats, key->flats == 1 ? "flat" : "flats");
-    } else {
-        snprintf(key_signature->name, sizeof(key_signature->name), "%s", key->name);
-    }
+    return &zm_key_signatures[key_index % ZM_KEY_SIGNATURES];
 }
+
+// https://en.wikipedia.org/wiki/Time_signature
+
+static const zm_time_signature_t zm_time_signatures[] = {
+    { "2/2", 2, ZM_HALF },
+    { "2/4", 2, ZM_QUARTER },
+    { "3/4", 3, ZM_QUARTER },
+    { "4/4", 4, ZM_QUARTER },
+    { "6/8", 6, ZM_EIGHTH },
+};
+
+#define ZM_TIME_SIGNATURES (sizeof(zm_time_signatures) / sizeof(zm_time_signatures[0]))
+
+zm_time_t zm_get_next_time_index(zm_time_t time_index)
+{
+    return (time_index + 1) % ZM_TIME_SIGNATURES;
+}
+
+const zm_time_signature_t *zm_get_time_signature(zm_time_t time_index)
+{
+    return &zm_time_signatures[time_index % ZM_TIME_SIGNATURES];
+}
+
+// See https://en.wikipedia.org/wiki/Tempo
+
+static const zm_tempo_signature_t zm_tempo_signatures[] = {
+    { "Largo", "50 BPM", 50 },
+    { "Andante", "80 BPM", 80 },
+    { "Moderato", "100 BPM", 100 },
+    { "Allegro", "120 BPM", 120 },
+    { "Vivace", "150 BPM", 150 },
+    { "Presto", "180 BPM", 180 },
+};
+
+#define ZM_TEMPO_SIGNATURES (sizeof(zm_tempo_signatures) / sizeof(zm_tempo_signatures[0]))
+
+zm_tempo_t zm_get_next_tempo_index(zm_tempo_t tempo_index)
+{
+    return (tempo_index + 1) % ZM_TEMPO_SIGNATURES;
+}
+
+const zm_tempo_signature_t *zm_get_tempo_signature(zm_tempo_t tempo_index)
+{
+    return &zm_tempo_signatures[tempo_index % ZM_TEMPO_SIGNATURES];
+}
+

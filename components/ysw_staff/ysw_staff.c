@@ -22,20 +22,15 @@
 #define YSW_STAFF_SPACE 0x02
 #define YSW_LEFT_BAR 0x03
 #define YSW_RIGHT_BAR 0x04
-#define YSW_2_2_TIME 0x18
-#define YSW_2_4_TIME 0x19
-#define YSW_3_4_TIME 0x1a
-#define YSW_4_4_TIME 0x1b
-#define YSW_3_2_TIME 0x1c
-#define YSW_6_8_TIME 0x1d
+#define YSW_SHARP_BASE 0x0a
+#define YSW_FLAT_BASE 0x11
+#define YSW_TIME_BASE 0x18
 #define YSW_16_BASE 0x20
 #define YSW_8_BASE 0x2e
 #define YSW_4_BASE 0x3c
 #define YSW_2_BASE 0x4a
 #define YSW_1_BASE 0x58
 #define YSW_DOT_BASE 0x66
-#define YSW_SHARP_BASE 0x74
-#define YSW_FLAT_BASE 0x82
 #define YSW_16_REST 0xa0
 #define YSW_8_REST 0xa1
 #define YSW_4_REST 0xa2
@@ -137,17 +132,17 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
     visit_letter(vc, YSW_LEFT_BAR);
     visit_letter(vc, YSW_TREBLE_CLEF);
 
-    const zm_key_t *key = zm_get_key(ext->passage->key);
-    if (key->sharps) {
-        visit_letter(vc, 0x0a + key->sharps - 1);
-    } else if (key->flats) {
+    const zm_key_signature_t *key_signature = zm_get_key_signature(ext->passage->key);
+    if (key_signature->sharps) {
+        visit_letter(vc, YSW_SHARP_BASE + key_signature->sharps - 1);
+    } else if (key_signature->flats) {
         visit_letter(vc, YSW_STAFF_SPACE);
-        visit_letter(vc, 0x11 + key->flats - 1);
+        visit_letter(vc, YSW_FLAT_BASE + key_signature->flats - 1);
     } else {
         visit_letter(vc, YSW_STAFF_SPACE);
     }
 
-    visit_letter(vc, YSW_4_4_TIME);
+    visit_letter(vc, YSW_TIME_BASE + ext->passage->time);
 
     uint32_t ticks_in_measure = 0;
     uint32_t beat_count = ysw_array_get_count(ext->passage->beats);
@@ -301,8 +296,6 @@ lv_obj_t *ysw_staff_create(lv_obj_t *par)
     lv_obj_set_design_cb(staff, on_design);
 
     lv_obj_set_size(staff, 320, 120);
-    lv_theme_apply(staff, LV_THEME_LED);
-
     return staff;
 }
 
