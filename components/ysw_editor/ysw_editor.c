@@ -94,7 +94,7 @@ void ysw_field_set_value(lv_obj_t *field, const char *value)
     lv_label_set_text(ext->value, value);
 }
 
-// ysw_header
+// Header
 
 typedef struct {
     lv_cont_ext_t cont_ext; // base class data
@@ -104,19 +104,6 @@ typedef struct {
     lv_obj_t *tempo;
 } ysw_header_ext_t;
 
-static lv_design_cb_t ysw_header_base_design;
-static lv_signal_cb_t ysw_header_base_signal;
-
-static lv_res_t ysw_header_on_signal(lv_obj_t *obj, lv_signal_t sign, void *param)
-{
-    return ysw_header_base_signal(obj, sign, param);
-}
-
-static lv_design_res_t ysw_header_on_design(lv_obj_t *obj, const lv_area_t *clip_area, lv_design_mode_t mode)
-{
-    return ysw_header_base_design(obj, clip_area, mode);
-}
-
 lv_obj_t *ysw_header_create(lv_obj_t *par)
 {
     lv_obj_t *header = lv_cont_create(par, NULL);
@@ -125,21 +112,15 @@ lv_obj_t *ysw_header_create(lv_obj_t *par)
     ysw_header_ext_t *ext = lv_obj_allocate_ext_attr(header, sizeof(ysw_header_ext_t));
     assert(ext);
 
-    if (ysw_header_base_signal == NULL) {
-        ysw_header_base_signal = lv_obj_get_signal_cb(header);
-    }
-
-    if (ysw_header_base_design == NULL) {
-        ysw_header_base_design = lv_obj_get_design_cb(header);
-    }
-
     memset(ext, 0, sizeof(ysw_header_ext_t));
-
-    lv_obj_set_signal_cb(header, ysw_header_on_signal);
-    lv_obj_set_design_cb(header, ysw_header_on_design);
 
     ext->mode = ysw_field_create(header);
     ysw_field_set_name(ext->mode, "Mode");
+
+    // default duration (zm_duration_t)
+    // note/chord/drum sample
+    // chord quality
+    // chord style
 
     ext->key = ysw_field_create(header);
     ysw_field_set_name(ext->key, "Key");
@@ -169,10 +150,11 @@ static const char *modes[] = {
 
 #define YSW_EDITOR_MODE_COUNT 3
 
-void ysw_header_set_mode(lv_obj_t *header, ysw_editor_mode_t mode)
+void ysw_header_set_mode(lv_obj_t *header, const char *name, const char *value)
 {
     ysw_header_ext_t *ext = lv_obj_get_ext_attr(header);
-    ysw_field_set_value(ext->mode, modes[mode]);
+    ysw_field_set_name(ext->mode, name);
+    ysw_field_set_value(ext->mode, value);
 }
 
 void ysw_header_set_key(lv_obj_t *header, zm_key_x key_index)
@@ -194,6 +176,72 @@ void ysw_header_set_tempo(lv_obj_t *header, zm_tempo_t tempo_index)
     const zm_tempo_signature_t *tempo_signature = zm_get_tempo_signature(tempo_index);
     ysw_header_ext_t *ext = lv_obj_get_ext_attr(header);
     ysw_field_set_value(ext->tempo, tempo_signature->label);
+}
+
+// Footer
+
+typedef struct {
+    lv_cont_ext_t cont_ext; // base class data
+    lv_obj_t *key;
+    lv_obj_t *time;
+    lv_obj_t *tempo;
+    lv_obj_t *location;
+} ysw_footer_ext_t;
+
+lv_obj_t *ysw_footer_create(lv_obj_t *par)
+{
+    lv_obj_t *footer = lv_cont_create(par, NULL);
+    assert(footer);
+
+    ysw_footer_ext_t *ext = lv_obj_allocate_ext_attr(footer, sizeof(ysw_footer_ext_t));
+    assert(ext);
+
+    memset(ext, 0, sizeof(ysw_footer_ext_t));
+
+    ext->key = ysw_field_create(footer);
+    ysw_field_set_name(ext->key, "Key");
+
+    ext->time = ysw_field_create(footer);
+    ysw_field_set_name(ext->time, "Time");
+
+    ext->tempo = ysw_field_create(footer);
+    ysw_field_set_name(ext->tempo, "Tempo");
+
+    ext->location = ysw_field_create(footer);
+    ysw_field_set_name(ext->location, "Bar");
+
+    lv_cont_set_layout(footer, LV_LAYOUT_PRETTY_TOP);
+
+    return footer;
+}
+
+void ysw_footer_set_key(lv_obj_t *footer, zm_key_x key_index)
+{
+    const zm_key_signature_t *key_signature = zm_get_key_signature(key_index);
+    ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
+    ysw_field_set_value(ext->key, key_signature->name);
+}
+
+void ysw_footer_set_time(lv_obj_t *footer, zm_time_t time_index)
+{
+    const zm_time_signature_t *time_signature = zm_get_time_signature(time_index);
+    ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
+    ysw_field_set_value(ext->time, time_signature->name);
+}
+
+void ysw_footer_set_tempo(lv_obj_t *footer, zm_tempo_t tempo_index)
+{
+    const zm_tempo_signature_t *tempo_signature = zm_get_tempo_signature(tempo_index);
+    ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
+    ysw_field_set_value(ext->tempo, tempo_signature->label);
+}
+
+void ysw_footer_set_location(lv_obj_t *footer, uint32_t location, uint32_t total)
+{
+    char value[32];
+    snprintf(value, sizeof(value), "%d of %d", location, total);
+    ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
+    ysw_field_set_value(ext->location, value);
 }
 
 #endif
@@ -268,23 +316,6 @@ typedef struct {
     ysw_editor_mode_t mode;
 } context_t;
 
-static void update_footer(context_t *context)
-{
-    if (context->mode == YSW_EDITOR_MODE_NOTE) {
-        // Note: C5, Duration: 256, Sample: Steinway
-        char buf[256];
-        snprintf(buf, sizeof(buf), "Note: C5, Duration: 256, Sample: Steinway");
-        lv_label_set_text(context->footer, buf);
-    } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
-        // Chord: D Maj, Style: Arp1, Sample: Steinway
-    }
-}
-
-static void update_details(context_t *context)
-{
-    update_footer(context);
-}
-
 static void process_note(context_t *context, ysw_event_key_up_t *event)
 {
     zm_beat_t *beat = NULL;
@@ -298,7 +329,7 @@ static void process_note(context_t *context, ysw_event_key_up_t *event)
     uint8_t value = key_map[event->key];
     beat->tone.note = value == YSW_EDITOR_REST ? 0 : 60 + value;
     if (context->duration == ZM_AS_PLAYED) {
-        zm_tempo_signature_t *tempo_signature = zm_get_tempo_signature(context->passage->tempo);
+        const zm_tempo_signature_t *tempo_signature = zm_get_tempo_signature(context->passage->tempo);
         beat->tone.duration = ysw_millis_to_ticks(event->duration, tempo_signature->bpm);
     } else {
         beat->tone.duration = context->duration;
@@ -306,7 +337,6 @@ static void process_note(context_t *context, ysw_event_key_up_t *event)
     uint32_t beat_count = ysw_array_get_count(context->passage->beats);
     context->position = min(context->position + context->advance, beat_count * 2);
     ysw_staff_update_all(context->staff, context->position);
-    update_details(context);
 }
 
 static void process_duration(context_t *context)
@@ -325,7 +355,6 @@ static void process_duration(context_t *context)
         } else {
             context->duration = ZM_AS_PLAYED;
         }
-        update_details(context);
     } else {
         uint32_t beat_index = context->position / 2;
         zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
@@ -357,6 +386,7 @@ static void process_left(context_t *context)
     if (context->position > 0) {
         context->position--;
         ysw_staff_update_position(context->staff, context->position);
+        display_mode(context);
     }
 }
 
@@ -365,6 +395,7 @@ static void process_right(context_t *context)
     if (context->position < (ysw_array_get_count(context->passage->beats) * 2)) {
         context->position++;
         ysw_staff_update_position(context->staff, context->position);
+        display_mode(context);
     }
 }
 
@@ -407,31 +438,55 @@ static void on_key_up(context_t *context, ysw_event_key_up_t *event)
     }
 }
 
+// See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
+
+static const char *note_names[] = {
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+};
+
+void display_mode(context_t *context)
+{
+    char value[32] = {};
+    if (context->position % 2 == 1) {
+        uint32_t beat_index = context->position / 2;
+        if (beat_index < ysw_array_get_count(context->passage->beats)) {
+            if (context->mode == YSW_EDITOR_MODE_NOTE) {
+                zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
+                zm_note_t note = beat->tone.note;
+                const char *name = note_names[note % 12];
+                uint8_t octave = (note / 12) - 1;
+                snprintf(value, sizeof(value), "%s%d (%d)", name, octave, beat->tone.duration);
+            }
+        }
+    }
+    ysw_header_set_mode(context->header, modes[context->mode], value);
+}
+
 static void cycle_editor_mode(context_t *context)
 {
     context->mode = (context->mode + 1) % YSW_EDITOR_MODE_COUNT;
-    ysw_header_set_mode(context->header, context->mode);
+    display_mode(context);
 }
 
 static void cycle_key_signature(context_t *context)
 {
     context->passage->key = zm_get_next_key_index(context->passage->key);
     ysw_staff_update_all(context->staff, context->position);
-    ysw_header_set_key(context->header, context->passage->key);
+    ysw_footer_set_key(context->footer, context->passage->key);
 }
 
 static void cycle_time_signature(context_t *context)
 {
     context->passage->time = zm_get_next_time_index(context->passage->time);
     ysw_staff_update_all(context->staff, context->position);
-    ysw_header_set_time(context->header, context->passage->time);
+    ysw_footer_set_time(context->footer, context->passage->time);
 }
 
 static void cycle_tempo_signature(context_t *context)
 {
     context->passage->tempo = zm_get_next_tempo_index(context->passage->tempo);
     ysw_staff_update_all(context->staff, context->position);
-    ysw_header_set_tempo(context->header, context->passage->tempo);
+    ysw_footer_set_tempo(context->footer, context->passage->tempo);
 }
 
 static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
@@ -518,17 +573,21 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music)
     context->passage->tempo = ZM_TEMPO_100;
 
     context->container = lv_obj_create(lv_scr_act(), NULL);
+
+    lv_obj_set_style_local_bg_color(context->container, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_MAROON);
+    lv_obj_set_style_local_bg_opa(context->container, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_OPA_100);
+
+    lv_obj_set_style_local_text_color(context->container, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_YELLOW);
+    lv_obj_set_style_local_text_opa(context->container, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_OPA_100);
+
     assert(context->container);
     lv_obj_set_size(context->container, 320, 240);
     lv_obj_align(context->container, NULL, LV_ALIGN_CENTER, 0, 0);
 
     context->header = ysw_header_create(context->container);
-    lv_obj_set_size(context->header, 320, 40);
+    lv_obj_set_size(context->header, 320, 30);
     lv_obj_align(context->header, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    ysw_header_set_mode(context->header, context->mode);
-    ysw_header_set_key(context->header, context->passage->key);
-    ysw_header_set_time(context->header, context->passage->time);
-    ysw_header_set_tempo(context->header, context->passage->tempo);
+    display_mode(context);
 
     context->staff = ysw_staff_create(context->container);
     assert(context->staff);
@@ -536,12 +595,13 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music)
     lv_obj_align(context->staff, NULL, LV_ALIGN_CENTER, 0, 0);
     ysw_staff_set_passage(context->staff, context->passage);
 
-    context->footer = lv_label_create(context->container, NULL);
-    assert(context->footer);
-    lv_label_set_long_mode(context->footer, LV_LABEL_LONG_BREAK);
-    lv_label_set_align(context->footer, LV_LABEL_ALIGN_CENTER);
-    lv_obj_set_size(context->footer, 320, 20);
+    context->footer = ysw_footer_create(context->container);
+    lv_obj_set_size(context->footer, 320, 30);
     lv_obj_align(context->footer, NULL, LV_ALIGN_IN_BOTTOM_LEFT, 0, 0);
+    ysw_footer_set_key(context->footer, context->passage->key);
+    ysw_footer_set_time(context->footer, context->passage->time);
+    ysw_footer_set_tempo(context->footer, context->passage->tempo);
+    ysw_footer_set_location(context->footer, 1, 1);
 
     ysw_task_config_t config = ysw_task_default_config;
 

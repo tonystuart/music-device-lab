@@ -196,6 +196,7 @@ typedef struct {
     zm_key_x key;
     zm_time_t time;
     ysw_array_t *beats;
+    // zm_sample_t *melody_sample;
 } zm_passage_t;
 
 typedef struct {

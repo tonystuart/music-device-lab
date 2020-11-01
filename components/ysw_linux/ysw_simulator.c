@@ -45,11 +45,11 @@ typedef struct {
 } keycode_map_t;
 
 static const keycode_map_t keycode_map[] = {
-    { 2, 0 }, // C#
-    { 3, 1 }, // D#
-    { 5, 2 }, // F#
-    { 6, 3 }, // G#
-    { 7, 4 }, // A#
+    { '2', 0 }, // C#
+    { '3', 1 }, // D#
+    { '5', 2 }, // F#
+    { '6', 3 }, // G#
+    { '7', 4 }, // A#
 
     { 'q', 9 }, // C
     { 'w', 10 }, // D
