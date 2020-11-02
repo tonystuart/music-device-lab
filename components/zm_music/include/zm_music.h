@@ -52,7 +52,7 @@ typedef struct {
     const char *name;
     const uint8_t sharps;
     const uint8_t flats;
-    const uint8_t sharp_indexes[7];
+    const uint8_t sharp_index[7];
     const uint8_t flat_index[7];
     const char *label;
 } zm_key_signature_t;

@@ -33,6 +33,7 @@
 #define YSW_DOT_BASE 0x66
 #define YSW_SHARP_BASE 0x74
 #define YSW_FLAT_BASE 0x82
+#define YSW_NATURAL_BASE 0x90
 #define YSW_16_REST 0xa0
 #define YSW_8_REST 0xa1
 #define YSW_4_REST 0xa2
@@ -45,36 +46,64 @@
 static lv_design_cb_t ancestor_design;
 static lv_signal_cb_t ancestor_signal;
 
-typedef struct {
-    uint8_t step;
-    bool half;
-} semitones_t;
+static const bool black[] = {
+    0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0,
+};
 
-static const semitones_t semitones[] = {
-    { 0, false },  // C   0
-    { 0, true },   // C#  1
-    { 1, false },  // D   2
-    { 1, true },   // D#  3
-    { 2, false },  // E   4
-    { 3, false },  // F   5
-    { 3, true },   // F#  6
-    { 4, false },  // G   7
-    { 4, true },   // G#  8
-    { 5, false },  // A   9
-    { 5, true },   // A#  10
-    { 6, false },  // B   11
-    { 7, false },  // C   12
-    { 7, true },   // C#  13
-    { 8, false },  // D   14
-    { 8, true },   // D#  15
-    { 9, false },  // E   16
-    { 10, false }, // F   17
-    { 10, true },  // F#  18
-    { 11, false }, // G   19
-    { 11, true },  // G#  20
-    { 12, false }, // A   21
-    { 12, true },  // A#  22
-    { 13, false }, // B   23
+// sharps map to the note of the white key to the left
+static const uint8_t sharp_map[] = {
+    0,  // C   0
+    0,  // C#  1
+    1,  // D   2
+    1,  // D#  3
+    2,  // E   4
+    3,  // F   5
+    3,  // F#  6
+    4,  // G   7
+    4,  // G#  8
+    5,  // A   9
+    5,  // A#  10
+    6,  // B   11
+    7,  // C   12
+    7,  // C#  13
+    8,  // D   14
+    8,  // D#  15
+    9,  // E   16
+    10, // F   17
+    10, // F#  18
+    11, // G   19
+    11, // G#  20
+    12, // A   21
+    12, // A#  22
+    13, // B   23
+};
+
+// flats map to the note of the white key to the right
+static const uint8_t flat_map[] = {
+    0,  // C   0
+    1,  // Db  1
+    1,  // D   2
+    2,  // Eb  3
+    2,  // E   4
+    3,  // F   5
+    4,  // Gb  6
+    4,  // G   7
+    5,  // Ab  8
+    5,  // A   9
+    6,  // Bb  10
+    6,  // B   11
+    7,  // C   12
+    8,  // Db  13
+    8,  // D   14
+    9,  // Eb  15
+    9,  // E   16
+    10, // F   17
+    11, // Gb  18
+    11, // G   19
+    12, // Ab  20
+    12, // A   21
+    13, // Bb  22
+    13, // B   23
 };
 
 typedef enum {
@@ -166,9 +195,37 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
             ticks_in_measure += duration;
             if (beat->tone.note) {
                 uint8_t note = (beat->tone.note - 60) % 24;
-                uint8_t step = semitones[note].step;
-                if (semitones[note].half) {
-                    visit_letter(vc, YSW_SHARP_BASE + step);
+                uint8_t step = sharp_map[note]; // either map works if white key
+                ESP_LOGD(TAG, "sharp_map[%d]=%d", note, sharp_map[note]);
+                ESP_LOGD(TAG, "flat_map[%d]=%d", note, flat_map[note]);
+                // TODO: keep a table of accidentals for current measure
+                if (black[note]) {
+                    if (key_signature->sharps) {
+                        if (!key_signature->sharp_index[step % 7]) {
+                            ESP_LOGD(TAG, "accidental sharp note=%d, step=%d", note, step);
+                            visit_letter(vc, YSW_SHARP_BASE + step);
+                        }
+                    } else if (key_signature->flats) {
+                        step = flat_map[note];
+                        if (!key_signature->flat_index[step % 7]) {
+                            ESP_LOGD(TAG, "accidental flat note=%d, step=%d", note, step);
+                            visit_letter(vc, YSW_FLAT_BASE + step);
+                        }
+                    } else {
+                        ESP_LOGD(TAG, "accidental CMajor note=%d, step=%d", note, step);
+                        visit_letter(vc, YSW_SHARP_BASE + step);
+                    }
+                } else {
+                    if (key_signature->sharp_index[step % 7]) {
+                        ESP_LOGD(TAG, "natural sharp note=%d, step=%d", note, step);
+                        visit_letter(vc, YSW_NATURAL_BASE + step);
+                    } else if (key_signature->flat_index[step % 7]) {
+                        step = flat_map[note];
+                        ESP_LOGD(TAG, "natural flat note=%d, step=%d", note, step);
+                        visit_letter(vc, YSW_NATURAL_BASE + step);
+                    } else {
+                        ESP_LOGD(TAG, "regular note=%d, step=%d", note, step);
+                    }
                 }
                 if (duration <= ZM_SIXTEENTH) {
                     visit_letter(vc, YSW_16_BASE + step);
