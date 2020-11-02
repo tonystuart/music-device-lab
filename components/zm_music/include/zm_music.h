@@ -221,3 +221,4 @@ const zm_time_signature_t *zm_get_time_signature(zm_time_t time_index);
 
 zm_tempo_t zm_get_next_tempo_index(zm_tempo_t tempo_index);
 const zm_tempo_signature_t *zm_get_tempo_signature(zm_tempo_t tempo_index);
+zm_bpm_x zm_tempo_to_bpm(zm_tempo_t tempo);

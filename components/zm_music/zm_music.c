@@ -498,13 +498,17 @@ static const zm_tempo_signature_t zm_tempo_signatures[] = {
 
 #define ZM_TEMPO_SIGNATURES (sizeof(zm_tempo_signatures) / sizeof(zm_tempo_signatures[0]))
 
-zm_tempo_t zm_get_next_tempo_index(zm_tempo_t tempo_index)
+zm_tempo_t zm_get_next_tempo_index(zm_tempo_t tempo)
 {
-    return (tempo_index + 1) % ZM_TEMPO_SIGNATURES;
+    return (tempo + 1) % ZM_TEMPO_SIGNATURES;
 }
 
-const zm_tempo_signature_t *zm_get_tempo_signature(zm_tempo_t tempo_index)
+const zm_tempo_signature_t *zm_get_tempo_signature(zm_tempo_t tempo)
 {
-    return &zm_tempo_signatures[tempo_index % ZM_TEMPO_SIGNATURES];
+    return &zm_tempo_signatures[tempo % ZM_TEMPO_SIGNATURES];
 }
 
+zm_bpm_x zm_tempo_to_bpm(zm_tempo_t tempo)
+{
+    return zm_tempo_signatures[tempo % ZM_TEMPO_SIGNATURES].bpm;
+}

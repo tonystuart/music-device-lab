@@ -316,6 +316,32 @@ typedef struct {
     ysw_editor_mode_t mode;
 } context_t;
 
+// See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
+
+static const char *note_names[] = {
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+};
+
+static void display_mode(context_t *context)
+{
+    char value[32] = {};
+    if (context->position % 2 == 1) {
+        uint32_t beat_index = context->position / 2;
+        if (beat_index < ysw_array_get_count(context->passage->beats)) {
+            if (context->mode == YSW_EDITOR_MODE_NOTE) {
+                zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
+                zm_note_t note = beat->tone.note;
+                const char *name = note_names[note % 12];
+                uint8_t octave = (note / 12) - 1;
+                zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
+                uint32_t millis = ysw_ticks_to_millis(beat->tone.duration, bpm);
+                snprintf(value, sizeof(value), "%s%d (%d ms)", name, octave, millis);
+            }
+        }
+    }
+    ysw_header_set_mode(context->header, modes[context->mode], value);
+}
+
 static void process_note(context_t *context, ysw_event_key_up_t *event)
 {
     zm_beat_t *beat = NULL;
@@ -329,8 +355,8 @@ static void process_note(context_t *context, ysw_event_key_up_t *event)
     uint8_t value = key_map[event->key];
     beat->tone.note = value == YSW_EDITOR_REST ? 0 : 60 + value;
     if (context->duration == ZM_AS_PLAYED) {
-        const zm_tempo_signature_t *tempo_signature = zm_get_tempo_signature(context->passage->tempo);
-        beat->tone.duration = ysw_millis_to_ticks(event->duration, tempo_signature->bpm);
+        zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
+        beat->tone.duration = ysw_millis_to_ticks(event->duration, bpm);
     } else {
         beat->tone.duration = context->duration;
     }
@@ -360,6 +386,7 @@ static void process_duration(context_t *context)
         zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
         beat->tone.duration = context->duration;
         ysw_staff_update_all(context->staff, context->position);
+        display_mode(context);
     }
 }
 
@@ -438,30 +465,6 @@ static void on_key_up(context_t *context, ysw_event_key_up_t *event)
     }
 }
 
-// See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
-
-static const char *note_names[] = {
-    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
-};
-
-void display_mode(context_t *context)
-{
-    char value[32] = {};
-    if (context->position % 2 == 1) {
-        uint32_t beat_index = context->position / 2;
-        if (beat_index < ysw_array_get_count(context->passage->beats)) {
-            if (context->mode == YSW_EDITOR_MODE_NOTE) {
-                zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
-                zm_note_t note = beat->tone.note;
-                const char *name = note_names[note % 12];
-                uint8_t octave = (note / 12) - 1;
-                snprintf(value, sizeof(value), "%s%d (%d)", name, octave, beat->tone.duration);
-            }
-        }
-    }
-    ysw_header_set_mode(context->header, modes[context->mode], value);
-}
-
 static void cycle_editor_mode(context_t *context)
 {
     context->mode = (context->mode + 1) % YSW_EDITOR_MODE_COUNT;
@@ -487,6 +490,7 @@ static void cycle_tempo_signature(context_t *context)
     context->passage->tempo = zm_get_next_tempo_index(context->passage->tempo);
     ysw_staff_update_all(context->staff, context->position);
     ysw_footer_set_tempo(context->footer, context->passage->tempo);
+    display_mode(context);
 }
 
 static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
