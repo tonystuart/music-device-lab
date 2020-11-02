@@ -219,7 +219,7 @@ void ysw_footer_set_key(lv_obj_t *footer, zm_key_x key_index)
 {
     const zm_key_signature_t *key_signature = zm_get_key_signature(key_index);
     ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
-    ysw_field_set_value(ext->key, key_signature->name);
+    ysw_field_set_value(ext->key, key_signature->label);
 }
 
 void ysw_footer_set_time(lv_obj_t *footer, zm_time_t time_index)
