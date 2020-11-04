@@ -140,6 +140,28 @@ static void visit_string(visit_context_t *vc, const char *string)
     }
 }
 
+static void draw_measure_label(visit_context_t *vc, uint32_t measure)
+{
+    if (vc->visit_type == VT_DRAW) {
+        char buf[32];
+        ysw_itoa(measure, buf, sizeof(buf));
+        lv_area_t coords = {
+            .x1 = vc->point.x - 25,
+            .x2 = vc->point.x + 25,
+            .y1 = 70,
+            .y2 = 80,
+        };
+        lv_draw_label_dsc_t dsc = {
+            .color = LV_COLOR_WHITE,
+            .font = &lv_font_unscii_8,
+            .opa = LV_OPA_COVER,
+            .flag = LV_TXT_FLAG_CENTER,
+        };
+        //lv_draw_label(&coords, vc->clip_area, &dsc, "Hello\nBeautiful\nWorld\nWhere\nAre\nYou?", NULL);
+        lv_draw_label(&coords, vc->clip_area, &dsc, buf, NULL);
+    }
+}
+
 static zm_duration_t round_duration(zm_duration_t duration)
 {
     // Ugly, but efficient. It may not be perfect, but what would be better?
@@ -178,6 +200,7 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
     uint32_t ticks_in_measure = 0;
     uint32_t beat_count = ysw_array_get_count(ext->passage->beats);
     uint32_t symbol_count = beat_count * 2;
+    uint32_t measure = 0;
 
     for (int i = 0; i <= symbol_count; i++) { // = to get trailing space
         if (i == ext->position) {
@@ -244,7 +267,9 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
                 }
             }
             if (ticks_in_measure >= 1024) {
+                measure++;
                 visit_letter(vc, YSW_RIGHT_BAR);
+                draw_measure_label(vc, measure);
                 ticks_in_measure = 0;
             }
         }
