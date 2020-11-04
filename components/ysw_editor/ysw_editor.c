@@ -185,7 +185,7 @@ typedef struct {
     lv_obj_t *key;
     lv_obj_t *time;
     lv_obj_t *tempo;
-    lv_obj_t *location;
+    lv_obj_t *duration;
 } ysw_footer_ext_t;
 
 lv_obj_t *ysw_footer_create(lv_obj_t *par)
@@ -207,8 +207,8 @@ lv_obj_t *ysw_footer_create(lv_obj_t *par)
     ext->tempo = ysw_field_create(footer);
     ysw_field_set_name(ext->tempo, "Tempo");
 
-    ext->location = ysw_field_create(footer);
-    ysw_field_set_name(ext->location, "Bar");
+    ext->duration = ysw_field_create(footer);
+    ysw_field_set_name(ext->duration, "Duration");
 
     lv_cont_set_layout(footer, LV_LAYOUT_PRETTY_TOP);
 
@@ -236,12 +236,32 @@ void ysw_footer_set_tempo(lv_obj_t *footer, zm_tempo_t tempo_index)
     ysw_field_set_value(ext->tempo, tempo_signature->label);
 }
 
-void ysw_footer_set_location(lv_obj_t *footer, uint32_t location, uint32_t total)
+void ysw_footer_set_duration(lv_obj_t *footer, zm_duration_t duration)
 {
-    char value[32];
-    snprintf(value, sizeof(value), "%d of %d", location, total);
+    const char *value = NULL;
+    switch (duration) {
+        default:
+        case ZM_AS_PLAYED:
+            value = "As Played";
+            break;
+        case ZM_SIXTEENTH:
+            value = "1/16";
+            break;
+        case ZM_EIGHTH:
+            value = "1/8";
+            break;
+        case ZM_QUARTER:
+            value = "1/4";
+            break;
+        case ZM_HALF:
+            value = "1/2";
+            break;
+        case ZM_WHOLE:
+            value = "1/1";
+            break;
+    }
     ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
-    ysw_field_set_value(ext->location, value);
+    ysw_field_set_value(ext->duration, value);
 }
 
 #endif
@@ -348,6 +368,60 @@ static void display_mode(context_t *context)
     }
 }
 
+static void cycle_editor_mode(context_t *context)
+{
+    context->mode = (context->mode + 1) % YSW_EDITOR_MODE_COUNT;
+    display_mode(context);
+}
+
+static void cycle_key_signature(context_t *context)
+{
+    context->passage->key = zm_get_next_key_index(context->passage->key);
+    ysw_staff_update_all(context->staff, context->position);
+    ysw_footer_set_key(context->footer, context->passage->key);
+}
+
+static void cycle_time_signature(context_t *context)
+{
+    context->passage->time = zm_get_next_time_index(context->passage->time);
+    ysw_staff_update_all(context->staff, context->position);
+    ysw_footer_set_time(context->footer, context->passage->time);
+}
+
+static void cycle_tempo_signature(context_t *context)
+{
+    context->passage->tempo = zm_get_next_tempo_index(context->passage->tempo);
+    ysw_staff_update_all(context->staff, context->position);
+    ysw_footer_set_tempo(context->footer, context->passage->tempo);
+    display_mode(context);
+}
+
+static void cycle_duration(context_t *context)
+{
+    if (context->position % 2 == 0) {
+        if (context->duration == ZM_AS_PLAYED) {
+            context->duration = ZM_SIXTEENTH;
+        } else if (context->duration <= ZM_SIXTEENTH) {
+            context->duration = ZM_EIGHTH;
+        } else if (context->duration <= ZM_EIGHTH) {
+            context->duration = ZM_QUARTER;
+        } else if (context->duration <= ZM_QUARTER) {
+            context->duration = ZM_HALF;
+        } else if (context->duration <= ZM_HALF) {
+            context->duration = ZM_WHOLE;
+        } else {
+            context->duration = ZM_AS_PLAYED;
+        }
+        ysw_footer_set_duration(context->footer, context->duration);
+    } else {
+        uint32_t beat_index = context->position / 2;
+        zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
+        beat->tone.duration = context->duration;
+        ysw_staff_update_all(context->staff, context->position);
+        display_mode(context);
+    }
+}
+
 static void process_note(context_t *context, ysw_event_key_up_t *event)
 {
     zm_beat_t *beat = NULL;
@@ -370,31 +444,6 @@ static void process_note(context_t *context, ysw_event_key_up_t *event)
     context->position = min(context->position + context->advance, beat_count * 2);
     ysw_staff_update_all(context->staff, context->position);
     display_mode(context);
-}
-
-static void process_duration(context_t *context)
-{
-    if (context->position % 2 == 0) {
-        if (context->duration == ZM_AS_PLAYED) {
-            context->duration = ZM_SIXTEENTH;
-        } else if (context->duration <= ZM_SIXTEENTH) {
-            context->duration = ZM_EIGHTH;
-        } else if (context->duration <= ZM_EIGHTH) {
-            context->duration = ZM_QUARTER;
-        } else if (context->duration <= ZM_QUARTER) {
-            context->duration = ZM_HALF;
-        } else if (context->duration <= ZM_HALF) {
-            context->duration = ZM_WHOLE;
-        } else {
-            context->duration = ZM_AS_PLAYED;
-        }
-    } else {
-        uint32_t beat_index = context->position / 2;
-        zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
-        beat->tone.duration = context->duration;
-        ysw_staff_update_all(context->staff, context->position);
-        display_mode(context);
-    }
 }
 
 static void process_delete(context_t *context)
@@ -472,34 +521,6 @@ static void on_key_up(context_t *context, ysw_event_key_up_t *event)
     }
 }
 
-static void cycle_editor_mode(context_t *context)
-{
-    context->mode = (context->mode + 1) % YSW_EDITOR_MODE_COUNT;
-    display_mode(context);
-}
-
-static void cycle_key_signature(context_t *context)
-{
-    context->passage->key = zm_get_next_key_index(context->passage->key);
-    ysw_staff_update_all(context->staff, context->position);
-    ysw_footer_set_key(context->footer, context->passage->key);
-}
-
-static void cycle_time_signature(context_t *context)
-{
-    context->passage->time = zm_get_next_time_index(context->passage->time);
-    ysw_staff_update_all(context->staff, context->position);
-    ysw_footer_set_time(context->footer, context->passage->time);
-}
-
-static void cycle_tempo_signature(context_t *context)
-{
-    context->passage->tempo = zm_get_next_tempo_index(context->passage->tempo);
-    ysw_staff_update_all(context->staff, context->position);
-    ysw_footer_set_tempo(context->footer, context->passage->tempo);
-    display_mode(context);
-}
-
 static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
 {
     assert(event->key < KEY_MAP_SZ);
@@ -510,7 +531,7 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
             cycle_editor_mode(context);
             break;
         case YSW_EDITOR_DURATION:
-            process_duration(context);
+            cycle_duration(context);
             break;
         case YSW_EDITOR_KEY:
             cycle_key_signature(context);
@@ -612,6 +633,7 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music)
     ysw_footer_set_key(context->footer, context->passage->key);
     ysw_footer_set_time(context->footer, context->passage->time);
     ysw_footer_set_tempo(context->footer, context->passage->tempo);
+    ysw_footer_set_duration(context->footer, context->duration);
 
     ysw_task_config_t config = ysw_task_default_config;
 
