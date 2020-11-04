@@ -325,21 +325,23 @@ static const char *note_names[] = {
 static void display_mode(context_t *context)
 {
     char value[32] = {};
-    if (context->position % 2 == 1) {
+    uint32_t beat_count = ysw_array_get_count(context->passage->beats);
+    if (beat_count) {
         uint32_t beat_index = context->position / 2;
-        if (beat_index < ysw_array_get_count(context->passage->beats)) {
-            if (context->mode == YSW_EDITOR_MODE_NOTE) {
-                zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
-                zm_note_t note = beat->tone.note;
-                const char *name = note_names[note % 12];
-                uint8_t octave = (note / 12) - 1;
-                zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
-                uint32_t millis = ysw_ticks_to_millis(beat->tone.duration, bpm);
-                snprintf(value, sizeof(value), "%s%d (%d ms)", name, octave, millis);
-            }
+        if (beat_index >= beat_count) {
+            beat_index = beat_count - 1;
         }
+        if (context->mode == YSW_EDITOR_MODE_NOTE) {
+            zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
+            zm_note_t note = beat->tone.note;
+            const char *name = note_names[note % 12];
+            uint8_t octave = (note / 12) - 1;
+            zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
+            uint32_t millis = ysw_ticks_to_millis(beat->tone.duration, bpm);
+            snprintf(value, sizeof(value), "%s%d (%d ms)", name, octave, millis);
+        }
+        ysw_header_set_mode(context->header, modes[context->mode], value);
     }
-    ysw_header_set_mode(context->header, modes[context->mode], value);
 }
 
 static void process_note(context_t *context, ysw_event_key_up_t *event)
@@ -363,6 +365,7 @@ static void process_note(context_t *context, ysw_event_key_up_t *event)
     uint32_t beat_count = ysw_array_get_count(context->passage->beats);
     context->position = min(context->position + context->advance, beat_count * 2);
     ysw_staff_update_all(context->staff, context->position);
+    display_mode(context);
 }
 
 static void process_duration(context_t *context)
@@ -605,7 +608,6 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music)
     ysw_footer_set_key(context->footer, context->passage->key);
     ysw_footer_set_time(context->footer, context->passage->time);
     ysw_footer_set_tempo(context->footer, context->passage->tempo);
-    ysw_footer_set_location(context->footer, 1, 1);
 
     ysw_task_config_t config = ysw_task_default_config;
 

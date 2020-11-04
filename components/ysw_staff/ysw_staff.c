@@ -196,35 +196,27 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
             if (beat->tone.note) {
                 uint8_t note = (beat->tone.note - 60) % 24;
                 uint8_t step = sharp_map[note]; // either map works if white key
-                ESP_LOGD(TAG, "sharp_map[%d]=%d", note, sharp_map[note]);
-                ESP_LOGD(TAG, "flat_map[%d]=%d", note, flat_map[note]);
                 // TODO: keep a table of accidentals for current measure
                 if (black[note]) {
                     if (key_signature->sharps) {
                         if (!key_signature->sharp_index[step % 7]) {
-                            ESP_LOGD(TAG, "accidental sharp note=%d, step=%d", note, step);
                             visit_letter(vc, YSW_SHARP_BASE + step);
                         }
                     } else if (key_signature->flats) {
                         step = flat_map[note];
                         if (!key_signature->flat_index[step % 7]) {
-                            ESP_LOGD(TAG, "accidental flat note=%d, step=%d", note, step);
                             visit_letter(vc, YSW_FLAT_BASE + step);
                         }
                     } else {
-                        ESP_LOGD(TAG, "accidental CMajor note=%d, step=%d", note, step);
                         visit_letter(vc, YSW_SHARP_BASE + step);
                     }
                 } else {
                     if (key_signature->sharp_index[step % 7]) {
-                        ESP_LOGD(TAG, "natural sharp note=%d, step=%d", note, step);
                         visit_letter(vc, YSW_NATURAL_BASE + step);
                     } else if (key_signature->flat_index[step % 7]) {
                         step = flat_map[note];
-                        ESP_LOGD(TAG, "natural flat note=%d, step=%d", note, step);
                         visit_letter(vc, YSW_NATURAL_BASE + step);
                     } else {
-                        ESP_LOGD(TAG, "regular note=%d, step=%d", note, step);
                     }
                 }
                 if (duration <= ZM_SIXTEENTH) {
@@ -251,13 +243,13 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
                     visit_letter(vc, YSW_1_REST);
                 }
             }
+            if (ticks_in_measure >= 1024) {
+                visit_letter(vc, YSW_RIGHT_BAR);
+                ticks_in_measure = 0;
+            }
         }
         if (i == ext->position) {
             vc->color = LV_COLOR_WHITE;
-        }
-        if (ticks_in_measure >= 1024) {
-            visit_letter(vc, YSW_RIGHT_BAR);
-            ticks_in_measure = 0;
         }
     }
 }
