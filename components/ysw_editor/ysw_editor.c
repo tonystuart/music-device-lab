@@ -332,13 +332,17 @@ static void display_mode(context_t *context)
             beat_index = beat_count - 1;
         }
         if (context->mode == YSW_EDITOR_MODE_NOTE) {
-            zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
-            zm_note_t note = beat->tone.note;
-            const char *name = note_names[note % 12];
-            uint8_t octave = (note / 12) - 1;
             zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
+            zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
             uint32_t millis = ysw_ticks_to_millis(beat->tone.duration, bpm);
-            snprintf(value, sizeof(value), "%s%d (%d ms)", name, octave, millis);
+            zm_note_t note = beat->tone.note;
+            if (note) {
+                uint8_t octave = (note / 12) - 1;
+                const char *name = note_names[note % 12];
+                snprintf(value, sizeof(value), "%s%d (%d ms)", name, octave, millis);
+            } else {
+                snprintf(value, sizeof(value), "Rest (%d ms)", millis);
+            }
         }
         ysw_header_set_mode(context->header, modes[context->mode], value);
     }
