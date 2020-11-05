@@ -386,23 +386,29 @@ static void cycle_tempo_signature(context_t *context)
 
 static void cycle_duration(context_t *context)
 {
-    if (context->duration == ZM_AS_PLAYED) {
-        context->duration = ZM_SIXTEENTH;
-    } else if (context->duration <= ZM_SIXTEENTH) {
-        context->duration = ZM_EIGHTH;
-    } else if (context->duration <= ZM_EIGHTH) {
-        context->duration = ZM_QUARTER;
-    } else if (context->duration <= ZM_QUARTER) {
-        context->duration = ZM_HALF;
-    } else if (context->duration <= ZM_HALF) {
-        context->duration = ZM_WHOLE;
-    } else {
-        context->duration = ZM_AS_PLAYED;
-    }
-    ysw_footer_set_duration(context->footer, context->duration);
+    zm_beat_t *beat = NULL;
     if (context->position % 2 == 1 && context->duration != ZM_AS_PLAYED) {
         uint32_t beat_index = context->position / 2;
-        zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
+        beat = ysw_array_get(context->passage->beats, beat_index);
+    }
+    // Cycle default duration if not on a beat or if beat duration is already default duration
+    if (!beat || beat->tone.duration == context->duration) {
+        if (context->duration == ZM_AS_PLAYED) {
+            context->duration = ZM_SIXTEENTH;
+        } else if (context->duration <= ZM_SIXTEENTH) {
+            context->duration = ZM_EIGHTH;
+        } else if (context->duration <= ZM_EIGHTH) {
+            context->duration = ZM_QUARTER;
+        } else if (context->duration <= ZM_QUARTER) {
+            context->duration = ZM_HALF;
+        } else if (context->duration <= ZM_HALF) {
+            context->duration = ZM_WHOLE;
+        } else {
+            context->duration = ZM_AS_PLAYED;
+        }
+        ysw_footer_set_duration(context->footer, context->duration);
+    }
+    if (beat) {
         beat->tone.duration = context->duration;
         ysw_staff_update_all(context->staff, context->position);
         display_mode(context);
