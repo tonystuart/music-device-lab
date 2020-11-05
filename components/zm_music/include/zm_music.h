@@ -31,6 +31,7 @@ typedef uint8_t zm_bpm_x;
 
 typedef uint16_t zm_quality_x;
 typedef uint16_t zm_style_x;
+typedef uint16_t zm_sample_x;
 
 typedef enum {
     ZM_KEY_C,

@@ -217,16 +217,13 @@ static void initialize_touch_screen(void)
 #endif
 
 
-static zm_song_t *initialize_song(ysw_bus_h bus, zm_music_t *music, uint32_t index)
+static void initialize_samples(ysw_bus_h bus, zm_music_t *music)
 {
-    zm_song_t *song = ysw_array_get(music->songs, index);
-    zm_small_t part_count = ysw_array_get_count(song->parts);
-
-    for (zm_small_t i = 0; i < part_count; i++) {
-        zm_part_t  *part = ysw_array_get(song->parts, i);
-        zm_sample_t *sample = ysw_array_get(music->samples, part->pattern->sample_index);
+    zm_sample_x sample_count = ysw_array_get_count(music->samples);
+    for (zm_sample_x i = 0; i < sample_count; i++) {
+        zm_sample_t *sample = ysw_array_get(music->samples, i);
         ysw_event_sample_load_t sample_load = {
-            .index = part->pattern->sample_index,
+            .index = i,
             .reppnt = sample->reppnt,
             .replen = sample->replen,
             .volume = sample->volume,
@@ -236,9 +233,7 @@ static zm_song_t *initialize_song(ysw_bus_h bus, zm_music_t *music, uint32_t ind
                 "%s/samples/%s", YSW_MUSIC_PARTITION, sample->name);
         ysw_event_fire_sample_load(bus, &sample_load);
     };
-    return song;
 }
-
 
 #ifdef IDF_VER
 #include "ysw_keyboard.h"
@@ -277,7 +272,8 @@ int main(int argc, char *argv[])
     ysw_keyboard_create_task(bus, &keyboard_config);
 #endif
 
-    zm_song_t *song = initialize_song(bus, music, 0);
+    initialize_samples(bus, music);
+    zm_song_t *song = ysw_array_get(music->songs, 0);
     ysw_array_t *notes = zm_render_song(song);
 
     //ysw_event_fire_loop(bus, true);

@@ -157,7 +157,6 @@ static void draw_measure_label(visit_context_t *vc, uint32_t measure)
             .opa = LV_OPA_COVER,
             .flag = LV_TXT_FLAG_CENTER,
         };
-        //lv_draw_label(&coords, vc->clip_area, &dsc, "Hello\nBeautiful\nWorld\nWhere\nAre\nYou?", NULL);
         lv_draw_label(&coords, vc->clip_area, &dsc, buf, NULL);
     }
 }
@@ -200,7 +199,7 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
     uint32_t ticks_in_measure = 0;
     uint32_t beat_count = ysw_array_get_count(ext->passage->beats);
     uint32_t symbol_count = beat_count * 2;
-    uint32_t measure = 0;
+    uint32_t measure = 1;
 
     for (int i = 0; i <= symbol_count; i++) { // = to get trailing space
         if (i == ext->position) {
