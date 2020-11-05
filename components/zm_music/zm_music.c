@@ -356,48 +356,51 @@ int zm_note_compare(const void *left, const void *right)
     return delta;
 }
 
-zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large_t start_time, zm_small_t channel)
+void zm_render_step(ysw_array_t *notes, zm_step_t *step, zm_time_x step_start, zm_channel_x channel, zm_sample_x sample_index)
 {
-    zm_large_t step_start = start_time;
+    zm_medium_t semitone_count = ysw_array_get_count(step->quality->semitones);
+    zm_medium_t sound_count = ysw_array_get_count(step->style->sounds);
+    for (zm_medium_t j = 0; j < sound_count; j++) {
+        zm_sound_t *sound = ysw_array_get(step->style->sounds, j);
+        if (sound->semitone_index >= semitone_count) {
+            ESP_LOGW(TAG, "semitone_index=%d, semitone_count=%d", sound->semitone_index, semitone_count);
+            continue;
+        } 
+        zm_semitone_t semitone = (uintptr_t)ysw_array_get(step->quality->semitones, sound->semitone_index);
+        ysw_note_t *note = ysw_heap_allocate(sizeof(ysw_note_t));
+        note->channel = channel;
+        note->midi_note = step->root + semitone;
+        note->start = step_start + (sound->start * step->duration) / YSW_TICKS_PER_MEASURE;
+        note->duration = (sound->duration * step->duration) / YSW_TICKS_PER_MEASURE;
+        note->velocity = sound->velocity;
+        note->program = sample_index;
+        ysw_array_push(notes, note);
+    }
+}
+
+zm_time_x zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_time_x start_time, zm_small_t channel)
+{
+    zm_time_x step_start = start_time;
     zm_medium_t step_count = ysw_array_get_count(pattern->steps);
     for (zm_medium_t i = 0; i < step_count; i++) {
         zm_step_t *step = ysw_array_get(pattern->steps, i);
         if (step->root) { // root == 0 is a rest
-            zm_medium_t semitone_count = ysw_array_get_count(step->quality->semitones);
-            zm_medium_t sound_count = ysw_array_get_count(step->style->sounds);
-            for (zm_medium_t j = 0; j < sound_count; j++) {
-                zm_sound_t *sound = ysw_array_get(step->style->sounds, j);
-                if (sound->semitone_index >= semitone_count) {
-                    ESP_LOGW(TAG, "semitone_index=%d, semitone_count=%d", sound->semitone_index, semitone_count);
-                    continue;
-                } 
-                zm_semitone_t semitone = (uintptr_t)ysw_array_get(step->quality->semitones, sound->semitone_index);
-                ysw_note_t *note = ysw_heap_allocate(sizeof(ysw_note_t));
-                note->channel = channel;
-                note->midi_note = step->root + semitone;
-                note->start = step_start + (sound->start * step->duration) / YSW_TICKS_PER_MEASURE;
-                note->duration = (sound->duration * step->duration) / YSW_TICKS_PER_MEASURE;
-                note->velocity = sound->velocity;
-                note->program = pattern->sample_index;
-                ysw_array_push(notes, note);
-                //ESP_LOGD(TAG, "step_start=%d, midi_note=%d, start=%d, duration=%d, velocity=%d, channel=%d, sample=%d", step_start, note->midi_note, note->start, note->duration, note->velocity, note->channel, note->program);
-            }
+            zm_render_step(notes, step, step_start, channel, pattern->sample_index);
         }
         step_start += step->duration;
     }
-    //ESP_LOGD(TAG, "pattern note_count=%d, end_time=%d", ysw_array_get_count(notes), step_start);
     return step_start;
 }
 
 ysw_array_t *zm_render_song(zm_song_t *song)
 {
-    zm_large_t max_time = 0;
+    zm_time_x max_time = 0;
     ysw_array_t *notes = ysw_array_create(512);
     ysw_array_t *part_times = ysw_array_create(8);
     zm_medium_t part_count = ysw_array_get_count(song->parts);
     for (zm_medium_t i = 0; i < part_count; i++) {
-        zm_large_t begin_time = 0;
-        zm_large_t end_time = 0;
+        zm_time_x begin_time = 0;
+        zm_time_x end_time = 0;
         zm_part_t *part = ysw_array_get(song->parts, i);
         if (i == part->when.part_index) {
             begin_time = max_time;
@@ -406,7 +409,7 @@ ysw_array_t *zm_render_song(zm_song_t *song)
             zm_part_time_t *part_time = ysw_array_get(part_times, part->when.part_index);
             begin_time = part_time->begin_time;
             if (part->fit == ZM_FIT_LOOP) {
-                zm_large_t loop_time = begin_time;
+                zm_time_x loop_time = begin_time;
                 while (end_time < part_time->end_time) {
                     end_time = zm_render_pattern(notes, part->pattern, loop_time, i);
                     loop_time = end_time;
@@ -453,12 +456,12 @@ static const zm_key_signature_t zm_key_signatures[] = {
 
 #define ZM_KEY_SIGNATURES (sizeof(zm_key_signatures) / sizeof(zm_key_signatures[0]))
 
-zm_key_x zm_get_next_key_index(zm_key_x key_index)
+zm_key_signature_x zm_get_next_key_index(zm_key_signature_x key_index)
 {
     return (key_index + 1) % ZM_KEY_SIGNATURES;
 }
 
-const zm_key_signature_t *zm_get_key_signature(zm_key_x key_index)
+const zm_key_signature_t *zm_get_key_signature(zm_key_signature_x key_index)
 {
     return &zm_key_signatures[key_index % ZM_KEY_SIGNATURES];
 }
@@ -475,12 +478,12 @@ static const zm_time_signature_t zm_time_signatures[] = {
 
 #define ZM_TIME_SIGNATURES (sizeof(zm_time_signatures) / sizeof(zm_time_signatures[0]))
 
-zm_time_t zm_get_next_time_index(zm_time_t time_index)
+zm_time_signature_x zm_get_next_time_index(zm_time_signature_x time_index)
 {
     return (time_index + 1) % ZM_TIME_SIGNATURES;
 }
 
-const zm_time_signature_t *zm_get_time_signature(zm_time_t time_index)
+const zm_time_signature_t *zm_get_time_signature(zm_time_signature_x time_index)
 {
     return &zm_time_signatures[time_index % ZM_TIME_SIGNATURES];
 }

@@ -68,13 +68,13 @@ lv_obj_t *ysw_field_create(lv_obj_t *par)
 
     ext->name = lv_label_create(field, NULL);
     lv_label_set_align(ext->name, LV_LABEL_ALIGN_CENTER);
-    lv_obj_set_style_local_text_font(ext->name, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, &lv_font_unscii_8);
+    lv_obj_set_style_local_text_font(ext->name, 0, 0, &lv_font_unscii_8);
 
     ext->value = lv_label_create(field, NULL);
     lv_label_set_align(ext->value, LV_LABEL_ALIGN_CENTER);
 
-    lv_obj_set_style_local_pad_top(field, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 2);
-    lv_obj_set_style_local_pad_left(field, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 2);
+    lv_obj_set_style_local_pad_top(field, 0, 0, 2);
+    lv_obj_set_style_local_pad_left(field, 0, 0, 2);
 
     lv_cont_set_fit(field, LV_FIT_TIGHT);
     lv_cont_set_layout(field, LV_LAYOUT_COLUMN_LEFT);
@@ -124,7 +124,7 @@ lv_obj_t *ysw_header_create(lv_obj_t *par)
 }
 
 typedef enum {
-    YSW_EDITOR_MODE_NOTE,
+    YSW_EDITOR_MODE_TONE,
     YSW_EDITOR_MODE_CHORD,
     YSW_EDITOR_MODE_DRUM,
 } ysw_editor_mode_t;
@@ -187,14 +187,14 @@ lv_obj_t *ysw_footer_create(lv_obj_t *par)
     return footer;
 }
 
-void ysw_footer_set_key(lv_obj_t *footer, zm_key_x key_index)
+void ysw_footer_set_key(lv_obj_t *footer, zm_key_signature_x key_index)
 {
     const zm_key_signature_t *key_signature = zm_get_key_signature(key_index);
     ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
     ysw_field_set_value(ext->key_field, key_signature->label);
 }
 
-void ysw_footer_set_time(lv_obj_t *footer, zm_time_t time_index)
+void ysw_footer_set_time(lv_obj_t *footer, zm_time_signature_x time_index)
 {
     const zm_time_signature_t *time_signature = zm_get_time_signature(time_index);
     ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
@@ -294,26 +294,21 @@ typedef struct {
     ysw_bus_h bus;
     zm_music_t *music;
     zm_passage_t *passage;
-    // defaults
-    zm_sample_t *sample;
+    zm_sample_t *tone_sample;
+    zm_sample_t *chord_sample;
+    zm_quality_t *quality;
+    zm_style_t *style;
     zm_duration_t duration;
-    zm_quality_x quality;
-    zm_style_x style;
 
-    uint32_t position;
     uint8_t advance;
+    uint32_t position;
+    ysw_editor_mode_t mode;
+
     lv_obj_t *container;
     lv_obj_t *header;
     lv_obj_t *staff;
     lv_obj_t *footer;
-    ysw_editor_mode_t mode;
 } context_t;
-
-// See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
-
-static const char *note_names[] = {
-    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
-};
 
 static void display_mode(context_t *context)
 {
@@ -324,14 +319,14 @@ static void display_mode(context_t *context)
         if (beat_index >= beat_count) {
             beat_index = beat_count - 1;
         }
-        if (context->mode == YSW_EDITOR_MODE_NOTE) {
+        if (context->mode == YSW_EDITOR_MODE_TONE) {
             zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
             zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
             uint32_t millis = ysw_ticks_to_millis(beat->tone.duration, bpm);
             zm_note_t note = beat->tone.note;
             if (note) {
                 uint8_t octave = (note / 12) - 1;
-                const char *name = note_names[note % 12];
+                const char *name = zm_get_note_name(note);
                 snprintf(value, sizeof(value), "%s%d (%d ms)", name, octave, millis);
             } else {
                 snprintf(value, sizeof(value), "Rest (%d ms)", millis);
@@ -343,7 +338,7 @@ static void display_mode(context_t *context)
 
 static void display_sample(context_t *context)
 {
-    ysw_header_set_sample(context->header, context->sample->name);
+    ysw_header_set_sample(context->header, context->tone_sample->name);
 }
 
 static void cycle_editor_mode(context_t *context)
@@ -356,9 +351,9 @@ static void cycle_sample(context_t *context)
 {
     ysw_array_t *samples = context->music->samples;
     zm_sample_x sample_count = ysw_array_get_count(samples);
-    zm_sample_x sample_index = ysw_array_find(samples, context->sample);
+    zm_sample_x sample_index = ysw_array_find(samples, context->tone_sample);
     sample_index = (sample_index + 1) % sample_count;
-    context->sample = ysw_array_get(samples, sample_index);
+    context->tone_sample = ysw_array_get(samples, sample_index);
     display_sample(context);
 }
 
@@ -419,20 +414,38 @@ static void process_note(context_t *context, ysw_event_key_up_t *event)
 {
     zm_beat_t *beat = NULL;
     int32_t beat_index = context->position / 2;
-    if (context->position % 2 == 0) {
+    bool is_new_beat = context->position % 2 == 0;
+    if (is_new_beat) {
         beat = ysw_heap_allocate(sizeof(zm_beat_t));
         ysw_array_insert(context->passage->beats, beat_index, beat);
     } else {
         beat = ysw_array_get(context->passage->beats, beat_index);
     }
+
     uint8_t value = key_map[event->key];
-    beat->tone.note = value == YSW_EDITOR_REST ? 0 : 60 + value;
-    if (context->duration == ZM_AS_PLAYED) {
-        zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
-        beat->tone.duration = ysw_millis_to_ticks(event->duration, bpm);
-    } else {
-        beat->tone.duration = context->duration;
+    zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
+    if (context->mode == YSW_EDITOR_MODE_TONE) {
+        beat->tone.note = value == YSW_EDITOR_REST ? 0 : 60 + value;
+        if (context->duration == ZM_AS_PLAYED) {
+            beat->tone.duration = ysw_millis_to_ticks(event->duration, bpm);
+        } else {
+            beat->tone.duration = context->duration;
+        }
+    } else if (context -> mode == YSW_EDITOR_MODE_CHORD) {
+        if (is_new_beat) {
+            beat->tone.duration = ZM_QUARTER;
+        }
+        beat->chord.root = 60 + value;
+        beat->chord.quality = context->quality;
+        beat->chord.style = context->style;
+        beat->chord.duration = ZM_HALF;
+        ysw_array_t *notes = ysw_array_create(16);
+        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->chord_sample);
+        zm_render_step(notes, &beat->chord, 0, 1, sample_index);
+        ysw_event_fire_play(context->bus, notes, bpm); // TODO: consider supplying origin or use channel
+    } else if (context -> mode == YSW_EDITOR_MODE_DRUM) {
     }
+
     uint32_t beat_count = ysw_array_get_count(context->passage->beats);
     context->position = min(context->position + context->advance, beat_count * 2);
     ysw_staff_update_all(context->staff, context->position);
@@ -478,19 +491,21 @@ static void process_right(context_t *context)
 static void on_key_down(context_t *context, ysw_event_key_down_t *event)
 {
     assert(event->key < KEY_MAP_SZ);
-    uint8_t value = key_map[event->key];
-    if (value < YSW_EDITOR_NOTES) {
-        ysw_event_program_change_t program_change = {
-            .channel = 0,
-            .program = ysw_array_find(context->music->samples, context->sample),
-        };
-        ysw_event_fire_program_change(context->bus, YSW_ORIGIN_EDITOR, &program_change);
-        ysw_event_note_on_t note_on = {
-            .channel = 0,
-            .midi_note = 60 + value,
-            .velocity = 80,
-        };
-        ysw_event_fire_note_on(context->bus, YSW_ORIGIN_EDITOR, &note_on);
+    if (context->mode == YSW_EDITOR_MODE_TONE) {
+        uint8_t value = key_map[event->key];
+        if (value < YSW_EDITOR_NOTES) {
+            ysw_event_program_change_t program_change = {
+                .channel = 0,
+                .program = ysw_array_find(context->music->samples, context->tone_sample),
+            };
+            ysw_event_fire_program_change(context->bus, YSW_ORIGIN_EDITOR, &program_change);
+            ysw_event_note_on_t note_on = {
+                .channel = 0,
+                .midi_note = 60 + value,
+                .velocity = 80,
+            };
+            ysw_event_fire_note_on(context->bus, YSW_ORIGIN_EDITOR, &note_on);
+        }
     }
 }
 
@@ -498,23 +513,17 @@ static void on_key_up(context_t *context, ysw_event_key_up_t *event)
 {
     assert(event->key < KEY_MAP_SZ);
     uint8_t value = key_map[event->key];
-    if (value < YSW_EDITOR_NOTES) {
-        ysw_event_note_off_t note_off = {
-            .channel = 0,
-            .midi_note = 60 + value,
-        };
-        ysw_event_fire_note_off(context->bus, YSW_ORIGIN_EDITOR, &note_off);
+    if (context->mode == YSW_EDITOR_MODE_TONE) {
+        if (value < YSW_EDITOR_NOTES) {
+            ysw_event_note_off_t note_off = {
+                .channel = 0,
+                .midi_note = 60 + value,
+            };
+            ysw_event_fire_note_off(context->bus, YSW_ORIGIN_EDITOR, &note_off);
+        }
     }
     if (value < YSW_EDITOR_NOTES || value == YSW_EDITOR_REST) {
-        switch (context->mode) {
-            case YSW_EDITOR_MODE_NOTE:
-                process_note(context, event);
-                break;
-            case YSW_EDITOR_MODE_CHORD:
-                break;
-            case YSW_EDITOR_MODE_DRUM:
-                break;
-        }
+        process_note(context, event);
     }
 }
 
@@ -585,19 +594,27 @@ static void process_event(void *caller_context, ysw_event_t *event)
     lv_task_handler();
 }
 
+#define QUALITY 2 // TODO: make 0 default or search by name
+
 void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music)
 {
+    assert(ysw_array_get_count(music->samples));
+    assert(ysw_array_get_count(music->qualities) > QUALITY);
+    assert(ysw_array_get_count(music->styles));
+
     context_t *context = ysw_heap_allocate(sizeof(context_t));
 
     context->bus = bus;
     context->music = music;
-    context->sample = ysw_array_get(music->samples, 0);
+    context->tone_sample = ysw_array_get(music->samples, 0);
+    context->chord_sample = context->tone_sample;
+    context->quality = ysw_array_get(music->qualities, QUALITY);
+    context->style = ysw_array_get(music->styles, 0);
     context->duration = ZM_AS_PLAYED;
-    context->quality = 0;
-    context->style = 0;
-    context->position = 0;
+
     context->advance = 2;
-    context->mode = YSW_EDITOR_MODE_NOTE;
+    context->position = 0;
+    context->mode = YSW_EDITOR_MODE_TONE;
 
     context->passage = ysw_heap_allocate(sizeof(zm_passage_t));
     context->passage->beats = ysw_array_create(64);
@@ -607,11 +624,11 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music)
 
     context->container = lv_obj_create(lv_scr_act(), NULL);
 
-    lv_obj_set_style_local_bg_color(context->container, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_MAROON);
-    lv_obj_set_style_local_bg_opa(context->container, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_OPA_100);
+    lv_obj_set_style_local_bg_color(context->container, 0, 0, LV_COLOR_MAROON);
+    lv_obj_set_style_local_bg_opa(context->container, 0, 0, LV_OPA_100);
 
-    lv_obj_set_style_local_text_color(context->container, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_YELLOW);
-    lv_obj_set_style_local_text_opa(context->container, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_OPA_100);
+    lv_obj_set_style_local_text_color(context->container, 0, 0, LV_COLOR_YELLOW);
+    lv_obj_set_style_local_text_opa(context->container, 0, 0, LV_OPA_100);
 
     assert(context->container);
     lv_obj_set_size(context->container, 320, 240);

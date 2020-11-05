@@ -15,23 +15,22 @@
 #include "stdint.h"
 #include "stdio.h"
 
-typedef uint8_t zm_note_t;
-typedef uint8_t zm_semitone_t;
-
 typedef uint8_t zm_small_t;
 typedef uint16_t zm_medium_t;
 typedef uint32_t zm_large_t;
 
 typedef bool zm_yesno_t;
 
-typedef zm_medium_t zm_index_t;
-
-typedef uint8_t zm_key_x;
+typedef uint8_t zm_note_t;
+typedef uint8_t zm_semitone_t;
 typedef uint8_t zm_bpm_x;
+typedef uint8_t zm_channel_x;
 
+typedef uint16_t zm_index_t; // TODO: replace with specific index types
 typedef uint16_t zm_quality_x;
 typedef uint16_t zm_style_x;
 typedef uint16_t zm_sample_x;
+typedef uint32_t zm_time_x;
 
 typedef enum {
     ZM_KEY_C,
@@ -47,7 +46,7 @@ typedef enum {
     ZM_KEY_A_FLAT,
     ZM_KEY_D_FLAT,
     ZM_KEY_G_FLAT,
-} zm_key_t;
+} zm_key_signature_x;
 
 typedef struct {
     const char *name;
@@ -73,7 +72,7 @@ typedef enum {
     ZM_TIME_3_4,
     ZM_TIME_4_4,
     ZM_TIME_6_8,
-} zm_time_t;
+} zm_time_signature_x;
 
 typedef struct {
     const char *name;
@@ -194,8 +193,8 @@ typedef struct {
 typedef struct {
     char *name;
     zm_tempo_t tempo;
-    zm_key_x key;
-    zm_time_t time;
+    zm_key_signature_x key;
+    zm_time_signature_x time;
     ysw_array_t *beats;
     // zm_sample_t *melody_sample;
 } zm_passage_t;
@@ -211,15 +210,28 @@ typedef struct {
 void zm_music_free(zm_music_t *music);
 zm_music_t *zm_read_from_file(FILE *file);
 zm_music_t *zm_read(void);
+
+void zm_render_step(ysw_array_t *notes, zm_step_t *step, zm_time_x step_start, zm_channel_x channel, zm_sample_x sample_index);
 zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large_t start_time, zm_small_t channel);
 ysw_array_t *zm_render_song(zm_song_t *song);
 
-const zm_key_signature_t *zm_get_key_signature(zm_key_x key_index);
-zm_key_x zm_get_next_key_index(zm_key_x key_index);
+const zm_key_signature_t *zm_get_key_signature(zm_key_signature_x key_index);
+zm_key_signature_x zm_get_next_key_index(zm_key_signature_x key_index);
 
-zm_time_t zm_get_next_time_index(zm_time_t time_index);
-const zm_time_signature_t *zm_get_time_signature(zm_time_t time_index);
+zm_time_signature_x zm_get_next_time_index(zm_time_signature_x time_index);
+const zm_time_signature_t *zm_get_time_signature(zm_time_signature_x time_index);
 
 zm_tempo_t zm_get_next_tempo_index(zm_tempo_t tempo_index);
 const zm_tempo_signature_t *zm_get_tempo_signature(zm_tempo_t tempo_index);
 zm_bpm_x zm_tempo_to_bpm(zm_tempo_t tempo);
+
+// See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
+
+static inline const char *zm_get_note_name(zm_note_t note)
+{
+    static const char *note_names[] = {
+        "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+    };
+    return note_names[note % 12];
+}
+

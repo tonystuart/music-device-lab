@@ -132,6 +132,7 @@ static void visit_letter(visit_context_t *vc, uint32_t letter)
     }
 }
 
+#if 0
 static void visit_string(visit_context_t *vc, const char *string)
 {
     const char *p = string;
@@ -139,6 +140,7 @@ static void visit_string(visit_context_t *vc, const char *string)
         visit_letter(vc, *p++);
     }
 }
+#endif
 
 static void draw_measure_label(visit_context_t *vc, uint32_t measure)
 {
@@ -163,7 +165,7 @@ static void draw_measure_label(visit_context_t *vc, uint32_t measure)
 
 static zm_duration_t round_duration(zm_duration_t duration)
 {
-    // Ugly, but efficient. It may not be perfect, but what would be better?
+    // TODO: added dotted durations, consider using durations table
     zm_duration_t rounded_duration = 0;
     if (duration <= (ZM_SIXTEENTH + ((ZM_EIGHTH - ZM_SIXTEENTH) / 2))) {  // 64 + 32
         rounded_duration = ZM_SIXTEENTH;
@@ -177,6 +179,83 @@ static zm_duration_t round_duration(zm_duration_t duration)
         rounded_duration = ZM_WHOLE;
     }
     return rounded_duration;
+}
+
+static uint32_t visit_tone(visit_context_t *vc, zm_beat_t *beat, const zm_key_signature_t *key_signature)
+{
+    zm_duration_t duration = round_duration(beat->tone.duration);
+    if (beat->tone.note) {
+        uint8_t note = (beat->tone.note - 60) % 24;
+        uint8_t step = sharp_map[note]; // either map works if white key
+        // TODO: keep a table of accidentals for current measure
+        if (black[note]) {
+            if (key_signature->sharps) {
+                if (!key_signature->sharp_index[step % 7]) {
+                    visit_letter(vc, YSW_SHARP_BASE + step);
+                }
+            } else if (key_signature->flats) {
+                step = flat_map[note];
+                if (!key_signature->flat_index[step % 7]) {
+                    visit_letter(vc, YSW_FLAT_BASE + step);
+                }
+            } else {
+                visit_letter(vc, YSW_SHARP_BASE + step);
+            }
+        } else {
+            if (key_signature->sharp_index[step % 7]) {
+                visit_letter(vc, YSW_NATURAL_BASE + step);
+            } else if (key_signature->flat_index[step % 7]) {
+                step = flat_map[note];
+                visit_letter(vc, YSW_NATURAL_BASE + step);
+            } else {
+            }
+        }
+        if (duration <= ZM_SIXTEENTH) {
+            visit_letter(vc, YSW_16_BASE + step);
+        } else if (duration <= ZM_EIGHTH) {
+            visit_letter(vc, YSW_8_BASE + step);
+        } else if (duration <= ZM_QUARTER) {
+            visit_letter(vc, YSW_4_BASE + step);
+        } else if (duration <= ZM_HALF) {
+            visit_letter(vc, YSW_2_BASE + step);
+        } else {
+            visit_letter(vc, YSW_1_BASE + step);
+        }
+    } else {
+        if (duration <= ZM_SIXTEENTH) {
+            visit_letter(vc, YSW_16_REST);
+        } else if (duration <= ZM_EIGHTH) {
+            visit_letter(vc, YSW_8_REST);
+        } else if (duration <= ZM_QUARTER) {
+            visit_letter(vc, YSW_4_REST);
+        } else if (duration <= ZM_HALF) {
+            visit_letter(vc, YSW_2_REST);
+        } else {
+            visit_letter(vc, YSW_1_REST);
+        }
+    }
+    return duration;
+}
+
+static void visit_chord(visit_context_t *vc, zm_beat_t *beat)
+{
+    if (vc->visit_type == VT_DRAW && beat->chord.root) {
+        lv_area_t coords = {
+            .x1 = vc->point.x - 25,
+            .x2 = vc->point.x + 25,
+            .y1 = 40,
+            .y2 = 60,
+        };
+        lv_draw_label_dsc_t dsc = {
+            .color = LV_COLOR_WHITE,
+            .font = &lv_font_montserrat_14,
+            .opa = LV_OPA_COVER,
+            .flag = LV_TXT_FLAG_CENTER,
+        };
+        const char *note_name = zm_get_note_name(beat->chord.root);
+        lv_draw_label(&coords, vc->clip_area, &dsc, note_name, NULL);
+        // TODO: display quality
+    }
 }
 
 static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
@@ -213,58 +292,8 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
         } else {
             uint32_t beat_index = i / 2;
             zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);
-            zm_duration_t duration = round_duration(beat->tone.duration);
-            ticks_in_measure += duration;
-            if (beat->tone.note) {
-                uint8_t note = (beat->tone.note - 60) % 24;
-                uint8_t step = sharp_map[note]; // either map works if white key
-                // TODO: keep a table of accidentals for current measure
-                if (black[note]) {
-                    if (key_signature->sharps) {
-                        if (!key_signature->sharp_index[step % 7]) {
-                            visit_letter(vc, YSW_SHARP_BASE + step);
-                        }
-                    } else if (key_signature->flats) {
-                        step = flat_map[note];
-                        if (!key_signature->flat_index[step % 7]) {
-                            visit_letter(vc, YSW_FLAT_BASE + step);
-                        }
-                    } else {
-                        visit_letter(vc, YSW_SHARP_BASE + step);
-                    }
-                } else {
-                    if (key_signature->sharp_index[step % 7]) {
-                        visit_letter(vc, YSW_NATURAL_BASE + step);
-                    } else if (key_signature->flat_index[step % 7]) {
-                        step = flat_map[note];
-                        visit_letter(vc, YSW_NATURAL_BASE + step);
-                    } else {
-                    }
-                }
-                if (duration <= ZM_SIXTEENTH) {
-                    visit_letter(vc, YSW_16_BASE + step);
-                } else if (duration <= ZM_EIGHTH) {
-                    visit_letter(vc, YSW_8_BASE + step);
-                } else if (duration <= ZM_QUARTER) {
-                    visit_letter(vc, YSW_4_BASE + step);
-                } else if (duration <= ZM_HALF) {
-                    visit_letter(vc, YSW_2_BASE + step);
-                } else {
-                    visit_letter(vc, YSW_1_BASE + step);
-                }
-            } else {
-                if (duration <= ZM_SIXTEENTH) {
-                    visit_letter(vc, YSW_16_REST);
-                } else if (duration <= ZM_EIGHTH) {
-                    visit_letter(vc, YSW_8_REST);
-                } else if (duration <= ZM_QUARTER) {
-                    visit_letter(vc, YSW_4_REST);
-                } else if (duration <= ZM_HALF) {
-                    visit_letter(vc, YSW_2_REST);
-                } else {
-                    visit_letter(vc, YSW_1_REST);
-                }
-            }
+            visit_chord(vc, beat);
+            ticks_in_measure += visit_tone(vc, beat, key_signature);
             if (ticks_in_measure >= 1024) {
                 measure++;
                 visit_letter(vc, YSW_RIGHT_BAR);
