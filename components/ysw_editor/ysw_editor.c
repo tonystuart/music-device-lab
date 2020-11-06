@@ -332,6 +332,16 @@ static void display_mode(context_t *context)
                 snprintf(value, sizeof(value), "Rest (%d ms)", millis);
             }
         }
+        if (context->mode == YSW_EDITOR_MODE_CHORD) {
+            zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
+            zm_note_t root = beat->chord.root;
+            if (root) {
+                const char *name = zm_get_note_name(root);
+                snprintf(value, sizeof(value), "%s %s %s", name,
+                        beat->chord.quality->name,
+                        beat->chord.style->name);
+            }
+        }
         ysw_header_set_mode(context->header, modes[context->mode], value);
     }
 }
