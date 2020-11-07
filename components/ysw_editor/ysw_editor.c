@@ -310,6 +310,17 @@ typedef struct {
     lv_obj_t *footer;
 } context_t;
 
+static void display_sample(context_t *context)
+{
+    const char *value = "";
+    if (context->mode == YSW_EDITOR_MODE_TONE) {
+        value = context->tone_sample->name;
+    } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
+        value = context->chord_sample->name;
+    }
+    ysw_header_set_sample(context->header, value);
+}
+
 static void display_mode(context_t *context)
 {
     char value[32] = {};
@@ -342,13 +353,9 @@ static void display_mode(context_t *context)
                         beat->chord.style->name);
             }
         }
-        ysw_header_set_mode(context->header, modes[context->mode], value);
     }
-}
-
-static void display_sample(context_t *context)
-{
-    ysw_header_set_sample(context->header, context->tone_sample->name);
+    ysw_header_set_mode(context->header, modes[context->mode], value);
+    display_sample(context);
 }
 
 static void cycle_editor_mode(context_t *context)
@@ -357,13 +364,27 @@ static void cycle_editor_mode(context_t *context)
     display_mode(context);
 }
 
+static zm_sample_t *next_sample(ysw_array_t *samples, zm_sample_t *previous)
+{
+    zm_sample_x sample_count = ysw_array_get_count(samples);
+    zm_sample_x sample_index = ysw_array_find(samples, previous);
+    sample_index = (sample_index + 1) % sample_count;
+    zm_sample_t *next = ysw_array_get(samples, sample_index);
+    return next;
+}
+
 static void cycle_sample(context_t *context)
 {
-    ysw_array_t *samples = context->music->samples;
-    zm_sample_x sample_count = ysw_array_get_count(samples);
-    zm_sample_x sample_index = ysw_array_find(samples, context->tone_sample);
-    sample_index = (sample_index + 1) % sample_count;
-    context->tone_sample = ysw_array_get(samples, sample_index);
+    if (context->mode == YSW_EDITOR_MODE_TONE) {
+        context->tone_sample = next_sample(context->music->samples, context->tone_sample);
+        ysw_event_program_change_t program_change = {
+            .channel = 0,
+            .program = ysw_array_find(context->music->samples, context->tone_sample),
+        };
+        ysw_event_fire_program_change(context->bus, YSW_ORIGIN_EDITOR, &program_change);
+    } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
+        context->chord_sample = next_sample(context->music->samples, context->chord_sample);
+    }
     display_sample(context);
 }
 
@@ -441,18 +462,20 @@ static void process_note(context_t *context, ysw_event_key_up_t *event)
         } else {
             beat->tone.duration = context->duration;
         }
-    } else if (context -> mode == YSW_EDITOR_MODE_CHORD) {
-        if (is_new_beat) {
-            beat->tone.duration = ZM_QUARTER;
+    } else if (context ->mode == YSW_EDITOR_MODE_CHORD) {
+        if (value != YSW_EDITOR_REST) {
+            if (is_new_beat) {
+                beat->tone.duration = ZM_QUARTER;
+            }
+            beat->chord.root = 60 + value;
+            beat->chord.quality = context->quality;
+            beat->chord.style = context->style;
+            beat->chord.duration = ZM_HALF;
+            ysw_array_t *notes = ysw_array_create(16);
+            zm_sample_x sample_index = ysw_array_find(context->music->samples, context->chord_sample);
+            zm_render_step(notes, &beat->chord, 0, 1, sample_index);
+            ysw_event_fire_play(context->bus, notes, bpm); // TODO: consider supplying origin or use channel
         }
-        beat->chord.root = 60 + value;
-        beat->chord.quality = context->quality;
-        beat->chord.style = context->style;
-        beat->chord.duration = ZM_HALF;
-        ysw_array_t *notes = ysw_array_create(16);
-        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->chord_sample);
-        zm_render_step(notes, &beat->chord, 0, 1, sample_index);
-        ysw_event_fire_play(context->bus, notes, bpm); // TODO: consider supplying origin or use channel
     } else if (context -> mode == YSW_EDITOR_MODE_DRUM) {
     }
 
@@ -504,11 +527,6 @@ static void on_key_down(context_t *context, ysw_event_key_down_t *event)
     if (context->mode == YSW_EDITOR_MODE_TONE) {
         uint8_t value = key_map[event->key];
         if (value < YSW_EDITOR_NOTES) {
-            ysw_event_program_change_t program_change = {
-                .channel = 0,
-                .program = ysw_array_find(context->music->samples, context->tone_sample),
-            };
-            ysw_event_fire_program_change(context->bus, YSW_ORIGIN_EDITOR, &program_change);
             ysw_event_note_on_t note_on = {
                 .channel = 0,
                 .midi_note = 60 + value,
