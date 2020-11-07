@@ -256,7 +256,7 @@ static const uint8_t key_map[] = {
 
 #define KEY_MAP_SZ (sizeof(key_map) / sizeof(key_map[0]))
 
-#define YSW_EDITOR_NOTES 24
+#define YSW_EDITOR_LEFT_KEYBOARD 24
 
 #define YSW_EDITOR_MODE 24
 #define YSW_EDITOR_KEY 25
@@ -264,13 +264,16 @@ static const uint8_t key_map[] = {
 
 #define YSW_EDITOR_TEMPO 28
 
+#define YSW_EDITOR_MODAL_29 29
+#define YSW_EDITOR_MODAL_30 30
+
 // chords
-#define YSW_EDITOR_QUALITY 29
-#define YSW_EDITOR_STYLE 30
+#define YSW_EDITOR_QUALITY YSW_EDITOR_MODAL_29
+#define YSW_EDITOR_STYLE YSW_EDITOR_MODAL_30
 
 // notes
-#define YSW_EDITOR_REST 29
-#define YSW_EDITOR_DURATION 30
+#define YSW_EDITOR_REST YSW_EDITOR_MODAL_29
+#define YSW_EDITOR_DURATION YSW_EDITOR_MODAL_30
 
 #define YSW_EDITOR_DELETE 32
 #define YSW_EDITOR_SAMPLE 33
@@ -279,6 +282,9 @@ static const uint8_t key_map[] = {
 #define YSW_EDITOR_DOWN 31
 #define YSW_EDITOR_LEFT 35
 #define YSW_EDITOR_RIGHT 39
+
+#define DEFAULT_QUALITY 2 // TODO: make "major" 0 default or search by name
+#define DEFAULT_STYLE 2 // TODO: make "stacked" 0 default or search by name
 
 // 0 % 2 = 0
 // 1 % 2 = 1 C
@@ -351,8 +357,12 @@ static void display_mode(context_t *context)
                 snprintf(value, sizeof(value), "%s %s %s", name,
                         beat->chord.quality->name,
                         beat->chord.style->name);
+            } else {
+                snprintf(value, sizeof(value), "%s %s", context->quality->name, context->style->name);
             }
         }
+    } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
+        snprintf(value, sizeof(value), "%s %s", context->quality->name, context->style->name);
     }
     ysw_header_set_mode(context->header, modes[context->mode], value);
     display_sample(context);
@@ -441,7 +451,49 @@ static void cycle_duration(context_t *context)
     }
 }
 
-static void process_note(context_t *context, ysw_event_key_up_t *event)
+static void cycle_quality(context_t *context)
+{
+    zm_beat_t *beat = NULL;
+    if (context->position % 2 == 1) {
+        uint32_t beat_index = context->position / 2;
+        beat = ysw_array_get(context->passage->beats, beat_index);
+    }
+    if (!beat || !beat->chord.root || beat->chord.quality == context->quality) {
+        zm_quality_x previous = ysw_array_find(context->music->qualities, context->quality);
+        zm_quality_x quality_count = ysw_array_get_count(context->music->qualities);
+        zm_quality_x next = (previous + 1) % quality_count;
+        context->quality = ysw_array_get(context->music->qualities, next);
+        context->style = ysw_array_get(context->music->styles, DEFAULT_STYLE);
+    }
+    if (beat) {
+        beat->chord.quality = context->quality;
+        beat->chord.style = context->style;
+        ysw_staff_update_all(context->staff, context->position);
+    }
+    display_mode(context);
+}
+
+static void cycle_style(context_t *context)
+{
+    zm_beat_t *beat = NULL;
+    if (context->position % 2 == 1) {
+        uint32_t beat_index = context->position / 2;
+        beat = ysw_array_get(context->passage->beats, beat_index);
+    }
+    if (!beat || !beat->chord.root || beat->chord.style == context->style) {
+        zm_style_x previous = ysw_array_find(context->music->styles, context->style);
+        zm_style_x style_count = ysw_array_get_count(context->music->styles);
+        zm_style_x next = (previous + 1) % style_count;
+        context->style = ysw_array_get(context->music->styles, next);
+    }
+    if (beat) {
+        beat->chord.style = context->style;
+        ysw_staff_update_all(context->staff, context->position);
+    }
+    display_mode(context);
+}
+
+static void process_beat(context_t *context, ysw_event_key_up_t *event)
 {
     zm_beat_t *beat = NULL;
     int32_t beat_index = context->position / 2;
@@ -463,19 +515,17 @@ static void process_note(context_t *context, ysw_event_key_up_t *event)
             beat->tone.duration = context->duration;
         }
     } else if (context ->mode == YSW_EDITOR_MODE_CHORD) {
-        if (value != YSW_EDITOR_REST) {
-            if (is_new_beat) {
-                beat->tone.duration = ZM_QUARTER;
-            }
-            beat->chord.root = 60 + value;
-            beat->chord.quality = context->quality;
-            beat->chord.style = context->style;
-            beat->chord.duration = ZM_HALF;
-            ysw_array_t *notes = ysw_array_create(16);
-            zm_sample_x sample_index = ysw_array_find(context->music->samples, context->chord_sample);
-            zm_render_step(notes, &beat->chord, 0, 1, sample_index);
-            ysw_event_fire_play(context->bus, notes, bpm); // TODO: consider supplying origin or use channel
+        if (is_new_beat) {
+            beat->tone.duration = ZM_QUARTER;
         }
+        beat->chord.root = 60 + value;
+        beat->chord.quality = context->quality;
+        beat->chord.style = context->style;
+        beat->chord.duration = ZM_HALF;
+        ysw_array_t *notes = ysw_array_create(16);
+        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->chord_sample);
+        zm_render_step(notes, &beat->chord, 0, 1, sample_index);
+        ysw_event_fire_play(context->bus, notes, bpm); // TODO: consider supplying origin or use channel
     } else if (context -> mode == YSW_EDITOR_MODE_DRUM) {
     }
 
@@ -526,7 +576,7 @@ static void on_key_down(context_t *context, ysw_event_key_down_t *event)
     assert(event->key < KEY_MAP_SZ);
     if (context->mode == YSW_EDITOR_MODE_TONE) {
         uint8_t value = key_map[event->key];
-        if (value < YSW_EDITOR_NOTES) {
+        if (value < YSW_EDITOR_LEFT_KEYBOARD) {
             ysw_event_note_on_t note_on = {
                 .channel = 0,
                 .midi_note = 60 + value,
@@ -542,7 +592,7 @@ static void on_key_up(context_t *context, ysw_event_key_up_t *event)
     assert(event->key < KEY_MAP_SZ);
     uint8_t value = key_map[event->key];
     if (context->mode == YSW_EDITOR_MODE_TONE) {
-        if (value < YSW_EDITOR_NOTES) {
+        if (value < YSW_EDITOR_LEFT_KEYBOARD) {
             ysw_event_note_off_t note_off = {
                 .channel = 0,
                 .midi_note = 60 + value,
@@ -550,8 +600,35 @@ static void on_key_up(context_t *context, ysw_event_key_up_t *event)
             ysw_event_fire_note_off(context->bus, YSW_ORIGIN_EDITOR, &note_off);
         }
     }
-    if (value < YSW_EDITOR_NOTES || value == YSW_EDITOR_REST) {
-        process_note(context, event);
+    if (value < YSW_EDITOR_LEFT_KEYBOARD || 
+            (value == YSW_EDITOR_REST && context->mode == YSW_EDITOR_MODE_TONE)) {
+        process_beat(context, event);
+    }
+}
+
+static void on_modal_29(context_t *context) {
+    switch (context->mode) {
+        case YSW_EDITOR_MODE_TONE:
+            // rest is handled in on_key_up
+            break;
+        case YSW_EDITOR_MODE_CHORD:
+            cycle_quality(context);
+            break;
+        case YSW_EDITOR_MODE_DRUM:
+            break;
+    }
+}
+
+static void on_modal_30(context_t *context) {
+    switch (context->mode) {
+        case YSW_EDITOR_MODE_TONE:
+            cycle_duration(context);
+            break;
+        case YSW_EDITOR_MODE_CHORD:
+            cycle_style(context);
+            break;
+        case YSW_EDITOR_MODE_DRUM:
+            break;
     }
 }
 
@@ -567,9 +644,6 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
         case YSW_EDITOR_SAMPLE:
             cycle_sample(context);
             break;
-        case YSW_EDITOR_DURATION:
-            cycle_duration(context);
-            break;
         case YSW_EDITOR_KEY:
             cycle_key_signature(context);
             break;
@@ -578,6 +652,12 @@ static void on_key_pressed(context_t *context, ysw_event_key_pressed_t *event)
             break;
         case YSW_EDITOR_TEMPO:
             cycle_tempo_signature(context);
+            break;
+        case YSW_EDITOR_MODAL_29:
+            on_modal_29(context);
+            break;
+        case YSW_EDITOR_MODAL_30:
+            on_modal_30(context);
             break;
         case YSW_EDITOR_DELETE:
             process_delete(context);
@@ -622,12 +702,10 @@ static void process_event(void *caller_context, ysw_event_t *event)
     lv_task_handler();
 }
 
-#define QUALITY 2 // TODO: make 0 default or search by name
-
 void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music)
 {
     assert(ysw_array_get_count(music->samples));
-    assert(ysw_array_get_count(music->qualities) > QUALITY);
+    assert(ysw_array_get_count(music->qualities) > DEFAULT_QUALITY);
     assert(ysw_array_get_count(music->styles));
 
     context_t *context = ysw_heap_allocate(sizeof(context_t));
@@ -636,8 +714,8 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music)
     context->music = music;
     context->tone_sample = ysw_array_get(music->samples, 0);
     context->chord_sample = context->tone_sample;
-    context->quality = ysw_array_get(music->qualities, QUALITY);
-    context->style = ysw_array_get(music->styles, 0);
+    context->quality = ysw_array_get(music->qualities, DEFAULT_QUALITY);
+    context->style = ysw_array_get(music->styles, DEFAULT_STYLE);
     context->duration = ZM_AS_PLAYED;
 
     context->advance = 2;

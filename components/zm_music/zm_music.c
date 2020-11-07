@@ -78,7 +78,7 @@ static void push_back_tokens(zm_mfr_t *zm_mfr)
 
 static void parse_sample(zm_mfr_t *zm_mfr)
 {
-    zm_index_t index = atoi(zm_mfr->tokens[1]);
+    zm_sample_x index = atoi(zm_mfr->tokens[1]);
     zm_medium_t count = ysw_array_get_count(zm_mfr->music->samples);
 
     if (index != count) {
@@ -98,7 +98,7 @@ static void parse_sample(zm_mfr_t *zm_mfr)
 
 static void parse_quality(zm_mfr_t *zm_mfr)
 {
-    zm_index_t index = atoi(zm_mfr->tokens[1]);
+    zm_quality_x index = atoi(zm_mfr->tokens[1]);
     zm_medium_t count = ysw_array_get_count(zm_mfr->music->qualities);
 
     if (index != count) {
@@ -108,11 +108,12 @@ static void parse_quality(zm_mfr_t *zm_mfr)
 
     zm_quality_t *quality = ysw_heap_allocate(sizeof(zm_quality_t));
     quality->name = ysw_heap_strdup(zm_mfr->tokens[2]);
-    quality->semitones = ysw_array_create(8);
+    quality->label = ysw_heap_strdup(zm_mfr->tokens[3]);
+    quality->distances = ysw_array_create(8);
     
-    for (zm_small_t i = 3; i < zm_mfr->token_count; i++) {
-        zm_semitone_t semitone = atoi(zm_mfr->tokens[i]);
-        ysw_array_push(quality->semitones, (void*)(uintptr_t)semitone);
+    for (zm_small_t i = 4; i < zm_mfr->token_count; i++) {
+        zm_distance_t distance = atoi(zm_mfr->tokens[i]);
+        ysw_array_push(quality->distances, (void*)(uintptr_t)distance);
     }
 
     ysw_array_push(zm_mfr->music->qualities, quality);
@@ -120,7 +121,7 @@ static void parse_quality(zm_mfr_t *zm_mfr)
 
 static void parse_style(zm_mfr_t *zm_mfr)
 {
-    zm_index_t index = atoi(zm_mfr->tokens[1]);
+    zm_style_x index = atoi(zm_mfr->tokens[1]);
     zm_medium_t count = ysw_array_get_count(zm_mfr->music->styles);
 
     if (index != count) {
@@ -138,7 +139,7 @@ static void parse_style(zm_mfr_t *zm_mfr)
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
         if (type == ZM_MF_SOUND && zm_mfr->token_count == 5) {
             zm_sound_t *sound = ysw_heap_allocate(sizeof(zm_sound_t));
-            sound->semitone_index = atoi(zm_mfr->tokens[1]);
+            sound->distance_index = atoi(zm_mfr->tokens[1]);
             sound->velocity = atoi(zm_mfr->tokens[2]);
             sound->start = atoi(zm_mfr->tokens[3]);
             sound->duration = atoi(zm_mfr->tokens[4]);
@@ -154,7 +155,7 @@ static void parse_style(zm_mfr_t *zm_mfr)
 
 static void parse_pattern(zm_mfr_t *zm_mfr)
 {
-    zm_index_t index = atoi(zm_mfr->tokens[1]);
+    zm_pattern_x index = atoi(zm_mfr->tokens[1]);
     zm_medium_t count = ysw_array_get_count(zm_mfr->music->patterns);
 
     if (index != count) {
@@ -189,7 +190,7 @@ static void parse_pattern(zm_mfr_t *zm_mfr)
 
 static void parse_song(zm_mfr_t *zm_mfr)
 {
-    zm_index_t index = atoi(zm_mfr->tokens[1]);
+    zm_song_x index = atoi(zm_mfr->tokens[1]);
     zm_medium_t count = ysw_array_get_count(zm_mfr->music->songs);
 
     if (index != count) {
@@ -247,7 +248,7 @@ void zm_music_free(zm_music_t *music)
     for (zm_medium_t i = 0; i < quality_count; i++) {
         zm_quality_t *quality = ysw_array_get(music->qualities, i);
         ysw_heap_free(quality->name);
-        ysw_array_free(quality->semitones);
+        ysw_array_free(quality->distances);
     }
     ysw_array_free(music->qualities);
 
@@ -287,7 +288,7 @@ zm_music_t *zm_read_from_file(FILE *file)
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
         if (type == ZM_MF_SAMPLE && zm_mfr->token_count == 7) {
             parse_sample(zm_mfr);
-        } else if (type == ZM_MF_QUALITY && zm_mfr->token_count > 3) {
+        } else if (type == ZM_MF_QUALITY && zm_mfr->token_count > 4) {
             parse_quality(zm_mfr);
         } else if (type == ZM_MF_STYLE && zm_mfr->token_count == 3) {
             parse_style(zm_mfr);
@@ -358,18 +359,18 @@ int zm_note_compare(const void *left, const void *right)
 
 void zm_render_step(ysw_array_t *notes, zm_step_t *step, zm_time_x step_start, zm_channel_x channel, zm_sample_x sample_index)
 {
-    zm_medium_t semitone_count = ysw_array_get_count(step->quality->semitones);
+    zm_medium_t distance_count = ysw_array_get_count(step->quality->distances);
     zm_medium_t sound_count = ysw_array_get_count(step->style->sounds);
     for (zm_medium_t j = 0; j < sound_count; j++) {
         zm_sound_t *sound = ysw_array_get(step->style->sounds, j);
-        if (sound->semitone_index >= semitone_count) {
-            ESP_LOGW(TAG, "semitone_index=%d, semitone_count=%d", sound->semitone_index, semitone_count);
+        if (sound->distance_index >= distance_count) {
+            ESP_LOGW(TAG, "distance_index=%d, distance_count=%d", sound->distance_index, distance_count);
             continue;
         } 
-        zm_semitone_t semitone = (uintptr_t)ysw_array_get(step->quality->semitones, sound->semitone_index);
+        zm_distance_t distance = (intptr_t)ysw_array_get(step->quality->distances, sound->distance_index);
         ysw_note_t *note = ysw_heap_allocate(sizeof(ysw_note_t));
         note->channel = channel;
-        note->midi_note = step->root + semitone;
+        note->midi_note = step->root + distance;
         note->start = step_start + (sound->start * step->duration) / YSW_TICKS_PER_MEASURE;
         note->duration = (sound->duration * step->duration) / YSW_TICKS_PER_MEASURE;
         note->velocity = sound->velocity;

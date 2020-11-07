@@ -33,20 +33,20 @@
 1,10,bassguitar,0,0,60,2
 
 #type(quality),index,name,semitones
-2,0,Unity,0
-2,1,Power,0,7
-2,2,Major,0,4,7
-2,3,Minor,0,3,7
-2,4,Major 7th,0,4,7,11
-2,5,Minor 7th,0,3,7,10
-2,6,Dominant 7th,0,4,7,10
-2,7,Augmented,0,4,8
-2,8,Diminished,0,3,6
-2,9,7/6,0,4,7,9,10
-2,10,M7/6,0,4,7,9,11
+2,0,Root Only,1,0
+2,1,Power,5,0,7
+2,2,Major,,0,4,7
+2,3,Minor,min,0,3,7
+2,4,Major 7th,Maj7,0,4,7,11
+2,5,Minor 7th,min7,0,3,7,10
+2,6,Dominant 7th,dom7,0,4,7,10
+2,7,Augmented,aug,0,4,8
+2,8,Diminished,dim,0,3,6
+2,9,Blues 1,7/6,0,4,7,9,10
+2,10,Blues 2,M7/6,0,4,7,9,11
 
 #type(style),index,name
-3,0,Up Down Arpeggio
+3,0,Arpeggio 1
 
 #type(sound),semitone_index,velocity,start,duration
 4,0,100,0,128
@@ -59,7 +59,7 @@
 4,1,80,896,128
 
 #type(style),index,name
-3,1,Slow Strum
+3,1,Strum 1
 
 #type(sound),semitone_index,velocity,start,duration
 4,0,100,0,1024
@@ -69,15 +69,18 @@
 4,4,80,600,1024
 
 #type(style),index,name
-3,2,Chord (3 notes)
+3,2,Stacked
 
 #type(sound),semitone_index,velocity,start,duration
 4,0,80,0,1024
 4,1,80,0,1024
 4,2,80,0,1024
+4,3,80,0,1024
+4,4,80,0,1024
+4,5,80,0,1024
 
 #type(style),index,name
-3,3,Chord (4 notes)
+3,3,Stacked 4
 
 #type(sound),semitone_index,velocity,start,duration
 4,0,80,0,1024
@@ -86,7 +89,7 @@
 4,3,80,0,1024
 
 #type(style),index,name
-3,4,Note (4 note)
+3,4,Note 4
 
 #type(sound),semitone_index,velocity,start,duration
 4,0,80,0,1024

@@ -21,15 +21,21 @@ typedef uint32_t zm_large_t;
 
 typedef bool zm_yesno_t;
 
+typedef int8_t zm_distance_t;
+
 typedef uint8_t zm_note_t;
-typedef uint8_t zm_semitone_t;
+
 typedef uint8_t zm_bpm_x;
 typedef uint8_t zm_channel_x;
+typedef uint8_t zm_velocity_x;
+typedef uint8_t zm_distance_x;
 
-typedef uint16_t zm_index_t; // TODO: replace with specific index types
 typedef uint16_t zm_quality_x;
 typedef uint16_t zm_style_x;
 typedef uint16_t zm_sample_x;
+typedef uint16_t zm_pattern_x;
+typedef uint16_t zm_song_x;
+
 typedef uint32_t zm_time_x;
 
 typedef enum {
@@ -108,12 +114,13 @@ typedef enum {
 
 typedef struct {
     char *name;
-    ysw_array_t *semitones;
+    char *label;
+    ysw_array_t *distances;
 } zm_quality_t;
 
 typedef struct {
-    zm_medium_t semitone_index;
-    zm_medium_t velocity;
+    zm_distance_x distance_index;
+    zm_velocity_x velocity;
     zm_medium_t start;
     zm_medium_t duration;
 } zm_sound_t;

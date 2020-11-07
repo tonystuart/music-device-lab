@@ -252,9 +252,11 @@ static void visit_chord(visit_context_t *vc, zm_beat_t *beat)
             .opa = LV_OPA_COVER,
             .flag = LV_TXT_FLAG_CENTER,
         };
-        const char *note_name = zm_get_note_name(beat->chord.root);
-        lv_draw_label(&coords, vc->clip_area, &dsc, note_name, NULL);
-        // TODO: display quality
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%s%s",
+            zm_get_note_name(beat->chord.root),
+            beat->chord.quality->label);
+        lv_draw_label(&coords, vc->clip_area, &dsc, buf, NULL);
     }
 }
 
