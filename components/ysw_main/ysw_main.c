@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
 
     initialize_samples(bus, music);
 
-#if 0
+#if 1
     zm_song_t *song = ysw_array_get(music->songs, 0);
     ysw_array_t *notes = zm_render_song(song);
     ysw_event_fire_loop(bus, true);

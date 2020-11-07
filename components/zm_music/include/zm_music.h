@@ -127,6 +127,7 @@ typedef struct {
 
 typedef struct {
     char *name;
+    zm_distance_x distance_count;
     ysw_array_t *sounds;   
 } zm_style_t;
 

@@ -32,7 +32,7 @@
 1,9,thehihatclosed,0,0,60,1
 1,10,bassguitar,0,0,60,2
 
-#type(quality),index,name,semitones
+#type(quality),index,name,distances
 2,0,Root Only,1,0
 2,1,Power,5,0,7
 2,2,Major,,0,4,7
@@ -48,7 +48,7 @@
 #type(style),index,name
 3,0,Arpeggio 1
 
-#type(sound),semitone_index,velocity,start,duration
+#type(sound),distance_index,velocity,start,duration
 4,0,100,0,128
 4,1,80,128,128
 4,2,80,256,128
@@ -61,7 +61,7 @@
 #type(style),index,name
 3,1,Strum 1
 
-#type(sound),semitone_index,velocity,start,duration
+#type(sound),distance_index,velocity,start,duration
 4,0,100,0,1024
 4,1,80,150,1024
 4,2,80,300,1024
@@ -71,7 +71,7 @@
 #type(style),index,name
 3,2,Stacked
 
-#type(sound),semitone_index,velocity,start,duration
+#type(sound),distance_index,velocity,start,duration
 4,0,80,0,1024
 4,1,80,0,1024
 4,2,80,0,1024
@@ -82,7 +82,7 @@
 #type(style),index,name
 3,3,Stacked 4
 
-#type(sound),semitone_index,velocity,start,duration
+#type(sound),distance_index,velocity,start,duration
 4,0,80,0,1024
 4,1,80,0,1024
 4,2,80,0,1024
@@ -91,7 +91,7 @@
 #type(style),index,name
 3,4,Note 4
 
-#type(sound),semitone_index,velocity,start,duration
+#type(sound),distance_index,velocity,start,duration
 4,0,80,0,1024
 
 #type(pattern),index,name,sample

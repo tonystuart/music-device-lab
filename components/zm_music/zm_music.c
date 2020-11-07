@@ -96,6 +96,8 @@ static void parse_sample(zm_mfr_t *zm_mfr)
     ysw_array_push(zm_mfr->music->samples, sample);
 }
 
+#define MAX_DISTANCES 16
+
 static void parse_quality(zm_mfr_t *zm_mfr)
 {
     zm_quality_x index = atoi(zm_mfr->tokens[1]);
@@ -111,9 +113,12 @@ static void parse_quality(zm_mfr_t *zm_mfr)
     quality->label = ysw_heap_strdup(zm_mfr->tokens[3]);
     quality->distances = ysw_array_create(8);
     
-    for (zm_small_t i = 4; i < zm_mfr->token_count; i++) {
-        zm_distance_t distance = atoi(zm_mfr->tokens[i]);
-        ysw_array_push(quality->distances, (void*)(uintptr_t)distance);
+    zm_distance_x distances_specified = zm_mfr->token_count - 4;
+    zm_distance_x distances_allowed = min(distances_specified, MAX_DISTANCES);
+
+    for (zm_small_t i = 0; i < distances_allowed; i++) {
+        zm_distance_t distance = atoi(zm_mfr->tokens[4 + i]);
+        ysw_array_push(quality->distances, (void*)(intptr_t)distance);
     }
 
     ysw_array_push(zm_mfr->music->qualities, quality);
@@ -134,19 +139,29 @@ static void parse_style(zm_mfr_t *zm_mfr)
     style->sounds = ysw_array_create(8);
 
     zm_yesno_t done = false;
+    zm_distance_x distances[MAX_DISTANCES] = {};
 
     while (!done && get_tokens(zm_mfr)) {
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
         if (type == ZM_MF_SOUND && zm_mfr->token_count == 5) {
             zm_sound_t *sound = ysw_heap_allocate(sizeof(zm_sound_t));
             sound->distance_index = atoi(zm_mfr->tokens[1]);
-            sound->velocity = atoi(zm_mfr->tokens[2]);
-            sound->start = atoi(zm_mfr->tokens[3]);
-            sound->duration = atoi(zm_mfr->tokens[4]);
-            ysw_array_push(style->sounds, sound);
+            if (sound->distance_index < MAX_DISTANCES) {
+                distances[sound->distance_index]++;
+                sound->velocity = atoi(zm_mfr->tokens[2]);
+                sound->start = atoi(zm_mfr->tokens[3]);
+                sound->duration = atoi(zm_mfr->tokens[4]);
+                ysw_array_push(style->sounds, sound);
+            }
         } else {
             push_back_tokens(zm_mfr);
             done = true;
+        }
+    }
+
+    for (zm_distance_x i = 0; i < MAX_DISTANCES; i++) {
+        if (distances[i]) {
+            style->distance_count++;
         }
     }
 

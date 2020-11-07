@@ -483,8 +483,16 @@ static void cycle_style(context_t *context)
     if (!beat || !beat->chord.root || beat->chord.style == context->style) {
         zm_style_x previous = ysw_array_find(context->music->styles, context->style);
         zm_style_x style_count = ysw_array_get_count(context->music->styles);
-        zm_style_x next = (previous + 1) % style_count;
-        context->style = ysw_array_get(context->music->styles, next);
+        bool found = false;
+        zm_distance_x distance_count = ysw_array_get_count(context->quality->distances);
+        for (zm_style_x i = 0; i < style_count && !found; i++) {
+            zm_style_x next = (previous + 1) % style_count;
+            zm_style_t *style = ysw_array_get(context->music->styles, next);
+            if (style->distance_count == distance_count) {
+                context->style = style;
+                found = true;
+            }
+        }
     }
     if (beat) {
         beat->chord.style = context->style;
