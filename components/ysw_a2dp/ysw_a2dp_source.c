@@ -246,7 +246,14 @@ static void filter_inquiry_scan_result(esp_bt_gap_cb_param_t *param)
 #if 1
     //if (strcmp(bda_str, "94:8e:29:cd:88:6a") == 0) {
     if (strcmp(bda_str, "87:9e:3d:cc:b9:20") == 0) {
-        ESP_LOGI(TAG, "Found OontZ Angle by BDA");
+        ESP_LOGI(TAG, "Found OontZ Angle (Cabin) by BDA");
+        s_a2d_state = APP_AV_STATE_DISCOVERED;
+        memcpy(s_peer_bda, param->disc_res.bda, ESP_BD_ADDR_LEN);
+        ESP_LOGI(BT_AV_TAG, "Cancel device discovery ...");
+        esp_bt_gap_cancel_discovery();
+        return;
+    } else if (strcmp(bda_str, "94:8e:29:cd:88:6a") == 0) {
+        ESP_LOGI(TAG, "Found OontZ Angle (Townhouse) by BDA");
         s_a2d_state = APP_AV_STATE_DISCOVERED;
         memcpy(s_peer_bda, param->disc_res.bda, ESP_BD_ADDR_LEN);
         ESP_LOGI(BT_AV_TAG, "Cancel device discovery ...");
