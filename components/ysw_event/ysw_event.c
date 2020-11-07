@@ -142,6 +142,15 @@ void ysw_event_fire_play(ysw_bus_h bus, ysw_array_t *notes, uint8_t bpm)
     ysw_event_publish(bus, &event);
 }
 
+void ysw_event_fire_stop(ysw_bus_h bus)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_COMMAND,
+        .header.type = YSW_EVENT_STOP,
+    };
+    ysw_event_publish(bus, &event);
+}
+
 void ysw_event_fire_sample_load(ysw_bus_h bus, ysw_event_sample_load_t *sample_load)
 {
     ysw_event_t event = {

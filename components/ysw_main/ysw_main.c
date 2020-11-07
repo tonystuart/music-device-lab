@@ -274,13 +274,6 @@ int main(int argc, char *argv[])
 
     initialize_samples(bus, music);
 
-#if 1
-    zm_song_t *song = ysw_array_get(music->songs, 0);
-    ysw_array_t *notes = zm_render_song(song);
-    ysw_event_fire_loop(bus, true);
-    ysw_event_fire_play(bus, notes, song->bpm);
-#endif
-
 #ifdef IDF_VER
 #else
     ysw_simulator_initialize(bus);

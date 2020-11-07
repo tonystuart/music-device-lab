@@ -152,5 +152,6 @@ void ysw_event_fire_key_pressed(ysw_bus_h bus, ysw_event_key_pressed_t *key_pres
 void ysw_event_fire_key_up(ysw_bus_h bus, ysw_event_key_up_t *key_up);
 void ysw_event_fire_loop(ysw_bus_h bus, bool loop);
 void ysw_event_fire_play(ysw_bus_h bus, ysw_array_t *notes, uint8_t bpm);
+void ysw_event_fire_stop(ysw_bus_h bus);
 void ysw_event_fire_sample_load(ysw_bus_h bus, ysw_event_sample_load_t *sample_load);
 
