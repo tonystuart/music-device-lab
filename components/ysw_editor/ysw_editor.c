@@ -319,6 +319,28 @@ typedef struct {
     lv_obj_t *footer;
 } context_t;
 
+static void play_beat(context_t *context, zm_beat_t *beat)
+{
+    ysw_array_t *notes = ysw_array_create(16);
+    zm_sample_x sample_index = ysw_array_find(context->music->samples, context->chord_sample);
+    zm_render_tone(notes, &beat->tone, 0, 1, sample_index);
+    if (beat->chord.root) {
+        zm_render_step(notes, &beat->chord, 0, 2, sample_index);
+        ysw_array_sort(notes, zm_note_compare);
+    }
+    zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
+    ysw_event_fire_play(context->bus, notes, bpm); // TODO: consider supplying origin or use channel
+}
+
+static void play_position(context_t *context)
+{
+    if (context->position % 2 == 1) {
+        zm_beat_x beat_index = context->position / 2;
+        zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
+        play_beat(context, beat);
+    }
+}
+
 static void display_sample(context_t *context)
 {
     const char *value = "";
@@ -336,9 +358,9 @@ static void display_tone_mode(context_t *context)
     // 2. between beats - show previous (to left) note or rest
     // 3. no beats - show blank
     char value[32] = {};
-    uint32_t beat_count = ysw_array_get_count(context->passage->beats);
+    zm_beat_x beat_count = ysw_array_get_count(context->passage->beats);
     if (beat_count) {
-        uint32_t beat_index = context->position / 2;
+        zm_beat_x beat_index = context->position / 2;
         if (beat_index >= beat_count) {
             beat_index = beat_count - 1;
         }
@@ -458,7 +480,7 @@ static void cycle_duration(context_t *context)
 {
     zm_beat_t *beat = NULL;
     if (context->position % 2 == 1 && context->duration != ZM_AS_PLAYED) {
-        uint32_t beat_index = context->position / 2;
+        zm_beat_x beat_index = context->position / 2;
         beat = ysw_array_get(context->passage->beats, beat_index);
     }
     // Cycle default duration if not on a beat or if beat duration is already default duration
@@ -510,7 +532,7 @@ static void cycle_quality(context_t *context)
 {
     zm_beat_t *beat = NULL;
     if (context->position % 2 == 1) {
-        uint32_t beat_index = context->position / 2;
+        zm_beat_x beat_index = context->position / 2;
         beat = ysw_array_get(context->passage->beats, beat_index);
     }
     if (!beat || !beat->chord.root || beat->chord.quality == context->quality) {
@@ -532,7 +554,7 @@ static void cycle_style(context_t *context)
 {
     zm_beat_t *beat = NULL;
     if (context->position % 2 == 1) {
-        uint32_t beat_index = context->position / 2;
+        zm_beat_x beat_index = context->position / 2;
         beat = ysw_array_get(context->passage->beats, beat_index);
     }
     if (!beat || !beat->chord.root || beat->chord.style == context->style) {
@@ -571,10 +593,10 @@ static void process_beat(context_t *context, ysw_event_key_up_t *event)
     }
 
     uint8_t value = key_map[event->key];
-    zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
     if (context->mode == YSW_EDITOR_MODE_TONE) {
         beat->tone.note = value == YSW_EDITOR_REST ? 0 : 60 + value;
         if (context->duration == ZM_AS_PLAYED) {
+            zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
             beat->tone.duration = ysw_millis_to_ticks(event->duration, bpm);
         } else {
             beat->tone.duration = context->duration;
@@ -587,14 +609,11 @@ static void process_beat(context_t *context, ysw_event_key_up_t *event)
         beat->chord.quality = context->quality;
         beat->chord.style = context->style;
         beat->chord.duration = ZM_HALF;
-        ysw_array_t *notes = ysw_array_create(16);
-        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->chord_sample);
-        zm_render_step(notes, &beat->chord, 0, 1, sample_index);
-        ysw_event_fire_play(context->bus, notes, bpm); // TODO: consider supplying origin or use channel
+        play_beat(context, beat);
     } else if (context -> mode == YSW_EDITOR_MODE_DRUM) {
     }
 
-    uint32_t beat_count = ysw_array_get_count(context->passage->beats);
+    zm_beat_x beat_count = ysw_array_get_count(context->passage->beats);
     context->position = min(context->position + context->advance, beat_count * 2);
     ysw_staff_update_all(context->staff, context->position);
     display_mode(context);
@@ -603,10 +622,10 @@ static void process_beat(context_t *context, ysw_event_key_up_t *event)
 static void process_delete(context_t *context)
 {
     if (context->position % 2 == 1) {
-        uint32_t beat_index = context->position / 2;
+        zm_beat_x beat_index = context->position / 2;
         zm_beat_t *beat = ysw_array_remove(context->passage->beats, beat_index);
         ysw_heap_free(beat);
-        uint32_t beat_count = ysw_array_get_count(context->passage->beats);
+        zm_beat_x beat_count = ysw_array_get_count(context->passage->beats);
         if (beat_index == beat_count) {
             if (beat_count) {
                 context->position -= 2;
@@ -622,6 +641,7 @@ static void process_left(context_t *context)
 {
     if (context->position > 0) {
         context->position--;
+        play_position(context);
         ysw_staff_update_position(context->staff, context->position);
         display_mode(context);
     }
@@ -631,6 +651,7 @@ static void process_right(context_t *context)
 {
     if (context->position < (ysw_array_get_count(context->passage->beats) * 2)) {
         context->position++;
+        play_position(context);
         ysw_staff_update_position(context->staff, context->position);
         display_mode(context);
     }

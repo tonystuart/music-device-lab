@@ -372,6 +372,18 @@ int zm_note_compare(const void *left, const void *right)
     return delta;
 }
 
+void zm_render_tone(ysw_array_t *notes, zm_tone_t *tone, zm_time_x tone_start, zm_channel_x channel, zm_sample_x sample_index)
+{
+    ysw_note_t *note = ysw_heap_allocate(sizeof(ysw_note_t));
+    note->channel = channel;
+    note->midi_note = tone->note;
+    note->start = tone_start;
+    note->duration = tone->duration;
+    note->velocity = 100;
+    note->program = sample_index;
+    ysw_array_push(notes, note);
+}
+
 void zm_render_step(ysw_array_t *notes, zm_step_t *step, zm_time_x step_start, zm_channel_x channel, zm_sample_x sample_index)
 {
     zm_medium_t distance_count = ysw_array_get_count(step->quality->distances);

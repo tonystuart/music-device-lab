@@ -36,6 +36,7 @@ typedef uint16_t zm_sample_x;
 typedef uint16_t zm_pattern_x;
 typedef uint16_t zm_song_x;
 
+typedef uint32_t zm_beat_x;
 typedef uint32_t zm_time_x;
 
 typedef enum {
@@ -220,6 +221,9 @@ void zm_music_free(zm_music_t *music);
 zm_music_t *zm_read_from_file(FILE *file);
 zm_music_t *zm_read(void);
 
+int zm_note_compare(const void *left, const void *right);
+
+void zm_render_tone(ysw_array_t *notes, zm_tone_t *tone, zm_time_x tone_start, zm_channel_x channel, zm_sample_x sample_index);
 void zm_render_step(ysw_array_t *notes, zm_step_t *step, zm_time_x step_start, zm_channel_x channel, zm_sample_x sample_index);
 zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large_t start_time, zm_small_t channel);
 ysw_array_t *zm_render_song(zm_song_t *song);
