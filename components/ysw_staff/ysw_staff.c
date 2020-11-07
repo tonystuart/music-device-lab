@@ -237,26 +237,42 @@ static uint32_t visit_tone(visit_context_t *vc, zm_beat_t *beat, const zm_key_si
     return duration;
 }
 
+#define BIG_CHORD_FONT 0
+
 static void visit_chord(visit_context_t *vc, zm_beat_t *beat)
 {
     if (vc->visit_type == VT_DRAW && beat->chord.root) {
+#if BIG_CHORD_FONT
         lv_area_t coords = {
-            .x1 = vc->point.x - 25,
-            .x2 = vc->point.x + 25,
+            .x1 = vc->point.x,
+            .x2 = vc->point.x + 50,
+            .y1 = 35,
+            .y2 = 60,
+        };
+        lv_draw_label_dsc_t dsc = {
+            .color = vc->color,
+            .font = &lv_font_montserrat_14,
+            .opa = LV_OPA_COVER,
+        };
+        lv_draw_label(&coords, vc->clip_area, &dsc, zm_get_note_name(beat->chord.root), NULL);
+        coords.y1 += 15;
+        lv_draw_label(&coords, vc->clip_area, &dsc, beat->chord.quality->label, NULL);
+#else
+        lv_area_t coords = {
+            .x1 = vc->point.x,
+            .x2 = vc->point.x + 50,
             .y1 = 40,
             .y2 = 60,
         };
         lv_draw_label_dsc_t dsc = {
-            .color = LV_COLOR_WHITE,
-            .font = &lv_font_montserrat_14,
+            .color = vc->color,
+            .font = &lv_font_unscii_8,
             .opa = LV_OPA_COVER,
-            .flag = LV_TXT_FLAG_CENTER,
         };
-        char buf[64];
-        snprintf(buf, sizeof(buf), "%s%s",
-            zm_get_note_name(beat->chord.root),
-            beat->chord.quality->label);
-        lv_draw_label(&coords, vc->clip_area, &dsc, buf, NULL);
+        lv_draw_label(&coords, vc->clip_area, &dsc, zm_get_note_name(beat->chord.root), NULL);
+        coords.y1 += 9;
+        lv_draw_label(&coords, vc->clip_area, &dsc, beat->chord.quality->label, NULL);
+#endif
     }
 }
 
@@ -296,6 +312,10 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
             zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);
             visit_chord(vc, beat);
             ticks_in_measure += visit_tone(vc, beat, key_signature);
+            visit_letter(vc, YSW_STAFF_SPACE);
+            if (beat->chord.root) {
+                visit_letter(vc, YSW_STAFF_SPACE);
+            }
             if (ticks_in_measure >= 1024) {
                 measure++;
                 visit_letter(vc, YSW_RIGHT_BAR);
@@ -326,7 +346,7 @@ static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
     }
 
     visit_context_t vc = {
-        .point.y = 60,
+        .point.y = 70,
         .color = LV_COLOR_WHITE,
         .clip_area = clip_area,
         .font = &MusiQwikT_48,

@@ -507,6 +507,7 @@ const zm_time_signature_t *zm_get_time_signature(zm_time_signature_x time_index)
 // See https://en.wikipedia.org/wiki/Tempo
 
 static const zm_tempo_signature_t zm_tempo_signatures[] = {
+    { "Grave", "30 BPM", 30 },
     { "Largo", "50 BPM", 50 },
     { "Andante", "80 BPM", 80 },
     { "Moderato", "100 BPM", 100 },

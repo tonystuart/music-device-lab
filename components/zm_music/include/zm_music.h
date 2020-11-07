@@ -87,6 +87,7 @@ typedef struct {
 } zm_time_signature_t;
 
 typedef enum {
+    ZM_TEMPO_30,
     ZM_TEMPO_50,
     ZM_TEMPO_80,
     ZM_TEMPO_100,

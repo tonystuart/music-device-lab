@@ -381,6 +381,10 @@ static void display_chord_mode(context_t *context)
     ysw_header_set_mode(context->header, modes[context->mode], value);
 }
 
+static void display_drum_mode(context_t *context)
+{
+    ysw_header_set_mode(context->header, modes[context->mode], "");
+}
 static void display_mode(context_t *context)
 {
     switch (context->mode) {
@@ -391,6 +395,7 @@ static void display_mode(context_t *context)
             display_chord_mode(context);
             break;
         case YSW_EDITOR_MODE_DRUM:
+            display_drum_mode(context);
             break;
     }
     // sample is mode specific
