@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define TAG "ALSA"
+#define TAG "YSW_ALSA"
 
 #define ALSA_DEVICE "default"
 #define ALSA_CHANNELS 2

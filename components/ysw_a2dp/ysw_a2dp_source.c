@@ -35,7 +35,7 @@
 #include "esp_a2dp_api.h"
 #include "esp_avrc_api.h"
 
-#define TAG "A2DP_SOURCE"
+#define TAG "YSW_A2DP_SOURCE"
 
 #define BT_AV_TAG               "BT_AV"
 #define BT_RC_CT_TAG            "RCCT"

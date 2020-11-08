@@ -15,7 +15,7 @@
 #include "esp_log.h"
 #include "assert.h"
 
-#define TAG "STAFF"
+#define TAG "YSW_STAFF"
 #define LV_OBJX_NAME "ysw_staff"
 
 #define YSW_TREBLE_CLEF 0x01

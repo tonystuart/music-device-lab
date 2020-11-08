@@ -11,7 +11,7 @@
 #include "ysw_bus.h"
 #include "esp_log.h"
 
-#define TAG "EVENT"
+#define TAG "YSW_EVENT"
 
 ysw_bus_h ysw_event_create_bus()
 {

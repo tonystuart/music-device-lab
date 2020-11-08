@@ -15,7 +15,7 @@
 #include "ysw_task.h"
 #include "esp_log.h"
 
-#define TAG "LED"
+#define TAG "YSW_LED"
 
 #define LED_COUNT 40
 #define MAX_POWER 16

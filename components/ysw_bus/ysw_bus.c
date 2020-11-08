@@ -16,7 +16,7 @@
 #include "assert.h"
 #include "stdlib.h"
 
-#define TAG "BUS"
+#define TAG "YSW_BUS"
 
 typedef enum {
     YSW_BUS_SUBSCRIBE,

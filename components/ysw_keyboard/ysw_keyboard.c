@@ -19,7 +19,7 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 
-#define TAG "KEYBOARD"
+#define TAG "YSW_KEYBOARD"
 
 #define LOW 0
 #define HIGH 1
@@ -84,7 +84,7 @@ static void on_key_pressed(ysw_bus_h bus, uint8_t key, state_t *state)
             .time = state->down_time,
         };
         ysw_event_fire_key_down(bus, &key_down);
-    } else if (state->down_time + ((state->repeat_count + 1) * 250) < current_millis) {
+    } else if (state->down_time + ((state->repeat_count + 1) * 100) < current_millis) {
         state->repeat_count++;
         ysw_event_key_pressed_t key_pressed = {
             .key = key,

@@ -14,7 +14,7 @@
 #include "esp_log.h"
 #include "math.h"
 
-#define TAG "A2DP_DRIVER"
+#define TAG "YSW_A2DP_DRIVER"
 
 #define PI (3.141592654)
 

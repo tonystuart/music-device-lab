@@ -24,7 +24,7 @@
 #include "termios.h"
 #include "unistd.h"
 
-#define TAG "MAIN"
+#define TAG "YSW_MAIN"
 
 #define YSW_MUSIC_PARTITION "/spiffs"
 
@@ -274,6 +274,43 @@ int main(int argc, char *argv[])
     initialize_samples(bus, music);
 
 #ifdef IDF_VER
+#if configUSE_TRACE_FACILITY && configTASKLIST_INCLUDE_COREID
+    static uint32_t last_report = 0;
+    uint32_t current_millis = ysw_get_millis();
+    if (current_millis > last_report + 5000) {
+        TaskStatus_t *task_status = ysw_heap_allocate(30 * sizeof(TaskStatus_t));
+        uint32_t count = uxTaskGetSystemState( task_status, 30, NULL );
+        for (uint32_t i = 0; i < count; i++) {
+            char state;
+            switch( task_status[i].eCurrentState) {
+                case eReady:
+                    state = 'R';
+                    break;
+                case eBlocked:
+                    state = 'B';
+                    break;
+                case eSuspended:
+                    state = 'S';
+                    break;
+                case eDeleted:
+                    state = 'D';
+                    break;
+                default:
+                    state = '?';
+                    break;
+            }
+            ESP_LOGD(TAG, "%3d %c %-20s %d %d %d %d",
+                    i,
+                    state,
+                    task_status[i].pcTaskName,
+                    task_status[i].uxCurrentPriority,
+                    task_status[i].usStackHighWaterMark,
+                    task_status[i].xTaskNumber,
+                    task_status[i].xCoreID );
+        }
+        last_report = current_millis;
+    }
+#endif
 #else
     ysw_simulator_initialize(bus);
     pthread_exit(0);

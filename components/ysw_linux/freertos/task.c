@@ -14,7 +14,7 @@
 #include "pthread.h"
 #include "unistd.h"
 
-#define TAG "TASK"
+#define TAG "YSW_TASK"
 
 static int ysw_rtos_ticks_to_millis(int ticks)
 {

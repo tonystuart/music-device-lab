@@ -12,7 +12,7 @@
 #include "esp_log.h"
 #include "stdint.h"
 
-#define TAG "SIMULATOR"
+#define TAG "YSW_SIMULATOR"
 
 typedef void (*lv_key_handler)(uint8_t key, uint32_t time, uint8_t repeat);
 extern lv_key_handler lv_key_down_handler;

@@ -19,7 +19,7 @@
 
 #include "rtmidi1053b.plg"
 
-#define TAG "VS1053_DRIVER"
+#define TAG "YSW_VS1053"
 
 #define $ ESP_ERROR_CHECK
 

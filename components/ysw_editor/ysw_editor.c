@@ -20,7 +20,7 @@
 #include "esp_log.h"
 #include "assert.h"
 
-#define TAG "EDITOR"
+#define TAG "YSW_EDITOR"
 
 #if 1
 
@@ -870,7 +870,9 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     config.event_handler = process_event;
     config.caller_context = context;
     config.wait_millis = 5;
-    config.priority = YSW_TASK_DEFAULT_PRIORITY + 1;
+    //config.priority = YSW_TASK_DEFAULT_PRIORITY + 1;
+    //config.priority = configMAX_PRIORITIES - 1;
+    config.priority = 24;
 
     ysw_task_h task = ysw_task_create(&config);
 
