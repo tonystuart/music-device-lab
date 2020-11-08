@@ -301,6 +301,7 @@ static const uint8_t key_map[] = {
 typedef struct {
     ysw_bus_h bus;
     zm_music_t *music;
+    ysw_editor_lvgl_init lvgl_init;
     zm_passage_t *passage;
     zm_sample_t *tone_sample;
     zm_sample_t *chord_sample;
@@ -791,32 +792,11 @@ static void process_event(void *caller_context, ysw_event_t *event)
     lv_task_handler();
 }
 
-void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music)
+static void initialize_editor_task(void *caller_context)
 {
-    assert(ysw_array_get_count(music->samples));
-    assert(ysw_array_get_count(music->qualities) > DEFAULT_QUALITY);
-    assert(ysw_array_get_count(music->styles));
+    context_t *context = caller_context;
 
-    context_t *context = ysw_heap_allocate(sizeof(context_t));
-
-    context->bus = bus;
-    context->music = music;
-    context->tone_sample = ysw_array_get(music->samples, 0);
-    context->chord_sample = context->tone_sample;
-    context->quality = ysw_array_get(music->qualities, DEFAULT_QUALITY);
-    context->style = ysw_array_get(music->styles, DEFAULT_STYLE);
-    context->duration = ZM_AS_PLAYED;
-
-    context->advance = 2;
-    context->position = 0;
-    context->mode = YSW_EDITOR_MODE_TONE;
-
-    context->passage = ysw_heap_allocate(sizeof(zm_passage_t));
-    context->passage->beats = ysw_array_create(64);
-    context->passage->key = ZM_KEY_C;
-    context->passage->time = ZM_TIME_4_4;
-    context->passage->tempo = ZM_TEMPO_100;
-
+    context->lvgl_init();
     context->container = lv_obj_create(lv_scr_act(), NULL);
 
     lv_obj_set_style_local_bg_color(context->container, 0, 0, LV_COLOR_MAROON);
@@ -848,11 +828,45 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music)
     ysw_footer_set_time(context->footer, context->passage->time);
     ysw_footer_set_tempo(context->footer, context->passage->tempo);
     ysw_footer_set_duration(context->footer, context->duration);
+}
+
+void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_init lvgl_init)
+{
+    assert(bus);
+    assert(music);
+    assert(lvgl_init);
+
+    assert(ysw_array_get_count(music->samples));
+    assert(ysw_array_get_count(music->qualities) > DEFAULT_QUALITY);
+    assert(ysw_array_get_count(music->styles));
+
+    context_t *context = ysw_heap_allocate(sizeof(context_t));
+
+    context->bus = bus;
+    context->music = music;
+    context->lvgl_init = lvgl_init;
+
+    context->tone_sample = ysw_array_get(music->samples, 0);
+    context->chord_sample = context->tone_sample;
+    context->quality = ysw_array_get(music->qualities, DEFAULT_QUALITY);
+    context->style = ysw_array_get(music->styles, DEFAULT_STYLE);
+    context->duration = ZM_AS_PLAYED;
+
+    context->advance = 2;
+    context->position = 0;
+    context->mode = YSW_EDITOR_MODE_TONE;
+
+    context->passage = ysw_heap_allocate(sizeof(zm_passage_t));
+    context->passage->beats = ysw_array_create(64);
+    context->passage->key = ZM_KEY_C;
+    context->passage->time = ZM_TIME_4_4;
+    context->passage->tempo = ZM_TEMPO_100;
 
     ysw_task_config_t config = ysw_task_default_config;
 
     config.name = TAG;
     config.bus = bus;
+    config.initializer = initialize_editor_task;
     config.event_handler = process_event;
     config.caller_context = context;
     config.wait_millis = 5;

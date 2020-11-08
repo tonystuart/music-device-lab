@@ -253,11 +253,10 @@ int main(int argc, char *argv[])
     zm_music_t *music = zm_read();
     ysw_bus_h bus = ysw_event_create_bus();
 
-    initialize_touch_screen();
     initialize_synthesizer(bus);
 
     ysw_sequencer_create_task(bus);
-    ysw_editor_create_task(bus, music);
+    ysw_editor_create_task(bus, music, initialize_touch_screen);
 
 #ifdef IDF_VER
     ysw_led_config_t led_config = {

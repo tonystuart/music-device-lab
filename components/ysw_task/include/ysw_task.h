@@ -23,6 +23,8 @@ typedef void *ysw_task_h;
 
 typedef void (*ysw_task_event_handler_t)(void *caller_context, ysw_event_t *event);
 
+typedef void (*ysw_task_initializer)(void *caller_context);
+
 // 1. Specify queue and/or bus if you want a queue allocated
 // 2. Specify queue_size and item_size if you want a queue allocated
 // 3. Specify event_handler if you want an event handler wrapper
@@ -38,6 +40,7 @@ typedef struct {
     ysw_task_h *task;
     TaskFunction_t function;
     ysw_task_event_handler_t event_handler;
+    ysw_task_initializer initializer;
     void *caller_context;
     uint16_t stack_size;
     int8_t priority;

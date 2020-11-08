@@ -12,4 +12,6 @@
 #include "ysw_bus.h"
 #include "zm_music.h"
 
-void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music);
+typedef void (*ysw_editor_lvgl_init)();
+
+void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_init lvgl_init);

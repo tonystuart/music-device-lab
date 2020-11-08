@@ -21,6 +21,7 @@ typedef struct {
     ysw_bus_h bus;
     QueueHandle_t queue;
     ysw_task_event_handler_t event_handler;
+    ysw_task_initializer initializer;
     void *caller_context;
     uint32_t wait_millis;
 } context_t;
@@ -28,6 +29,9 @@ typedef struct {
 static void ysw_task_event_handler(void *parameter)
 {
     context_t *context = parameter;
+    if (context->initializer) {
+        context->initializer(context->caller_context);
+    }
     for (;;) {
         ysw_event_t item;
         ysw_event_t *event = NULL;
@@ -61,6 +65,7 @@ ysw_task_h ysw_task_create(ysw_task_config_t *config)
 
     context->bus = config->bus;
     context->wait_millis = config->wait_millis;
+    context->initializer = config->initializer;
 
     TaskFunction_t function = NULL;
     void *parameter = NULL;
