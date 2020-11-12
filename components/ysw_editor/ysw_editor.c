@@ -7,10 +7,11 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-
 #include "ysw_editor.h"
 #include "ysw_common.h"
 #include "ysw_event.h"
+#include "ysw_footer.h"
+#include "ysw_header.h"
 #include "ysw_heap.h"
 #include "ysw_staff.h"
 #include "ysw_task.h"
@@ -21,222 +22,6 @@
 #include "assert.h"
 
 #define TAG "YSW_EDITOR"
-
-#if 1
-
-// ysw_field
-
-typedef struct {
-    lv_cont_ext_t cont_ext; // base class data
-    lv_obj_t *name;
-    lv_obj_t *value;
-} ysw_field_ext_t;
-
-static lv_design_cb_t ysw_field_base_design;
-static lv_signal_cb_t ysw_field_base_signal;
-
-static lv_res_t ysw_field_on_signal(lv_obj_t *obj, lv_signal_t sign, void *param)
-{
-    return ysw_field_base_signal(obj, sign, param);
-}
-
-static lv_design_res_t ysw_field_on_design(lv_obj_t *obj, const lv_area_t *clip_area, lv_design_mode_t mode)
-{
-    return ysw_field_base_design(obj, clip_area, mode);
-}
-
-lv_obj_t *ysw_field_create(lv_obj_t *par)
-{
-    lv_obj_t *field = lv_cont_create(par, NULL);
-    assert(field);
-
-    ysw_field_ext_t *ext = lv_obj_allocate_ext_attr(field, sizeof(ysw_field_ext_t));
-    assert(ext);
-
-    if (ysw_field_base_signal == NULL) {
-        ysw_field_base_signal = lv_obj_get_signal_cb(field);
-    }
-
-    if (ysw_field_base_design == NULL) {
-        ysw_field_base_design = lv_obj_get_design_cb(field);
-    }
-
-    memset(ext, 0, sizeof(ysw_field_ext_t));
-
-    lv_obj_set_signal_cb(field, ysw_field_on_signal);
-    lv_obj_set_design_cb(field, ysw_field_on_design);
-
-    ext->name = lv_label_create(field, NULL);
-    lv_label_set_align(ext->name, LV_LABEL_ALIGN_CENTER);
-    lv_obj_set_style_local_text_font(ext->name, 0, 0, &lv_font_unscii_8);
-
-    ext->value = lv_label_create(field, NULL);
-    lv_label_set_align(ext->value, LV_LABEL_ALIGN_CENTER);
-
-    lv_obj_set_style_local_pad_top(field, 0, 0, 2);
-    lv_obj_set_style_local_pad_left(field, 0, 0, 2);
-
-    lv_cont_set_fit(field, LV_FIT_TIGHT);
-    lv_cont_set_layout(field, LV_LAYOUT_COLUMN_LEFT);
-
-    return field;
-}
-
-void ysw_field_set_name(lv_obj_t *field, const char *name)
-{
-    ysw_field_ext_t *ext = lv_obj_get_ext_attr(field);
-    lv_label_set_text(ext->name, name);
-}
-
-void ysw_field_set_value(lv_obj_t *field, const char *value)
-{
-    ysw_field_ext_t *ext = lv_obj_get_ext_attr(field);
-    lv_label_set_text(ext->value, value);
-}
-
-// Header
-
-typedef struct {
-    lv_cont_ext_t cont_ext; // base class data
-    lv_obj_t *mode_field;
-    lv_obj_t *sample_field;
-} ysw_header_ext_t;
-
-lv_obj_t *ysw_header_create(lv_obj_t *par)
-{
-    lv_obj_t *header = lv_cont_create(par, NULL);
-    assert(header);
-
-    ysw_header_ext_t *ext = lv_obj_allocate_ext_attr(header, sizeof(ysw_header_ext_t));
-    assert(ext);
-
-    memset(ext, 0, sizeof(ysw_header_ext_t));
-
-    ext->mode_field = ysw_field_create(header);
-    ysw_field_set_name(ext->mode_field, "Mode");
-
-    ext->sample_field = ysw_field_create(header);
-    ysw_field_set_name(ext->sample_field, "Sample");
-
-    lv_cont_set_layout(header, LV_LAYOUT_PRETTY_TOP);
-
-    return header;
-}
-
-typedef enum {
-    YSW_EDITOR_MODE_TONE,
-    YSW_EDITOR_MODE_CHORD,
-    YSW_EDITOR_MODE_DRUM,
-} ysw_editor_mode_t;
-
-static const char *modes[] = {
-    "Note",
-    "Chord",
-    "Drum",
-};
-
-#define YSW_EDITOR_MODE_COUNT 3
-
-void ysw_header_set_mode(lv_obj_t *header, const char *name, const char *value)
-{
-    ysw_header_ext_t *ext = lv_obj_get_ext_attr(header);
-    ysw_field_set_name(ext->mode_field, name);
-    ysw_field_set_value(ext->mode_field, value);
-}
-
-void ysw_header_set_sample(lv_obj_t *header, const char *sample_name)
-{
-    ysw_header_ext_t *ext = lv_obj_get_ext_attr(header);
-    ysw_field_set_value(ext->sample_field, sample_name);
-}
-
-// Footer
-
-typedef struct {
-    lv_cont_ext_t cont_ext; // base class data
-    lv_obj_t *key_field;
-    lv_obj_t *time_field;
-    lv_obj_t *tempo_field;
-    lv_obj_t *duration_field;
-} ysw_footer_ext_t;
-
-lv_obj_t *ysw_footer_create(lv_obj_t *par)
-{
-    lv_obj_t *footer = lv_cont_create(par, NULL);
-    assert(footer);
-
-    ysw_footer_ext_t *ext = lv_obj_allocate_ext_attr(footer, sizeof(ysw_footer_ext_t));
-    assert(ext);
-
-    memset(ext, 0, sizeof(ysw_footer_ext_t));
-
-    ext->key_field = ysw_field_create(footer);
-    ysw_field_set_name(ext->key_field, "Key");
-
-    ext->time_field = ysw_field_create(footer);
-    ysw_field_set_name(ext->time_field, "Time");
-
-    ext->tempo_field = ysw_field_create(footer);
-    ysw_field_set_name(ext->tempo_field, "Tempo");
-
-    ext->duration_field = ysw_field_create(footer);
-    ysw_field_set_name(ext->duration_field, "Duration");
-
-    lv_cont_set_layout(footer, LV_LAYOUT_PRETTY_TOP);
-
-    return footer;
-}
-
-void ysw_footer_set_key(lv_obj_t *footer, zm_key_signature_x key_index)
-{
-    const zm_key_signature_t *key_signature = zm_get_key_signature(key_index);
-    ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
-    ysw_field_set_value(ext->key_field, key_signature->label);
-}
-
-void ysw_footer_set_time(lv_obj_t *footer, zm_time_signature_x time_index)
-{
-    const zm_time_signature_t *time_signature = zm_get_time_signature(time_index);
-    ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
-    ysw_field_set_value(ext->time_field, time_signature->name);
-}
-
-void ysw_footer_set_tempo(lv_obj_t *footer, zm_tempo_t tempo_index)
-{
-    const zm_tempo_signature_t *tempo_signature = zm_get_tempo_signature(tempo_index);
-    ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
-    ysw_field_set_value(ext->tempo_field, tempo_signature->label);
-}
-
-void ysw_footer_set_duration(lv_obj_t *footer, zm_duration_t duration)
-{
-    const char *value = NULL;
-    switch (duration) {
-        default:
-        case ZM_AS_PLAYED:
-            value = "As Played";
-            break;
-        case ZM_SIXTEENTH:
-            value = "1/16";
-            break;
-        case ZM_EIGHTH:
-            value = "1/8";
-            break;
-        case ZM_QUARTER:
-            value = "1/4";
-            break;
-        case ZM_HALF:
-            value = "1/2";
-            break;
-        case ZM_WHOLE:
-            value = "1/1";
-            break;
-    }
-    ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
-    ysw_field_set_value(ext->duration_field, value);
-}
-
-#endif
 
 // Layout of keycodes generated by keyboard:
 //
@@ -297,6 +82,20 @@ static const uint8_t key_map[] = {
 // 6 % 2 = 0
 
 // position / 2 >= count ? space-after-note : position % 2 ? note index / 2 : space-before-note
+
+typedef enum {
+    YSW_EDITOR_MODE_TONE,
+    YSW_EDITOR_MODE_CHORD,
+    YSW_EDITOR_MODE_DRUM,
+} ysw_editor_mode_t;
+
+static const char *modes[] = {
+    "Note",
+    "Chord",
+    "Drum",
+};
+
+#define YSW_EDITOR_MODE_COUNT 3
 
 typedef struct {
     ysw_bus_h bus;
