@@ -33,10 +33,10 @@ static ysw_bus_h cb_bus;
 // T = top row of digits
 // N = numeric keypad digits
 //
-//   T2, T3,     T4, T5, T6,     N7, N8, N9, UP,
-//  Q,  W,  E,  R,  T,  Y,  Y,   N4, N5, N6, DN,
-//    S,  D,      G,  H,  I,     N1, N2, N3, LT,
-//  Z,  X,  C,  V,  B,  N,  M,   36, 37, 38, RT,
+//   T2, T3,     T4, T5, T6,     LK,  /,  *, UP,
+//  Q,  W,  E,  R,  T,  Y,  Y,   N7, N8, N9, DN,
+//    S,  D,      G,  H,  I,     N4, N5, N6, LT,
+//  Z,  X,  C,  V,  B,  N,  M,   N1, N2, N3, RT,
 //
 
 typedef struct {
@@ -73,22 +73,44 @@ static const keycode_map_t keycode_map[] = {
     { 'n', 34 }, // A
     { 'm', 35 }, // B
 
+//    0,  1,      2,  3,  4,      5,  6,  7,  8,
+//  9, 10, 11, 12, 13, 14, 15,   16, 17, 18, 19,
+//   20, 21,     22, 23, 24,     25, 26, 27, 28,
+// 29, 30, 31, 32, 33, 34, 35,   36, 37, 38, 39,
+
+//   T2, T3,     T4, T5, T6,     LK,  /,  *, UP,
+//  Q,  W,  E,  R,  T,  Y,  Y,   N7, N8, N9, DN,
+//    S,  D,      G,  H,  I,     N4, N5, N6, LT,
+//  Z,  X,  C,  V,  B,  N,  M,   N1, N2, N3, RT,
+
     { 79, 39 }, // Right Arrow
     { 80, 28 }, // Left Arrow
     { 81, 19 }, // Down Arrow
     { 82, 8 }, // Up Arrow
 
-    { 89, 25 }, // N1
-    { 90, 26 }, // N2
-    { 91, 27 }, // N3
-    { 92, 16 }, // N4
-    { 93, 17 }, // N5
-    { 94, 18 }, // N6
-    { 95, 5 }, // N7
-    { 96, 6 }, // N8
-    { 97, 7 }, // N9
+    { 83, 5 }, // Keypad Num Lock
+    { 84, 6 }, // Keypad Slash (/)
+    { 85, 7 }, // Keypad Asterisk (*)
 
-    { 99, 25 }, // Keypad Delete
+    { 86, 8 }, // Keypad Minus (-) -> Same as UP
+    { 87, 19 }, // Keypad Plus (+) -> Same as DOWN
+    { 88, 39 }, // Keypad Enter    -> Same as RIGHT
+
+    { 89, 36 }, // N1
+    { 90, 37 }, // N2
+    { 91, 38 }, // N3
+
+    { 92, 25 }, // N4
+    { 93, 26 }, // N5
+    { 94, 27 }, // N6
+
+    { 95, 16 }, // N7
+    { 96, 17 }, // N8
+    { 97, 18 }, // N9
+
+    { 98, 28 }, // Keypad 0/Insert  -> Same as LEFT
+    { 99, 25 }, // Keypad Delete    -> Same as DELETE
+
     { 127, 25 }, // Delete Button
 };
 
