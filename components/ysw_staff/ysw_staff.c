@@ -18,6 +18,8 @@
 #define TAG "YSW_STAFF"
 #define LV_OBJX_NAME "ysw_staff"
 
+#define MAX_NOTES 24
+
 #define YSW_TREBLE_CLEF 0x01
 #define YSW_STAFF_SPACE 0x02
 #define YSW_LEFT_BAR 0x03
@@ -106,6 +108,8 @@ static const uint8_t flat_map[] = {
     13, // B   23
 };
 
+// See: https://en.wikipedia.org/wiki/Accidental_(music)
+
 typedef enum {
     VT_MEASURE,
     VT_DRAW,
@@ -117,6 +121,7 @@ typedef struct {
     const lv_area_t *clip_area;
     const lv_font_t *font;
     visit_type_t visit_type;
+    bool marked[MAX_NOTES];
 } visit_context_t;
 
 void ysw_draw_letter(const lv_point_t * pos_p, const lv_area_t * clip_area, const lv_font_t * font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode);
@@ -185,29 +190,46 @@ static uint32_t visit_tone(visit_context_t *vc, zm_beat_t *beat, const zm_key_si
 {
     zm_duration_t duration = round_duration(beat->tone.duration);
     if (beat->tone.note) {
-        uint8_t note = (beat->tone.note - 60) % 24;
+        uint8_t note = (beat->tone.note - 60) % MAX_NOTES;
         uint8_t step = sharp_map[note]; // either map works if white key
-        // TODO: keep a table of accidentals for current measure
         if (black[note]) {
             if (key_signature->sharps) {
                 if (!key_signature->sharp_index[step % 7]) {
-                    visit_letter(vc, YSW_SHARP_BASE + step);
+                    if (!vc->marked[step]) {
+                        visit_letter(vc, YSW_SHARP_BASE + step);
+                        vc->marked[step] = true;
+                    }
                 }
             } else if (key_signature->flats) {
                 step = flat_map[note];
                 if (!key_signature->flat_index[step % 7]) {
-                    visit_letter(vc, YSW_FLAT_BASE + step);
+                    if (!vc->marked[step]) {
+                        visit_letter(vc, YSW_FLAT_BASE + step);
+                        vc->marked[step] = true;
+                    }
                 }
             } else {
-                visit_letter(vc, YSW_SHARP_BASE + step);
+                if (!vc->marked[step]) {
+                    visit_letter(vc, YSW_SHARP_BASE + step);
+                    vc->marked[step] = true;
+                }
             }
         } else {
             if (key_signature->sharp_index[step % 7]) {
-                visit_letter(vc, YSW_NATURAL_BASE + step);
+                if (!vc->marked[step]) {
+                    visit_letter(vc, YSW_NATURAL_BASE + step);
+                    vc->marked[step] = true;
+                }
             } else if (key_signature->flat_index[step % 7]) {
                 step = flat_map[note];
+                if (!vc->marked[step]) {
+                    visit_letter(vc, YSW_NATURAL_BASE + step);
+                    vc->marked[step] = true;
+                }
+            } else if (vc->marked[step]) {
+                // cancel a sharp or flat in same measure
                 visit_letter(vc, YSW_NATURAL_BASE + step);
-            } else {
+                vc->marked[step] = false;
             }
         }
         if (duration <= ZM_SIXTEENTH) {
@@ -320,6 +342,7 @@ static void visit_all(ysw_staff_ext_t *ext, visit_context_t *vc)
                 measure++;
                 visit_letter(vc, YSW_RIGHT_BAR);
                 draw_measure_label(vc, measure);
+                memset(vc->marked, 0, sizeof(vc->marked));
                 ticks_in_measure = 0;
             }
         }
@@ -360,6 +383,7 @@ static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
         visit_all(ext, &vc);
         vc.point.x = 160 - vc.point.x;
         ext->last_x = vc.point.x;
+        memset(vc.marked, 0, sizeof(vc.marked));
     }
 
     vc.visit_type = VT_DRAW;
