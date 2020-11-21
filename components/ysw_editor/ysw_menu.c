@@ -71,6 +71,7 @@ static void open_menu(ysw_menu_t *menu)
     lv_obj_align(menu->container, NULL, LV_ALIGN_CENTER, 0, 0);
 
     lv_obj_t *btnmatrix = lv_btnmatrix_create(menu->container, NULL);
+    lv_btnmatrix_set_align(btnmatrix, LV_LABEL_ALIGN_CENTER);
 
     lv_obj_set_style_local_border_width(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, 1);
     lv_obj_set_style_local_border_color(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_COLOR_CYAN);

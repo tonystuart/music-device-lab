@@ -78,6 +78,7 @@ typedef struct {
 
     bool loop;
     uint8_t advance;
+    uint8_t move_amount;
     uint32_t position;
     ysw_editor_mode_t mode;
 
@@ -389,8 +390,8 @@ static void process_delete(context_t *context)
 
 static void process_left(context_t *context)
 {
-    if (context->position > 0) {
-        context->position--;
+    if (context->position >= context->move_amount) {
+        context->position -= context->move_amount;
         play_position(context);
         ysw_staff_update_position(context->staff, context->position);
         display_mode(context);
@@ -399,8 +400,8 @@ static void process_left(context_t *context)
 
 static void process_right(context_t *context)
 {
-    if (context->position < (ysw_array_get_count(context->passage->beats) * 2)) {
-        context->position++;
+    if (context->position <= (ysw_array_get_count(context->passage->beats) * 2) - context->move_amount) {
+        context->position += context->move_amount;
         play_position(context);
         ysw_staff_update_position(context->staff, context->position);
         display_mode(context);
@@ -473,10 +474,21 @@ static void on_mode_drum(ysw_menu_t *menu, ysw_event_t *event, void *caller_cont
     display_mode(context);
 }
 
-static void on_mode_cycle(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_cycle_mode(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
 {
     context_t *context = caller_context;
     context->mode = (context->mode + 1) % 3;
+    display_mode(context);
+}
+
+static void on_cycle_move_amount(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+{
+    context_t *context = caller_context;
+    if (context->move_amount == 1) {
+        context->move_amount = 2;
+    } else {
+        context->move_amount = 1;
+    }
     display_mode(context);
 }
 
@@ -716,7 +728,7 @@ static const ysw_menu_item_t menu_2[] = {
     /* 34 */ { "A5", 0x03, on_note, VP 69 },
     /* 35 */ { "B5", 0x03, on_note, VP 71 },
     /* 36 */ { "Menu+", 0x83, ysw_menu_on_open, 0 },
-    /* 37 */ { "Delete", 0x94, on_delete, 0 },
+    /* 37 */ { "Move\nAmount", 0x94, on_cycle_move_amount, 0 },
     /* 38 */ { "Menu-", 0x83, ysw_menu_on_close, 0 },
     /* 39 */ { "Right", 0x84, on_right, 0 },
     /* 40 */ { NULL, 0, NULL, NULL },
@@ -728,7 +740,7 @@ static const ysw_menu_item_t base_menu[] = {
     /* 02 */ { "F#6", 0x03, on_note, VP 78 },
     /* 03 */ { "G#6", 0x03, on_note, VP 80 },
     /* 04 */ { "A#6", 0x03, on_note, VP 82 },
-    /* 05 */ { "Mode", 0x94, on_mode_cycle, 0 },
+    /* 05 */ { "Mode", 0x94, on_cycle_mode, 0 },
     /* 06 */ { "Duration", 0x94, on_duration, 0 },
     /* 07 */ { "Rest", 0x94, on_note, VP 0 },
     /* 08 */ { "Up", 0xc4, on_up, 0 },
@@ -789,6 +801,7 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     context->duration = ZM_AS_PLAYED;
 
     context->advance = 2;
+    context->move_amount = 1;
     context->position = 0;
     context->mode = YSW_EDITOR_MODE_TONE;
 
