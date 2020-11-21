@@ -16,10 +16,11 @@
 #define YSW_MENU_DOWN 0x01
 #define YSW_MENU_UP 0x02
 #define YSW_MENU_PRESS 0x04
-#define YSW_MENU_POP_MENU 0x08
+
 #define YSW_MENU_POP_ALL 0x10
-#define YSW_MENU_LEGEND 0x80
+#define YSW_MENU_POP_TOP 0x20
 #define YSW_MENU_LINE 0x40
+#define YSW_MENU_LEGEND 0x80
 
 typedef struct ysw_menu_s ysw_menu_t;
 
@@ -34,7 +35,7 @@ typedef struct {
 
 typedef struct ysw_menu_s {
     const ysw_menu_item_t *menu_items;
-    const ysw_array_t *menu_stack;
+    ysw_array_t *menu_stack;
     lv_obj_t *container;
 } ysw_menu_t;
 

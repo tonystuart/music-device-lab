@@ -449,6 +449,7 @@ static void process_down(context_t *context)
     }
 }
 
+UNUSED
 static void on_mode_tone(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
 {
     context_t *context = caller_context;
@@ -456,6 +457,7 @@ static void on_mode_tone(ysw_menu_t *menu, ysw_event_t *event, void *caller_cont
     display_mode(context);
 }
 
+UNUSED
 static void on_mode_chord(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
 {
     context_t *context = caller_context;
@@ -463,10 +465,18 @@ static void on_mode_chord(ysw_menu_t *menu, ysw_event_t *event, void *caller_con
     display_mode(context);
 }
 
+UNUSED
 static void on_mode_drum(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
 {
     context_t *context = caller_context;
     context->mode = YSW_EDITOR_MODE_DRUM;
+    display_mode(context);
+}
+
+static void on_mode_cycle(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+{
+    context_t *context = caller_context;
+    context->mode = (context->mode + 1) % 3;
     display_mode(context);
 }
 
@@ -674,9 +684,9 @@ static const ysw_menu_item_t menu_2[] = {
     /* 02 */ { "F#6", 0x03, on_note, VP 78 },
     /* 03 */ { "G#6", 0x03, on_note, VP 80 },
     /* 04 */ { "A#6", 0x03, on_note, VP 82 },
-    /* 05 */ { "Play", 0x84, on_play, 0 },
-    /* 06 */ { "Stop", 0x84, on_stop, 0 },
-    /* 07 */ { "Loop", 0x84, on_loop, 0 },
+    /* 05 */ { "Play", 0x94, on_play, 0 },
+    /* 06 */ { "Stop", 0x94, on_stop, 0 },
+    /* 07 */ { "Loop", 0x94, on_loop, 0 },
     /* 08 */ { "Up", 0xc4, on_up, 0 },
     /* 09 */ { "C6", 0x03, on_note, VP 72 },
     /* 10 */ { "D6", 0x03, on_note, VP 74 },
@@ -685,18 +695,18 @@ static const ysw_menu_item_t menu_2[] = {
     /* 13 */ { "G6", 0x03, on_note, VP 79 },
     /* 14 */ { "A6", 0x03, on_note, VP 81 },
     /* 15 */ { "B6", 0x03, on_note, VP 83 },
-    /* 16 */ { " ", 0x84, on_sample, 0 },
-    /* 17 */ { " ", 0x84, on_quality, 0 },
-    /* 18 */ { " ", 0x84, on_style, 0 },
+    /* 16 */ { " ", 0x94, ysw_menu_nop, 0 },
+    /* 17 */ { " ", 0x94, ysw_menu_nop, 0 },
+    /* 18 */ { " ", 0x94, ysw_menu_nop, 0 },
     /* 19 */ { "Down", 0xc4, on_down, 0 },
     /* 20 */ { "C#5", 0x03, on_note, VP 61 },
     /* 21 */ { "D#5", 0x03, on_note, VP 63 },
     /* 22 */ { "F#5", 0x03, on_note, VP 66 },
     /* 23 */ { "G#5", 0x03, on_note, VP 68 },
     /* 24 */ { "A#5", 0x03, on_note, VP 70 },
-    /* 25 */ { "Duration", 0x84, on_duration, 0 },
-    /* 26 */ { " ", 0x84, ysw_menu_nop, 0 },
-    /* 27 */ { "Rest", 0x83, on_note, VP 0 },
+    /* 25 */ { " ", 0x94, ysw_menu_nop, 0 },
+    /* 26 */ { " ", 0x94, ysw_menu_nop, 0 },
+    /* 27 */ { " ", 0x94, ysw_menu_nop, 0 },
     /* 28 */ { "Left", 0xc4, on_left, 0 },
     /* 29 */ { "C5", 0x03, on_note, VP 60 },
     /* 30 */ { "D5", 0x03, on_note, VP 62 },
@@ -706,7 +716,7 @@ static const ysw_menu_item_t menu_2[] = {
     /* 34 */ { "A5", 0x03, on_note, VP 69 },
     /* 35 */ { "B5", 0x03, on_note, VP 71 },
     /* 36 */ { "Menu+", 0x83, ysw_menu_on_open, 0 },
-    /* 37 */ { "Delete", 0x84, on_delete, 0 },
+    /* 37 */ { "Delete", 0x94, on_delete, 0 },
     /* 38 */ { "Menu-", 0x83, ysw_menu_on_close, 0 },
     /* 39 */ { "Right", 0x84, on_right, 0 },
     /* 40 */ { NULL, 0, NULL, NULL },
@@ -718,9 +728,9 @@ static const ysw_menu_item_t base_menu[] = {
     /* 02 */ { "F#6", 0x03, on_note, VP 78 },
     /* 03 */ { "G#6", 0x03, on_note, VP 80 },
     /* 04 */ { "A#6", 0x03, on_note, VP 82 },
-    /* 05 */ { "Note", 0x84, on_mode_tone, 0 },
-    /* 06 */ { "Chord", 0x84, on_mode_chord, 0 },
-    /* 07 */ { "Drum", 0x84, on_mode_drum, 0 },
+    /* 05 */ { "Mode", 0x94, on_mode_cycle, 0 },
+    /* 06 */ { "Duration", 0x94, on_duration, 0 },
+    /* 07 */ { "Rest", 0x94, on_note, VP 0 },
     /* 08 */ { "Up", 0xc4, on_up, 0 },
     /* 09 */ { "C6", 0x03, on_note, VP 72 },
     /* 10 */ { "D6", 0x03, on_note, VP 74 },
@@ -729,18 +739,18 @@ static const ysw_menu_item_t base_menu[] = {
     /* 13 */ { "G6", 0x03, on_note, VP 79 },
     /* 14 */ { "A6", 0x03, on_note, VP 81 },
     /* 15 */ { "B6", 0x03, on_note, VP 83 },
-    /* 16 */ { "Sample", 0x84, on_sample, 0 },
-    /* 17 */ { "Quality", 0x84, on_quality, 0 },
-    /* 18 */ { "Style", 0x84, on_style, 0 },
+    /* 16 */ { "Sample", 0x94, on_sample, 0 },
+    /* 17 */ { "Quality", 0x94, on_quality, 0 },
+    /* 18 */ { "Style", 0x94, on_style, 0 },
     /* 19 */ { "Down", 0xc4, on_down, 0 },
     /* 20 */ { "C#5", 0x03, on_note, VP 61 },
     /* 21 */ { "D#5", 0x03, on_note, VP 63 },
     /* 22 */ { "F#5", 0x03, on_note, VP 66 },
     /* 23 */ { "G#5", 0x03, on_note, VP 68 },
     /* 24 */ { "A#5", 0x03, on_note, VP 70 },
-    /* 25 */ { "Key", 0x84, on_key_signature, 0 },
-    /* 26 */ { "Time", 0x84, on_time_signature, 0 },
-    /* 27 */ { "Tempo", 0x84, on_tempo, 0 },
+    /* 25 */ { "Key", 0x94, on_key_signature, 0 },
+    /* 26 */ { "Time", 0x94, on_time_signature, 0 },
+    /* 27 */ { "Tempo", 0x94, on_tempo, 0 },
     /* 28 */ { "Left", 0xc4, on_left, 0 },
     /* 29 */ { "C5", 0x03, on_note, VP 60 },
     /* 30 */ { "D5", 0x03, on_note, VP 62 },
@@ -750,7 +760,7 @@ static const ysw_menu_item_t base_menu[] = {
     /* 34 */ { "A5", 0x03, on_note, VP 69 },
     /* 35 */ { "B5", 0x03, on_note, VP 71 },
     /* 36 */ { "Menu+", 0x83, ysw_menu_on_open, (void*)menu_2 },
-    /* 37 */ { "Delete", 0x84, on_delete, 0 },
+    /* 37 */ { "Delete", 0x94, on_delete, 0 },
     /* 38 */ { "Menu-", 0x83, ysw_menu_on_close, 0 },
     /* 39 */ { "Right", 0x84, on_right, 0 },
     /* 40 */ { NULL, 0, NULL, NULL },

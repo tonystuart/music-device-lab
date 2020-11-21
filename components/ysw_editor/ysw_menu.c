@@ -96,6 +96,29 @@ static void close_menu(ysw_menu_t *menu)
     menu->container = NULL;
 }
 
+static void pop_all(ysw_menu_t *menu)
+{
+    ESP_LOGD(TAG, "pop_all count=%d", ysw_array_get_count(menu->menu_stack));
+    if (menu->container) {
+        close_menu(menu);
+        while (ysw_array_get_count(menu->menu_stack)) {
+            menu->menu_items = ysw_array_pop(menu->menu_stack);
+        }
+    }
+}
+
+static void pop_top(ysw_menu_t *menu)
+{
+    ESP_LOGD(TAG, "pop_top count=%d", ysw_array_get_count(menu->menu_stack));
+    if (menu->container) {
+        close_menu(menu);
+        if (ysw_array_get_count(menu->menu_stack)) {
+            menu->menu_items = ysw_array_pop(menu->menu_stack);
+            open_menu(menu);
+        }
+    }
+}
+
 void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event, void *caller_context)
 {
     const ysw_menu_item_t *menu_item = menu->menu_items + event->key_down.key;
@@ -109,6 +132,11 @@ void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event, void *caller_conte
     const ysw_menu_item_t *menu_item = menu->menu_items + event->key_down.key;
     if (menu_item->flags & YSW_MENU_UP) {
         menu_item->cb(menu, event, caller_context, menu_item->value);
+    }
+    if (menu_item->flags & YSW_MENU_POP_ALL) {
+        pop_all(menu);
+    } else if (menu_item->flags & YSW_MENU_POP_TOP) {
+        pop_top(menu);
     }
 }
 
@@ -151,12 +179,6 @@ void ysw_menu_on_open(ysw_menu_t *menu, ysw_event_t *event, void *caller_context
 void ysw_menu_on_close(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
 {
     if (event->header.type == YSW_EVENT_KEY_DOWN) {
-        if (menu->container) {
-            close_menu(menu);
-            if (ysw_array_get_count(menu->menu_stack)) {
-                menu->menu_items = ysw_array_pop(menu->menu_stack);
-                open_menu(menu);
-            }
-        }
+        pop_top(menu);
     }
 }
