@@ -118,9 +118,9 @@ static void show_softkeys(ysw_menu_t *menu)
     assert(container);
 
     lv_obj_set_style_local_bg_color(container, 0, 0, LV_COLOR_BLACK);
-    lv_obj_set_style_local_bg_opa(container, 0, 0, LV_OPA_50);
+    lv_obj_set_style_local_bg_opa(container, 0, 0, LV_OPA_40);
 
-    lv_obj_set_style_local_text_color(container, 0, 0, LV_COLOR_YELLOW);
+    lv_obj_set_style_local_text_color(container, 0, 0, LV_COLOR_CYAN);
     lv_obj_set_style_local_text_opa(container, 0, 0, LV_OPA_100);
 
     lv_obj_set_size(container, 320, 240);
@@ -129,11 +129,10 @@ static void show_softkeys(ysw_menu_t *menu)
     lv_obj_t *btnmatrix = lv_btnmatrix_create(container, NULL);
     lv_btnmatrix_set_align(btnmatrix, LV_LABEL_ALIGN_CENTER);
 
-    lv_obj_set_style_local_border_width(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, 1);
-    lv_obj_set_style_local_border_color(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_COLOR_YELLOW);
-    lv_obj_set_style_local_border_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_OPA_50);
+    lv_obj_set_style_local_bg_color(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_COLOR_GRAY);
+    lv_obj_set_style_local_bg_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_OPA_40);
 
-    lv_obj_set_style_local_bg_color(btnmatrix, LV_BTNMATRIX_PART_BTN, LV_STATE_PRESSED, LV_COLOR_YELLOW);
+    lv_obj_set_style_local_bg_color(btnmatrix, LV_BTNMATRIX_PART_BTN, LV_STATE_PRESSED, LV_COLOR_CYAN);
     lv_obj_set_style_local_bg_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, LV_STATE_PRESSED, LV_OPA_50);
 
     lv_obj_set_style_local_pad_all(btnmatrix, LV_BTNMATRIX_PART_BG, 0, 5);
