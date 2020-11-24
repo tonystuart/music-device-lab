@@ -658,7 +658,10 @@ static void initialize_editor_task(void *caller_context)
     context->container = lv_obj_create(lv_scr_act(), NULL);
     assert(context->container);
 
+    // See https://docs.lvgl.io/v7/en/html/overview/style.html
     lv_obj_set_style_local_bg_color(context->container, 0, 0, LV_COLOR_MAROON);
+    lv_obj_set_style_local_bg_grad_color(context->container, 0, 0, LV_COLOR_BLACK);
+    lv_obj_set_style_local_bg_grad_dir(context->container, 0, 0, LV_GRAD_DIR_VER);
     lv_obj_set_style_local_bg_opa(context->container, 0, 0, LV_OPA_100);
 
     lv_obj_set_style_local_text_color(context->container, 0, 0, LV_COLOR_YELLOW);

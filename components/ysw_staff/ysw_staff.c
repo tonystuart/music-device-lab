@@ -360,7 +360,9 @@ static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
     };
     lv_area_t coords;
     lv_obj_get_coords(staff, &coords);
+#if 0
     lv_draw_rect(&coords, clip_area, &rect_dsc);
+#endif
 
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
 
