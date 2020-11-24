@@ -82,7 +82,7 @@ static void event_handler(lv_obj_t *btnmatrix, lv_event_t button_event)
     ysw_menu_t *menu = lv_obj_get_user_data(btnmatrix);
     if (menu) {
         uint16_t button_index = lv_btnmatrix_get_active_btn(btnmatrix);
-        if (button_index != -1) {
+        if (button_index != LV_BTNMATRIX_BTN_NONE) {
             int32_t item_index = find_menu_item(menu, button_index);
             if (item_index != -1) {
                 if (button_event == LV_EVENT_PRESSED) {
