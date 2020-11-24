@@ -10,11 +10,12 @@
 #include "ysw_bus.h"
 #include "ysw_event.h"
 #include "esp_log.h"
+#include "SDL2/SDL_scancode.h"
 #include "stdint.h"
 
 #define TAG "YSW_SIMULATOR"
 
-typedef void (*lv_key_handler)(uint8_t key, uint32_t time, uint8_t repeat);
+typedef void (*lv_key_handler)(SDL_Scancode scancode, uint8_t key, uint32_t time, uint8_t repeat);
 extern lv_key_handler lv_key_down_handler;
 extern lv_key_handler lv_key_up_handler;
 static uint32_t down_time;
@@ -45,33 +46,33 @@ typedef struct {
 } keycode_map_t;
 
 static const keycode_map_t keycode_map[] = {
-    { '2', 0 }, // C#
-    { '3', 1 }, // D#
-    { '5', 2 }, // F#
-    { '6', 3 }, // G#
-    { '7', 4 }, // A#
+    { SDL_SCANCODE_2, 0 }, // C#
+    { SDL_SCANCODE_3, 1 }, // D#
+    { SDL_SCANCODE_5, 2 }, // F#
+    { SDL_SCANCODE_6, 3 }, // G#
+    { SDL_SCANCODE_7, 4 }, // A#
 
-    { 'q', 9 }, // C
-    { 'w', 10 }, // D
-    { 'e', 11 }, // E
-    { 'r', 12 }, // F
-    { 't', 13 }, // G
-    { 'y', 14 }, // A
-    { 'u', 15 }, // B
+    { SDL_SCANCODE_Q, 9 }, // C
+    { SDL_SCANCODE_W, 10 }, // D
+    { SDL_SCANCODE_E, 11 }, // E
+    { SDL_SCANCODE_R, 12 }, // F
+    { SDL_SCANCODE_T, 13 }, // G
+    { SDL_SCANCODE_Y, 14 }, // A
+    { SDL_SCANCODE_U, 15 }, // B
 
-    { 's', 20 }, // C#
-    { 'd', 21 }, // D#
-    { 'g', 22 }, // F#
-    { 'h', 23 }, // G#
-    { 'j', 24 }, // A#
+    { SDL_SCANCODE_S, 20 }, // C#
+    { SDL_SCANCODE_D, 21 }, // D#
+    { SDL_SCANCODE_G, 22 }, // F#
+    { SDL_SCANCODE_H, 23 }, // G#
+    { SDL_SCANCODE_J, 24 }, // A#
 
-    { 'z', 29 }, // C
-    { 'x', 30 }, // D
-    { 'c', 31 }, // E
-    { 'v', 32 }, // F
-    { 'b', 33 }, // G
-    { 'n', 34 }, // A
-    { 'm', 35 }, // B
+    { SDL_SCANCODE_Z, 29 }, // C
+    { SDL_SCANCODE_X, 30 }, // D
+    { SDL_SCANCODE_C, 31 }, // E
+    { SDL_SCANCODE_V, 32 }, // F
+    { SDL_SCANCODE_B, 33 }, // G
+    { SDL_SCANCODE_N, 34 }, // A
+    { SDL_SCANCODE_M, 35 }, // B
 
 //    0,  1,      2,  3,  4,      5,  6,  7,  8,
 //  9, 10, 11, 12, 13, 14, 15,   16, 17, 18, 19,
@@ -83,35 +84,35 @@ static const keycode_map_t keycode_map[] = {
 //    S,  D,      G,  H,  I,     N4, N5, N6, LT,
 //  Z,  X,  C,  V,  B,  N,  M,   N1, N2, N3, RT,
 
-    { 79, 39 }, // Right Arrow
-    { 80, 28 }, // Left Arrow
-    { 81, 19 }, // Down Arrow
-    { 82, 8 }, // Up Arrow
+    { SDL_SCANCODE_RIGHT, 39 }, // Right Arrow
+    { SDL_SCANCODE_LEFT, 28 }, // Left Arrow
+    { SDL_SCANCODE_DOWN, 19 }, // Down Arrow
+    { SDL_SCANCODE_UP, 8 }, // Up Arrow
 
-    { 83, 5 }, // Keypad Num Lock
-    { 84, 6 }, // Keypad Slash (/)
-    { 85, 7 }, // Keypad Asterisk (*)
+    { SDL_SCANCODE_NUMLOCKCLEAR, 5 }, // Keypad Num Lock
+    { SDL_SCANCODE_KP_DIVIDE, 6 }, // Keypad Slash (/)
+    { SDL_SCANCODE_KP_MULTIPLY, 7 }, // Keypad Asterisk (*)
 
-    { 86, 8 }, // Keypad Minus (-) -> Same as UP
-    { 87, 19 }, // Keypad Plus (+) -> Same as DOWN
-    { 88, 39 }, // Keypad Enter    -> Same as RIGHT
+    { SDL_SCANCODE_KP_MINUS, 8 }, // Keypad Minus (-) -> Same as UP
+    { SDL_SCANCODE_KP_PLUS, 19 }, // Keypad Plus (+) -> Same as DOWN
+    { SDL_SCANCODE_KP_ENTER, 39 }, // Keypad Enter    -> Same as RIGHT
 
-    { 89, 36 }, // N1
-    { 90, 37 }, // N2
-    { 91, 38 }, // N3
+    { SDL_SCANCODE_KP_1, 36 }, // N1
+    { SDL_SCANCODE_KP_2, 37 }, // N2
+    { SDL_SCANCODE_KP_3, 38 }, // N3
 
-    { 92, 25 }, // N4
-    { 93, 26 }, // N5
-    { 94, 27 }, // N6
+    { SDL_SCANCODE_KP_4, 25 }, // N4
+    { SDL_SCANCODE_KP_5, 26 }, // N5
+    { SDL_SCANCODE_KP_6, 27 }, // N6
 
-    { 95, 16 }, // N7
-    { 96, 17 }, // N8
-    { 97, 18 }, // N9
+    { SDL_SCANCODE_KP_7, 16 }, // N7
+    { SDL_SCANCODE_KP_8, 17 }, // N8
+    { SDL_SCANCODE_KP_9, 18 }, // N9
 
-    { 98, 28 }, // Keypad 0/Insert  -> Same as LEFT
-    { 99, 25 }, // Keypad Delete    -> Same as DELETE
+    { SDL_SCANCODE_KP_0, 28 }, // Keypad 0/Insert  -> Same as LEFT
+    { SDL_SCANCODE_KP_PERIOD, 37 }, // Keypad ./Delete    -> Same as DELETE
 
-    { 127, 25 }, // Delete Button
+    { SDL_SCANCODE_DELETE, 37 }, // Delete Button
 };
 
 #define KEYCODE_MAP_SZ (sizeof(keycode_map) / sizeof(keycode_map[0]))
@@ -126,10 +127,10 @@ static int find_key(char input)
     return -1;
 }
 
-static void on_key_down(uint8_t code, uint32_t time, uint8_t repeat)
+static void on_key_down(SDL_Scancode scancode, uint8_t sym, uint32_t time, uint8_t repeat)
 {
-    ESP_LOGD(TAG, "on_key_down code=%d (%c), time=%d, repeat=%d", code, code, time, repeat);
-    int key = find_key(code);
+    //ESP_LOGD(TAG, "on_key_down code=%d, sym=%d (%c), time=%d, repeat=%d", scancode, sym, sym, time, repeat);
+    int key = find_key(scancode);
     if (key != -1) {
         if (repeat) {
             // TODO: add state to provide accurate time, duration, repeat_count -- if neccessary
@@ -153,10 +154,9 @@ static void on_key_down(uint8_t code, uint32_t time, uint8_t repeat)
     }
 }
 
-static void on_key_up(uint8_t code, uint32_t time, uint8_t repeat)
+static void on_key_up(SDL_Scancode scancode, uint8_t sym, uint32_t time, uint8_t repeat)
 {
-    //ESP_LOGD(TAG, "on_key_up code=%d (%c), time=%d, repeat=%d", code, code, time, repeat);
-    int key = find_key(code);
+    int key = find_key(scancode);
     if (key != -1) {
         uint32_t current_millis = ysw_get_millis();
         uint32_t duration = current_millis - down_time;

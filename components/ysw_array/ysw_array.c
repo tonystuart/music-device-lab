@@ -100,6 +100,13 @@ uint32_t ysw_array_get_size(ysw_array_t *array)
     return array->size;
 }
 
+void *ysw_array_get_top(ysw_array_t *array)
+{
+    assert(array);
+    assert(array->count);
+    return array->data[array->count - 1];
+}
+
 void *ysw_array_get(ysw_array_t *array, uint32_t index)
 {
     assert(array);

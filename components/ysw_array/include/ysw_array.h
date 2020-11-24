@@ -29,6 +29,7 @@ void ysw_array_resize(ysw_array_t *array, uint32_t new_size);
 void ysw_array_pack(ysw_array_t *array);
 uint32_t ysw_array_get_count(ysw_array_t *array);
 uint32_t ysw_array_get_size(ysw_array_t *array);
+void *ysw_array_get_top(ysw_array_t *array);
 void *ysw_array_get(ysw_array_t *array, uint32_t index);
 void ysw_array_set(ysw_array_t *array, uint32_t index, void *value);
 void ysw_array_insert(ysw_array_t *array, uint32_t index, void *value);

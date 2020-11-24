@@ -17,15 +17,20 @@
 
 #define TAG "YSW_MENU"
 
-static uint32_t get_map_item_count(ysw_menu_t *menu)
+static inline const ysw_menu_item_t *get_items(ysw_menu_t *menu)
+{
+    return ysw_array_get_top(menu->stack);
+}
+
+static uint32_t get_button_map_size(ysw_menu_t *menu)
 {
     uint32_t map_item_count = 0;
-    const ysw_menu_item_t *menu_item = menu->menu_items;
+    const ysw_menu_item_t *menu_item = get_items(menu);
     while (menu_item->name) {
-        if (menu_item->flags & 0x80) {
+        if (menu_item->flags & YSW_MENU_SOFTKEY_LABEL) {
             map_item_count++;
         }
-        if (menu_item->flags & 0x40) {
+        if (menu_item->flags & YSW_MENU_SOFTKEY_NEWLINE) {
             map_item_count++;
         }
         menu_item++;
@@ -34,19 +39,18 @@ static uint32_t get_map_item_count(ysw_menu_t *menu)
     return map_item_count;
 }
 
-static const char** get_map_items(ysw_menu_t *menu)
+static const char** create_button_map(ysw_menu_t *menu)
 {
-    uint32_t map_item_count = get_map_item_count(menu);
-    const char **map = ysw_heap_allocate(map_item_count * sizeof(char *));
+    uint32_t button_map_size = get_button_map_size(menu);
+    const char **map = ysw_heap_allocate(button_map_size * sizeof(char *));
     const char **p = map;
 
-    const ysw_menu_item_t *menu_item = menu->menu_items;
+    const ysw_menu_item_t *menu_item = get_items(menu);
     while (menu_item->name) {
-        if (menu_item->flags & 0x80) {
+        if (menu_item->flags & YSW_MENU_SOFTKEY_LABEL) {
             *p++ = menu_item->name;
         }
-        if (menu_item->flags & 0x40) {
-            map_item_count++;
+        if (menu_item->flags & YSW_MENU_SOFTKEY_NEWLINE) {
             *p++ = "\n";
         }
         menu_item++;
@@ -56,26 +60,81 @@ static const char** get_map_items(ysw_menu_t *menu)
     return map;
 }
 
-static void open_menu(ysw_menu_t *menu)
+static uint16_t find_menu_item(ysw_menu_t *menu, int32_t target_index)
 {
-    menu->container = lv_obj_create(lv_scr_act(), NULL);
-    assert(menu->container);
+    uint16_t item_index = 0;
+    uint16_t label_index = 0;
+    const ysw_menu_item_t *menu_item = get_items(menu);
+    while (menu_item->name) {
+        if (menu_item->flags & YSW_MENU_SOFTKEY_LABEL) {
+            if (target_index == label_index++) {
+                return item_index;
+            }
+        }
+        menu_item++;
+        item_index++;
+    }
+    return -1;
+}
 
-    lv_obj_set_style_local_bg_color(menu->container, 0, 0, LV_COLOR_BLACK);
-    lv_obj_set_style_local_bg_opa(menu->container, 0, 0, LV_OPA_50);
+static void event_handler(lv_obj_t *btnmatrix, lv_event_t button_event)
+{
+    ysw_menu_t *menu = lv_obj_get_user_data(btnmatrix);
+    if (menu) {
+        uint16_t button_index = lv_btnmatrix_get_active_btn(btnmatrix);
+        if (button_index != -1) {
+            int32_t item_index = find_menu_item(menu, button_index);
+            if (item_index != -1) {
+                if (button_event == LV_EVENT_PRESSED) {
+                    ysw_event_t event = {
+                        .header.origin = YSW_ORIGIN_KEYBOARD,
+                        .header.type = YSW_EVENT_KEY_DOWN,
+                        .key_down.key = item_index,
+                    };
+                    ysw_menu_on_key_down(menu, &event);
+                } else if (button_event == LV_EVENT_RELEASED) {
+                    ysw_event_t event = {
+                        .header.origin = YSW_ORIGIN_KEYBOARD,
+                        .header.type = YSW_EVENT_KEY_UP,
+                        .key_up.key = item_index,
+                    };
+                    ysw_menu_on_key_up(menu, &event);
+                } else if (button_event == LV_EVENT_VALUE_CHANGED) {
+                    ysw_event_t event = {
+                        .header.origin = YSW_ORIGIN_KEYBOARD,
+                        .header.type = YSW_EVENT_KEY_PRESSED,
+                        .key_pressed.key = item_index,
+                    };
+                    ysw_menu_on_key_pressed(menu, &event);
+                }
+            }
+        }
+    }
+}
 
-    lv_obj_set_style_local_text_color(menu->container, 0, 0, LV_COLOR_CYAN);
-    lv_obj_set_style_local_text_opa(menu->container, 0, 0, LV_OPA_100);
+static void show_softkeys(ysw_menu_t *menu)
+{
+    lv_obj_t *container = lv_obj_create(lv_scr_act(), NULL);
+    assert(container);
 
-    lv_obj_set_size(menu->container, 320, 240);
-    lv_obj_align(menu->container, NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_local_bg_color(container, 0, 0, LV_COLOR_BLACK);
+    lv_obj_set_style_local_bg_opa(container, 0, 0, LV_OPA_50);
 
-    lv_obj_t *btnmatrix = lv_btnmatrix_create(menu->container, NULL);
+    lv_obj_set_style_local_text_color(container, 0, 0, LV_COLOR_CYAN);
+    lv_obj_set_style_local_text_opa(container, 0, 0, LV_OPA_100);
+
+    lv_obj_set_size(container, 320, 240);
+    lv_obj_align(container, NULL, LV_ALIGN_CENTER, 0, 0);
+
+    lv_obj_t *btnmatrix = lv_btnmatrix_create(container, NULL);
     lv_btnmatrix_set_align(btnmatrix, LV_LABEL_ALIGN_CENTER);
 
     lv_obj_set_style_local_border_width(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, 1);
     lv_obj_set_style_local_border_color(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_COLOR_CYAN);
-    lv_obj_set_style_local_border_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_OPA_100);
+    lv_obj_set_style_local_border_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_OPA_80);
+
+    lv_obj_set_style_local_bg_color(btnmatrix, LV_BTNMATRIX_PART_BTN, LV_STATE_PRESSED, LV_COLOR_CYAN);
+    lv_obj_set_style_local_bg_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, LV_STATE_PRESSED, LV_OPA_50);
 
     lv_obj_set_style_local_pad_all(btnmatrix, LV_BTNMATRIX_PART_BG, 0, 5);
     lv_obj_set_style_local_pad_inner(btnmatrix, LV_BTNMATRIX_PART_BG, 0, 5);
@@ -83,56 +142,60 @@ static void open_menu(ysw_menu_t *menu)
     lv_obj_set_size(btnmatrix, 320, 240);
     lv_obj_align(btnmatrix, NULL, LV_ALIGN_CENTER, 0, 0);
 
-    const char **map_items = get_map_items(menu);
-    lv_obj_set_user_data(menu->container, map_items);
-    lv_btnmatrix_set_map(btnmatrix, map_items);
+    const char **button_map = create_button_map(menu);
+    lv_btnmatrix_set_map(btnmatrix, button_map);
+    lv_obj_set_user_data(btnmatrix, menu);
+    lv_obj_set_event_cb(btnmatrix, event_handler);
+
+    menu->softkeys = ysw_heap_allocate(sizeof(ysw_softkeys_t));
+    menu->softkeys->container = container;
+    menu->softkeys->button_map = button_map;
 }
 
-static void close_menu(ysw_menu_t *menu)
+static void hide_softkeys(ysw_menu_t *menu)
 {
-    const char **map_items = lv_obj_get_user_data(menu->container);
-    assert(map_items);
-    ysw_heap_free(map_items);
-    lv_obj_del(menu->container);
-    menu->container = NULL;
+    assert(menu->softkeys);
+    lv_obj_del(menu->softkeys->container);
+    ysw_heap_free(menu->softkeys->button_map);
+    ysw_heap_free(menu->softkeys);
+    menu->softkeys = NULL;
 }
 
 static void pop_all(ysw_menu_t *menu)
 {
-    ESP_LOGD(TAG, "pop_all count=%d", ysw_array_get_count(menu->menu_stack));
-    if (menu->container) {
-        close_menu(menu);
-        while (ysw_array_get_count(menu->menu_stack)) {
-            menu->menu_items = ysw_array_pop(menu->menu_stack);
+    if (menu->softkeys) {
+        hide_softkeys(menu);
+        while (ysw_array_get_count(menu->stack) > 1) {
+            ysw_array_pop(menu->stack);
         }
     }
 }
 
 static void pop_top(ysw_menu_t *menu)
 {
-    ESP_LOGD(TAG, "pop_top count=%d", ysw_array_get_count(menu->menu_stack));
-    if (menu->container) {
-        close_menu(menu);
-        if (ysw_array_get_count(menu->menu_stack)) {
-            menu->menu_items = ysw_array_pop(menu->menu_stack);
-            open_menu(menu);
+    if (menu->softkeys) {
+        hide_softkeys(menu);
+        if (ysw_array_get_count(menu->stack) > 1) {
+            ysw_array_pop(menu->stack);
+            show_softkeys(menu);
+            lv_indev_wait_release(lv_indev_get_act()); // suppress events while button is still down
         }
     }
 }
 
-void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event, void *caller_context)
+void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event)
 {
-    const ysw_menu_item_t *menu_item = menu->menu_items + event->key_down.key;
+    const ysw_menu_item_t *menu_item = get_items(menu) + event->key_down.key;
     if (menu_item->flags & YSW_MENU_DOWN) {
-        menu_item->cb(menu, event, caller_context, menu_item->value);
+        menu_item->cb(menu, event, menu_item->value);
     }
 }
 
-void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event, void *caller_context)
+void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
 {
-    const ysw_menu_item_t *menu_item = menu->menu_items + event->key_down.key;
+    const ysw_menu_item_t *menu_item = get_items(menu) + event->key_down.key;
     if (menu_item->flags & YSW_MENU_UP) {
-        menu_item->cb(menu, event, caller_context, menu_item->value);
+        menu_item->cb(menu, event, menu_item->value);
     }
     if (menu_item->flags & YSW_MENU_POP_ALL) {
         pop_all(menu);
@@ -141,43 +204,43 @@ void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event, void *caller_conte
     }
 }
 
-void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event, void *caller_context)
+void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event)
 {
-    const ysw_menu_item_t *menu_item = menu->menu_items + event->key_down.key;
+    const ysw_menu_item_t *menu_item = get_items(menu) + event->key_down.key;
     if (menu_item->flags & YSW_MENU_PRESS) {
-        menu_item->cb(menu, event, caller_context, menu_item->value);
+        menu_item->cb(menu, event, menu_item->value);
     }
 }
 
-ysw_menu_t *ysw_menu_create(const ysw_menu_item_t *menu_items)
+ysw_menu_t *ysw_menu_create(const ysw_menu_item_t *menu_items, void *caller_context)
 {
     ysw_menu_t *menu = ysw_heap_allocate(sizeof(ysw_menu_t));
-    menu->menu_items = menu_items;
-    menu->menu_stack = ysw_array_create(4);
+    menu->caller_context = caller_context;
+    menu->stack = ysw_array_create(4);
+    ysw_array_push(menu->stack, (void*)menu_items);
     return menu;
 }
 
-void ysw_menu_nop(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+void ysw_menu_nop(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
 }
 
-void ysw_menu_on_open(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+void ysw_menu_on_open(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     if (event->header.type == YSW_EVENT_KEY_DOWN) {
-        if (menu->container) {
+        if (menu->softkeys) {
             if (value) {
-                close_menu(menu);
-                ysw_array_push(menu->menu_stack, (void*)menu->menu_items);
-                menu->menu_items = value;
-                open_menu(menu);
+                hide_softkeys(menu);
+                ysw_array_push(menu->stack, value);
+                show_softkeys(menu);
             }
         } else {
-            open_menu(menu);
+            show_softkeys(menu);
         }
     }
 }
 
-void ysw_menu_on_close(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+void ysw_menu_on_close(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     if (event->header.type == YSW_EVENT_KEY_DOWN) {
         pop_top(menu);

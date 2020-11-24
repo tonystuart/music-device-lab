@@ -17,14 +17,15 @@
 #define YSW_MENU_UP 0x02
 #define YSW_MENU_PRESS 0x04
 
-#define YSW_MENU_POP_ALL 0x10
-#define YSW_MENU_POP_TOP 0x20
-#define YSW_MENU_LINE 0x40
-#define YSW_MENU_LEGEND 0x80
+#define YSW_MENU_SOFTKEY_LABEL 0x10
+#define YSW_MENU_SOFTKEY_NEWLINE 0x20
+
+#define YSW_MENU_POP_TOP 0x100
+#define YSW_MENU_POP_ALL 0x200
 
 typedef struct ysw_menu_s ysw_menu_t;
 
-typedef void (*ysw_menu_cb_t)(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value);
+typedef void (*ysw_menu_cb_t)(ysw_menu_t *menu, ysw_event_t *event, void *value);
 
 typedef struct {
     const char *name;
@@ -33,22 +34,27 @@ typedef struct {
     void *value;
 } ysw_menu_item_t;
 
-typedef struct ysw_menu_s {
-    const ysw_menu_item_t *menu_items;
-    ysw_array_t *menu_stack;
+typedef struct {
     lv_obj_t *container;
+    const char **button_map;
+} ysw_softkeys_t;
+
+typedef struct ysw_menu_s {
+    ysw_array_t *stack; // each element is the base of an array of menu items
+    ysw_softkeys_t *softkeys; // null if not currently displaying softkeys
+    void *caller_context; // arbitrary context passed through from caller
 } ysw_menu_t;
 
-void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event, void *caller_context);
+void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event);
 
-void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event, void *caller_context);
+void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event);
 
-void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event, void *caller_context);
+void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event);
 
-void ysw_menu_on_open(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value);
+void ysw_menu_on_open(ysw_menu_t *menu, ysw_event_t *event, void *value);
 
-void ysw_menu_on_close(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value);
+void ysw_menu_on_close(ysw_menu_t *menu, ysw_event_t *event, void *value);
 
-ysw_menu_t *ysw_menu_create(const ysw_menu_item_t *menu_items);
+void ysw_menu_nop(ysw_menu_t *menu, ysw_event_t *event, void *value);
 
-void ysw_menu_nop(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value);
+ysw_menu_t *ysw_menu_create(const ysw_menu_item_t *menu_items, void *caller_context);

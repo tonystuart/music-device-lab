@@ -78,7 +78,6 @@ typedef struct {
 
     bool loop;
     uint8_t advance;
-    uint8_t move_amount;
     uint32_t position;
     ysw_editor_mode_t mode;
 
@@ -93,12 +92,15 @@ typedef struct {
 static void play_beat(context_t *context, zm_beat_t *beat)
 {
     ysw_array_t *notes = ysw_array_create(16);
-    zm_sample_x sample_index = ysw_array_find(context->music->samples, context->chord_sample);
-    zm_render_tone(notes, &beat->tone, 0, 1, sample_index);
-    if (beat->chord.root) {
-        zm_render_step(notes, &beat->chord, 0, 2, sample_index);
-        ysw_array_sort(notes, zm_note_compare);
+    if (beat->tone.note) {
+        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->tone_sample);
+        zm_render_tone(notes, &beat->tone, 0, 1, sample_index);
     }
+    if (beat->chord.root) {
+        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->chord_sample);
+        zm_render_step(notes, &beat->chord, 0, 2, sample_index);
+    }
+    ysw_array_sort(notes, zm_note_compare);
     zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
     ysw_event_fire_play(context->bus, notes, bpm); // TODO: consider supplying origin or use channel
 }
@@ -178,6 +180,7 @@ static void display_drum_mode(context_t *context)
 {
     ysw_header_set_mode(context->header, modes[context->mode], "");
 }
+
 static void display_mode(context_t *context)
 {
     switch (context->mode) {
@@ -388,20 +391,22 @@ static void process_delete(context_t *context)
     }
 }
 
-static void process_left(context_t *context)
+static void process_left(context_t *context, uint8_t move_amount)
 {
-    if (context->position >= context->move_amount) {
-        context->position -= context->move_amount;
+    ESP_LOGD(TAG, "process_left");
+    if (context->position >= move_amount) {
+        context->position -= move_amount;
         play_position(context);
         ysw_staff_update_position(context->staff, context->position);
         display_mode(context);
     }
 }
 
-static void process_right(context_t *context)
+static void process_right(context_t *context, uint8_t move_amount)
 {
-    if (context->position <= (ysw_array_get_count(context->passage->beats) * 2) - context->move_amount) {
-        context->position += context->move_amount;
+    uint32_t new_position = context->position + move_amount;
+    if (new_position <= ysw_array_get_count(context->passage->beats) * 2) {
+        context->position = new_position;
         play_position(context);
         ysw_staff_update_position(context->staff, context->position);
         display_mode(context);
@@ -414,14 +419,14 @@ static void process_up(context_t *context)
         zm_beat_x beat_index = context->position / 2;
         zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
         if (context->mode == YSW_EDITOR_MODE_TONE) {
-            if (beat->tone.note < 83) {
+            if (beat->tone.note && beat->tone.note < 83) {
                 beat->tone.note++;
             }
-        } else if (context ->mode == YSW_EDITOR_MODE_CHORD) {
-            if (beat->chord.root < 83) {
+        } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
+            if (beat->chord.root && beat->chord.root < 83) {
                 beat->chord.root++;
             }
-        } else if (context -> mode == YSW_EDITOR_MODE_DRUM) {
+        } else if (context->mode == YSW_EDITOR_MODE_DRUM) {
         }
         play_position(context);
         ysw_staff_update_all(context->staff, context->position);
@@ -435,14 +440,14 @@ static void process_down(context_t *context)
         zm_beat_x beat_index = context->position / 2;
         zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
         if (context->mode == YSW_EDITOR_MODE_TONE) {
-            if (beat->tone.note > 60) {
+            if (beat->tone.note && beat->tone.note > 60) {
                 beat->tone.note--;
             }
-        } else if (context ->mode == YSW_EDITOR_MODE_CHORD) {
-            if (beat->chord.root > 60) {
+        } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
+            if (beat->chord.root && beat->chord.root > 60) {
                 beat->chord.root--;
             }
-        } else if (context -> mode == YSW_EDITOR_MODE_DRUM) {
+        } else if (context->mode == YSW_EDITOR_MODE_DRUM) {
         }
         play_position(context);
         ysw_staff_update_all(context->staff, context->position);
@@ -451,143 +456,145 @@ static void process_down(context_t *context)
 }
 
 UNUSED
-static void on_mode_tone(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_mode_tone(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     context->mode = YSW_EDITOR_MODE_TONE;
     display_mode(context);
 }
 
 UNUSED
-static void on_mode_chord(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_mode_chord(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     context->mode = YSW_EDITOR_MODE_CHORD;
     display_mode(context);
 }
 
 UNUSED
-static void on_mode_drum(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_mode_drum(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     context->mode = YSW_EDITOR_MODE_DRUM;
     display_mode(context);
 }
 
-static void on_cycle_mode(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_cycle_mode(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     context->mode = (context->mode + 1) % 3;
     display_mode(context);
 }
 
-static void on_cycle_move_amount(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_sample(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
-    if (context->move_amount == 1) {
-        context->move_amount = 2;
-    } else {
-        context->move_amount = 1;
-    }
-    display_mode(context);
-}
-
-static void on_sample(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
-{
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     cycle_sample(context);
 }
 
-static void on_quality(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_quality(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     cycle_quality(context);
 }
 
-static void on_style(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_style(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     cycle_style(context);
 }
 
-static void on_key_signature(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_key_signature(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     cycle_key_signature(context);
 }
 
-static void on_time_signature(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_time_signature(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     cycle_time_signature(context);
 }
 
-static void on_tempo(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_tempo(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     cycle_tempo(context);
 }
 
-static void on_duration(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_duration(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     cycle_duration(context);
 }
 
-static void on_delete(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     process_delete(context);
 }
 
-static void on_play(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_play(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     zm_song_t *song = ysw_array_get(context->music->songs, 0);
     ysw_array_t *notes = zm_render_song(song);
     ysw_event_fire_play(context->bus, notes, song->bpm);
 }
 
-static void on_stop(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_stop(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     ysw_event_fire_stop(context->bus);
 }
 
-static void on_loop(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_loop(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     context->loop = !context->loop;
     ysw_event_fire_loop(context->bus, context->loop);
 }
 
-static void on_left(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_left(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
-    process_left(context);
+    ESP_LOGD(TAG, "on_left");
+    context_t *context = menu->caller_context;
+    process_left(context, 1);
 }
 
-static void on_right(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_right(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
-    process_right(context);
+    context_t *context = menu->caller_context;
+    process_right(context, 1);
 }
 
-static void on_up(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_previous(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
+    process_left(context, 2);
+}
+
+static void on_next(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    context_t *context = menu->caller_context;
+    process_right(context, 2);
+}
+
+static void on_up(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    context_t *context = menu->caller_context;
     process_up(context);
 }
 
-static void on_down(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_down(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     process_down(context);
 }
 
-static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *caller_context, void *value)
+static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = caller_context;
+    context_t *context = menu->caller_context;
     zm_note_t midi_note = (uintptr_t)value;
     if (event->header.type == YSW_EVENT_KEY_DOWN) {
         if (context->mode == YSW_EDITOR_MODE_TONE) {
@@ -625,13 +632,13 @@ static void process_event(void *caller_context, ysw_event_t *event)
     if (event) {
         switch (event->header.type) {
             case YSW_EVENT_KEY_DOWN:
-                ysw_menu_on_key_down(context->menu, event, context);
+                ysw_menu_on_key_down(context->menu, event);
                 break;
             case YSW_EVENT_KEY_UP:
-                ysw_menu_on_key_up(context->menu, event, context);
+                ysw_menu_on_key_up(context->menu, event);
                 break;
             case YSW_EVENT_KEY_PRESSED:
-                ysw_menu_on_key_pressed(context->menu, event, context);
+                ysw_menu_on_key_pressed(context->menu, event);
                 break;
             case YSW_EVENT_NOTE_ON:
                 on_note_on(context, event);
@@ -696,10 +703,10 @@ static const ysw_menu_item_t menu_2[] = {
     /* 02 */ { "F#6", 0x03, on_note, VP 78 },
     /* 03 */ { "G#6", 0x03, on_note, VP 80 },
     /* 04 */ { "A#6", 0x03, on_note, VP 82 },
-    /* 05 */ { "Play", 0x94, on_play, 0 },
-    /* 06 */ { "Stop", 0x94, on_stop, 0 },
-    /* 07 */ { "Loop", 0x94, on_loop, 0 },
-    /* 08 */ { "Up", 0xc4, on_up, 0 },
+    /* 05 */ { "Play", 0x14, on_play, 0 },
+    /* 06 */ { "Stop", 0x14, on_stop, 0 },
+    /* 07 */ { "Loop", 0x14, on_loop, 0 },
+    /* 08 */ { "Up", 0x34, on_up, 0 },
     /* 09 */ { "C6", 0x03, on_note, VP 72 },
     /* 10 */ { "D6", 0x03, on_note, VP 74 },
     /* 11 */ { "E6", 0x03, on_note, VP 76 },
@@ -707,19 +714,19 @@ static const ysw_menu_item_t menu_2[] = {
     /* 13 */ { "G6", 0x03, on_note, VP 79 },
     /* 14 */ { "A6", 0x03, on_note, VP 81 },
     /* 15 */ { "B6", 0x03, on_note, VP 83 },
-    /* 16 */ { " ", 0x94, ysw_menu_nop, 0 },
-    /* 17 */ { " ", 0x94, ysw_menu_nop, 0 },
-    /* 18 */ { " ", 0x94, ysw_menu_nop, 0 },
-    /* 19 */ { "Down", 0xc4, on_down, 0 },
+    /* 16 */ { " ", 0x14, ysw_menu_nop, 0 },
+    /* 17 */ { " ", 0x14, ysw_menu_nop, 0 },
+    /* 18 */ { " ", 0x14, ysw_menu_nop, 0 },
+    /* 19 */ { "Down", 0x34, on_down, 0 },
     /* 20 */ { "C#5", 0x03, on_note, VP 61 },
     /* 21 */ { "D#5", 0x03, on_note, VP 63 },
     /* 22 */ { "F#5", 0x03, on_note, VP 66 },
     /* 23 */ { "G#5", 0x03, on_note, VP 68 },
     /* 24 */ { "A#5", 0x03, on_note, VP 70 },
-    /* 25 */ { " ", 0x94, ysw_menu_nop, 0 },
-    /* 26 */ { " ", 0x94, ysw_menu_nop, 0 },
-    /* 27 */ { " ", 0x94, ysw_menu_nop, 0 },
-    /* 28 */ { "Left", 0xc4, on_left, 0 },
+    /* 25 */ { " ", 0x14, ysw_menu_nop, 0 },
+    /* 26 */ { " ", 0x14, ysw_menu_nop, 0 },
+    /* 27 */ { " ", 0x14, ysw_menu_nop, 0 },
+    /* 28 */ { "Previous", 0x34, on_previous, 0 },
     /* 29 */ { "C5", 0x03, on_note, VP 60 },
     /* 30 */ { "D5", 0x03, on_note, VP 62 },
     /* 31 */ { "E5", 0x03, on_note, VP 64 },
@@ -727,10 +734,10 @@ static const ysw_menu_item_t menu_2[] = {
     /* 33 */ { "G5", 0x03, on_note, VP 67 },
     /* 34 */ { "A5", 0x03, on_note, VP 69 },
     /* 35 */ { "B5", 0x03, on_note, VP 71 },
-    /* 36 */ { "Menu+", 0x83, ysw_menu_on_open, 0 },
-    /* 37 */ { "Move\nAmount", 0x94, on_cycle_move_amount, 0 },
-    /* 38 */ { "Menu-", 0x83, ysw_menu_on_close, 0 },
-    /* 39 */ { "Right", 0x84, on_right, 0 },
+    /* 36 */ { "Menu+", 0x13, ysw_menu_on_open, 0 },
+    /* 37 */ { " ", 0x14, ysw_menu_nop, 0 },
+    /* 38 */ { "Menu-", 0x13, ysw_menu_on_close, 0 },
+    /* 39 */ { "Next", 0x14, on_next, 0 },
     /* 40 */ { NULL, 0, NULL, NULL },
 };
 
@@ -740,10 +747,10 @@ static const ysw_menu_item_t base_menu[] = {
     /* 02 */ { "F#6", 0x03, on_note, VP 78 },
     /* 03 */ { "G#6", 0x03, on_note, VP 80 },
     /* 04 */ { "A#6", 0x03, on_note, VP 82 },
-    /* 05 */ { "Mode", 0x94, on_cycle_mode, 0 },
-    /* 06 */ { "Duration", 0x94, on_duration, 0 },
-    /* 07 */ { "Rest", 0x94, on_note, VP 0 },
-    /* 08 */ { "Up", 0xc4, on_up, 0 },
+    /* 05 */ { "Mode", 0x14, on_cycle_mode, 0 },
+    /* 06 */ { "Duration", 0x14, on_duration, 0 },
+    /* 07 */ { "Rest", 0x13, on_note, VP 0 },
+    /* 08 */ { "Up", 0x34, on_up, 0 },
     /* 09 */ { "C6", 0x03, on_note, VP 72 },
     /* 10 */ { "D6", 0x03, on_note, VP 74 },
     /* 11 */ { "E6", 0x03, on_note, VP 76 },
@@ -751,19 +758,19 @@ static const ysw_menu_item_t base_menu[] = {
     /* 13 */ { "G6", 0x03, on_note, VP 79 },
     /* 14 */ { "A6", 0x03, on_note, VP 81 },
     /* 15 */ { "B6", 0x03, on_note, VP 83 },
-    /* 16 */ { "Sample", 0x94, on_sample, 0 },
-    /* 17 */ { "Quality", 0x94, on_quality, 0 },
-    /* 18 */ { "Style", 0x94, on_style, 0 },
-    /* 19 */ { "Down", 0xc4, on_down, 0 },
+    /* 16 */ { "Sample", 0x14, on_sample, 0 },
+    /* 17 */ { "Quality", 0x14, on_quality, 0 },
+    /* 18 */ { "Style", 0x14, on_style, 0 },
+    /* 19 */ { "Down", 0x34, on_down, 0 },
     /* 20 */ { "C#5", 0x03, on_note, VP 61 },
     /* 21 */ { "D#5", 0x03, on_note, VP 63 },
     /* 22 */ { "F#5", 0x03, on_note, VP 66 },
     /* 23 */ { "G#5", 0x03, on_note, VP 68 },
     /* 24 */ { "A#5", 0x03, on_note, VP 70 },
-    /* 25 */ { "Key", 0x94, on_key_signature, 0 },
-    /* 26 */ { "Time", 0x94, on_time_signature, 0 },
-    /* 27 */ { "Tempo", 0x94, on_tempo, 0 },
-    /* 28 */ { "Left", 0xc4, on_left, 0 },
+    /* 25 */ { "Key", 0x14, on_key_signature, 0 },
+    /* 26 */ { "Time", 0x14, on_time_signature, 0 },
+    /* 27 */ { "Tempo", 0x14, on_tempo, 0 },
+    /* 28 */ { "Left", 0x34, on_left, 0 },
     /* 29 */ { "C5", 0x03, on_note, VP 60 },
     /* 30 */ { "D5", 0x03, on_note, VP 62 },
     /* 31 */ { "E5", 0x03, on_note, VP 64 },
@@ -771,10 +778,10 @@ static const ysw_menu_item_t base_menu[] = {
     /* 33 */ { "G5", 0x03, on_note, VP 67 },
     /* 34 */ { "A5", 0x03, on_note, VP 69 },
     /* 35 */ { "B5", 0x03, on_note, VP 71 },
-    /* 36 */ { "Menu+", 0x83, ysw_menu_on_open, (void*)menu_2 },
-    /* 37 */ { "Delete", 0x94, on_delete, 0 },
-    /* 38 */ { "Menu-", 0x83, ysw_menu_on_close, 0 },
-    /* 39 */ { "Right", 0x84, on_right, 0 },
+    /* 36 */ { "Menu+", 0x13, ysw_menu_on_open, (void*)menu_2 },
+    /* 37 */ { "Delete", 0x14, on_delete, 0 },
+    /* 38 */ { "Menu-", 0x13, ysw_menu_on_close, 0 },
+    /* 39 */ { "Right", 0x14, on_right, 0 },
     /* 40 */ { NULL, 0, NULL, NULL },
 };
 
@@ -801,7 +808,6 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     context->duration = ZM_AS_PLAYED;
 
     context->advance = 2;
-    context->move_amount = 1;
     context->position = 0;
     context->mode = YSW_EDITOR_MODE_TONE;
 
@@ -811,7 +817,7 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     context->passage->time = ZM_TIME_4_4;
     context->passage->tempo = ZM_TEMPO_100;
 
-    context->menu = ysw_menu_create(base_menu);
+    context->menu = ysw_menu_create(base_menu, context);
 
     ysw_task_config_t config = ysw_task_default_config;
 
