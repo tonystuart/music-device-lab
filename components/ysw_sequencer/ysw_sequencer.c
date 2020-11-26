@@ -230,7 +230,6 @@ static void play_note(context_t *context, ysw_note_t *note, int next_note_index)
     }
 
     if (next_note_index != -1) {
-        ysw_event_fire_note_status(context->bus, note);
         ysw_event_note_on_t note_on = {
             .channel = note->channel,
             .midi_note = note->midi_note,
@@ -241,6 +240,7 @@ static void play_note(context_t *context, ysw_note_t *note, int next_note_index)
         context->active_notes[next_note_index].midi_note = note->midi_note;
         context->active_notes[next_note_index].end_time =
             t2ms(context, note->start) + t2ms(context, note->duration);
+        ysw_event_fire_note_status(context->bus, note);
     } else {
         ESP_LOGE(TAG, "Maximum polyphony exceeded, active_count=%d", context->active_count);
     }

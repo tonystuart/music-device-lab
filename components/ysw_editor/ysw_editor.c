@@ -27,29 +27,13 @@
 #define DEFAULT_QUALITY 2 // TODO: make "major" 0 default or search by name
 #define DEFAULT_STYLE 2 // TODO: make "stacked" 0 default or search by name
 
-// Note that position is 2x the beat index and encodes both the beat index and the space before it.
+// channels
 
-// 0 % 2 = 0
-// 1 % 2 = 1 C
-// 2 % 2 = 0
-// 3 % 2 = 1 E
-// 4 % 2 = 0
-// 5 % 2 = 1 G
-// 6 % 2 = 0
+#define FOREGROUND_TONE 0
+#define FOREGROUND_CHORD 1
+#define FOREGROUND_DRUM 2
 
-// A remainder of zero indicates the space and a remainder of 1 indicates
-// the beat. This happens to work at the end of the array too, if the position
-// is 2x the size of the array, it refers to the space following the last beat.
-
-// if (position / 2 >= size) {
-//   -> space after last beat
-// } else {
-//   if (position % 2 == 0) {
-//     -> space before beat
-//   } else {
-//     -> beat_index = position / 2;
-//   }
-// }
+#define BACKGROUND_BASE 3
 
 typedef enum {
     YSW_EDITOR_MODE_TONE,
@@ -88,25 +72,59 @@ typedef struct {
     ysw_menu_t *menu;
 } context_t;
 
+// Note that position is 2x the beat index and encodes both the beat index and the space before it.
+
+// 0 % 2 = 0
+// 1 % 2 = 1 C
+// 2 % 2 = 0
+// 3 % 2 = 1 E
+// 4 % 2 = 0
+// 5 % 2 = 1 G
+// 6 % 2 = 0
+
+// A remainder of zero indicates the space and a remainder of 1 indicates
+// the beat. This happens to work at the end of the array too, if the position
+// is 2x the size of the array, it refers to the space following the last beat.
+
+// if (position / 2 >= size) {
+//   -> space after last beat
+// } else {
+//   if (position % 2 == 0) {
+//     -> space before beat
+//   } else {
+//     -> beat_index = position / 2;
+//   }
+// }
+
+static inline bool is_beat_position(context_t *context)
+{
+    return context->position % 2 == 1;
+}
+
+static inline bool is_space_position(context_t *context)
+{
+    return context->position % 2 == 0;
+}
+
 static void play_beat(context_t *context, zm_beat_t *beat)
 {
     ysw_array_t *notes = ysw_array_create(16);
     if (beat->tone.note) {
         zm_sample_x sample_index = ysw_array_find(context->music->samples, context->passage->tone_sample);
-        zm_render_tone(notes, &beat->tone, 0, 1, sample_index);
+        zm_render_tone(notes, &beat->tone, 0, FOREGROUND_TONE, sample_index);
     }
     if (beat->chord.root) {
         zm_sample_x sample_index = ysw_array_find(context->music->samples, context->passage->chord_sample);
-        zm_render_step(notes, &beat->chord, 0, 2, sample_index);
+        zm_render_step(notes, &beat->chord, 0, FOREGROUND_CHORD, sample_index);
     }
     ysw_array_sort(notes, zm_note_compare);
     zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
-    ysw_event_fire_play(context->bus, notes, bpm); // TODO: consider supplying origin or use channel
+    ysw_event_fire_play(context->bus, notes, bpm);
 }
 
 static void play_position(context_t *context)
 {
-    if (context->position % 2 == 1) {
+    if (is_beat_position(context)) {
         zm_beat_x beat_index = context->position / 2;
         zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
         play_beat(context, beat);
@@ -159,7 +177,7 @@ static void display_chord_mode(context_t *context)
     // 4. no beats - show quality, style
     char value[32] = {};
     zm_beat_t *beat = NULL;
-    if (context->position % 2 == 1) {
+    if (is_beat_position(context)) {
         beat = ysw_array_get(context->passage->beats, context->position / 2);
     }
     if (beat && beat->chord.root) {
@@ -246,7 +264,7 @@ static void cycle_tempo(context_t *context)
 static void cycle_duration(context_t *context)
 {
     zm_beat_t *beat = NULL;
-    if (context->position % 2 == 1 && context->duration != ZM_AS_PLAYED) {
+    if (is_beat_position(context) && context->duration != ZM_AS_PLAYED) {
         zm_beat_x beat_index = context->position / 2;
         beat = ysw_array_get(context->passage->beats, beat_index);
     }
@@ -298,7 +316,7 @@ static zm_style_t *find_matching_style(context_t *context, bool preincrement)
 static void cycle_quality(context_t *context)
 {
     zm_beat_t *beat = NULL;
-    if (context->position % 2 == 1) {
+    if (is_beat_position(context)) {
         zm_beat_x beat_index = context->position / 2;
         beat = ysw_array_get(context->passage->beats, beat_index);
     }
@@ -320,7 +338,7 @@ static void cycle_quality(context_t *context)
 static void cycle_style(context_t *context)
 {
     zm_beat_t *beat = NULL;
-    if (context->position % 2 == 1) {
+    if (is_beat_position(context)) {
         zm_beat_x beat_index = context->position / 2;
         beat = ysw_array_get(context->passage->beats, beat_index);
     }
@@ -334,11 +352,11 @@ static void cycle_style(context_t *context)
     display_mode(context);
 }
 
-static void process_beat(context_t *context, zm_note_t midi_note, zm_time_x duration)
+static void process_beat(context_t *context, zm_note_t midi_note, zm_time_x duration_millis)
 {
     zm_beat_t *beat = NULL;
     int32_t beat_index = context->position / 2;
-    bool is_new_beat = context->position % 2 == 0;
+    bool is_new_beat = is_space_position(context);
     if (is_new_beat) {
         beat = ysw_heap_allocate(sizeof(zm_beat_t));
         ysw_array_insert(context->passage->beats, beat_index, beat);
@@ -346,23 +364,23 @@ static void process_beat(context_t *context, zm_note_t midi_note, zm_time_x dura
         beat = ysw_array_get(context->passage->beats, beat_index);
     }
 
+    zm_duration_t duration = context->duration;
+    if (duration == ZM_AS_PLAYED) {
+        zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
+        duration = ysw_millis_to_ticks(duration_millis, bpm);
+    }
+
     if (context->mode == YSW_EDITOR_MODE_TONE) {
         beat->tone.note = midi_note; // rest == 0
-        if (context->duration == ZM_AS_PLAYED) {
-            zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
-            beat->tone.duration = ysw_millis_to_ticks(duration, bpm);
-        } else {
-            beat->tone.duration = context->duration;
-        }
+        beat->tone.duration = duration;
     } else if (context ->mode == YSW_EDITOR_MODE_CHORD) {
-        if (is_new_beat) {
-            beat->tone.duration = ZM_QUARTER;
-        }
         beat->chord.root = midi_note;
         beat->chord.quality = context->quality;
         beat->chord.style = context->style;
-        beat->chord.duration = ZM_HALF;
-        play_beat(context, beat);
+        beat->chord.duration = duration;
+        if (!beat->tone.duration) {
+            beat->tone.duration = beat->chord.duration;
+        }
     } else if (context -> mode == YSW_EDITOR_MODE_DRUM) {
     }
 
@@ -374,7 +392,7 @@ static void process_beat(context_t *context, zm_note_t midi_note, zm_time_x dura
 
 static void process_delete(context_t *context)
 {
-    if (context->position % 2 == 1) {
+    if (is_beat_position(context)) {
         zm_beat_x beat_index = context->position / 2;
         zm_beat_t *beat = ysw_array_remove(context->passage->beats, beat_index);
         ysw_heap_free(beat);
@@ -414,7 +432,7 @@ static void process_right(context_t *context, uint8_t move_amount)
 
 static void process_up(context_t *context)
 {
-    if (context->position % 2 == 1) {
+    if (is_beat_position(context)) {
         zm_beat_x beat_index = context->position / 2;
         zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
         if (context->mode == YSW_EDITOR_MODE_TONE) {
@@ -435,7 +453,7 @@ static void process_up(context_t *context)
 
 static void process_down(context_t *context)
 {
-    if (context->position % 2 == 1) {
+    if (is_beat_position(context)) {
         zm_beat_x beat_index = context->position / 2;
         zm_beat_t *beat = ysw_array_get(context->passage->beats, beat_index);
         if (context->mode == YSW_EDITOR_MODE_TONE) {
@@ -536,7 +554,7 @@ static void on_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
 static void on_play(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     context_t *context = menu->caller_context;
-    ysw_array_t *notes = zm_render_passage(context->music, context->passage, 3);
+    ysw_array_t *notes = zm_render_passage(context->music, context->passage, BACKGROUND_BASE);
     zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
     ysw_event_fire_play(context->bus, notes, bpm);
 }
@@ -607,12 +625,20 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
         if (context->mode == YSW_EDITOR_MODE_TONE) {
             if (midi_note) {
                 ysw_event_note_on_t note_on = {
-                    .channel = 0,
+                    .channel = FOREGROUND_TONE,
                     .midi_note = midi_note,
                     .velocity = 80,
                 };
                 ysw_event_fire_note_on(context->bus, YSW_ORIGIN_EDITOR, &note_on);
             }
+        } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
+            zm_beat_t beat = {
+                .chord.root = midi_note,
+                .chord.quality = context->quality,
+                .chord.style = context->style,
+                .chord.duration = 512,
+            };
+            play_beat(context, &beat);
         }
     } else if (event->header.type == YSW_EVENT_KEY_UP) {
         if (context->mode == YSW_EDITOR_MODE_TONE) {
@@ -628,10 +654,12 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
     }
 }
 
-static void on_note_on(context_t *context, ysw_event_t *event)
+static void on_note_status(context_t *context, ysw_event_t *event)
 {
-    assert(event->header.origin == YSW_ORIGIN_SEQUENCER); // i.e. not from us
-    context->position = 
+    if (event->note_status.note.channel >= BACKGROUND_BASE) {
+        // NB: the current demo song does not follow our channel assignments
+        ESP_LOGD(TAG, "on_note_status with channel=%d", event->note_status.note.channel);
+    }
 }
 
 static void process_event(void *caller_context, ysw_event_t *event)
@@ -648,8 +676,8 @@ static void process_event(void *caller_context, ysw_event_t *event)
             case YSW_EVENT_KEY_PRESSED:
                 ysw_menu_on_key_pressed(context->menu, event);
                 break;
-            case YSW_EVENT_NOTE_ON:
-                on_note_on(context, event);
+            case YSW_EVENT_NOTE_STATUS:
+                on_note_status(context, event);
                 break;
             default:
                 break;
