@@ -67,11 +67,10 @@ static const char *modes[] = {
 
 typedef struct {
     ysw_bus_h bus;
-    zm_music_t *music;
     ysw_editor_lvgl_init lvgl_init;
+
+    zm_music_t *music;
     zm_passage_t *passage;
-    zm_sample_t *tone_sample;
-    zm_sample_t *chord_sample;
     zm_quality_t *quality;
     zm_style_t *style;
     zm_duration_t duration;
@@ -93,11 +92,11 @@ static void play_beat(context_t *context, zm_beat_t *beat)
 {
     ysw_array_t *notes = ysw_array_create(16);
     if (beat->tone.note) {
-        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->tone_sample);
+        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->passage->tone_sample);
         zm_render_tone(notes, &beat->tone, 0, 1, sample_index);
     }
     if (beat->chord.root) {
-        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->chord_sample);
+        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->passage->chord_sample);
         zm_render_step(notes, &beat->chord, 0, 2, sample_index);
     }
     ysw_array_sort(notes, zm_note_compare);
@@ -118,9 +117,9 @@ static void display_sample(context_t *context)
 {
     const char *value = "";
     if (context->mode == YSW_EDITOR_MODE_TONE) {
-        value = context->tone_sample->name;
+        value = context->passage->tone_sample->name;
     } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
-        value = context->chord_sample->name;
+        value = context->passage->chord_sample->name;
     }
     ysw_header_set_sample(context->header, value);
 }
@@ -210,14 +209,14 @@ static zm_sample_t *next_sample(ysw_array_t *samples, zm_sample_t *previous)
 static void cycle_sample(context_t *context)
 {
     if (context->mode == YSW_EDITOR_MODE_TONE) {
-        context->tone_sample = next_sample(context->music->samples, context->tone_sample);
+        context->passage->tone_sample = next_sample(context->music->samples, context->passage->tone_sample);
         ysw_event_program_change_t program_change = {
             .channel = 0,
-            .program = ysw_array_find(context->music->samples, context->tone_sample),
+            .program = ysw_array_find(context->music->samples, context->passage->tone_sample),
         };
         ysw_event_fire_program_change(context->bus, YSW_ORIGIN_EDITOR, &program_change);
     } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
-        context->chord_sample = next_sample(context->music->samples, context->chord_sample);
+        context->passage->chord_sample = next_sample(context->music->samples, context->passage->chord_sample);
     }
     display_sample(context);
 }
@@ -542,6 +541,14 @@ static void on_play(ysw_menu_t *menu, ysw_event_t *event, void *value)
     ysw_event_fire_play(context->bus, notes, song->bpm);
 }
 
+static void on_demo(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    context_t *context = menu->caller_context;
+    zm_song_t *song = ysw_array_get(context->music->songs, 0);
+    ysw_array_t *notes = zm_render_song(song);
+    ysw_event_fire_play(context->bus, notes, song->bpm);
+}
+
 static void on_stop(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     context_t *context = menu->caller_context;
@@ -720,7 +727,7 @@ static const ysw_menu_item_t menu_2[] = {
     /* 14 */ { "A6", 0x03, on_note, VP 81 },
     /* 15 */ { "B6", 0x03, on_note, VP 83 },
 
-    /* 16 */ { " ", 0x14, ysw_menu_nop, 0 },
+    /* 16 */ { "Demo", 0x14, on_demo, 0 },
     /* 17 */ { " ", 0x14, ysw_menu_nop, 0 },
     /* 18 */ { " ", 0x14, ysw_menu_nop, 0 },
     /* 19 */ { "Down", 0x34, on_down, 0 },
@@ -817,11 +824,17 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     context_t *context = ysw_heap_allocate(sizeof(context_t));
 
     context->bus = bus;
-    context->music = music;
     context->lvgl_init = lvgl_init;
+    context->music = music;
 
-    context->tone_sample = ysw_array_get(music->samples, 0);
-    context->chord_sample = context->tone_sample;
+    context->passage = ysw_heap_allocate(sizeof(zm_passage_t));
+    context->passage->beats = ysw_array_create(64);
+    context->passage->key = ZM_KEY_C;
+    context->passage->time = ZM_TIME_4_4;
+    context->passage->tempo = ZM_TEMPO_100;
+    context->passage->tone_sample = ysw_array_get(music->samples, 0);
+    context->passage->chord_sample = context->passage->tone_sample;
+
     context->quality = ysw_array_get(music->qualities, DEFAULT_QUALITY);
     context->style = ysw_array_get(music->styles, DEFAULT_STYLE);
     context->duration = ZM_AS_PLAYED;
@@ -829,12 +842,6 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     context->advance = 2;
     context->position = 0;
     context->mode = YSW_EDITOR_MODE_TONE;
-
-    context->passage = ysw_heap_allocate(sizeof(zm_passage_t));
-    context->passage->beats = ysw_array_create(64);
-    context->passage->key = ZM_KEY_C;
-    context->passage->time = ZM_TIME_4_4;
-    context->passage->tempo = ZM_TEMPO_100;
 
     context->menu = ysw_menu_create(base_menu, context);
 
