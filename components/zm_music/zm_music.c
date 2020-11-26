@@ -462,6 +462,27 @@ ysw_array_t *zm_render_song(zm_song_t *song)
     return notes;
 }
 
+ysw_array_t *zm_render_passage(zm_music_t *music, zm_passage_t *passage, zm_channel_x base_channel)
+{
+    zm_time_x beat_time = 0;
+    ysw_array_t *notes = ysw_array_create(512);
+    zm_beat_x beat_count = ysw_array_get_count(passage->beats);
+    zm_sample_x tone_sample_index = ysw_array_find(music->samples, passage->tone_sample);
+    zm_sample_x chord_sample_index = ysw_array_find(music->samples, passage->chord_sample);
+    for (zm_beat_x i = 0; i < beat_count; i++) {
+        zm_beat_t *beat = ysw_array_get(passage->beats, i);
+        if (beat->tone.note) {
+            zm_render_tone(notes, &beat->tone, beat_time, base_channel, tone_sample_index);
+        }
+        if (beat->chord.root) {
+            zm_render_step(notes, &beat->chord, beat_time, base_channel + 1, chord_sample_index);
+        }
+        beat_time += beat->tone.duration;
+    }
+    ysw_array_sort(notes, zm_note_compare);
+    return notes;
+}
+
 // https://en.wikipedia.org/wiki/Key_signature
 
 static const zm_key_signature_t zm_key_signatures[] = {

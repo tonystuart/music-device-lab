@@ -228,6 +228,7 @@ void zm_render_tone(ysw_array_t *notes, zm_tone_t *tone, zm_time_x tone_start, z
 void zm_render_step(ysw_array_t *notes, zm_step_t *step, zm_time_x step_start, zm_channel_x channel, zm_sample_x sample_index);
 zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large_t start_time, zm_small_t channel);
 ysw_array_t *zm_render_song(zm_song_t *song);
+ysw_array_t *zm_render_passage(zm_music_t *music, zm_passage_t *passage, zm_channel_x base_channel);
 
 const zm_key_signature_t *zm_get_key_signature(zm_key_signature_x key_index);
 zm_key_signature_x zm_get_next_key_index(zm_key_signature_x key_index);

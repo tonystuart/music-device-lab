@@ -536,9 +536,9 @@ static void on_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
 static void on_play(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     context_t *context = menu->caller_context;
-    zm_song_t *song = ysw_array_get(context->music->songs, 0);
-    ysw_array_t *notes = zm_render_song(song);
-    ysw_event_fire_play(context->bus, notes, song->bpm);
+    ysw_array_t *notes = zm_render_passage(context->music, context->passage, 3);
+    zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);
+    ysw_event_fire_play(context->bus, notes, bpm);
 }
 
 static void on_demo(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -631,6 +631,7 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
 static void on_note_on(context_t *context, ysw_event_t *event)
 {
     assert(event->header.origin == YSW_ORIGIN_SEQUENCER); // i.e. not from us
+    context->position = 
 }
 
 static void process_event(void *caller_context, ysw_event_t *event)
@@ -714,9 +715,9 @@ static const ysw_menu_item_t menu_2[] = {
     /* 03 */ { "G#6", 0x03, on_note, VP 80 },
     /* 04 */ { "A#6", 0x03, on_note, VP 82 },
 
-    /* 05 */ { "Play", 0x14, on_play, 0 },
-    /* 06 */ { "Stop", 0x14, on_stop, 0 },
-    /* 07 */ { "Loop", 0x14, on_loop, 0 },
+    /* 05 */ { "Play", 0x214, on_play, 0 },
+    /* 06 */ { "Stop", 0x214, on_stop, 0 },
+    /* 07 */ { "Loop", 0x214, on_loop, 0 },
     /* 08 */ { "Up", 0x34, on_up, 0 },
 
     /* 09 */ { "C6", 0x03, on_note, VP 72 },
@@ -727,7 +728,7 @@ static const ysw_menu_item_t menu_2[] = {
     /* 14 */ { "A6", 0x03, on_note, VP 81 },
     /* 15 */ { "B6", 0x03, on_note, VP 83 },
 
-    /* 16 */ { "Demo", 0x14, on_demo, 0 },
+    /* 16 */ { "Demo", 0x214, on_demo, 0 },
     /* 17 */ { " ", 0x14, ysw_menu_nop, 0 },
     /* 18 */ { " ", 0x14, ysw_menu_nop, 0 },
     /* 19 */ { "Down", 0x34, on_down, 0 },
