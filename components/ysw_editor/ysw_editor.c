@@ -392,11 +392,16 @@ static void process_beat(context_t *context, zm_note_t midi_note, zm_time_x dura
 
 static void process_delete(context_t *context)
 {
-    if (is_beat_position(context)) {
-        zm_beat_x beat_index = context->position / 2;
+    zm_beat_x beat_index = context->position / 2;
+    zm_beat_x beat_count = ysw_array_get_count(context->passage->beats);
+    if (beat_count > 0 && beat_index == beat_count) {
+        // On space following last beat in passage, delete previous beat
+        beat_index--;
+    }
+    if (beat_index < beat_count) {
         zm_beat_t *beat = ysw_array_remove(context->passage->beats, beat_index);
         ysw_heap_free(beat);
-        zm_beat_x beat_count = ysw_array_get_count(context->passage->beats);
+        beat_count--;
         if (beat_index == beat_count) {
             if (beat_count) {
                 context->position -= 2;
