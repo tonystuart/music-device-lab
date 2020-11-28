@@ -21,9 +21,8 @@ extern "C" {
 //#include "../lv_core/lv_obj.h"
 
 typedef struct {
-    zm_passage_t *passage;
     uint32_t position;
-    lv_coord_t last_x;
+    zm_passage_t *passage;
 } ysw_staff_ext_t;
 
 enum {
@@ -34,8 +33,8 @@ typedef uint8_t ysw_staff_part_t;
 
 lv_obj_t *ysw_staff_create(lv_obj_t *par);
 void ysw_staff_set_passage(lv_obj_t *staff, zm_passage_t *passage);
-void ysw_staff_update_position(lv_obj_t *staff, uint32_t position);
-void ysw_staff_update_all(lv_obj_t *staff, uint32_t position);
+void ysw_staff_set_position(lv_obj_t *staff, uint32_t position);
+void ysw_staff_invalidate(lv_obj_t *staff);
 zm_passage_t *ysw_staff_get_passage(lv_obj_t *staff);
 uint32_t ysw_staff_get_position(lv_obj_t *staff);
 

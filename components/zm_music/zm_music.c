@@ -565,3 +565,22 @@ zm_bpm_x zm_tempo_to_bpm(zm_tempo_t tempo)
 {
     return zm_tempo_signatures[tempo % ZM_TEMPO_SIGNATURES].bpm;
 }
+
+zm_duration_t zm_round_duration(zm_duration_t duration)
+{
+    // TODO: added dotted durations, consider using durations table
+    zm_duration_t rounded_duration = 0;
+    if (duration <= (ZM_SIXTEENTH + ((ZM_EIGHTH - ZM_SIXTEENTH) / 2))) {  // 64 + 32
+        rounded_duration = ZM_SIXTEENTH;
+    } else if (duration <= (ZM_EIGHTH + ((ZM_QUARTER - ZM_EIGHTH) / 2))) { // 128 + 64
+        rounded_duration = ZM_EIGHTH;
+    } else if (duration <= (ZM_QUARTER + ((ZM_HALF - ZM_QUARTER) / 2))) { // 256 + 128
+        rounded_duration = ZM_QUARTER;
+    } else if (duration <= (ZM_HALF + ((ZM_WHOLE - ZM_HALF) / 2 ))) {     // 512 + 256
+        rounded_duration = ZM_HALF;
+    } else {
+        rounded_duration = ZM_WHOLE;
+    }
+    return rounded_duration;
+}
+

@@ -106,6 +106,30 @@ static inline bool is_space_position(context_t *context)
     return context->position % 2 == 0;
 }
 
+static void recalculate(context_t *context)
+{
+    zm_time_x time = 0;
+    zm_measure_x measure = 1;
+    uint32_t ticks_in_measure = 0;
+
+    zm_beat_x beat_count = ysw_array_get_count(context->passage->beats);
+    for (zm_beat_x i = 0; i < beat_count; i++) {
+        zm_beat_t *beat = ysw_array_get(context->passage->beats, i);
+        beat->time = time;
+        beat->flags = 0;
+        ticks_in_measure += zm_round_duration(beat->tone.duration);
+        if (ticks_in_measure >= 1024) {
+            beat->flags |= ZM_BEAT_NEW_MEASURE;
+            ticks_in_measure = 0;
+            measure++;
+        }
+        beat->measure = measure;
+        time += beat->tone.duration; // TODO: add articulation, use beat->time in zm_render_passage
+    }
+
+    ysw_staff_invalidate(context->staff);
+}
+
 static void play_beat(context_t *context, zm_beat_t *beat)
 {
     ysw_array_t *notes = ysw_array_create(16);
@@ -242,21 +266,21 @@ static void cycle_sample(context_t *context)
 static void cycle_key_signature(context_t *context)
 {
     context->passage->key = zm_get_next_key_index(context->passage->key);
-    ysw_staff_update_all(context->staff, context->position);
+    recalculate(context);
     ysw_footer_set_key(context->footer, context->passage->key);
 }
 
 static void cycle_time_signature(context_t *context)
 {
     context->passage->time = zm_get_next_time_index(context->passage->time);
-    ysw_staff_update_all(context->staff, context->position);
+    recalculate(context);
     ysw_footer_set_time(context->footer, context->passage->time);
 }
 
 static void cycle_tempo(context_t *context)
 {
     context->passage->tempo = zm_get_next_tempo_index(context->passage->tempo);
-    ysw_staff_update_all(context->staff, context->position);
+    recalculate(context);
     ysw_footer_set_tempo(context->footer, context->passage->tempo);
     display_mode(context);
 }
@@ -287,7 +311,7 @@ static void cycle_duration(context_t *context)
     }
     if (beat) {
         beat->tone.duration = context->duration;
-        ysw_staff_update_all(context->staff, context->position);
+        recalculate(context);
         display_mode(context);
     }
 }
@@ -330,7 +354,7 @@ static void cycle_quality(context_t *context)
     if (beat) {
         beat->chord.quality = context->quality;
         beat->chord.style = context->style;
-        ysw_staff_update_all(context->staff, context->position);
+        recalculate(context);
     }
     display_mode(context);
 }
@@ -347,7 +371,7 @@ static void cycle_style(context_t *context)
     }
     if (beat) {
         beat->chord.style = context->style;
-        ysw_staff_update_all(context->staff, context->position);
+        recalculate(context);
     }
     display_mode(context);
 }
@@ -386,8 +410,9 @@ static void process_beat(context_t *context, zm_note_t midi_note, zm_time_x dura
 
     zm_beat_x beat_count = ysw_array_get_count(context->passage->beats);
     context->position = min(context->position + context->advance, beat_count * 2);
-    ysw_staff_update_all(context->staff, context->position);
+    ysw_staff_set_position(context->staff, context->position);
     display_mode(context);
+    recalculate(context);
 }
 
 static void process_delete(context_t *context)
@@ -409,7 +434,8 @@ static void process_delete(context_t *context)
                 context->position = 0;
             }
         }
-        ysw_staff_update_all(context->staff, context->position);
+        ysw_staff_set_position(context->staff, context->position);
+        recalculate(context);
     }
 }
 
@@ -419,7 +445,7 @@ static void process_left(context_t *context, uint8_t move_amount)
     if (context->position >= move_amount) {
         context->position -= move_amount;
         play_position(context);
-        ysw_staff_update_position(context->staff, context->position);
+        ysw_staff_set_position(context->staff, context->position);
         display_mode(context);
     }
 }
@@ -430,7 +456,7 @@ static void process_right(context_t *context, uint8_t move_amount)
     if (new_position <= ysw_array_get_count(context->passage->beats) * 2) {
         context->position = new_position;
         play_position(context);
-        ysw_staff_update_position(context->staff, context->position);
+        ysw_staff_set_position(context->staff, context->position);
         display_mode(context);
     }
 }
@@ -451,7 +477,7 @@ static void process_up(context_t *context)
         } else if (context->mode == YSW_EDITOR_MODE_DRUM) {
         }
         play_position(context);
-        ysw_staff_update_all(context->staff, context->position);
+        recalculate(context);
         display_mode(context);
     }
 }
@@ -472,7 +498,7 @@ static void process_down(context_t *context)
         } else if (context->mode == YSW_EDITOR_MODE_DRUM) {
         }
         play_position(context);
-        ysw_staff_update_all(context->staff, context->position);
+        recalculate(context);
         display_mode(context);
     }
 }

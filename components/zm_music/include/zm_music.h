@@ -30,6 +30,7 @@ typedef uint8_t zm_channel_x;
 typedef uint8_t zm_velocity_x;
 typedef uint8_t zm_distance_x;
 
+typedef uint16_t zm_measure_x;
 typedef uint16_t zm_quality_x;
 typedef uint16_t zm_style_x;
 typedef uint16_t zm_sample_x;
@@ -194,7 +195,14 @@ typedef struct {
     zm_duration_t duration;
 } zm_rhythm_t;
 
+typedef enum {
+    ZM_BEAT_NEW_MEASURE = 0x0001,
+} zm_beat_flags_t;
+
 typedef struct {
+    zm_time_x time;
+    zm_measure_x measure;
+    zm_beat_flags_t flags;
     zm_tone_t tone;
     zm_step_t chord;
     zm_rhythm_t rhythm;
@@ -239,6 +247,8 @@ const zm_time_signature_t *zm_get_time_signature(zm_time_signature_x time_index)
 zm_tempo_t zm_get_next_tempo_index(zm_tempo_t tempo_index);
 const zm_tempo_signature_t *zm_get_tempo_signature(zm_tempo_t tempo_index);
 zm_bpm_x zm_tempo_to_bpm(zm_tempo_t tempo);
+
+zm_duration_t zm_round_duration(zm_duration_t duration);
 
 // See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
 
