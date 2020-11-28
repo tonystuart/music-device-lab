@@ -200,11 +200,52 @@ uint32_t ysw_array_get_free_space(ysw_array_t *array)
     return array->size - array->count;
 }
 
-void ysw_array_sort(ysw_array_t *array,  int (*comparator)(const void *, const void *))
+void ysw_array_sort(ysw_array_t *array, ysw_array_comparator comparator)
 {
     assert(array);
     assert(comparator);
     qsort(array->data, array->count, sizeof(void *), comparator);
+}
+
+int32_t ysw_array_search(ysw_array_t *array, void *needle, ysw_array_comparator comparator, ysw_array_match_t match_type)
+{
+    assert(array);
+    assert(comparator);
+
+    int16_t found = -1;
+    uint16_t bottom = 0;
+    int16_t middle = -1;
+    uint16_t top = array->count;
+
+    while (found == -1 && bottom != top) {
+        middle = bottom + ((top - bottom) / 2);
+        int relationship = comparator(&needle, &array->data[middle]);
+        if (relationship < 0) {
+            top = middle;
+        } else if (relationship > 0) {
+            bottom = middle + 1;
+        } else if ((match_type & YSW_ARRAY_MATCH_LOWEST_INDEX) &&
+                (middle > 0 && comparator(&array->data[middle-1], &array->data[middle]) == 0)) {
+            top = middle;
+        } else if ((match_type & YSW_ARRAY_MATCH_HIGHEST_INDEX) &&
+                (middle + 1 < array->count && comparator(&array->data[middle+1], &array->data[middle]) == 0)) {
+            bottom = middle + 1;
+        } else {
+            found = middle;
+        }
+    }
+
+    if (!found) {
+        if ((match_type & YSW_ARRAY_MATCH_FLOOR) &&
+                (middle > 0 && comparator(&array->data[middle], &needle) < 0)) {
+            found = middle - 1;
+        } else if ((match_type & YSW_ARRAY_MATCH_CEIL) &&
+                (middle + 1 < array->count && comparator(&needle, &array->data[middle+1]) < 0)) {
+            found = middle + 1;
+        }
+    }
+
+    return found;
 }
 
 void ysw_array_free_node(void *p)

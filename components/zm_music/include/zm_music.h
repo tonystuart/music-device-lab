@@ -200,7 +200,7 @@ typedef enum {
 } zm_beat_flags_t;
 
 typedef struct {
-    zm_time_x time;
+    zm_time_x start;
     zm_measure_x measure;
     zm_beat_flags_t flags;
     zm_tone_t tone;

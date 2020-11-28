@@ -105,17 +105,22 @@ static inline bool is_space_position(context_t *context)
 {
     return context->position % 2 == 0;
 }
+ 
+static inline uint32_t beat_index_to_position(zm_beat_x beat_index)
+{
+    return (beat_index * 2) + 1;
+}
 
 static void recalculate(context_t *context)
 {
-    zm_time_x time = 0;
+    zm_time_x start = 0;
     zm_measure_x measure = 1;
     uint32_t ticks_in_measure = 0;
 
     zm_beat_x beat_count = ysw_array_get_count(context->passage->beats);
     for (zm_beat_x i = 0; i < beat_count; i++) {
         zm_beat_t *beat = ysw_array_get(context->passage->beats, i);
-        beat->time = time;
+        beat->start = start;
         beat->flags = 0;
         ticks_in_measure += zm_round_duration(beat->tone.duration);
         if (ticks_in_measure >= 1024) {
@@ -124,7 +129,7 @@ static void recalculate(context_t *context)
             measure++;
         }
         beat->measure = measure;
-        time += beat->tone.duration; // TODO: add articulation, use beat->time in zm_render_passage
+        start += beat->tone.duration; // TODO: add articulation, use beat->start in zm_render_passage
     }
 
     ysw_staff_invalidate(context->staff);
@@ -685,11 +690,29 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
     }
 }
 
+int compare_beats(const void *left, const void *right)
+{
+    const zm_beat_t *left_beat = *(zm_beat_t * const *)left;
+    const zm_beat_t *right_beat = *(zm_beat_t * const *)right;
+    int delta = left_beat->start - right_beat->start;
+    return delta;
+}
+
 static void on_note_status(context_t *context, ysw_event_t *event)
 {
     if (event->note_status.note.channel >= BACKGROUND_BASE) {
-        // NB: the current demo song does not follow our channel assignments
-        ESP_LOGD(TAG, "on_note_status with channel=%d", event->note_status.note.channel);
+        zm_beat_t needle = {
+            .start = event->note_status.note.start,
+        };
+        ysw_array_match_t flags = YSW_ARRAY_MATCH_EXACT;
+        int32_t result = ysw_array_search(context->passage->beats, &needle, compare_beats, flags);
+        if (result != -1) {
+            ESP_LOGD(TAG, "found start=%d at index=%d", needle.start, result);
+            context->position = beat_index_to_position(result);
+            ysw_staff_set_position(context->staff, context->position);
+        } else {
+            ESP_LOGD(TAG, "could not find start=%d", needle.start);
+        }
     }
 }
 
