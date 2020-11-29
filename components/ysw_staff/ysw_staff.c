@@ -301,10 +301,6 @@ static void draw_signature(draw_context_t *dc, zm_time_signature_x time)
 static void draw_beat(draw_context_t *dc, zm_beat_t *beat)
 {
     if (dc->draw_type == YSW_STAFF_LEFT) {
-        if (beat->flags & ZM_BEAT_NEW_MEASURE) {
-            draw_measure_label(dc, beat->measure);
-            draw_letter(dc, YSW_RIGHT_BAR);
-        }
         draw_letter(dc, YSW_STAFF_SPACE);
         if (beat->chord.root) {
             draw_letter(dc, YSW_STAFF_SPACE);
@@ -322,10 +318,6 @@ static void draw_beat(draw_context_t *dc, zm_beat_t *beat)
         if (beat->chord.root) {
             draw_letter(dc, YSW_STAFF_SPACE);
         }
-        if (beat->flags & ZM_BEAT_NEW_MEASURE) {
-            draw_letter(dc, YSW_RIGHT_BAR);
-            draw_measure_label(dc, beat->measure);
-        }
     }
 }
 
@@ -341,6 +333,10 @@ static void draw_staff(ysw_staff_ext_t *ext, draw_context_t *dc)
         if (left % 2 == 1) {
             uint32_t beat_index = left / 2;
             zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);
+            if (beat->flags & ZM_BEAT_NEW_MEASURE) {
+                draw_measure_label(dc, beat->measure);
+                draw_letter(dc, YSW_RIGHT_BAR);
+            }
             draw_beat(dc, beat);
         } else {
             draw_letter(dc, YSW_STAFF_SPACE);
@@ -355,18 +351,28 @@ static void draw_staff(ysw_staff_ext_t *ext, draw_context_t *dc)
     dc->point.x = 160;
 
     for (uint32_t right = ext->position; right <= symbol_count && dc->point.x < 320; right++) {
-        if (right == ext->position) {
-            dc->color = LV_COLOR_RED;
-        }
         if (right % 2 == 1) {
             uint32_t beat_index = right / 2;
             zm_beat_t *beat = ysw_array_get(ext->passage->beats, beat_index);
-            draw_beat(dc, beat);
+            if (right == ext->position) {
+                dc->color = LV_COLOR_RED;
+                draw_beat(dc, beat);
+                dc->color = LV_COLOR_WHITE;
+            } else {
+                draw_beat(dc, beat);
+            }
+            if (beat->flags & ZM_BEAT_NEW_MEASURE) {
+                draw_letter(dc, YSW_RIGHT_BAR);
+                draw_measure_label(dc, beat->measure);
+            }
         } else {
-            draw_letter(dc, YSW_STAFF_SPACE);
-        }
-        if (right == ext->position) {
-            dc->color = LV_COLOR_WHITE;
+            if (right == ext->position) {
+                dc->color = LV_COLOR_RED;
+                draw_letter(dc, YSW_STAFF_SPACE);
+                dc->color = LV_COLOR_WHITE;
+            } else {
+                draw_letter(dc, YSW_STAFF_SPACE);
+            }
         }
     }
 }
