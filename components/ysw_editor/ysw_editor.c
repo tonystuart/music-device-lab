@@ -797,9 +797,9 @@ static const ysw_menu_item_t menu_2[] = {
     /* 03 */ { "G#6", 0x03, on_note, VP 80 },
     /* 04 */ { "A#6", 0x03, on_note, VP 82 },
 
-    /* 05 */ { "Play", 0x214, on_play, 0 },
-    /* 06 */ { "Stop", 0x214, on_stop, 0 },
-    /* 07 */ { "Loop", 0x214, on_loop, 0 },
+    /* 05 */ { "Play", 0x2014, on_play, 0 },
+    /* 06 */ { "Stop", 0x2014, on_stop, 0 },
+    /* 07 */ { "Loop", 0x2014, on_loop, 0 },
     /* 08 */ { "Up", 0x34, on_up, 0 },
 
     /* 09 */ { "C6", 0x03, on_note, VP 72 },
@@ -810,7 +810,7 @@ static const ysw_menu_item_t menu_2[] = {
     /* 14 */ { "A6", 0x03, on_note, VP 81 },
     /* 15 */ { "B6", 0x03, on_note, VP 83 },
 
-    /* 16 */ { "Demo", 0x214, on_demo, 0 },
+    /* 16 */ { "Demo", 0x2014, on_demo, 0 },
     /* 17 */ { " ", 0x14, ysw_menu_nop, 0 },
     /* 18 */ { " ", 0x14, ysw_menu_nop, 0 },
     /* 19 */ { "Down", 0x34, on_down, 0 },
@@ -834,9 +834,9 @@ static const ysw_menu_item_t menu_2[] = {
     /* 34 */ { "A5", 0x03, on_note, VP 69 },
     /* 35 */ { "B5", 0x03, on_note, VP 71 },
 
-    /* 36 */ { "Menu+", 0x13, ysw_menu_on_open, 0 },
+    /* 36 */ { "Menu+", 0x1013, ysw_menu_nop, 0 },
     /* 37 */ { " ", 0x14, ysw_menu_nop, 0 },
-    /* 38 */ { "Menu-", 0x13, ysw_menu_on_close, 0 },
+    /* 38 */ { "Menu-", 0x113, ysw_menu_nop, 0 },
     /* 39 */ { "Next", 0x14, on_next, 0 },
 
     /* 40 */ { NULL, 0, NULL, NULL },
@@ -849,9 +849,9 @@ static const ysw_menu_item_t base_menu[] = {
     /* 03 */ { "G#6", 0x03, on_note, VP 80 },
     /* 04 */ { "A#6", 0x03, on_note, VP 82 },
 
-    /* 05 */ { "Chord\nQuality", 0x14, on_quality, 0 },
-    /* 06 */ { "Chord\nStyle", 0x14, on_style, 0 },
-    /* 07 */ { "Sample", 0x14, on_sample, 0 },
+    /* 05 */ { "Chord\nQuality", 0x2014, on_quality, 0 },
+    /* 06 */ { "Chord\nStyle", 0x2014, on_style, 0 },
+    /* 07 */ { "Sample", 0x2014, on_sample, 0 },
     /* 08 */ { "Up", 0x34, on_up, 0 },
 
     /* 09 */ { "C6", 0x03, on_note, VP 72 },
@@ -862,9 +862,9 @@ static const ysw_menu_item_t base_menu[] = {
     /* 14 */ { "A6", 0x03, on_note, VP 81 },
     /* 15 */ { "B6", 0x03, on_note, VP 83 },
 
-    /* 16 */ { "Key\nSig", 0x14, on_key_signature, 0 },
-    /* 17 */ { "Time\nSig", 0x14, on_time_signature, 0 },
-    /* 18 */ { "Tempo\n(BPM)", 0x14, on_tempo, 0 },
+    /* 16 */ { "Key\nSig", 0x2014, on_key_signature, 0 },
+    /* 17 */ { "Time\nSig", 0x2014, on_time_signature, 0 },
+    /* 18 */ { "Tempo\n(BPM)", 0x2014, on_tempo, 0 },
     /* 19 */ { "Down", 0x34, on_down, 0 },
 
     /* 20 */ { "C#5", 0x03, on_note, VP 61 },
@@ -873,9 +873,9 @@ static const ysw_menu_item_t base_menu[] = {
     /* 23 */ { "G#5", 0x03, on_note, VP 68 },
     /* 24 */ { "A#5", 0x03, on_note, VP 70 },
 
-    /* 25 */ { "Input\nMode", 0x14, on_cycle_mode, 0 },
-    /* 26 */ { "Add\nRest", 0x13, on_note, VP 0 },
-    /* 27 */ { "Note\nDuration", 0x14, on_duration, 0 },
+    /* 25 */ { "Input\nMode", 0x2014, on_cycle_mode, 0 },
+    /* 26 */ { "Add\nRest", 0x2013, on_note, VP 0 },
+    /* 27 */ { "Note\nDuration", 0x2014, on_duration, 0 },
     /* 28 */ { "Left", 0x34, on_left, 0 },
 
     /* 29 */ { "C5", 0x03, on_note, VP 60 },
@@ -886,9 +886,9 @@ static const ysw_menu_item_t base_menu[] = {
     /* 34 */ { "A5", 0x03, on_note, VP 69 },
     /* 35 */ { "B5", 0x03, on_note, VP 71 },
 
-    /* 36 */ { "Menu+", 0x13, ysw_menu_on_open, (void*)menu_2 },
-    /* 37 */ { "Delete", 0x14, on_delete, 0 },
-    /* 38 */ { "Menu-", 0x13, ysw_menu_on_close, 0 },
+    /* 36 */ { "Menu+", 0x1013, ysw_menu_nop, (void*)menu_2 },
+    /* 37 */ { "Delete", 0x2014, on_delete, 0 },
+    /* 38 */ { "Menu-", 0x113, ysw_menu_nop, 0 },
     /* 39 */ { "Right", 0x14, on_right, 0 },
 
     /* 40 */ { NULL, 0, NULL, NULL },

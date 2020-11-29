@@ -20,8 +20,11 @@
 #define YSW_MENU_SOFTKEY_LABEL 0x10
 #define YSW_MENU_SOFTKEY_NEWLINE 0x20
 
-#define YSW_MENU_POP_TOP 0x100
+#define YSW_MENU_POP 0x100
 #define YSW_MENU_POP_ALL 0x200
+
+#define YSW_MENU_OPEN 0x1000
+#define YSW_MENU_CLOSE 0x2000
 
 typedef struct ysw_menu_s ysw_menu_t;
 
@@ -50,10 +53,6 @@ void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event);
 void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event);
 
 void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event);
-
-void ysw_menu_on_open(ysw_menu_t *menu, ysw_event_t *event, void *value);
-
-void ysw_menu_on_close(ysw_menu_t *menu, ysw_event_t *event, void *value);
 
 void ysw_menu_nop(ysw_menu_t *menu, ysw_event_t *event, void *value);
 

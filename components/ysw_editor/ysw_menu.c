@@ -118,7 +118,7 @@ static void show_softkeys(ysw_menu_t *menu)
     assert(container);
 
     lv_obj_set_style_local_bg_color(container, 0, 0, LV_COLOR_BLACK);
-    lv_obj_set_style_local_bg_opa(container, 0, 0, LV_OPA_70);
+    lv_obj_set_style_local_bg_opa(container, 0, 0, LV_OPA_100);
 
     lv_obj_set_style_local_text_color(container, 0, 0, LV_COLOR_CYAN);
     lv_obj_set_style_local_text_opa(container, 0, 0, LV_OPA_100);
@@ -170,23 +170,52 @@ static void pop_all(ysw_menu_t *menu)
     }
 }
 
-static void pop_top(ysw_menu_t *menu)
+static void pop_menu(ysw_menu_t *menu)
+{
+    bool softkeys_visible = menu->softkeys;
+    if (softkeys_visible) {
+        hide_softkeys(menu);
+    }
+    if (ysw_array_get_count(menu->stack) > 1) {
+        ysw_array_pop(menu->stack);
+        if (softkeys_visible) {
+            show_softkeys(menu);
+        }
+        lv_indev_wait_release(lv_indev_get_act()); // suppress events while button is still down
+    }
+}
+
+static void open_menu(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    if (menu->softkeys) {
+        if (value) {
+            hide_softkeys(menu);
+            ysw_array_push(menu->stack, value);
+            show_softkeys(menu);
+        }
+    } else {
+        show_softkeys(menu);
+    }
+}
+
+static void close_menu(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     if (menu->softkeys) {
         hide_softkeys(menu);
-        if (ysw_array_get_count(menu->stack) > 1) {
-            ysw_array_pop(menu->stack);
-            show_softkeys(menu);
-            lv_indev_wait_release(lv_indev_get_act()); // suppress events while button is still down
-        }
     }
 }
 
 void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event)
 {
     const ysw_menu_item_t *menu_item = get_items(menu) + event->key_down.key;
+    if (menu_item->flags & YSW_MENU_CLOSE) {
+        close_menu(menu, event, menu_item->value);
+    }
     if (menu_item->flags & YSW_MENU_DOWN) {
         menu_item->cb(menu, event, menu_item->value);
+    }
+    if (menu_item->flags & YSW_MENU_OPEN) {
+        open_menu(menu, event, menu_item->value);
     }
 }
 
@@ -198,8 +227,8 @@ void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
     }
     if (menu_item->flags & YSW_MENU_POP_ALL) {
         pop_all(menu);
-    } else if (menu_item->flags & YSW_MENU_POP_TOP) {
-        pop_top(menu);
+    } else if (menu_item->flags & YSW_MENU_POP) {
+        pop_menu(menu);
     }
 }
 
@@ -224,24 +253,3 @@ void ysw_menu_nop(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
 }
 
-void ysw_menu_on_open(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    if (event->header.type == YSW_EVENT_KEY_DOWN) {
-        if (menu->softkeys) {
-            if (value) {
-                hide_softkeys(menu);
-                ysw_array_push(menu->stack, value);
-                show_softkeys(menu);
-            }
-        } else {
-            show_softkeys(menu);
-        }
-    }
-}
-
-void ysw_menu_on_close(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    if (event->header.type == YSW_EVENT_KEY_DOWN) {
-        pop_top(menu);
-    }
-}
