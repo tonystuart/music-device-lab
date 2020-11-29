@@ -172,16 +172,15 @@ static void pop_all(ysw_menu_t *menu)
 
 static void pop_menu(ysw_menu_t *menu)
 {
-    bool softkeys_visible = menu->softkeys;
-    if (softkeys_visible) {
+    if (menu->softkeys) {
         hide_softkeys(menu);
-    }
-    if (ysw_array_get_count(menu->stack) > 1) {
-        ysw_array_pop(menu->stack);
-        if (softkeys_visible) {
+        if (ysw_array_get_count(menu->stack) > 1) {
+            ysw_array_pop(menu->stack);
             show_softkeys(menu);
+            lv_indev_wait_release(lv_indev_get_act()); // suppress events while button is still down
         }
-        lv_indev_wait_release(lv_indev_get_act()); // suppress events while button is still down
+    } else {
+        show_softkeys(menu);
     }
 }
 
