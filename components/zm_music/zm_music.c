@@ -302,6 +302,14 @@ void zm_music_free(zm_music_t *music)
     }
     ysw_array_free(music->samples);
 
+    zm_medium_t program_count = ysw_array_get_count(music->programs);
+    for (zm_medium_t i = 0; i < program_count; i++) {
+        zm_program_t *program = ysw_array_get(music->programs, i);
+        ysw_heap_free(program->name);
+        ysw_array_free_all(program->patches);
+    }
+    ysw_array_free(music->programs);
+
     zm_medium_t quality_count = ysw_array_get_count(music->qualities);
     for (zm_medium_t i = 0; i < quality_count; i++) {
         zm_quality_t *quality = ysw_array_get(music->qualities, i);
@@ -314,7 +322,7 @@ void zm_music_free(zm_music_t *music)
     for (zm_medium_t i = 0; i < style_count; i++) {
         zm_style_t *style = ysw_array_get(music->styles, i);
         ysw_heap_free(style->name);
-        ysw_array_free(style->sounds);
+        ysw_array_free_all(style->sounds);
     }
     ysw_array_free(music->styles);
 
@@ -322,7 +330,7 @@ void zm_music_free(zm_music_t *music)
     for (zm_medium_t i = 0; i < pattern_count; i++) {
         zm_pattern_t *pattern = ysw_array_get(music->patterns, i);
         ysw_heap_free(pattern->name);
-        ysw_array_free(pattern->steps);
+        ysw_array_free_all(pattern->steps);
     }
     ysw_array_free(music->patterns);
 
@@ -330,17 +338,9 @@ void zm_music_free(zm_music_t *music)
     for (zm_medium_t i = 0; i < song_count; i++) {
         zm_song_t *song = ysw_array_get(music->songs, i);
         ysw_heap_free(song->name);
-        ysw_array_free(song->parts);
+        ysw_array_free_all(song->parts);
     }
     ysw_array_free(music->songs);
-
-    zm_medium_t program_count = ysw_array_get_count(music->programs);
-    for (zm_medium_t i = 0; i < program_count; i++) {
-        zm_program_t *program = ysw_array_get(music->programs, i);
-        ysw_heap_free(program->name);
-        ysw_array_free(program->patches);
-    }
-    ysw_array_free(music->programs);
 }
 
 zm_music_t *zm_read_from_file(FILE *file)
