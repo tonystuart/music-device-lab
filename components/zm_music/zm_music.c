@@ -31,13 +31,23 @@
 
 typedef enum {
     ZM_MF_SAMPLE = 1,
-    ZM_MF_QUALITY,
-    ZM_MF_STYLE,
-    ZM_MF_SOUND,
-    ZM_MF_PATTERN,
-    ZM_MF_STEP,
-    ZM_MF_SONG,
-    ZM_MF_PART,
+    ZM_MF_QUALITY = 2,
+    ZM_MF_STYLE = 3,
+    ZM_MF_SOUND = 4,
+    ZM_MF_PATTERN = 5,
+    ZM_MF_STEP = 6,
+    ZM_MF_SONG = 7,
+    ZM_MF_PART = 8,
+
+    ZM_MF_PROGRAM = 22,
+    ZM_MF_PATCH = 23,
+
+    ZM_MF_PASSAGE = 30,
+    ZM_MF_BEAT = 31,
+    ZM_MF_TONE = 32,
+    ZM_MF_CHORD = 33,
+    ZM_MF_DRUM = 34,
+
 } zm_mf_type_t;
 
 typedef struct {
@@ -94,6 +104,38 @@ static void parse_sample(zm_mfr_t *zm_mfr)
     sample->pan = atoi(zm_mfr->tokens[6]);
 
     ysw_array_push(zm_mfr->music->samples, sample);
+}
+
+static void parse_program(zm_mfr_t *zm_mfr)
+{
+    zm_program_x index = atoi(zm_mfr->tokens[1]);
+    zm_medium_t count = ysw_array_get_count(zm_mfr->music->programs);
+
+    if (index != count) {
+        ESP_LOGW(TAG, "parse_program index=%d, count=%d", index, count);
+        return;
+    }
+
+    zm_program_t *program = ysw_heap_allocate(sizeof(zm_program_t));
+    program->name = ysw_heap_strdup(zm_mfr->tokens[2]);
+    program->patches = ysw_array_create(1);
+
+    zm_yesno_t done = false;
+
+    while (!done && get_tokens(zm_mfr)) {
+        zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
+        if (type == ZM_MF_PATCH && zm_mfr->token_count == 3) {
+            zm_patch_t *patch = ysw_heap_allocate(sizeof(zm_patch_t));
+            patch->up_to = atoi(zm_mfr->tokens[1]);
+            patch->sample = ysw_array_get(zm_mfr->music->samples, atoi(zm_mfr->tokens[2]));
+            ysw_array_push(program->patches, patch);
+        } else {
+            push_back_tokens(zm_mfr);
+            done = true;
+        }
+    }
+
+    ysw_array_push(zm_mfr->music->programs, program);
 }
 
 #define MAX_DISTANCES 16
@@ -242,6 +284,7 @@ static zm_music_t *create_music()
 {
     zm_music_t *music = ysw_heap_allocate(sizeof(zm_music_t));
     music->samples = ysw_array_create(8);
+    music->programs = ysw_array_create(8);
     music->qualities = ysw_array_create(32);
     music->styles = ysw_array_create(64);
     music->patterns = ysw_array_create(64);
@@ -290,6 +333,14 @@ void zm_music_free(zm_music_t *music)
         ysw_array_free(song->parts);
     }
     ysw_array_free(music->songs);
+
+    zm_medium_t program_count = ysw_array_get_count(music->programs);
+    for (zm_medium_t i = 0; i < program_count; i++) {
+        zm_program_t *program = ysw_array_get(music->programs, i);
+        ysw_heap_free(program->name);
+        ysw_array_free(program->patches);
+    }
+    ysw_array_free(music->programs);
 }
 
 zm_music_t *zm_read_from_file(FILE *file)
@@ -303,6 +354,8 @@ zm_music_t *zm_read_from_file(FILE *file)
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
         if (type == ZM_MF_SAMPLE && zm_mfr->token_count == 7) {
             parse_sample(zm_mfr);
+        } else if (type == ZM_MF_PROGRAM && zm_mfr->token_count == 3) {
+            parse_program(zm_mfr);
         } else if (type == ZM_MF_QUALITY && zm_mfr->token_count > 4) {
             parse_quality(zm_mfr);
         } else if (type == ZM_MF_STYLE && zm_mfr->token_count == 3) {

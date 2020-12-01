@@ -4,14 +4,14 @@
 # 0 unison
 # 1 minor 2nd
 # 2 major 2nd
-# 3 minor 3rd (flatted third, sharped 2nd)
+# 3 minor 3rd (flat third, sharp 2nd)
 # 4 major 3rd
 # 5 perfect 4th
-# 6 tritone (sharped 4th, flatted 5th)
+# 6 tritone (flat 5th, sharp 4th)
 # 7 perfect 5th
-# 8 minor 6th (sharped 5th, flatted 6th)
+# 8 minor 6th (flat 6th, sharp 5th)
 # 9 major 6th
-# 10 minor 7th (sharped 6th, flatted 7th)
+# 10 minor 7th (flat 7th, sharp 6th)
 # 11 major 7th
 # 12 octave
 
@@ -419,4 +419,24 @@
 8,6,0,7,1 # Snare 11
 8,7,0,7,1 # Hi Hat Closed 12
 
+#type(program),index,name
+22,0,Piano
+
+#type(patch),up_to,sample
+23,127,0 # Steinway
+
+#type(program),index,name
+22,1,Acoustic Bass
+
+#type(patch),up_to,sample
+23,127,10 # bassguitar
+
+#type(program),index,name
+22,2,Standard Kit
+
+#type(patch),up_to,sample
+23,60,6 # BassDrum1
+23,62,9 # thehihatclosed
+23,64,8 # Snare1
+23,127,7 # Cymbal1
 

@@ -29,6 +29,7 @@ typedef uint8_t zm_bpm_x;
 typedef uint8_t zm_channel_x;
 typedef uint8_t zm_velocity_x;
 typedef uint8_t zm_distance_x;
+typedef uint8_t zm_program_x;
 
 typedef uint16_t zm_measure_x;
 typedef uint16_t zm_quality_x;
@@ -117,6 +118,24 @@ typedef enum {
 
 typedef struct {
     char *name;
+    zm_medium_t reppnt;
+    zm_medium_t replen;
+    zm_small_t volume;
+    zm_pan_t pan;
+} zm_sample_t;
+
+typedef struct {
+    char *name;
+    ysw_array_t *patches;
+} zm_program_t;
+
+typedef struct {
+    zm_note_t up_to;
+    zm_sample_t *sample;
+} zm_patch_t;
+
+typedef struct {
+    char *name;
     char *label;
     ysw_array_t *distances;
 } zm_quality_t;
@@ -140,14 +159,6 @@ typedef struct {
     zm_style_t *style;
     zm_duration_t duration;
 } zm_step_t;
-
-typedef struct {
-    char *name;
-    zm_medium_t reppnt;
-    zm_medium_t replen;
-    zm_small_t volume;
-    zm_pan_t pan;
-} zm_sample_t;
 
 typedef struct {
     char *name;
@@ -220,6 +231,7 @@ typedef struct {
 
 typedef struct {
     ysw_array_t *samples;
+    ysw_array_t *programs;
     ysw_array_t *qualities;
     ysw_array_t *styles;
     ysw_array_t *patterns;
