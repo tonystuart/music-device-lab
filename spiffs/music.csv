@@ -32,411 +32,415 @@
 1,9,thehihatclosed,0,0,60,1
 1,10,bassguitar,0,0,60,2
 
+#type(program),index,name
+2,0,Piano
+
+#type(patch),up_to,sample
+3,127,0 # Steinway
+
+#type(program),index,name
+2,1,Acoustic Bass
+
+#type(patch),up_to,sample
+3,127,10 # bassguitar
+
+#type(program),index,name
+2,2,Standard Kit
+
+#type(patch),up_to,sample
+3,60,6 # BassDrum1
+3,62,9 # thehihatclosed
+3,64,8 # Snare1
+3,127,7 # Cymbal1
+
 #type(quality),index,name,distances
-2,0,Root Only,1,0
-2,1,Power,5,0,7
-2,2,Major,,0,4,7
-2,3,Minor,min,0,3,7
-2,4,Major 7th,Maj7,0,4,7,11
-2,5,Minor 7th,min7,0,3,7,10
-2,6,Dominant 7th,dom7,0,4,7,10
-2,7,Augmented,aug,0,4,8
-2,8,Diminished,dim,0,3,6
-2,9,Blues 1,7/6,0,4,7,9,10
-2,10,Blues 2,M7/6,0,4,7,9,11
+4,0,Root Only,1,0
+4,1,Power,5,0,7
+4,2,Major,,0,4,7
+4,3,Minor,min,0,3,7
+4,4,Major 7th,Maj7,0,4,7,11
+4,5,Minor 7th,min7,0,3,7,10
+4,6,Dominant 7th,dom7,0,4,7,10
+4,7,Augmented,aug,0,4,8
+4,8,Diminished,dim,0,3,6
+4,9,Blues 1,7/6,0,4,7,9,10
+4,10,Blues 2,M7/6,0,4,7,9,11
 
 #type(style),index,name
-3,0,Arpeggio 1 (5)
+5,0,Arpeggio 1 (5)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,100,0,128
-4,1,80,128,128
-4,2,80,256,128
-4,3,80,384,128
-4,4,100,512,128
-4,3,80,640,128
-4,2,80,768,128
-4,1,80,896,128
+6,0,100,0,128
+6,1,80,128,128
+6,2,80,256,128
+6,3,80,384,128
+6,4,100,512,128
+6,3,80,640,128
+6,2,80,768,128
+6,1,80,896,128
 
 #type(style),index,name
-3,1,Strum 1 (5)
+5,1,Strum 1 (5)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,100,0,1024
-4,1,80,150,1024
-4,2,80,300,1024
-4,3,80,450,1024
-4,4,80,600,1024
+6,0,100,0,1024
+6,1,80,150,1024
+6,2,80,300,1024
+6,3,80,450,1024
+6,4,80,600,1024
 
 #type(style),index,name
-3,2,Stacked (6)
+5,2,Stacked (6)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,80,0,1024
-4,1,80,0,1024
-4,2,80,0,1024
-4,3,80,0,1024
-4,4,80,0,1024
-4,5,80,0,1024
+6,0,80,0,1024
+6,1,80,0,1024
+6,2,80,0,1024
+6,3,80,0,1024
+6,4,80,0,1024
+6,5,80,0,1024
 
 #type(style),index,name
-3,3,Stacked (4)
+5,3,Stacked (4)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,80,0,1024
-4,1,80,0,1024
-4,2,80,0,1024
-4,3,80,0,1024
+6,0,80,0,1024
+6,1,80,0,1024
+6,2,80,0,1024
+6,3,80,0,1024
 
 #type(style),index,name
-3,4,Note (1)
+5,4,Note (1)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,80,0,1024
+6,0,80,0,1024
 
 # Rationalized Styles (merge with previous styles)
 
 #type(style),index,name
-3,5,Stacked (2)
+5,5,Stacked (2)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,80,0,1024
-4,1,80,0,1024
+6,0,80,0,1024
+6,1,80,0,1024
 
 #type(style),index,name
-3,6,Stacked (3)
+5,6,Stacked (3)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,80,0,1024
-4,1,80,0,1024
-4,2,80,0,1024
+6,0,80,0,1024
+6,1,80,0,1024
+6,2,80,0,1024
 
 #type(style),index,name
-3,7,Stacked (5)
+5,7,Stacked (5)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,80,0,1024
-4,1,80,0,1024
-4,2,80,0,1024
-4,3,80,0,1024
-4,4,80,0,1024
+6,0,80,0,1024
+6,1,80,0,1024
+6,2,80,0,1024
+6,3,80,0,1024
+6,4,80,0,1024
 
 #type(style),index,name
-3,8,Stacked (7)
+5,8,Stacked (7)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,80,0,1024
-4,1,80,0,1024
-4,2,80,0,1024
-4,3,80,0,1024
-4,4,80,0,1024
-4,5,80,0,1024
-4,6,80,0,1024
+6,0,80,0,1024
+6,1,80,0,1024
+6,2,80,0,1024
+6,3,80,0,1024
+6,4,80,0,1024
+6,5,80,0,1024
+6,6,80,0,1024
 
 #type(style),index,name
-3,9,Arpeggio 1 (2)
+5,9,Arpeggio 1 (2)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,100,0,128
-4,1,80,128,128
+6,0,100,0,128
+6,1,80,128,128
 
 #type(style),index,name
-3,10,Arpeggio 1 (3)
+5,10,Arpeggio 1 (3)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,100,0,128
-4,1,80,128,128
-4,2,80,256,128
-4,1,80,384,128
+6,0,100,0,128
+6,1,80,128,128
+6,2,80,256,128
+6,1,80,384,128
 
 #type(style),index,name
-3,11,Arpeggio 1 (4)
+5,11,Arpeggio 1 (4)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,100,0,128
-4,1,80,128,128
-4,2,80,256,128
-4,3,80,384,128
-4,2,100,512,128
-4,1,80,640,128
+6,0,100,0,128
+6,1,80,128,128
+6,2,80,256,128
+6,3,80,384,128
+6,2,100,512,128
+6,1,80,640,128
 
 #type(style),index,name
-3,12,Strum 1 (2)
+5,12,Strum 1 (2)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,100,0,1024
-4,1,80,150,1024
+6,0,100,0,1024
+6,1,80,150,1024
 
 #type(style),index,name
-3,13,Strum 1 (3)
+5,13,Strum 1 (3)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,100,0,1024
-4,1,80,150,1024
-4,2,80,300,1024
+6,0,100,0,1024
+6,1,80,150,1024
+6,2,80,300,1024
 
 #type(style),index,name
-3,14,Strum 1 (4)
+5,14,Strum 1 (4)
 
 #type(sound),distance_index,velocity,start,duration
-4,0,100,0,1024
-4,1,80,150,1024
-4,2,80,300,1024
-4,3,80,450,1024
+6,0,100,0,1024
+6,1,80,150,1024
+6,2,80,300,1024
+6,3,80,450,1024
 
 #type(pattern),index,name,sample
-5,0,Twelve Bar Blues,0
+45,0,Twelve Bar Blues,0
 
 #type(step),root,quality,style,duration
-6,60,9,0,1024
-6,60,9,0,1024
-6,60,9,0,1024
-6,60,9,0,1024
-6,65,9,0,1024
-6,65,9,0,1024
-6,60,9,0,1024
-6,60,9,0,1024
-6,67,9,0,1024
-6,65,9,0,1024
-6,60,9,0,1024
-6,60,9,0,1024
+46,60,9,0,1024
+46,60,9,0,1024
+46,60,9,0,1024
+46,60,9,0,1024
+46,65,9,0,1024
+46,65,9,0,1024
+46,60,9,0,1024
+46,60,9,0,1024
+46,67,9,0,1024
+46,65,9,0,1024
+46,60,9,0,1024
+46,60,9,0,1024
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
 # 62 63 64 65 66 67 68 69 70 71 72 73
 
 #type(pattern),index,name,sample
-5,1,Summer Nights Chords,0
+45,1,Summer Nights Chords,0
 
 #type(step),root,quality,style,duration
-6,62,2,2,512 # D 1
-6,67,2,2,512 # G
-6,69,2,2,512 # A
-6,67,2,2,512 # G
-6,62,2,2,512 # D
-6,67,2,2,512 # G
-6,69,2,2,512 # A
-6,67,2,2,512 # G
-6,62,2,2,512 # D 2
-6,67,2,2,512 # G
-6,69,2,2,512 # A
-6,71,2,2,512 # B
-6,64,2,2,512 # E
-6,69,2,2,512 # A
-6,64,2,2,512 # E
-6,69,2,2,512 # A
-6,62,2,2,512 # D 3
-6,67,2,2,512 # G
-6,69,2,2,512 # A
-6,71,2,2,512 # B
-6,64,5,3,512 # Em7
-6,69,2,2,512 # A
+46,62,2,2,512 # D 1
+46,67,2,2,512 # G
+46,69,2,2,512 # A
+46,67,2,2,512 # G
+46,62,2,2,512 # D
+46,67,2,2,512 # G
+46,69,2,2,512 # A
+46,67,2,2,512 # G
+46,62,2,2,512 # D 2
+46,67,2,2,512 # G
+46,69,2,2,512 # A
+46,71,2,2,512 # B
+46,64,2,2,512 # E
+46,69,2,2,512 # A
+46,64,2,2,512 # E
+46,69,2,2,512 # A
+46,62,2,2,512 # D 3
+46,67,2,2,512 # G
+46,69,2,2,512 # A
+46,71,2,2,512 # B
+46,64,5,3,512 # Em7
+46,69,2,2,512 # A
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
 # 62 63 64 65 66 67 68 69 70 71 72 73
 
 #type(pattern),index,name,sample
-5,2,Summer Nights Melody,1
+45,2,Summer Nights Melody,1
 
 #type(step),root,quality,style,duration
 # Line 1 - Measure 1
-6,00,0,4,256 # Rest
-6,66,0,4,128 # F#
-6,62,0,4,128 # D
-6,67,0,4,128 # G
-6,64,0,4,128 # E
-6,00,0,4,256 # Rest
+46,00,0,4,256 # Rest
+46,66,0,4,128 # F#
+46,62,0,4,128 # D
+46,67,0,4,128 # G
+46,64,0,4,128 # E
+46,00,0,4,256 # Rest
 # Line 1 - Measure 2
-6,69,0,4,128 # A
-6,66,0,4,128 # F#
-6,69,0,4,128 # A
-6,69,0,4,256 # A
-6,67,0,4,384 # G
+46,69,0,4,128 # A
+46,66,0,4,128 # F#
+46,69,0,4,128 # A
+46,69,0,4,256 # A
+46,67,0,4,384 # G
 # Line 1 - Measure 3
-6,00,0,4,256 # Rest
-6,66,0,4,128 # F#
-6,62,0,4,128 # D
-6,67,0,4,128 # G
-6,64,0,4,128 # E
-6,00,0,4,256 # Rest
+46,00,0,4,256 # Rest
+46,66,0,4,128 # F#
+46,62,0,4,128 # D
+46,67,0,4,128 # G
+46,64,0,4,128 # E
+46,00,0,4,256 # Rest
 # Line 1 - Measure 4
-6,69,0,4,128 # A
-6,66,0,4,128 # F#
-6,69,0,4,128 # A
-6,69,0,4,256 # A
-6,67,0,4,384 # G
+46,69,0,4,128 # A
+46,66,0,4,128 # F#
+46,69,0,4,128 # A
+46,69,0,4,256 # A
+46,67,0,4,384 # G
 # Line 2 - Measure 1
-6,00,0,4,256 # Rest
-6,66,0,4,128 # F#
-6,62,0,4,128 # D
-6,67,0,4,256 # G
-6,00,0,4,256 # Rest
+46,00,0,4,256 # Rest
+46,66,0,4,128 # F#
+46,62,0,4,128 # D
+46,67,0,4,256 # G
+46,00,0,4,256 # Rest
 # Line 2 - Measure 2
-6,69,0,4,128 # A
-6,66,0,4,128 # F#
-6,69,0,4,128 # A
-6,71,0,4,384 # B
-6,00,0,4,256 # Rest
+46,69,0,4,128 # A
+46,66,0,4,128 # F#
+46,69,0,4,128 # A
+46,71,0,4,384 # B
+46,00,0,4,256 # Rest
 # Line 2 - Measure 3
-6,00,0,4,256 # Rest
-6,68,0,4,128 # G#
-6,64,0,4,128 # E
-6,69,0,4,256 # A
-6,00,0,4,256 # Rest
+46,00,0,4,256 # Rest
+46,68,0,4,128 # G#
+46,64,0,4,128 # E
+46,69,0,4,256 # A
+46,00,0,4,256 # Rest
 # Line 2 - Measure 4
-6,68,0,4,128 # G#
-6,64,0,4,128 # E
-6,68,0,4,128 # G#
-6,69,0,4,384 # A
-6,00,0,4,256 # Rest
+46,68,0,4,128 # G#
+46,64,0,4,128 # E
+46,68,0,4,128 # G#
+46,69,0,4,384 # A
+46,00,0,4,256 # Rest
 # Line 3 - Measure 1
-6,00,0,4,256 # Rest
-6,74,0,4,128 # D
-6,69,0,4,128 # A
-6,71,0,4,256 # B
-6,00,0,4,256 # Rest
+46,00,0,4,256 # Rest
+46,74,0,4,128 # D
+46,69,0,4,128 # A
+46,71,0,4,256 # B
+46,00,0,4,256 # Rest
 # Line 3 - Measure 2
-6,69,0,4,128 # A
-6,71,0,4,128 # B
-6,69,0,4,128 # A
-6,66,0,4,384 # F#
-6,71,0,4,128 # B
-6,69,0,4,128 # A
+46,69,0,4,128 # A
+46,71,0,4,128 # B
+46,69,0,4,128 # A
+46,66,0,4,384 # F#
+46,71,0,4,128 # B
+46,69,0,4,128 # A
 # Line 3 - Measure 3
-6,67,0,4,128 # G
-6,00,0,4,128 # Rest
-6,64,0,4,128 # E
-6,71,0,4,128 # B
-6,69,0,4,128 # A
-6,71,0,4,128 # B
-6,69,0,4,128 # A
-6,62,0,4,128 # D
+46,67,0,4,128 # G
+46,00,0,4,128 # Rest
+46,64,0,4,128 # E
+46,71,0,4,128 # B
+46,69,0,4,128 # A
+46,71,0,4,128 # B
+46,69,0,4,128 # A
+46,62,0,4,128 # D
 
 #type(pattern),index,name,sample
-5,3,Summer Nights Bass Guitar,10
+45,3,Summer Nights Bass Guitar,10
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
 # 62 63 64 65 66 67 68 69 70 71 72 73
 
 #type(tone),root,quality,style,duration
-6,62,0,4,128
-6,64,0,4,128
-6,66,0,4,128
-6,67,0,4,128
-6,69,0,4,128
-6,71,0,4,128
-6,73,0,4,128
-6,74,0,4,128
+46,62,0,4,128
+46,64,0,4,128
+46,66,0,4,128
+46,67,0,4,128
+46,69,0,4,128
+46,71,0,4,128
+46,73,0,4,128
+46,74,0,4,128
 
 #type(pattern),index,name,sample
-5,4,Standard 8th Note Groove Bass Drum,6
-6,60,0,4,256
-6,00,0,4,256
-6,60,0,4,256
-6,00,0,4,256
+45,4,Standard 8th Note Groove Bass Drum,6
+46,60,0,4,256
+46,00,0,4,256
+46,60,0,4,256
+46,00,0,4,256
 
 #type(pattern),index,name,sample
-5,5,Standard 8th Note Groove Cymbal,7
-6,60,0,4,256
-6,00,0,4,256
-6,60,0,4,256
-6,00,0,4,256
+45,5,Standard 8th Note Groove Cymbal,7
+46,60,0,4,256
+46,00,0,4,256
+46,60,0,4,256
+46,00,0,4,256
 
 #type(pattern),index,name,sample
-5,6,Standard 8th Note Groove Snare,8
-6,00,0,4,256
-6,60,0,4,256
-6,00,0,4,256
-6,60,0,4,256
+45,6,Standard 8th Note Groove Snare,8
+46,00,0,4,256
+46,60,0,4,256
+46,00,0,4,256
+46,60,0,4,256
 
 #type(pattern),index,name,sample
-5,7,Standard 8th Note Groove Hi Hat,9
-6,60,0,4,128
-6,60,0,4,128
-6,60,0,4,128
-6,60,0,4,128
-6,60,0,4,128
-6,60,0,4,128
-6,60,0,4,128
-6,60,0,4,128
+45,7,Standard 8th Note Groove Hi Hat,9
+46,60,0,4,128
+46,60,0,4,128
+46,60,0,4,128
+46,60,0,4,128
+46,60,0,4,128
+46,60,0,4,128
+46,60,0,4,128
+46,60,0,4,128
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
 # 62 63 64 65 66 67 68 69 70 71 72 73
 
 #type(pattern),index,name,sample
-5,8,Summer Nights Intro,0
+45,8,Summer Nights Intro,0
 
 #type(step),root,quality,style,duration
 # Line 0 - Measure 1
-6,50,0,4,256 # D
-6,00,0,4,128 # Rest
-6,50,0,4,128 # D
-6,55,0,4,256 # G
-6,00,0,4,128 # Rest
-6,55,0,4,128 # G
+46,50,0,4,256 # D
+46,00,0,4,128 # Rest
+46,50,0,4,128 # D
+46,55,0,4,256 # G
+46,00,0,4,128 # Rest
+46,55,0,4,128 # G
 # Line 0 - Measure 2
-6,57,0,4,256 # A
-6,00,0,4,128 # Rest
-6,57,0,4,128 # A
-6,55,0,4,128 # G
-6,57,0,4,256 # A
-6,55,0,4,128 # G
+46,57,0,4,256 # A
+46,00,0,4,128 # Rest
+46,57,0,4,128 # A
+46,55,0,4,128 # G
+46,57,0,4,256 # A
+46,55,0,4,128 # G
 # Line 0 - Measure 3
-6,50,0,4,256 # D
-6,00,0,4,128 # Rest
-6,50,0,4,128 # D
-6,55,0,4,256 # G
-6,00,0,4,128 # Rest
-6,55,0,4,128 # G
+46,50,0,4,256 # D
+46,00,0,4,128 # Rest
+46,50,0,4,128 # D
+46,55,0,4,256 # G
+46,00,0,4,128 # Rest
+46,55,0,4,128 # G
 # Line 0 - Measure 4
-6,57,0,4,256 # A
-6,00,0,4,128 # Rest
-6,57,0,4,128 # A
-6,55,0,4,128 # G
-6,57,0,4,256 # A
-6,55,0,4,128 # G
+46,57,0,4,256 # A
+46,00,0,4,128 # Rest
+46,57,0,4,128 # A
+46,55,0,4,128 # G
+46,57,0,4,256 # A
+46,55,0,4,128 # G
 
 #type(song),index,name,bpm
-7,0,Summer Nights,160
+47,0,Summer Nights,160
 
 #type(part),pattern,when-type,when-part-index,fit
-8,8,0,0,0 # Intro 0
+48,8,0,0,0 # Intro 0
 # Page 1
-8,1,1,0,0 # Chords 1
-8,2,0,1,0 # Melody 2
-8,3,0,1,1 # Bass Guitar 3
-8,4,0,1,1 # Bass Drum 4
-8,6,0,1,1 # Snare 5
-8,7,0,1,1 # Hi Hat Closed 6
+48,1,1,0,0 # Chords 1
+48,2,0,1,0 # Melody 2
+48,3,0,1,1 # Bass Guitar 3
+48,4,0,1,1 # Bass Drum 4
+48,6,0,1,1 # Snare 5
+48,7,0,1,1 # Hi Hat Closed 6
 # Page 2
-8,1,1,1,0 # Chords 7
-8,2,0,7,0 # Melody 8
-8,3,0,7,1 # Bass Guitar 9
-8,4,0,7,1 # Bass Drum 10
-8,6,0,7,1 # Snare 11
-8,7,0,7,1 # Hi Hat Closed 12
+48,1,1,1,0 # Chords 7
+48,2,0,7,0 # Melody 8
+48,3,0,7,1 # Bass Guitar 9
+48,4,0,7,1 # Bass Drum 10
+48,6,0,7,1 # Snare 11
+48,7,0,7,1 # Hi Hat Closed 12
 
-#type(program),index,name
-22,0,Piano
+#type(passage),index,name,tempo,key,time,tone,chord,drum
 
-#type(patch),up_to,sample
-23,127,0 # Steinway
-
-#type(program),index,name
-22,1,Acoustic Bass
-
-#type(patch),up_to,sample
-23,127,10 # bassguitar
-
-#type(program),index,name
-22,2,Standard Kit
-
-#type(patch),up_to,sample
-23,60,6 # BassDrum1
-23,62,9 # thehihatclosed
-23,64,8 # Snare1
-23,127,7 # Cymbal1
+#type(beat),start,measure,flags
 

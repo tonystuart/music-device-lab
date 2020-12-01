@@ -31,22 +31,25 @@
 
 typedef enum {
     ZM_MF_SAMPLE = 1,
-    ZM_MF_QUALITY = 2,
-    ZM_MF_STYLE = 3,
-    ZM_MF_SOUND = 4,
-    ZM_MF_PATTERN = 5,
-    ZM_MF_STEP = 6,
-    ZM_MF_SONG = 7,
-    ZM_MF_PART = 8,
+    ZM_MF_PROGRAM = 2,
+    ZM_MF_PATCH = 3,
 
-    ZM_MF_PROGRAM = 22,
-    ZM_MF_PATCH = 23,
+    ZM_MF_QUALITY = 4,
+    ZM_MF_STYLE = 5,
+    ZM_MF_SOUND = 6,
 
-    ZM_MF_PASSAGE = 30,
-    ZM_MF_BEAT = 31,
-    ZM_MF_TONE = 32,
-    ZM_MF_CHORD = 33,
-    ZM_MF_DRUM = 34,
+    ZM_MF_PASSAGE = 7, // related to PATTERN
+    ZM_MF_BEAT = 8,
+    ZM_MF_TONE = 9,
+    ZM_MF_CHORD = 10, // related to STEP
+    ZM_MF_DRUM = 11,
+
+    ZM_MF_COMPOSITION = 12, // related to SONG
+
+    ZM_MF_PATTERN = 45,
+    ZM_MF_STEP = 46,
+    ZM_MF_SONG = 47,
+    ZM_MF_PART = 48,
 
 } zm_mf_type_t;
 
