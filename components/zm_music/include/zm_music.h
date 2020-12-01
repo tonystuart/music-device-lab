@@ -227,7 +227,7 @@ typedef struct {
     ysw_array_t *beats;
     zm_sample_t *tone_sample;
     zm_sample_t *chord_sample;
-} zm_passage_t;
+} zm_pattern_t;
 
 typedef struct {
     ysw_array_t *samples;
@@ -248,7 +248,7 @@ void zm_render_tone(ysw_array_t *notes, zm_tone_t *tone, zm_time_x tone_start, z
 void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_sample_x sample_index);
 zm_large_t zm_render_model(ysw_array_t *notes, zm_model_t *model, zm_large_t start_time, zm_small_t channel);
 ysw_array_t *zm_render_song(zm_song_t *song);
-ysw_array_t *zm_render_passage(zm_music_t *music, zm_passage_t *passage, zm_channel_x base_channel);
+ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_channel_x base_channel);
 
 const zm_key_signature_t *zm_get_key_signature(zm_key_signature_x key_index);
 zm_key_signature_x zm_get_next_key_index(zm_key_signature_x key_index);

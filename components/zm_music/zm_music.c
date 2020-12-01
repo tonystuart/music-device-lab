@@ -38,13 +38,14 @@ typedef enum {
     ZM_MF_STYLE = 5,
     ZM_MF_SOUND = 6,
 
-    ZM_MF_PASSAGE = 7, // related to PATTERN (now MODEL)
+    ZM_MF_PATTERN = 7, // formerly PASSAGE, related to PATTERN (now MODEL)
     ZM_MF_BEAT = 8,
     ZM_MF_TONE = 9,
     ZM_MF_CHORD = 10, // related to STEP (now CHORD)
     ZM_MF_DRUM = 11,
 
     ZM_MF_COMPOSITION = 12, // related to SONG
+    ZM_MF_PART = 13, // related to PART (now ROLE)
 
     // deprecated:
     ZM_MF_MODEL = 45, // PATTERN -> MODEL
@@ -519,15 +520,15 @@ ysw_array_t *zm_render_song(zm_song_t *song)
     return notes;
 }
 
-ysw_array_t *zm_render_passage(zm_music_t *music, zm_passage_t *passage, zm_channel_x base_channel)
+ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_channel_x base_channel)
 {
     zm_time_x beat_time = 0;
     ysw_array_t *notes = ysw_array_create(512);
-    zm_beat_x beat_count = ysw_array_get_count(passage->beats);
-    zm_sample_x tone_sample_index = ysw_array_find(music->samples, passage->tone_sample);
-    zm_sample_x chord_sample_index = ysw_array_find(music->samples, passage->chord_sample);
+    zm_beat_x beat_count = ysw_array_get_count(pattern->beats);
+    zm_sample_x tone_sample_index = ysw_array_find(music->samples, pattern->tone_sample);
+    zm_sample_x chord_sample_index = ysw_array_find(music->samples, pattern->chord_sample);
     for (zm_beat_x i = 0; i < beat_count; i++) {
-        zm_beat_t *beat = ysw_array_get(passage->beats, i);
+        zm_beat_t *beat = ysw_array_get(pattern->beats, i);
         if (beat->tone.note) {
             zm_render_tone(notes, &beat->tone, beat_time, base_channel, tone_sample_index);
         }
