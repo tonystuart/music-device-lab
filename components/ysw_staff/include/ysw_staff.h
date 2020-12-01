@@ -29,7 +29,7 @@ enum {
     YSW_STAFF_PART_MAIN = LV_OBJ_PART_MAIN,
 };
 
-typedef uint8_t ysw_staff_part_t;
+typedef uint8_t ysw_staff_role_t;
 
 lv_obj_t *ysw_staff_create(lv_obj_t *par);
 void ysw_staff_set_passage(lv_obj_t *staff, zm_passage_t *passage);

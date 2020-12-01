@@ -38,18 +38,19 @@ typedef enum {
     ZM_MF_STYLE = 5,
     ZM_MF_SOUND = 6,
 
-    ZM_MF_PASSAGE = 7, // related to PATTERN
+    ZM_MF_PASSAGE = 7, // related to PATTERN (now MODEL)
     ZM_MF_BEAT = 8,
     ZM_MF_TONE = 9,
-    ZM_MF_CHORD = 10, // related to STEP
+    ZM_MF_CHORD = 10, // related to STEP (now CHORD)
     ZM_MF_DRUM = 11,
 
     ZM_MF_COMPOSITION = 12, // related to SONG
 
-    ZM_MF_PATTERN = 45,
-    ZM_MF_STEP = 46,
+    // deprecated:
+    ZM_MF_MODEL = 45, // PATTERN -> MODEL
+    ZM_MF_STEP = 46, // STEP -> CHORD
     ZM_MF_SONG = 47,
-    ZM_MF_PART = 48,
+    ZM_MF_ROLE = 48, // PART -> ROLE
 
 } zm_mf_type_t;
 
@@ -213,39 +214,39 @@ static void parse_style(zm_mfr_t *zm_mfr)
     ysw_array_push(zm_mfr->music->styles, style);
 }
 
-static void parse_pattern(zm_mfr_t *zm_mfr)
+static void parse_model(zm_mfr_t *zm_mfr)
 {
-    zm_pattern_x index = atoi(zm_mfr->tokens[1]);
-    zm_medium_t count = ysw_array_get_count(zm_mfr->music->patterns);
+    zm_model_x index = atoi(zm_mfr->tokens[1]);
+    zm_medium_t count = ysw_array_get_count(zm_mfr->music->models);
 
     if (index != count) {
-        ESP_LOGW(TAG, "parse_pattern index=%d, count=%d", index, count);
+        ESP_LOGW(TAG, "parse_model index=%d, count=%d", index, count);
         return;
     }
 
-    zm_pattern_t *pattern = ysw_heap_allocate(sizeof(zm_pattern_t));
-    pattern->name = ysw_heap_strdup(zm_mfr->tokens[2]);
-    pattern->sample_index = atoi(zm_mfr->tokens[3]);
-    pattern->steps = ysw_array_create(16);
+    zm_model_t *model = ysw_heap_allocate(sizeof(zm_model_t));
+    model->name = ysw_heap_strdup(zm_mfr->tokens[2]);
+    model->sample_index = atoi(zm_mfr->tokens[3]);
+    model->chords = ysw_array_create(16);
 
     zm_yesno_t done = false;
 
     while (!done && get_tokens(zm_mfr)) {
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
         if (type == ZM_MF_STEP && zm_mfr->token_count == 5) {
-            zm_step_t *step = ysw_heap_allocate(sizeof(zm_step_t));
-            step->root = atoi(zm_mfr->tokens[1]);
-            step->quality = ysw_array_get(zm_mfr->music->qualities, atoi(zm_mfr->tokens[2]));
-            step->style = ysw_array_get(zm_mfr->music->styles, atoi(zm_mfr->tokens[3]));
-            step->duration = atoi(zm_mfr->tokens[4]);
-            ysw_array_push(pattern->steps, step);
+            zm_chord_t *chord = ysw_heap_allocate(sizeof(zm_chord_t));
+            chord->root = atoi(zm_mfr->tokens[1]);
+            chord->quality = ysw_array_get(zm_mfr->music->qualities, atoi(zm_mfr->tokens[2]));
+            chord->style = ysw_array_get(zm_mfr->music->styles, atoi(zm_mfr->tokens[3]));
+            chord->duration = atoi(zm_mfr->tokens[4]);
+            ysw_array_push(model->chords, chord);
         } else {
             push_back_tokens(zm_mfr);
             done = true;
         }
     }
 
-    ysw_array_push(zm_mfr->music->patterns, pattern);
+    ysw_array_push(zm_mfr->music->models, model);
 }
 
 static void parse_song(zm_mfr_t *zm_mfr)
@@ -261,19 +262,19 @@ static void parse_song(zm_mfr_t *zm_mfr)
     zm_song_t *song = ysw_heap_allocate(sizeof(zm_song_t));
     song->name = ysw_heap_strdup(zm_mfr->tokens[2]);
     song->bpm = atoi(zm_mfr->tokens[3]);
-    song->parts = ysw_array_create(16);
+    song->roles = ysw_array_create(16);
 
     zm_yesno_t done = false;
 
     while (!done && get_tokens(zm_mfr)) {
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_PART && zm_mfr->token_count == 5) {
-            zm_part_t *part = ysw_heap_allocate(sizeof(zm_part_t));
-            part->pattern = ysw_array_get(zm_mfr->music->patterns, atoi(zm_mfr->tokens[1]));
-            part->when.type = atoi(zm_mfr->tokens[2]);
-            part->when.part_index = atoi(zm_mfr->tokens[3]);
-            part->fit = atoi(zm_mfr->tokens[4]);
-            ysw_array_push(song->parts, part);
+        if (type == ZM_MF_ROLE && zm_mfr->token_count == 5) {
+            zm_role_t *role = ysw_heap_allocate(sizeof(zm_role_t));
+            role->model = ysw_array_get(zm_mfr->music->models, atoi(zm_mfr->tokens[1]));
+            role->when.type = atoi(zm_mfr->tokens[2]);
+            role->when.role_index = atoi(zm_mfr->tokens[3]);
+            role->fit = atoi(zm_mfr->tokens[4]);
+            ysw_array_push(song->roles, role);
         } else {
             push_back_tokens(zm_mfr);
             done = true;
@@ -290,7 +291,7 @@ static zm_music_t *create_music()
     music->programs = ysw_array_create(8);
     music->qualities = ysw_array_create(32);
     music->styles = ysw_array_create(64);
-    music->patterns = ysw_array_create(64);
+    music->models = ysw_array_create(64);
     music->songs = ysw_array_create(16);
     return music;
 }
@@ -329,19 +330,19 @@ void zm_music_free(zm_music_t *music)
     }
     ysw_array_free(music->styles);
 
-    zm_medium_t pattern_count = ysw_array_get_count(music->patterns);
-    for (zm_medium_t i = 0; i < pattern_count; i++) {
-        zm_pattern_t *pattern = ysw_array_get(music->patterns, i);
-        ysw_heap_free(pattern->name);
-        ysw_array_free_all(pattern->steps);
+    zm_medium_t model_count = ysw_array_get_count(music->models);
+    for (zm_medium_t i = 0; i < model_count; i++) {
+        zm_model_t *model = ysw_array_get(music->models, i);
+        ysw_heap_free(model->name);
+        ysw_array_free_all(model->chords);
     }
-    ysw_array_free(music->patterns);
+    ysw_array_free(music->models);
 
     zm_medium_t song_count = ysw_array_get_count(music->songs);
     for (zm_medium_t i = 0; i < song_count; i++) {
         zm_song_t *song = ysw_array_get(music->songs, i);
         ysw_heap_free(song->name);
-        ysw_array_free_all(song->parts);
+        ysw_array_free_all(song->roles);
     }
     ysw_array_free(music->songs);
 }
@@ -363,8 +364,8 @@ zm_music_t *zm_read_from_file(FILE *file)
             parse_quality(zm_mfr);
         } else if (type == ZM_MF_STYLE && zm_mfr->token_count == 3) {
             parse_style(zm_mfr);
-        } else if (type == ZM_MF_PATTERN && zm_mfr->token_count == 4) {
-            parse_pattern(zm_mfr);
+        } else if (type == ZM_MF_MODEL && zm_mfr->token_count == 4) {
+            parse_model(zm_mfr);
         } else if (type == ZM_MF_SONG && zm_mfr->token_count == 4) {
             parse_song(zm_mfr);
         } else {
@@ -440,79 +441,79 @@ void zm_render_tone(ysw_array_t *notes, zm_tone_t *tone, zm_time_x tone_start, z
     ysw_array_push(notes, note);
 }
 
-void zm_render_step(ysw_array_t *notes, zm_step_t *step, zm_time_x step_start, zm_channel_x channel, zm_sample_x sample_index)
+void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_sample_x sample_index)
 {
-    zm_medium_t distance_count = ysw_array_get_count(step->quality->distances);
-    zm_medium_t sound_count = ysw_array_get_count(step->style->sounds);
+    zm_medium_t distance_count = ysw_array_get_count(chord->quality->distances);
+    zm_medium_t sound_count = ysw_array_get_count(chord->style->sounds);
     for (zm_medium_t j = 0; j < sound_count; j++) {
-        zm_sound_t *sound = ysw_array_get(step->style->sounds, j);
+        zm_sound_t *sound = ysw_array_get(chord->style->sounds, j);
         if (sound->distance_index >= distance_count) {
             ESP_LOGW(TAG, "distance_index=%d, distance_count=%d", sound->distance_index, distance_count);
             continue;
         } 
-        zm_distance_t distance = (intptr_t)ysw_array_get(step->quality->distances, sound->distance_index);
+        zm_distance_t distance = (intptr_t)ysw_array_get(chord->quality->distances, sound->distance_index);
         ysw_note_t *note = ysw_heap_allocate(sizeof(ysw_note_t));
         note->channel = channel;
-        note->midi_note = step->root + distance;
-        note->start = step_start + (sound->start * step->duration) / YSW_TICKS_PER_MEASURE;
-        note->duration = (sound->duration * step->duration) / YSW_TICKS_PER_MEASURE;
+        note->midi_note = chord->root + distance;
+        note->start = chord_start + (sound->start * chord->duration) / YSW_TICKS_PER_MEASURE;
+        note->duration = (sound->duration * chord->duration) / YSW_TICKS_PER_MEASURE;
         note->velocity = sound->velocity;
         note->program = sample_index;
         ysw_array_push(notes, note);
     }
 }
 
-zm_time_x zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_time_x start_time, zm_small_t channel)
+zm_time_x zm_render_model(ysw_array_t *notes, zm_model_t *model, zm_time_x start_time, zm_small_t channel)
 {
-    zm_time_x step_start = start_time;
-    zm_medium_t step_count = ysw_array_get_count(pattern->steps);
-    for (zm_medium_t i = 0; i < step_count; i++) {
-        zm_step_t *step = ysw_array_get(pattern->steps, i);
-        if (step->root) { // root == 0 is a rest
-            zm_render_step(notes, step, step_start, channel, pattern->sample_index);
+    zm_time_x chord_start = start_time;
+    zm_medium_t chord_count = ysw_array_get_count(model->chords);
+    for (zm_medium_t i = 0; i < chord_count; i++) {
+        zm_chord_t *chord = ysw_array_get(model->chords, i);
+        if (chord->root) { // root == 0 is a rest
+            zm_render_chord(notes, chord, chord_start, channel, model->sample_index);
         }
-        step_start += step->duration;
+        chord_start += chord->duration;
     }
-    return step_start;
+    return chord_start;
 }
 
 ysw_array_t *zm_render_song(zm_song_t *song)
 {
     zm_time_x max_time = 0;
     ysw_array_t *notes = ysw_array_create(512);
-    ysw_array_t *part_times = ysw_array_create(8);
-    zm_medium_t part_count = ysw_array_get_count(song->parts);
-    for (zm_medium_t i = 0; i < part_count; i++) {
+    ysw_array_t *role_times = ysw_array_create(8);
+    zm_medium_t role_count = ysw_array_get_count(song->roles);
+    for (zm_medium_t i = 0; i < role_count; i++) {
         zm_time_x begin_time = 0;
         zm_time_x end_time = 0;
-        zm_part_t *part = ysw_array_get(song->parts, i);
-        if (i == part->when.part_index) {
+        zm_role_t *role = ysw_array_get(song->roles, i);
+        if (i == role->when.role_index) {
             begin_time = max_time;
-            end_time = zm_render_pattern(notes, part->pattern, begin_time, i);
-        } else if (part->when.type == ZM_WHEN_TYPE_WITH) {
-            zm_part_time_t *part_time = ysw_array_get(part_times, part->when.part_index);
-            begin_time = part_time->begin_time;
-            if (part->fit == ZM_FIT_LOOP) {
+            end_time = zm_render_model(notes, role->model, begin_time, i);
+        } else if (role->when.type == ZM_WHEN_TYPE_WITH) {
+            zm_role_time_t *role_time = ysw_array_get(role_times, role->when.role_index);
+            begin_time = role_time->begin_time;
+            if (role->fit == ZM_FIT_LOOP) {
                 zm_time_x loop_time = begin_time;
-                while (end_time < part_time->end_time) {
-                    end_time = zm_render_pattern(notes, part->pattern, loop_time, i);
+                while (end_time < role_time->end_time) {
+                    end_time = zm_render_model(notes, role->model, loop_time, i);
                     loop_time = end_time;
                 } 
             } else {
-                end_time = zm_render_pattern(notes, part->pattern, begin_time, i);
+                end_time = zm_render_model(notes, role->model, begin_time, i);
             }
-        } else if (part->when.type == ZM_WHEN_TYPE_AFTER) {
-            zm_part_time_t *part_time = ysw_array_get(part_times, part->when.part_index);
-            begin_time = part_time->end_time;
-            end_time = zm_render_pattern(notes, part->pattern, begin_time, i);
+        } else if (role->when.type == ZM_WHEN_TYPE_AFTER) {
+            zm_role_time_t *role_time = ysw_array_get(role_times, role->when.role_index);
+            begin_time = role_time->end_time;
+            end_time = zm_render_model(notes, role->model, begin_time, i);
         }
-        zm_part_time_t *part_time = ysw_heap_allocate(sizeof(zm_part_time_t));
-        part_time->begin_time = begin_time;
-        part_time->end_time = end_time;
-        ysw_array_push(part_times, part_time);
+        zm_role_time_t *role_time = ysw_heap_allocate(sizeof(zm_role_time_t));
+        role_time->begin_time = begin_time;
+        role_time->end_time = end_time;
+        ysw_array_push(role_times, role_time);
         max_time = max(max_time, end_time);
     }
-    ysw_array_free_all(part_times);
+    ysw_array_free_all(role_times);
     ysw_array_sort(notes, zm_note_compare);
     ESP_LOGD(TAG, "song note_count=%d", ysw_array_get_count(notes));
     return notes;
@@ -531,7 +532,7 @@ ysw_array_t *zm_render_passage(zm_music_t *music, zm_passage_t *passage, zm_chan
             zm_render_tone(notes, &beat->tone, beat_time, base_channel, tone_sample_index);
         }
         if (beat->chord.root) {
-            zm_render_step(notes, &beat->chord, beat_time, base_channel + 1, chord_sample_index);
+            zm_render_chord(notes, &beat->chord, beat_time, base_channel + 1, chord_sample_index);
         }
         beat_time += beat->tone.duration;
     }

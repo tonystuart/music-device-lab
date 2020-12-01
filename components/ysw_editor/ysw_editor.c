@@ -144,7 +144,7 @@ static void play_beat(context_t *context, zm_beat_t *beat)
     }
     if (beat->chord.root) {
         zm_sample_x sample_index = ysw_array_find(context->music->samples, context->passage->chord_sample);
-        zm_render_step(notes, &beat->chord, 0, FOREGROUND_CHORD, sample_index);
+        zm_render_chord(notes, &beat->chord, 0, FOREGROUND_CHORD, sample_index);
     }
     ysw_array_sort(notes, zm_note_compare);
     zm_bpm_x bpm = zm_tempo_to_bpm(context->passage->tempo);

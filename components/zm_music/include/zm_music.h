@@ -35,7 +35,7 @@ typedef uint16_t zm_measure_x;
 typedef uint16_t zm_quality_x;
 typedef uint16_t zm_style_x;
 typedef uint16_t zm_sample_x;
-typedef uint16_t zm_pattern_x;
+typedef uint16_t zm_model_x;
 typedef uint16_t zm_song_x;
 
 typedef uint32_t zm_beat_x;
@@ -158,13 +158,13 @@ typedef struct {
     zm_quality_t *quality;
     zm_style_t *style;
     zm_duration_t duration;
-} zm_step_t;
+} zm_chord_t;
 
 typedef struct {
     char *name;
     zm_medium_t sample_index;
-    ysw_array_t *steps;
-} zm_pattern_t;
+    ysw_array_t *chords;
+} zm_model_t;
 
 typedef enum {
     ZM_WHEN_TYPE_WITH,
@@ -173,27 +173,27 @@ typedef enum {
 
 typedef struct {
     zm_when_type_t type;
-    zm_medium_t part_index;
+    zm_medium_t role_index;
 } zm_when_t;
 
 typedef struct {
     zm_large_t begin_time;
     zm_large_t end_time;
-} zm_part_time_t;
+} zm_role_time_t;
 
 typedef struct {
     char *name;
     zm_small_t bpm;
     // key signature
     // time signature
-    ysw_array_t *parts;
+    ysw_array_t *roles;
 } zm_song_t;
 
 typedef struct {
-    zm_pattern_t *pattern;
+    zm_model_t *model;
     zm_when_t when;
     zm_fit_t fit;
-} zm_part_t;
+} zm_role_t;
 
 typedef struct {
     zm_note_t note; // Use 0 for rest
@@ -202,7 +202,7 @@ typedef struct {
 
 typedef struct {
     char *name;
-    ysw_array_t *patterns;
+    ysw_array_t *models;
     zm_duration_t duration;
 } zm_rhythm_t;
 
@@ -215,7 +215,7 @@ typedef struct {
     zm_measure_x measure;
     zm_beat_flags_t flags;
     zm_tone_t tone;
-    zm_step_t chord;
+    zm_chord_t chord;
     zm_rhythm_t rhythm;
 } zm_beat_t;
 
@@ -234,7 +234,7 @@ typedef struct {
     ysw_array_t *programs;
     ysw_array_t *qualities;
     ysw_array_t *styles;
-    ysw_array_t *patterns;
+    ysw_array_t *models;
     ysw_array_t *songs;
 } zm_music_t;
 
@@ -245,8 +245,8 @@ zm_music_t *zm_read(void);
 int zm_note_compare(const void *left, const void *right);
 
 void zm_render_tone(ysw_array_t *notes, zm_tone_t *tone, zm_time_x tone_start, zm_channel_x channel, zm_sample_x sample_index);
-void zm_render_step(ysw_array_t *notes, zm_step_t *step, zm_time_x step_start, zm_channel_x channel, zm_sample_x sample_index);
-zm_large_t zm_render_pattern(ysw_array_t *notes, zm_pattern_t *pattern, zm_large_t start_time, zm_small_t channel);
+void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_sample_x sample_index);
+zm_large_t zm_render_model(ysw_array_t *notes, zm_model_t *model, zm_large_t start_time, zm_small_t channel);
 ysw_array_t *zm_render_song(zm_song_t *song);
 ysw_array_t *zm_render_passage(zm_music_t *music, zm_passage_t *passage, zm_channel_x base_channel);
 
