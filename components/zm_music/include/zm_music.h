@@ -35,10 +35,11 @@ typedef uint16_t zm_measure_x;
 typedef uint16_t zm_quality_x;
 typedef uint16_t zm_style_x;
 typedef uint16_t zm_sample_x;
+typedef uint16_t zm_pattern_x;
 typedef uint16_t zm_model_x;
 typedef uint16_t zm_song_x;
 
-typedef uint32_t zm_beat_x;
+typedef uint32_t zm_division_x;
 typedef uint32_t zm_time_x;
 
 typedef enum {
@@ -198,7 +199,7 @@ typedef struct {
 typedef struct {
     zm_note_t note; // Use 0 for rest
     zm_duration_t duration;
-} zm_tone_t;
+} zm_melody_t;
 
 typedef struct {
     char *name;
@@ -207,25 +208,25 @@ typedef struct {
 } zm_rhythm_t;
 
 typedef enum {
-    ZM_BEAT_NEW_MEASURE = 0x0001,
-} zm_beat_flags_t;
+    ZM_DIVISION_NEW_MEASURE = 0x0001,
+} zm_division_flags_t;
 
 typedef struct {
     zm_time_x start;
     zm_measure_x measure;
-    zm_beat_flags_t flags;
-    zm_tone_t tone;
+    zm_division_flags_t flags;
+    zm_melody_t melody;
     zm_chord_t chord;
     zm_rhythm_t rhythm;
-} zm_beat_t;
+} zm_division_t;
 
 typedef struct {
     char *name;
     zm_tempo_t tempo;
     zm_key_signature_x key;
     zm_time_signature_x time;
-    ysw_array_t *beats;
-    zm_sample_t *tone_sample;
+    ysw_array_t *divisions;
+    zm_sample_t *melody_sample;
     zm_sample_t *chord_sample;
 } zm_pattern_t;
 
@@ -234,6 +235,7 @@ typedef struct {
     ysw_array_t *programs;
     ysw_array_t *qualities;
     ysw_array_t *styles;
+    ysw_array_t *patterns;
     ysw_array_t *models;
     ysw_array_t *songs;
 } zm_music_t;
@@ -244,7 +246,7 @@ zm_music_t *zm_read(void);
 
 int zm_note_compare(const void *left, const void *right);
 
-void zm_render_tone(ysw_array_t *notes, zm_tone_t *tone, zm_time_x tone_start, zm_channel_x channel, zm_sample_x sample_index);
+void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_sample_x sample_index);
 void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_sample_x sample_index);
 zm_large_t zm_render_model(ysw_array_t *notes, zm_model_t *model, zm_large_t start_time, zm_small_t channel);
 ysw_array_t *zm_render_song(zm_song_t *song);

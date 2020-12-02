@@ -29,22 +29,22 @@
 
 // channels
 
-#define FOREGROUND_TONE 0
+#define FOREGROUND_MELODY 0
 #define FOREGROUND_CHORD 1
-#define FOREGROUND_DRUM 2
+#define FOREGROUND_RHYTHM 2
 
 #define BACKGROUND_BASE 3
 
 typedef enum {
-    YSW_EDITOR_MODE_TONE,
+    YSW_EDITOR_MODE_MELODY,
     YSW_EDITOR_MODE_CHORD,
-    YSW_EDITOR_MODE_DRUM,
+    YSW_EDITOR_MODE_RHYTHM,
 } ysw_editor_mode_t;
 
 static const char *modes[] = {
-    "Note",
+    "Melody",
     "Chord",
-    "Drum",
+    "Rhythm",
 };
 
 #define YSW_EDITOR_MODE_COUNT 3
@@ -72,7 +72,7 @@ typedef struct {
     ysw_menu_t *menu;
 } context_t;
 
-// Note that position is 2x the beat index and encodes both the beat index and the space before it.
+// Note that position is 2x the division index and encodes both the division index and the space before it.
 
 // 0 % 2 = 0
 // 1 % 2 = 1 C
@@ -83,20 +83,20 @@ typedef struct {
 // 6 % 2 = 0
 
 // A remainder of zero indicates the space and a remainder of 1 indicates
-// the beat. This happens to work at the end of the array too, if the position
-// is 2x the size of the array, it refers to the space following the last beat.
+// the division. This happens to work at the end of the array too, if the position
+// is 2x the size of the array, it refers to the space following the last division.
 
 // if (position / 2 >= size) {
-//   -> space after last beat
+//   -> space after last division
 // } else {
 //   if (position % 2 == 0) {
-//     -> space before beat
+//     -> space before division
 //   } else {
-//     -> beat_index = position / 2;
+//     -> division_index = position / 2;
 //   }
 // }
 
-static inline bool is_beat_position(context_t *context)
+static inline bool is_division_position(context_t *context)
 {
     return context->position % 2 == 1;
 }
@@ -106,9 +106,9 @@ static inline bool is_space_position(context_t *context)
     return context->position % 2 == 0;
 }
  
-static inline uint32_t beat_index_to_position(zm_beat_x beat_index)
+static inline uint32_t division_index_to_position(zm_division_x division_index)
 {
-    return (beat_index * 2) + 1;
+    return (division_index * 2) + 1;
 }
 
 static void recalculate(context_t *context)
@@ -117,34 +117,34 @@ static void recalculate(context_t *context)
     zm_measure_x measure = 1;
     uint32_t ticks_in_measure = 0;
 
-    zm_beat_x beat_count = ysw_array_get_count(context->pattern->beats);
-    for (zm_beat_x i = 0; i < beat_count; i++) {
-        zm_beat_t *beat = ysw_array_get(context->pattern->beats, i);
-        beat->start = start;
-        beat->flags = 0;
-        ticks_in_measure += zm_round_duration(beat->tone.duration);
+    zm_division_x division_count = ysw_array_get_count(context->pattern->divisions);
+    for (zm_division_x i = 0; i < division_count; i++) {
+        zm_division_t *division = ysw_array_get(context->pattern->divisions, i);
+        division->start = start;
+        division->flags = 0;
+        ticks_in_measure += zm_round_duration(division->melody.duration);
         if (ticks_in_measure >= 1024) {
-            beat->flags |= ZM_BEAT_NEW_MEASURE;
+            division->flags |= ZM_DIVISION_NEW_MEASURE;
             ticks_in_measure = 0;
             measure++;
         }
-        beat->measure = measure;
-        start += beat->tone.duration; // TODO: add articulation, use beat->start in zm_render_pattern
+        division->measure = measure;
+        start += division->melody.duration; // TODO: add articulation, use division->start in zm_render_pattern
     }
 
     ysw_staff_invalidate(context->staff);
 }
 
-static void play_beat(context_t *context, zm_beat_t *beat)
+static void play_division(context_t *context, zm_division_t *division)
 {
     ysw_array_t *notes = ysw_array_create(16);
-    if (beat->tone.note) {
-        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->pattern->tone_sample);
-        zm_render_tone(notes, &beat->tone, 0, FOREGROUND_TONE, sample_index);
+    if (division->melody.note) {
+        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->pattern->melody_sample);
+        zm_render_melody(notes, &division->melody, 0, FOREGROUND_MELODY, sample_index);
     }
-    if (beat->chord.root) {
+    if (division->chord.root) {
         zm_sample_x sample_index = ysw_array_find(context->music->samples, context->pattern->chord_sample);
-        zm_render_chord(notes, &beat->chord, 0, FOREGROUND_CHORD, sample_index);
+        zm_render_chord(notes, &division->chord, 0, FOREGROUND_CHORD, sample_index);
     }
     ysw_array_sort(notes, zm_note_compare);
     zm_bpm_x bpm = zm_tempo_to_bpm(context->pattern->tempo);
@@ -153,40 +153,40 @@ static void play_beat(context_t *context, zm_beat_t *beat)
 
 static void play_position(context_t *context)
 {
-    if (is_beat_position(context)) {
-        zm_beat_x beat_index = context->position / 2;
-        zm_beat_t *beat = ysw_array_get(context->pattern->beats, beat_index);
-        play_beat(context, beat);
+    if (is_division_position(context)) {
+        zm_division_x division_index = context->position / 2;
+        zm_division_t *division = ysw_array_get(context->pattern->divisions, division_index);
+        play_division(context, division);
     }
 }
 
 static void display_sample(context_t *context)
 {
     const char *value = "";
-    if (context->mode == YSW_EDITOR_MODE_TONE) {
-        value = context->pattern->tone_sample->name;
+    if (context->mode == YSW_EDITOR_MODE_MELODY) {
+        value = context->pattern->melody_sample->name;
     } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
         value = context->pattern->chord_sample->name;
     }
     ysw_header_set_sample(context->header, value);
 }
 
-static void display_tone_mode(context_t *context)
+static void display_melody_mode(context_t *context)
 {
-    // 1. on a beat - show note or rest
-    // 2. between beats - show previous (to left) note or rest
-    // 3. no beats - show blank
+    // 1. on a division - show note or rest
+    // 2. between divisions - show previous (to left) note or rest
+    // 3. no divisions - show blank
     char value[32] = {};
-    zm_beat_x beat_count = ysw_array_get_count(context->pattern->beats);
-    if (beat_count) {
-        zm_beat_x beat_index = context->position / 2;
-        if (beat_index >= beat_count) {
-            beat_index = beat_count - 1;
+    zm_division_x division_count = ysw_array_get_count(context->pattern->divisions);
+    if (division_count) {
+        zm_division_x division_index = context->position / 2;
+        if (division_index >= division_count) {
+            division_index = division_count - 1;
         }
         zm_bpm_x bpm = zm_tempo_to_bpm(context->pattern->tempo);
-        zm_beat_t *beat = ysw_array_get(context->pattern->beats, beat_index);
-        uint32_t millis = ysw_ticks_to_millis(beat->tone.duration, bpm);
-        zm_note_t note = beat->tone.note;
+        zm_division_t *division = ysw_array_get(context->pattern->divisions, division_index);
+        uint32_t millis = ysw_ticks_to_millis(division->melody.duration, bpm);
+        zm_note_t note = division->melody.note;
         if (note) {
             uint8_t octave = (note / 12) - 1;
             const char *name = zm_get_note_name(note);
@@ -200,20 +200,20 @@ static void display_tone_mode(context_t *context)
 
 static void display_chord_mode(context_t *context)
 {
-    // 1. on a beat with a chord value - show chord value, quality, style
-    // 2. on a beat without a chord value - show quality, style
-    // 3. between beats - show quality, style
-    // 4. no beats - show quality, style
+    // 1. on a division with a chord value - show chord value, quality, style
+    // 2. on a division without a chord value - show quality, style
+    // 3. between divisions - show quality, style
+    // 4. no divisions - show quality, style
     char value[32] = {};
-    zm_beat_t *beat = NULL;
-    if (is_beat_position(context)) {
-        beat = ysw_array_get(context->pattern->beats, context->position / 2);
+    zm_division_t *division = NULL;
+    if (is_division_position(context)) {
+        division = ysw_array_get(context->pattern->divisions, context->position / 2);
     }
-    if (beat && beat->chord.root) {
+    if (division && division->chord.root) {
         snprintf(value, sizeof(value), "%s %s %s",
-                zm_get_note_name(beat->chord.root),
-                beat->chord.quality->name,
-                beat->chord.style->name);
+                zm_get_note_name(division->chord.root),
+                division->chord.quality->name,
+                division->chord.style->name);
     } else {
         snprintf(value, sizeof(value), "%s %s",
                 context->quality->name,
@@ -222,7 +222,7 @@ static void display_chord_mode(context_t *context)
     ysw_header_set_mode(context->header, modes[context->mode], value);
 }
 
-static void display_drum_mode(context_t *context)
+static void display_rhythm_mode(context_t *context)
 {
     ysw_header_set_mode(context->header, modes[context->mode], "");
 }
@@ -230,14 +230,14 @@ static void display_drum_mode(context_t *context)
 static void display_mode(context_t *context)
 {
     switch (context->mode) {
-        case YSW_EDITOR_MODE_TONE:
-            display_tone_mode(context);
+        case YSW_EDITOR_MODE_MELODY:
+            display_melody_mode(context);
             break;
         case YSW_EDITOR_MODE_CHORD:
             display_chord_mode(context);
             break;
-        case YSW_EDITOR_MODE_DRUM:
-            display_drum_mode(context);
+        case YSW_EDITOR_MODE_RHYTHM:
+            display_rhythm_mode(context);
             break;
     }
     // sample is mode specific
@@ -255,11 +255,11 @@ static zm_sample_t *next_sample(ysw_array_t *samples, zm_sample_t *previous)
 
 static void cycle_sample(context_t *context)
 {
-    if (context->mode == YSW_EDITOR_MODE_TONE) {
-        context->pattern->tone_sample = next_sample(context->music->samples, context->pattern->tone_sample);
+    if (context->mode == YSW_EDITOR_MODE_MELODY) {
+        context->pattern->melody_sample = next_sample(context->music->samples, context->pattern->melody_sample);
         ysw_event_program_change_t program_change = {
             .channel = 0,
-            .program = ysw_array_find(context->music->samples, context->pattern->tone_sample),
+            .program = ysw_array_find(context->music->samples, context->pattern->melody_sample),
         };
         ysw_event_fire_program_change(context->bus, YSW_ORIGIN_EDITOR, &program_change);
     } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
@@ -292,13 +292,13 @@ static void cycle_tempo(context_t *context)
 
 static void cycle_duration(context_t *context)
 {
-    zm_beat_t *beat = NULL;
-    if (is_beat_position(context) && context->duration != ZM_AS_PLAYED) {
-        zm_beat_x beat_index = context->position / 2;
-        beat = ysw_array_get(context->pattern->beats, beat_index);
+    zm_division_t *division = NULL;
+    if (is_division_position(context) && context->duration != ZM_AS_PLAYED) {
+        zm_division_x division_index = context->position / 2;
+        division = ysw_array_get(context->pattern->divisions, division_index);
     }
-    // Cycle default duration if not on a beat or if beat duration is already default duration
-    if (!beat || beat->tone.duration == context->duration) {
+    // Cycle default duration if not on a division or if division duration is already default duration
+    if (!division || division->melody.duration == context->duration) {
         if (context->duration == ZM_AS_PLAYED) {
             context->duration = ZM_SIXTEENTH;
         } else if (context->duration <= ZM_SIXTEENTH) {
@@ -314,8 +314,8 @@ static void cycle_duration(context_t *context)
         }
         ysw_footer_set_duration(context->footer, context->duration);
     }
-    if (beat) {
-        beat->tone.duration = context->duration;
+    if (division) {
+        division->melody.duration = context->duration;
         recalculate(context);
         display_mode(context);
     }
@@ -344,53 +344,52 @@ static zm_style_t *find_matching_style(context_t *context, bool preincrement)
 
 static void cycle_quality(context_t *context)
 {
-    zm_beat_t *beat = NULL;
-    if (is_beat_position(context)) {
-        zm_beat_x beat_index = context->position / 2;
-        beat = ysw_array_get(context->pattern->beats, beat_index);
+    zm_division_t *division = NULL;
+    if (is_division_position(context)) {
+        zm_division_x division_index = context->position / 2;
+        division = ysw_array_get(context->pattern->divisions, division_index);
     }
-    if (!beat || !beat->chord.root || beat->chord.quality == context->quality) {
+    if (!division || !division->chord.root || division->chord.quality == context->quality) {
         zm_quality_x previous = ysw_array_find(context->music->qualities, context->quality);
         zm_quality_x quality_count = ysw_array_get_count(context->music->qualities);
         zm_quality_x next = (previous + 1) % quality_count;
         context->quality = ysw_array_get(context->music->qualities, next);
         context->style = find_matching_style(context, false);
     }
-    if (beat) {
-        beat->chord.quality = context->quality;
-        beat->chord.style = context->style;
-        recalculate(context);
+    if (division) {
+        division->chord.quality = context->quality;
+        division->chord.style = context->style;
+        ysw_staff_invalidate(context->staff);
     }
     display_mode(context);
 }
 
 static void cycle_style(context_t *context)
 {
-    zm_beat_t *beat = NULL;
-    if (is_beat_position(context)) {
-        zm_beat_x beat_index = context->position / 2;
-        beat = ysw_array_get(context->pattern->beats, beat_index);
+    zm_division_t *division = NULL;
+    if (is_division_position(context)) {
+        zm_division_x division_index = context->position / 2;
+        division = ysw_array_get(context->pattern->divisions, division_index);
     }
-    if (!beat || !beat->chord.root || beat->chord.style == context->style) {
+    if (!division || !division->chord.root || division->chord.style == context->style) {
         context->style = find_matching_style(context, true);
     }
-    if (beat) {
-        beat->chord.style = context->style;
-        recalculate(context);
+    if (division) {
+        division->chord.style = context->style;
     }
     display_mode(context);
 }
 
-static void process_beat(context_t *context, zm_note_t midi_note, zm_time_x duration_millis)
+static void process_division(context_t *context, zm_note_t midi_note, zm_time_x duration_millis)
 {
-    zm_beat_t *beat = NULL;
-    int32_t beat_index = context->position / 2;
-    bool is_new_beat = is_space_position(context);
-    if (is_new_beat) {
-        beat = ysw_heap_allocate(sizeof(zm_beat_t));
-        ysw_array_insert(context->pattern->beats, beat_index, beat);
+    zm_division_t *division = NULL;
+    int32_t division_index = context->position / 2;
+    bool is_new_division = is_space_position(context);
+    if (is_new_division) {
+        division = ysw_heap_allocate(sizeof(zm_division_t));
+        ysw_array_insert(context->pattern->divisions, division_index, division);
     } else {
-        beat = ysw_array_get(context->pattern->beats, beat_index);
+        division = ysw_array_get(context->pattern->divisions, division_index);
     }
 
     zm_duration_t duration = context->duration;
@@ -399,22 +398,22 @@ static void process_beat(context_t *context, zm_note_t midi_note, zm_time_x dura
         duration = ysw_millis_to_ticks(duration_millis, bpm);
     }
 
-    if (context->mode == YSW_EDITOR_MODE_TONE) {
-        beat->tone.note = midi_note; // rest == 0
-        beat->tone.duration = duration;
+    if (context->mode == YSW_EDITOR_MODE_MELODY) {
+        division->melody.note = midi_note; // rest == 0
+        division->melody.duration = duration;
     } else if (context ->mode == YSW_EDITOR_MODE_CHORD) {
-        beat->chord.root = midi_note;
-        beat->chord.quality = context->quality;
-        beat->chord.style = context->style;
-        beat->chord.duration = duration;
-        if (!beat->tone.duration) {
-            beat->tone.duration = beat->chord.duration;
+        division->chord.root = midi_note;
+        division->chord.quality = context->quality;
+        division->chord.style = context->style;
+        division->chord.duration = max(duration, ZM_QUARTER);
+        if (!division->melody.duration) {
+            division->melody.duration = division->chord.duration;
         }
-    } else if (context -> mode == YSW_EDITOR_MODE_DRUM) {
+    } else if (context -> mode == YSW_EDITOR_MODE_RHYTHM) {
     }
 
-    zm_beat_x beat_count = ysw_array_get_count(context->pattern->beats);
-    context->position = min(context->position + context->advance, beat_count * 2);
+    zm_division_x division_count = ysw_array_get_count(context->pattern->divisions);
+    context->position = min(context->position + context->advance, division_count * 2);
     ysw_staff_set_position(context->staff, context->position);
     display_mode(context);
     recalculate(context);
@@ -422,18 +421,18 @@ static void process_beat(context_t *context, zm_note_t midi_note, zm_time_x dura
 
 static void process_delete(context_t *context)
 {
-    zm_beat_x beat_index = context->position / 2;
-    zm_beat_x beat_count = ysw_array_get_count(context->pattern->beats);
-    if (beat_count > 0 && beat_index == beat_count) {
-        // On space following last beat in pattern, delete previous beat
-        beat_index--;
+    zm_division_x division_index = context->position / 2;
+    zm_division_x division_count = ysw_array_get_count(context->pattern->divisions);
+    if (division_count > 0 && division_index == division_count) {
+        // On space following last division in pattern, delete previous division
+        division_index--;
     }
-    if (beat_index < beat_count) {
-        zm_beat_t *beat = ysw_array_remove(context->pattern->beats, beat_index);
-        ysw_heap_free(beat);
-        beat_count--;
-        if (beat_index == beat_count) {
-            if (beat_count) {
+    if (division_index < division_count) {
+        zm_division_t *division = ysw_array_remove(context->pattern->divisions, division_index);
+        ysw_heap_free(division);
+        division_count--;
+        if (division_index == division_count) {
+            if (division_count) {
                 context->position -= 2;
             } else {
                 context->position = 0;
@@ -458,7 +457,7 @@ static void process_left(context_t *context, uint8_t move_amount)
 static void process_right(context_t *context, uint8_t move_amount)
 {
     uint32_t new_position = context->position + move_amount;
-    if (new_position <= ysw_array_get_count(context->pattern->beats) * 2) {
+    if (new_position <= ysw_array_get_count(context->pattern->divisions) * 2) {
         context->position = new_position;
         play_position(context);
         ysw_staff_set_position(context->staff, context->position);
@@ -468,18 +467,18 @@ static void process_right(context_t *context, uint8_t move_amount)
 
 static void process_up(context_t *context)
 {
-    if (is_beat_position(context)) {
-        zm_beat_x beat_index = context->position / 2;
-        zm_beat_t *beat = ysw_array_get(context->pattern->beats, beat_index);
-        if (context->mode == YSW_EDITOR_MODE_TONE) {
-            if (beat->tone.note && beat->tone.note < 83) {
-                beat->tone.note++;
+    if (is_division_position(context)) {
+        zm_division_x division_index = context->position / 2;
+        zm_division_t *division = ysw_array_get(context->pattern->divisions, division_index);
+        if (context->mode == YSW_EDITOR_MODE_MELODY) {
+            if (division->melody.note && division->melody.note < 83) {
+                division->melody.note++;
             }
         } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
-            if (beat->chord.root && beat->chord.root < 83) {
-                beat->chord.root++;
+            if (division->chord.root && division->chord.root < 83) {
+                division->chord.root++;
             }
-        } else if (context->mode == YSW_EDITOR_MODE_DRUM) {
+        } else if (context->mode == YSW_EDITOR_MODE_RHYTHM) {
         }
         play_position(context);
         recalculate(context);
@@ -489,18 +488,18 @@ static void process_up(context_t *context)
 
 static void process_down(context_t *context)
 {
-    if (is_beat_position(context)) {
-        zm_beat_x beat_index = context->position / 2;
-        zm_beat_t *beat = ysw_array_get(context->pattern->beats, beat_index);
-        if (context->mode == YSW_EDITOR_MODE_TONE) {
-            if (beat->tone.note && beat->tone.note > 60) {
-                beat->tone.note--;
+    if (is_division_position(context)) {
+        zm_division_x division_index = context->position / 2;
+        zm_division_t *division = ysw_array_get(context->pattern->divisions, division_index);
+        if (context->mode == YSW_EDITOR_MODE_MELODY) {
+            if (division->melody.note && division->melody.note > 60) {
+                division->melody.note--;
             }
         } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
-            if (beat->chord.root && beat->chord.root > 60) {
-                beat->chord.root--;
+            if (division->chord.root && division->chord.root > 60) {
+                division->chord.root--;
             }
-        } else if (context->mode == YSW_EDITOR_MODE_DRUM) {
+        } else if (context->mode == YSW_EDITOR_MODE_RHYTHM) {
         }
         play_position(context);
         recalculate(context);
@@ -509,10 +508,10 @@ static void process_down(context_t *context)
 }
 
 UNUSED
-static void on_mode_tone(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_mode_melody(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     context_t *context = menu->caller_context;
-    context->mode = YSW_EDITOR_MODE_TONE;
+    context->mode = YSW_EDITOR_MODE_MELODY;
     display_mode(context);
 }
 
@@ -525,10 +524,10 @@ static void on_mode_chord(ysw_menu_t *menu, ysw_event_t *event, void *value)
 }
 
 UNUSED
-static void on_mode_drum(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_mode_rhythm(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     context_t *context = menu->caller_context;
-    context->mode = YSW_EDITOR_MODE_DRUM;
+    context->mode = YSW_EDITOR_MODE_RHYTHM;
     display_mode(context);
 }
 
@@ -658,26 +657,26 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
     context_t *context = menu->caller_context;
     zm_note_t midi_note = (uintptr_t)value;
     if (event->header.type == YSW_EVENT_KEY_DOWN) {
-        if (context->mode == YSW_EDITOR_MODE_TONE) {
+        if (context->mode == YSW_EDITOR_MODE_MELODY) {
             if (midi_note) {
                 ysw_event_note_on_t note_on = {
-                    .channel = FOREGROUND_TONE,
+                    .channel = FOREGROUND_MELODY,
                     .midi_note = midi_note,
                     .velocity = 80,
                 };
                 ysw_event_fire_note_on(context->bus, YSW_ORIGIN_EDITOR, &note_on);
             }
         } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
-            zm_beat_t beat = {
+            zm_division_t division = {
                 .chord.root = midi_note,
                 .chord.quality = context->quality,
                 .chord.style = context->style,
                 .chord.duration = 512,
             };
-            play_beat(context, &beat);
+            play_division(context, &division);
         }
     } else if (event->header.type == YSW_EVENT_KEY_UP) {
-        if (context->mode == YSW_EDITOR_MODE_TONE) {
+        if (context->mode == YSW_EDITOR_MODE_MELODY) {
             if (midi_note) {
                 ysw_event_note_off_t note_off = {
                     .channel = 0,
@@ -686,29 +685,29 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
                 ysw_event_fire_note_off(context->bus, YSW_ORIGIN_EDITOR, &note_off);
             }
         }
-        process_beat(context, midi_note, event->key_pressed.duration);
+        process_division(context, midi_note, event->key_pressed.duration);
     }
 }
 
-int compare_beats(const void *left, const void *right)
+int compare_divisions(const void *left, const void *right)
 {
-    const zm_beat_t *left_beat = *(zm_beat_t * const *)left;
-    const zm_beat_t *right_beat = *(zm_beat_t * const *)right;
-    int delta = left_beat->start - right_beat->start;
+    const zm_division_t *left_division = *(zm_division_t * const *)left;
+    const zm_division_t *right_division = *(zm_division_t * const *)right;
+    int delta = left_division->start - right_division->start;
     return delta;
 }
 
 static void on_note_status(context_t *context, ysw_event_t *event)
 {
     if (event->note_status.note.channel >= BACKGROUND_BASE) {
-        zm_beat_t needle = {
+        zm_division_t needle = {
             .start = event->note_status.note.start,
         };
         ysw_array_match_t flags = YSW_ARRAY_MATCH_EXACT;
-        int32_t result = ysw_array_search(context->pattern->beats, &needle, compare_beats, flags);
+        int32_t result = ysw_array_search(context->pattern->divisions, &needle, compare_divisions, flags);
         if (result != -1) {
             ESP_LOGD(TAG, "found start=%d at index=%d", needle.start, result);
-            context->position = beat_index_to_position(result);
+            context->position = division_index_to_position(result);
             ysw_staff_set_position(context->staff, context->position);
         } else {
             ESP_LOGD(TAG, "could not find start=%d", needle.start);
@@ -918,13 +917,17 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     context->lvgl_init = lvgl_init;
     context->music = music;
 
-    context->pattern = ysw_heap_allocate(sizeof(zm_pattern_t));
-    context->pattern->beats = ysw_array_create(64);
-    context->pattern->key = ZM_KEY_C;
-    context->pattern->time = ZM_TIME_4_4;
-    context->pattern->tempo = ZM_TEMPO_100;
-    context->pattern->tone_sample = ysw_array_get(music->samples, 0);
-    context->pattern->chord_sample = context->pattern->tone_sample;
+    if (ysw_array_get_count(music->patterns) > 0) {
+        context->pattern = ysw_array_get(music->patterns, 0);
+    } else {
+        context->pattern = ysw_heap_allocate(sizeof(zm_pattern_t));
+        context->pattern->divisions = ysw_array_create(64);
+        context->pattern->key = ZM_KEY_C;
+        context->pattern->time = ZM_TIME_4_4;
+        context->pattern->tempo = ZM_TEMPO_100;
+        context->pattern->melody_sample = ysw_array_get(music->samples, 0);
+        context->pattern->chord_sample = context->pattern->melody_sample;
+    }
 
     context->quality = ysw_array_get(music->qualities, DEFAULT_QUALITY);
     context->style = ysw_array_get(music->styles, DEFAULT_STYLE);
@@ -932,7 +935,7 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
 
     context->advance = 2;
     context->position = 0;
-    context->mode = YSW_EDITOR_MODE_TONE;
+    context->mode = YSW_EDITOR_MODE_MELODY;
 
     context->menu = ysw_menu_create(base_menu, context);
 

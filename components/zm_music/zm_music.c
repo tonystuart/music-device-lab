@@ -29,29 +29,37 @@
 #define RECORD_SIZE 128
 #define TOKENS_SIZE 20
 
+// For drum beat and stroke, see https://en.wikipedia.org/wiki/Drum_beat
+
 typedef enum {
     ZM_MF_SAMPLE = 1,
     ZM_MF_PROGRAM = 2,
     ZM_MF_PATCH = 3,
 
+    // chords
     ZM_MF_QUALITY = 4,
     ZM_MF_STYLE = 5,
     ZM_MF_SOUND = 6,
 
-    ZM_MF_PATTERN = 7, // formerly PASSAGE, related to PATTERN (now MODEL)
-    ZM_MF_BEAT = 8,
-    ZM_MF_TONE = 9,
-    ZM_MF_CHORD = 10, // related to STEP (now CHORD)
-    ZM_MF_DRUM = 11,
+    // rhythms
+    ZM_MF_BEAT = 7,
+    ZM_MF_STROKE = 8,
 
-    ZM_MF_COMPOSITION = 12, // related to SONG
-    ZM_MF_PART = 13, // related to PART (now ROLE)
+    // layers
+    ZM_MF_PATTERN = 9, // formerly zm_passage_t
+    ZM_MF_DIVISION = 10, // formerly zm_beat_t
+    ZM_MF_MELODY = 11, // formerly zm_tone_t
+    ZM_MF_CHORD = 12, // formerly zm_step_t
+    ZM_MF_RHYTHM = 13, // formerly zm_drum_t
+
+    ZM_MF_COMPOSITION = 14,
+    ZM_MF_PART = 15,
 
     // deprecated:
-    ZM_MF_MODEL = 45, // PATTERN -> MODEL
-    ZM_MF_STEP = 46, // STEP -> CHORD
+    ZM_MF_MODEL = 45, // formerly PATTERN
+    ZM_MF_STEP = 46, // formerly initialized zm_step_t, now zm_chord_t
     ZM_MF_SONG = 47,
-    ZM_MF_ROLE = 48, // PART -> ROLE
+    ZM_MF_ROLE = 48, // formerly PART
 
 } zm_mf_type_t;
 
@@ -215,6 +223,53 @@ static void parse_style(zm_mfr_t *zm_mfr)
     ysw_array_push(zm_mfr->music->styles, style);
 }
 
+static void parse_pattern(zm_mfr_t *zm_mfr)
+{
+    zm_pattern_x index = atoi(zm_mfr->tokens[1]);
+    zm_medium_t count = ysw_array_get_count(zm_mfr->music->patterns);
+
+    if (index != count) {
+        ESP_LOGW(TAG, "parse_pattern index=%d, count=%d", index, count);
+        return;
+    }
+
+    zm_pattern_t *pattern = ysw_heap_allocate(sizeof(zm_pattern_t));
+    pattern->name = ysw_heap_strdup(zm_mfr->tokens[2]);
+    pattern->tempo = atoi(zm_mfr->tokens[3]);
+    pattern->key = atoi(zm_mfr->tokens[4]);
+    pattern->time = atoi(zm_mfr->tokens[5]);
+    pattern->melody_sample = ysw_array_get(zm_mfr->music->samples, atoi(zm_mfr->tokens[6]));
+    pattern->chord_sample = ysw_array_get(zm_mfr->music->samples, atoi(zm_mfr->tokens[7]));
+    pattern->divisions = ysw_array_create(16);
+
+    zm_yesno_t done = false;
+    zm_division_t *division = NULL;
+
+    while (!done && get_tokens(zm_mfr)) {
+        zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
+        if (type == ZM_MF_DIVISION && zm_mfr->token_count == 4) {
+            division = ysw_heap_allocate(sizeof(zm_division_t));
+            division->start = atoi(zm_mfr->tokens[1]);
+            division->measure = atoi(zm_mfr->tokens[2]);
+            division->flags = atoi(zm_mfr->tokens[3]);
+            ysw_array_push(pattern->divisions, division);
+        } else if (division && type == ZM_MF_MELODY && zm_mfr->token_count == 3) {
+            division->melody.note = atoi(zm_mfr->tokens[1]);
+            division->melody.duration = atoi(zm_mfr->tokens[2]);
+        } else if (division && type == ZM_MF_CHORD && zm_mfr->token_count == 5) {
+            division->chord.root = atoi(zm_mfr->tokens[1]);
+            division->chord.quality = ysw_array_get(zm_mfr->music->qualities, atoi(zm_mfr->tokens[2]));
+            division->chord.style = ysw_array_get(zm_mfr->music->styles, atoi(zm_mfr->tokens[3]));
+            division->chord.duration = atoi(zm_mfr->tokens[4]);
+        } else {
+            push_back_tokens(zm_mfr);
+            done = true;
+        }
+    }
+
+    ysw_array_push(zm_mfr->music->patterns, pattern);
+}
+
 static void parse_model(zm_mfr_t *zm_mfr)
 {
     zm_model_x index = atoi(zm_mfr->tokens[1]);
@@ -292,10 +347,25 @@ static zm_music_t *create_music()
     music->programs = ysw_array_create(8);
     music->qualities = ysw_array_create(32);
     music->styles = ysw_array_create(64);
+    music->patterns = ysw_array_create(64);
     music->models = ysw_array_create(64);
     music->songs = ysw_array_create(16);
     return music;
 }
+
+void zm_pattern_free(zm_pattern_t *pattern)
+{
+    ysw_heap_free(pattern->name);
+    zm_pattern_x count = ysw_array_get_count(pattern->divisions);
+    for (zm_pattern_x i = 0; i < count; i++) {
+        zm_pattern_t *pattern = ysw_array_get(pattern->divisions, i);
+        ysw_array_free_all(pattern->divisions);
+        ysw_array_free(pattern->divisions);
+    }
+    ysw_heap_free(pattern);
+}
+
+// TODO: factor type-specific delete functions out for reuse and invoke them
 
 void zm_music_free(zm_music_t *music)
 {
@@ -331,6 +401,13 @@ void zm_music_free(zm_music_t *music)
     }
     ysw_array_free(music->styles);
 
+    zm_medium_t pattern_count = ysw_array_get_count(music->patterns);
+    for (zm_medium_t i = 0; i < pattern_count; i++) {
+        zm_pattern_t *pattern = ysw_array_get(music->patterns, i);
+        zm_pattern_free(pattern);
+    }
+    ysw_array_free(music->patterns);
+
     zm_medium_t model_count = ysw_array_get_count(music->models);
     for (zm_medium_t i = 0; i < model_count; i++) {
         zm_model_t *model = ysw_array_get(music->models, i);
@@ -365,6 +442,8 @@ zm_music_t *zm_read_from_file(FILE *file)
             parse_quality(zm_mfr);
         } else if (type == ZM_MF_STYLE && zm_mfr->token_count == 3) {
             parse_style(zm_mfr);
+        } else if (type == ZM_MF_PATTERN && zm_mfr->token_count == 8) {
+            parse_pattern(zm_mfr);
         } else if (type == ZM_MF_MODEL && zm_mfr->token_count == 4) {
             parse_model(zm_mfr);
         } else if (type == ZM_MF_SONG && zm_mfr->token_count == 4) {
@@ -430,13 +509,13 @@ int zm_note_compare(const void *left, const void *right)
     return delta;
 }
 
-void zm_render_tone(ysw_array_t *notes, zm_tone_t *tone, zm_time_x tone_start, zm_channel_x channel, zm_sample_x sample_index)
+void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_sample_x sample_index)
 {
     ysw_note_t *note = ysw_heap_allocate(sizeof(ysw_note_t));
     note->channel = channel;
-    note->midi_note = tone->note;
-    note->start = tone_start;
-    note->duration = tone->duration;
+    note->midi_note = melody->note;
+    note->start = melody_start;
+    note->duration = melody->duration;
     note->velocity = 100;
     note->program = sample_index;
     ysw_array_push(notes, note);
@@ -522,20 +601,20 @@ ysw_array_t *zm_render_song(zm_song_t *song)
 
 ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_channel_x base_channel)
 {
-    zm_time_x beat_time = 0;
+    zm_time_x division_time = 0;
     ysw_array_t *notes = ysw_array_create(512);
-    zm_beat_x beat_count = ysw_array_get_count(pattern->beats);
-    zm_sample_x tone_sample_index = ysw_array_find(music->samples, pattern->tone_sample);
+    zm_division_x division_count = ysw_array_get_count(pattern->divisions);
+    zm_sample_x melody_sample_index = ysw_array_find(music->samples, pattern->melody_sample);
     zm_sample_x chord_sample_index = ysw_array_find(music->samples, pattern->chord_sample);
-    for (zm_beat_x i = 0; i < beat_count; i++) {
-        zm_beat_t *beat = ysw_array_get(pattern->beats, i);
-        if (beat->tone.note) {
-            zm_render_tone(notes, &beat->tone, beat_time, base_channel, tone_sample_index);
+    for (zm_division_x i = 0; i < division_count; i++) {
+        zm_division_t *division = ysw_array_get(pattern->divisions, i);
+        if (division->melody.note) {
+            zm_render_melody(notes, &division->melody, division_time, base_channel, melody_sample_index);
         }
-        if (beat->chord.root) {
-            zm_render_chord(notes, &beat->chord, beat_time, base_channel + 1, chord_sample_index);
+        if (division->chord.root) {
+            zm_render_chord(notes, &division->chord, division_time, base_channel + 1, chord_sample_index);
         }
-        beat_time += beat->tone.duration;
+        division_time += division->melody.duration;
     }
     ysw_array_sort(notes, zm_note_compare);
     return notes;

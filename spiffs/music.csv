@@ -205,7 +205,47 @@
 6,2,80,300,1024
 6,3,80,450,1024
 
-#type(pattern),index,name,sample
+#type(9=pattern),index,name,tempo,key,time,melody,chord
+#type(10=division),start,measure,flags # measure 1
+#type(11=melody),note,duration
+#type(12=chord),root,quality,style,duration
+
+9,0,Summer Nights Verse 1,3,2,3,1,10
+
+10,0,1,0
+11,0,256 # Rest
+12,62,2,2,512 # DMaj
+10,256,1,0
+11,66,128 # F#
+10,384,1,0
+11,62,128 # D
+10,512,1,0
+11,67,128 # G
+12,67,2,2,512 # GMaj
+10,640,1,0
+11,64,128 # E
+10,768,1,0
+11,00,256 # Rest
+
+10,1024,2,1
+11,69,128 # A
+12,69,2,2,512 # AMaj
+10,1152,2,0
+11,66,128 # F#
+10,1280,2,0
+11,69,128 # A
+10,1408,2,0
+11,69,128 # A # This is a tied eight-note (256 ticks) in the original score
+10,1536,2,0
+12,67,2,2,512 # GMaj
+11,69,128 # A
+10,1664,2,0
+11,67,384 # G
+
+################################
+################################
+
+#type(model),index,name,sample
 45,0,Twelve Bar Blues,0
 
 #type(step),root,quality,style,duration
@@ -226,7 +266,7 @@
 # D     E     F# G     A     B     C#
 # 62 63 64 65 66 67 68 69 70 71 72 73
 
-#type(pattern),index,name,sample
+#type(model),index,name,sample
 45,1,Summer Nights Chords,0
 
 #type(step),root,quality,style,duration
@@ -257,7 +297,7 @@
 # D     E     F# G     A     B     C#
 # 62 63 64 65 66 67 68 69 70 71 72 73
 
-#type(pattern),index,name,sample
+#type(model),index,name,sample
 45,2,Summer Nights Melody,1
 
 #type(step),root,quality,style,duration
@@ -334,14 +374,14 @@
 46,69,0,4,128 # A
 46,62,0,4,128 # D
 
-#type(pattern),index,name,sample
+#type(model),index,name,sample
 45,3,Summer Nights Bass Guitar,10
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
 # 62 63 64 65 66 67 68 69 70 71 72 73
 
-#type(tone),root,quality,style,duration
+#type(step),root,quality,style,duration
 46,62,0,4,128
 46,64,0,4,128
 46,66,0,4,128
@@ -351,28 +391,28 @@
 46,73,0,4,128
 46,74,0,4,128
 
-#type(pattern),index,name,sample
+#type(model),index,name,sample
 45,4,Standard 8th Note Groove Bass Drum,6
 46,60,0,4,256
 46,00,0,4,256
 46,60,0,4,256
 46,00,0,4,256
 
-#type(pattern),index,name,sample
+#type(model),index,name,sample
 45,5,Standard 8th Note Groove Cymbal,7
 46,60,0,4,256
 46,00,0,4,256
 46,60,0,4,256
 46,00,0,4,256
 
-#type(pattern),index,name,sample
+#type(model),index,name,sample
 45,6,Standard 8th Note Groove Snare,8
 46,00,0,4,256
 46,60,0,4,256
 46,00,0,4,256
 46,60,0,4,256
 
-#type(pattern),index,name,sample
+#type(model),index,name,sample
 45,7,Standard 8th Note Groove Hi Hat,9
 46,60,0,4,128
 46,60,0,4,128
@@ -387,7 +427,7 @@
 # D     E     F# G     A     B     C#
 # 62 63 64 65 66 67 68 69 70 71 72 73
 
-#type(pattern),index,name,sample
+#type(model),index,name,sample
 45,8,Summer Nights Intro,0
 
 #type(step),root,quality,style,duration
@@ -423,7 +463,7 @@
 #type(song),index,name,bpm
 47,0,Summer Nights,160
 
-#type(part),pattern,when-type,when-part-index,fit
+#type(role),model,when-type,when-role-index,fit
 48,8,0,0,0 # Intro 0
 # Page 1
 48,1,1,0,0 # Chords 1
@@ -439,8 +479,3 @@
 48,4,0,7,1 # Bass Drum 10
 48,6,0,7,1 # Snare 11
 48,7,0,7,1 # Hi Hat Closed 12
-
-#type(passage),index,name,tempo,key,time,tone,chord,drum
-
-#type(beat),start,measure,flags
-

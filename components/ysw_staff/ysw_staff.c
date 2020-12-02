@@ -247,11 +247,11 @@ static void draw_white(draw_context_t *dc, uint8_t note, zm_duration_t duration)
     }
 }
 
-static uint32_t draw_tone(draw_context_t *dc, zm_beat_t *beat)
+static uint32_t draw_melody(draw_context_t *dc, zm_division_t *division)
 {
-    zm_duration_t duration = zm_round_duration(beat->tone.duration);
-    if (beat->tone.note) {
-        uint8_t note = (beat->tone.note - 60) % MAX_NOTES;
+    zm_duration_t duration = zm_round_duration(division->melody.duration);
+    if (division->melody.note) {
+        uint8_t note = (division->melody.note - 60) % MAX_NOTES;
         if (black[note]) {
             draw_black(dc, note, duration);
         } else {
@@ -263,7 +263,7 @@ static uint32_t draw_tone(draw_context_t *dc, zm_beat_t *beat)
     return duration;
 }
 
-static void draw_chord(draw_context_t *dc, zm_beat_t *beat)
+static void draw_chord(draw_context_t *dc, zm_division_t *division)
 {
     lv_area_t coords = {
         .x1 = dc->point.x,
@@ -276,9 +276,9 @@ static void draw_chord(draw_context_t *dc, zm_beat_t *beat)
         .font = &lv_font_unscii_8,
         .opa = LV_OPA_COVER,
     };
-    lv_draw_label(&coords, dc->clip_area, &dsc, zm_get_note_name(beat->chord.root), NULL);
+    lv_draw_label(&coords, dc->clip_area, &dsc, zm_get_note_name(division->chord.root), NULL);
     coords.y1 += 9;
-    lv_draw_label(&coords, dc->clip_area, &dsc, beat->chord.quality->label, NULL);
+    lv_draw_label(&coords, dc->clip_area, &dsc, division->chord.quality->label, NULL);
 }
 
 static void draw_signature(draw_context_t *dc, zm_time_signature_x time)
@@ -298,24 +298,26 @@ static void draw_signature(draw_context_t *dc, zm_time_signature_x time)
     draw_letter(dc, YSW_LEFT_BAR);
 }
 
-static void draw_beat(draw_context_t *dc, zm_beat_t *beat)
+static void draw_division(draw_context_t *dc, zm_division_t *division)
 {
     if (dc->draw_type == YSW_STAFF_LEFT) {
         draw_letter(dc, YSW_STAFF_SPACE);
-        if (beat->chord.root) {
+        if (division->chord.root) {
+            // TODO: measure width of chord name to determine number of spaces
             draw_letter(dc, YSW_STAFF_SPACE);
         }
-        draw_tone(dc, beat);
-        if (beat->chord.root) {
-            draw_chord(dc, beat);
+        draw_melody(dc, division);
+        if (division->chord.root) {
+            draw_chord(dc, division);
         }
     } else if (dc->draw_type == YSW_STAFF_RIGHT) {
-        if (beat->chord.root) {
-            draw_chord(dc, beat);
+        if (division->chord.root) {
+            draw_chord(dc, division);
         }
-        draw_tone(dc, beat);
+        draw_melody(dc, division);
         draw_letter(dc, YSW_STAFF_SPACE);
-        if (beat->chord.root) {
+        if (division->chord.root) {
+            // TODO: measure width of chord name to determine number of spaces
             draw_letter(dc, YSW_STAFF_SPACE);
         }
     }
@@ -323,21 +325,23 @@ static void draw_beat(draw_context_t *dc, zm_beat_t *beat)
 
 static void draw_staff(ysw_staff_ext_t *ext, draw_context_t *dc)
 {
-    uint32_t beat_count = ysw_array_get_count(ext->pattern->beats);
-    uint32_t symbol_count = beat_count * 2;
+    uint32_t division_count = ysw_array_get_count(ext->pattern->divisions);
+    uint32_t symbol_count = division_count * 2;
 
     dc->draw_type = YSW_STAFF_LEFT;
     dc->point.x = 160;
 
     for (int32_t left = ext->position - 1; left >= 0 && dc->point.x > 0; left--) {
         if (left % 2 == 1) {
-            uint32_t beat_index = left / 2;
-            zm_beat_t *beat = ysw_array_get(ext->pattern->beats, beat_index);
-            if (beat->flags & ZM_BEAT_NEW_MEASURE) {
-                draw_measure_label(dc, beat->measure);
+            uint32_t division_index = left / 2;
+            zm_division_t *division = ysw_array_get(ext->pattern->divisions, division_index);
+            draw_division(dc, division);
+            // TODO: use end-of-measure instead of new-measure so space is to right of bar
+            if (division->flags & ZM_DIVISION_NEW_MEASURE) {
+                draw_letter(dc, YSW_STAFF_SPACE);
+                draw_measure_label(dc, division->measure);
                 draw_letter(dc, YSW_RIGHT_BAR);
             }
-            draw_beat(dc, beat);
         } else {
             draw_letter(dc, YSW_STAFF_SPACE);
         }
@@ -352,18 +356,20 @@ static void draw_staff(ysw_staff_ext_t *ext, draw_context_t *dc)
 
     for (uint32_t right = ext->position; right <= symbol_count && dc->point.x < 320; right++) {
         if (right % 2 == 1) {
-            uint32_t beat_index = right / 2;
-            zm_beat_t *beat = ysw_array_get(ext->pattern->beats, beat_index);
+            uint32_t division_index = right / 2;
+            zm_division_t *division = ysw_array_get(ext->pattern->divisions, division_index);
+            // TODO: use end-of-measure instead of new-measure so space is to right of bar
+            if (division->flags & ZM_DIVISION_NEW_MEASURE) {
+                draw_letter(dc, YSW_RIGHT_BAR);
+                draw_measure_label(dc, division->measure);
+                draw_letter(dc, YSW_STAFF_SPACE);
+            }
             if (right == ext->position) {
                 dc->color = LV_COLOR_RED;
-                draw_beat(dc, beat);
+                draw_division(dc, division);
                 dc->color = LV_COLOR_WHITE;
             } else {
-                draw_beat(dc, beat);
-            }
-            if (beat->flags & ZM_BEAT_NEW_MEASURE) {
-                draw_letter(dc, YSW_RIGHT_BAR);
-                draw_measure_label(dc, beat->measure);
+                draw_division(dc, division);
             }
         } else {
             if (right == ext->position) {
