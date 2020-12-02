@@ -140,7 +140,7 @@ static void play_division(context_t *context, zm_division_t *division)
     ysw_array_t *notes = ysw_array_create(16);
     if (division->melody.note) {
         zm_sample_x sample_index = ysw_array_find(context->music->samples, context->pattern->melody_sample);
-        zm_render_melody(notes, &division->melody, 0, FOREGROUND_MELODY, sample_index);
+        zm_render_melody(notes, &division->melody, 0, FOREGROUND_MELODY, sample_index, 0);
     }
     if (division->chord.root) {
         zm_sample_x sample_index = ysw_array_find(context->music->samples, context->pattern->chord_sample);
@@ -318,6 +318,22 @@ static void cycle_duration(context_t *context)
         division->melody.duration = context->duration;
         recalculate(context);
         display_mode(context);
+    }
+}
+
+static void cycle_tie(context_t *context)
+{
+    if (is_division_position(context)) {
+        zm_division_x division_index = context->position / 2;
+        zm_division_t *division = ysw_array_get(context->pattern->divisions, division_index);
+        if (division->melody.note) {
+            if (division->melody.tie) {
+                division->melody.tie = 0;
+            } else {
+                division->melody.tie = 1;
+            }
+            ysw_staff_invalidate(context->staff);
+        }
     }
 }
 
@@ -580,6 +596,12 @@ static void on_duration(ysw_menu_t *menu, ysw_event_t *event, void *value)
     cycle_duration(context);
 }
 
+static void on_tie(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    context_t *context = menu->caller_context;
+    cycle_tie(context);
+}
+
 static void on_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     context_t *context = menu->caller_context;
@@ -828,7 +850,7 @@ static const ysw_menu_item_t menu_2[] = {
     /* 23 */ { "G#5", YSW_MF_BUTTON, on_note, VP 68 },
     /* 24 */ { "A#5", YSW_MF_BUTTON, on_note, VP 70 },
 
-    /* 25 */ { " ", YSW_MF_BLANK, ysw_menu_nop, 0 },
+    /* 25 */ { "Tie", YSW_MF_COMMAND, on_tie, 0 },
     /* 26 */ { " ", YSW_MF_BLANK, ysw_menu_nop, 0 },
     /* 27 */ { " ", YSW_MF_BLANK, ysw_menu_nop, 0 },
     /* 28 */ { "Previous", YSW_MF_COMMAND_EOL, on_previous, 0 },

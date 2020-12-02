@@ -21,23 +21,25 @@ typedef uint32_t zm_large_t;
 
 typedef bool zm_yesno_t;
 
-typedef int8_t zm_distance_t;
+// alphabetical order by type
 
-typedef uint8_t zm_note_t;
+typedef int8_t zm_distance_t;
 
 typedef uint8_t zm_bpm_x;
 typedef uint8_t zm_channel_x;
-typedef uint8_t zm_velocity_x;
 typedef uint8_t zm_distance_x;
+typedef uint8_t zm_note_t;
 typedef uint8_t zm_program_x;
+typedef uint8_t zm_tie_x;
+typedef uint8_t zm_velocity_x;
 
 typedef uint16_t zm_measure_x;
-typedef uint16_t zm_quality_x;
-typedef uint16_t zm_style_x;
-typedef uint16_t zm_sample_x;
-typedef uint16_t zm_pattern_x;
 typedef uint16_t zm_model_x;
+typedef uint16_t zm_pattern_x;
+typedef uint16_t zm_quality_x;
+typedef uint16_t zm_sample_x;
 typedef uint16_t zm_song_x;
+typedef uint16_t zm_style_x;
 
 typedef uint32_t zm_division_x;
 typedef uint32_t zm_time_x;
@@ -199,6 +201,7 @@ typedef struct {
 typedef struct {
     zm_note_t note; // Use 0 for rest
     zm_duration_t duration;
+    zm_tie_x tie; // tie/portamento
 } zm_melody_t;
 
 typedef struct {
@@ -246,7 +249,7 @@ zm_music_t *zm_read(void);
 
 int zm_note_compare(const void *left, const void *right);
 
-void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_sample_x sample_index);
+void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_sample_x sample_index, zm_tie_x tie);
 void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_sample_x sample_index);
 zm_large_t zm_render_model(ysw_array_t *notes, zm_model_t *model, zm_large_t start_time, zm_small_t channel);
 ysw_array_t *zm_render_song(zm_song_t *song);

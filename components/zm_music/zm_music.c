@@ -253,9 +253,10 @@ static void parse_pattern(zm_mfr_t *zm_mfr)
             division->measure = atoi(zm_mfr->tokens[2]);
             division->flags = atoi(zm_mfr->tokens[3]);
             ysw_array_push(pattern->divisions, division);
-        } else if (division && type == ZM_MF_MELODY && zm_mfr->token_count == 3) {
+        } else if (division && type == ZM_MF_MELODY && zm_mfr->token_count == 4) {
             division->melody.note = atoi(zm_mfr->tokens[1]);
             division->melody.duration = atoi(zm_mfr->tokens[2]);
+            division->melody.tie = atoi(zm_mfr->tokens[3]);
         } else if (division && type == ZM_MF_CHORD && zm_mfr->token_count == 5) {
             division->chord.root = atoi(zm_mfr->tokens[1]);
             division->chord.quality = ysw_array_get(zm_mfr->music->qualities, atoi(zm_mfr->tokens[2]));
@@ -509,8 +510,15 @@ int zm_note_compare(const void *left, const void *right)
     return delta;
 }
 
-void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_sample_x sample_index)
+void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_sample_x sample_index, zm_tie_x tie)
 {
+    if (tie && ysw_array_get_count(notes)) {
+        ysw_note_t *tied_previous = ysw_array_get_top(notes);
+        if (tied_previous->midi_note == melody->note) {
+            tied_previous->duration += melody->duration;
+            return;
+        }
+    }
     ysw_note_t *note = ysw_heap_allocate(sizeof(ysw_note_t));
     note->channel = channel;
     note->midi_note = melody->note;
@@ -601,6 +609,7 @@ ysw_array_t *zm_render_song(zm_song_t *song)
 
 ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_channel_x base_channel)
 {
+    zm_tie_x tie = 0;
     zm_time_x division_time = 0;
     ysw_array_t *notes = ysw_array_create(512);
     zm_division_x division_count = ysw_array_get_count(pattern->divisions);
@@ -609,7 +618,12 @@ ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_chan
     for (zm_division_x i = 0; i < division_count; i++) {
         zm_division_t *division = ysw_array_get(pattern->divisions, i);
         if (division->melody.note) {
-            zm_render_melody(notes, &division->melody, division_time, base_channel, melody_sample_index);
+            zm_render_melody(notes, &division->melody, division_time, base_channel, melody_sample_index, tie);
+            if (division->melody.tie) {
+                tie = division->melody.tie;
+            } else if (tie) {
+                tie--;
+            }
         }
         if (division->chord.root) {
             zm_render_chord(notes, &division->chord, division_time, base_channel + 1, chord_sample_index);

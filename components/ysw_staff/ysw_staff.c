@@ -42,6 +42,9 @@
 #define YSW_2_REST 0xa3
 #define YSW_1_REST 0xa4
 
+#define YSW_TIE_UPPER 0xa6
+#define YSW_TIE_LOWER 0xaa
+
 #define OPA LV_OPA_100
 #define BLEND LV_BLEND_MODE_NORMAL
 
@@ -298,6 +301,17 @@ static void draw_signature(draw_context_t *dc, zm_time_signature_x time)
     draw_letter(dc, YSW_LEFT_BAR);
 }
 
+static void draw_tie(draw_context_t *dc, zm_division_t *division)
+{
+    lv_coord_t x = dc->point.x;
+    if (division->melody.note >= 72) {
+        draw_letter(dc, YSW_TIE_UPPER);
+    } else {
+        draw_letter(dc, YSW_TIE_LOWER);
+    }
+    dc->point.x = x;
+}
+
 static void draw_division(draw_context_t *dc, zm_division_t *division)
 {
     if (dc->draw_type == YSW_STAFF_LEFT) {
@@ -305,6 +319,9 @@ static void draw_division(draw_context_t *dc, zm_division_t *division)
         if (division->chord.root) {
             // TODO: measure width of chord name to determine number of spaces
             draw_letter(dc, YSW_STAFF_SPACE);
+        }
+        if (division->melody.tie) {
+            draw_tie(dc, division);
         }
         draw_melody(dc, division);
         if (division->chord.root) {
@@ -315,6 +332,9 @@ static void draw_division(draw_context_t *dc, zm_division_t *division)
             draw_chord(dc, division);
         }
         draw_melody(dc, division);
+        if (division->melody.tie) {
+            draw_tie(dc, division);
+        }
         draw_letter(dc, YSW_STAFF_SPACE);
         if (division->chord.root) {
             // TODO: measure width of chord name to determine number of spaces
