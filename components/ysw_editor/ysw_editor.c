@@ -423,7 +423,7 @@ static void process_division(context_t *context, zm_note_t midi_note, zm_time_x 
         division->chord.root = midi_note;
         division->chord.quality = context->quality;
         division->chord.style = context->style;
-        division->chord.duration = max(duration, ZM_QUARTER);
+        division->chord.duration = duration;
         if (!division->melody.duration) {
             division->melody.duration = division->chord.duration;
         }
