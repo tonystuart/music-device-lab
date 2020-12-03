@@ -162,33 +162,40 @@ static void draw_measure_label(draw_context_t *dc, uint32_t measure)
     lv_draw_label(&coords, dc->clip_area, &dsc, buf, NULL);
 }
 
+static const uint8_t rest_time_base[] = {
+    YSW_16_REST,
+    YSW_8_REST,
+    YSW_4_REST,
+    YSW_2_REST,
+    YSW_1_REST,
+};
+
 static void draw_rest(draw_context_t *dc, zm_duration_t duration)
 {
-    if (duration <= ZM_SIXTEENTH) {
-        draw_letter(dc, YSW_16_REST);
-    } else if (duration <= ZM_EIGHTH) {
-        draw_letter(dc, YSW_8_REST);
-    } else if (duration <= ZM_QUARTER) {
-        draw_letter(dc, YSW_4_REST);
-    } else if (duration <= ZM_HALF) {
-        draw_letter(dc, YSW_2_REST);
-    } else {
-        draw_letter(dc, YSW_1_REST);
-    }
+    uint8_t index = 0;
+    zm_round_duration(duration, &index, NULL);
+    draw_letter(dc, rest_time_base[index]);
 }
 
-static void draw_note(draw_context_t *dc, zm_duration_t duration, uint8_t step)
+static const uint8_t note_time_base[] = {
+    YSW_16_BASE,
+    YSW_8_BASE,
+    YSW_4_BASE,
+    YSW_2_BASE,
+    YSW_1_BASE,
+};
+
+static void draw_note(draw_context_t *dc, uint8_t step, zm_duration_t duration)
 {
-    if (duration <= ZM_SIXTEENTH) {
-        draw_letter(dc, YSW_16_BASE + step);
-    } else if (duration <= ZM_EIGHTH) {
-        draw_letter(dc, YSW_8_BASE + step);
-    } else if (duration <= ZM_QUARTER) {
-        draw_letter(dc, YSW_4_BASE + step);
-    } else if (duration <= ZM_HALF) {
-        draw_letter(dc, YSW_2_BASE + step);
-    } else {
-        draw_letter(dc, YSW_1_BASE + step);
+    uint8_t index = 0;
+    bool dotted = false;
+    zm_round_duration(duration, &index, &dotted);
+    if (dotted && dc->draw_type == YSW_STAFF_LEFT) {
+        draw_letter(dc, YSW_DOT_BASE + step);
+    }
+    draw_letter(dc, note_time_base[index] + step);
+    if (dotted && dc->draw_type == YSW_STAFF_RIGHT) {
+        draw_letter(dc, YSW_DOT_BASE + step);
     }
 }
 
@@ -214,13 +221,13 @@ static void draw_black(draw_context_t *dc, uint8_t note, zm_duration_t duration)
         accidental = YSW_SHARP_BASE + step;
     }
     if (dc->draw_type == YSW_STAFF_LEFT) {
-        draw_note(dc, duration, step);
+        draw_note(dc, step, duration);
     }
     if (accidental) {
         draw_letter(dc, accidental);
     }
     if (dc->draw_type == YSW_STAFF_RIGHT) {
-        draw_note(dc, duration, step);
+        draw_note(dc, step, duration);
     }
 }
 
@@ -240,19 +247,19 @@ static void draw_white(draw_context_t *dc, uint8_t note, zm_duration_t duration)
         accidental = YSW_NATURAL_BASE + step;
     }
     if (dc->draw_type == YSW_STAFF_LEFT) {
-        draw_note(dc, duration, step);
+        draw_note(dc, step, duration);
     }
     if (accidental) {
         draw_letter(dc, accidental);
     }
     if (dc->draw_type == YSW_STAFF_RIGHT) {
-        draw_note(dc, duration, step);
+        draw_note(dc, step, duration);
     }
 }
 
-static uint32_t draw_melody(draw_context_t *dc, zm_division_t *division)
+static void draw_melody(draw_context_t *dc, zm_division_t *division)
 {
-    zm_duration_t duration = zm_round_duration(division->melody.duration);
+    zm_duration_t duration = division->melody.duration;
     if (division->melody.note) {
         uint8_t note = (division->melody.note - 60) % MAX_NOTES;
         if (black[note]) {
@@ -263,7 +270,6 @@ static uint32_t draw_melody(draw_context_t *dc, zm_division_t *division)
     } else {
         draw_rest(dc, duration);
     }
-    return duration;
 }
 
 static void draw_chord(draw_context_t *dc, zm_division_t *division)

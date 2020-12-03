@@ -125,7 +125,7 @@ static void recalculate(context_t *context)
         division->start = start;
         division->flags = 0;
         division->measure = measure;
-        ticks_in_measure += zm_round_duration(division->melody.duration);
+        ticks_in_measure += zm_round_duration(division->melody.duration, NULL, NULL);
         if (ticks_in_measure >= 1024) {
             division->flags |= ZM_DIVISION_END_OF_MEASURE;
             ticks_in_measure = 0;

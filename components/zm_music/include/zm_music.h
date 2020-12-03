@@ -265,7 +265,7 @@ zm_tempo_t zm_get_next_tempo_index(zm_tempo_t tempo_index);
 const zm_tempo_signature_t *zm_get_tempo_signature(zm_tempo_t tempo_index);
 zm_bpm_x zm_tempo_to_bpm(zm_tempo_t tempo);
 
-zm_duration_t zm_round_duration(zm_duration_t duration);
+zm_duration_t zm_round_duration(zm_duration_t duration, uint8_t *index, bool *is_dotted);
 
 // See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
 
