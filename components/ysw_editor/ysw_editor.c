@@ -111,6 +111,8 @@ static inline uint32_t division_index_to_position(zm_division_x division_index)
     return (division_index * 2) + 1;
 }
 
+// TODO: remove unnecessary calls to recalculate (e.g. increase/decrease pitch)
+
 static void recalculate(context_t *context)
 {
     zm_time_x start = 0;
@@ -122,13 +124,13 @@ static void recalculate(context_t *context)
         zm_division_t *division = ysw_array_get(context->pattern->divisions, i);
         division->start = start;
         division->flags = 0;
+        division->measure = measure;
         ticks_in_measure += zm_round_duration(division->melody.duration);
         if (ticks_in_measure >= 1024) {
-            division->flags |= ZM_DIVISION_NEW_MEASURE;
+            division->flags |= ZM_DIVISION_END_OF_MEASURE;
             ticks_in_measure = 0;
             measure++;
         }
-        division->measure = measure;
         start += division->melody.duration; // TODO: add articulation, use division->start in zm_render_pattern
     }
 

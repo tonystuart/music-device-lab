@@ -355,13 +355,12 @@ static void draw_staff(ysw_staff_ext_t *ext, draw_context_t *dc)
         if (left % 2 == 1) {
             uint32_t division_index = left / 2;
             zm_division_t *division = ysw_array_get(ext->pattern->divisions, division_index);
-            draw_division(dc, division);
-            // TODO: use end-of-measure instead of new-measure so space is to right of bar
-            if (division->flags & ZM_DIVISION_NEW_MEASURE) {
+            if (division->flags & ZM_DIVISION_END_OF_MEASURE) {
                 draw_letter(dc, YSW_STAFF_SPACE);
-                draw_measure_label(dc, division->measure);
+                draw_measure_label(dc, division->measure + 1);
                 draw_letter(dc, YSW_RIGHT_BAR);
             }
+            draw_division(dc, division);
         } else {
             draw_letter(dc, YSW_STAFF_SPACE);
         }
@@ -378,18 +377,17 @@ static void draw_staff(ysw_staff_ext_t *ext, draw_context_t *dc)
         if (right % 2 == 1) {
             uint32_t division_index = right / 2;
             zm_division_t *division = ysw_array_get(ext->pattern->divisions, division_index);
-            // TODO: use end-of-measure instead of new-measure so space is to right of bar
-            if (division->flags & ZM_DIVISION_NEW_MEASURE) {
-                draw_letter(dc, YSW_RIGHT_BAR);
-                draw_measure_label(dc, division->measure);
-                draw_letter(dc, YSW_STAFF_SPACE);
-            }
             if (right == ext->position) {
                 dc->color = LV_COLOR_RED;
                 draw_division(dc, division);
                 dc->color = LV_COLOR_WHITE;
             } else {
                 draw_division(dc, division);
+            }
+            if (division->flags & ZM_DIVISION_END_OF_MEASURE) {
+                draw_letter(dc, YSW_RIGHT_BAR);
+                draw_measure_label(dc, division->measure + 1);
+                draw_letter(dc, YSW_STAFF_SPACE);
             }
         } else {
             if (right == ext->position) {

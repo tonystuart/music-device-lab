@@ -211,7 +211,7 @@ typedef struct {
 } zm_rhythm_t;
 
 typedef enum {
-    ZM_DIVISION_NEW_MEASURE = 0x0001,
+    ZM_DIVISION_END_OF_MEASURE = 0x0001,
 } zm_division_flags_t;
 
 typedef struct {
