@@ -28,7 +28,9 @@ typedef int8_t zm_distance_t;
 typedef uint8_t zm_bpm_x;
 typedef uint8_t zm_channel_x;
 typedef uint8_t zm_distance_x;
+typedef uint8_t zm_gm_x;
 typedef uint8_t zm_note_t;
+typedef uint8_t zm_patch_x;
 typedef uint8_t zm_program_x;
 typedef uint8_t zm_tie_x;
 typedef uint8_t zm_velocity_x;
@@ -129,6 +131,7 @@ typedef struct {
 
 typedef struct {
     char *name;
+    zm_gm_x gm;
     ysw_array_t *patches;
 } zm_program_t;
 
@@ -229,8 +232,8 @@ typedef struct {
     zm_key_signature_x key;
     zm_time_signature_x time;
     ysw_array_t *divisions;
-    zm_sample_t *melody_sample;
-    zm_sample_t *chord_sample;
+    zm_program_t *melody_program;
+    zm_program_t *chord_program;
 } zm_pattern_t;
 
 typedef struct {
@@ -247,10 +250,12 @@ void zm_music_free(zm_music_t *music);
 zm_music_t *zm_read_from_file(FILE *file);
 zm_music_t *zm_read(void);
 
+void *zm_load_sample(const char* name, uint16_t *word_count);
+
 int zm_note_compare(const void *left, const void *right);
 
-void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_sample_x sample_index, zm_tie_x tie);
-void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_sample_x sample_index);
+void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_program_x program_index, zm_tie_x tie);
+void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_program_x program_index);
 zm_large_t zm_render_model(ysw_array_t *notes, zm_model_t *model, zm_large_t start_time, zm_small_t channel);
 ysw_array_t *zm_render_song(zm_song_t *song);
 ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_channel_x base_channel);

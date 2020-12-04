@@ -141,12 +141,12 @@ static void play_division(context_t *context, zm_division_t *division)
 {
     ysw_array_t *notes = ysw_array_create(16);
     if (division->melody.note) {
-        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->pattern->melody_sample);
-        zm_render_melody(notes, &division->melody, 0, FOREGROUND_MELODY, sample_index, 0);
+        zm_program_x program_index = ysw_array_find(context->music->programs, context->pattern->melody_program);
+        zm_render_melody(notes, &division->melody, 0, FOREGROUND_MELODY, program_index, 0);
     }
     if (division->chord.root) {
-        zm_sample_x sample_index = ysw_array_find(context->music->samples, context->pattern->chord_sample);
-        zm_render_chord(notes, &division->chord, 0, FOREGROUND_CHORD, sample_index);
+        zm_program_x program_index = ysw_array_find(context->music->programs, context->pattern->chord_program);
+        zm_render_chord(notes, &division->chord, 0, FOREGROUND_CHORD, program_index);
     }
     ysw_array_sort(notes, zm_note_compare);
     zm_bpm_x bpm = zm_tempo_to_bpm(context->pattern->tempo);
@@ -162,15 +162,15 @@ static void play_position(context_t *context)
     }
 }
 
-static void display_sample(context_t *context)
+static void display_program(context_t *context)
 {
     const char *value = "";
     if (context->mode == YSW_EDITOR_MODE_MELODY) {
-        value = context->pattern->melody_sample->name;
+        value = context->pattern->melody_program->name;
     } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
-        value = context->pattern->chord_sample->name;
+        value = context->pattern->chord_program->name;
     }
-    ysw_header_set_sample(context->header, value);
+    ysw_header_set_program(context->header, value);
 }
 
 static void display_melody_mode(context_t *context)
@@ -242,32 +242,32 @@ static void display_mode(context_t *context)
             display_rhythm_mode(context);
             break;
     }
-    // sample is mode specific
-    display_sample(context);
+    // program is mode specific
+    display_program(context);
 }
 
-static zm_sample_t *next_sample(ysw_array_t *samples, zm_sample_t *previous)
+static zm_program_t *next_program(ysw_array_t *programs, zm_program_t *previous)
 {
-    zm_sample_x sample_count = ysw_array_get_count(samples);
-    zm_sample_x sample_index = ysw_array_find(samples, previous);
-    sample_index = (sample_index + 1) % sample_count;
-    zm_sample_t *next = ysw_array_get(samples, sample_index);
+    zm_program_x program_count = ysw_array_get_count(programs);
+    zm_program_x program_index = ysw_array_find(programs, previous);
+    program_index = (program_index + 1) % program_count;
+    zm_program_t *next = ysw_array_get(programs, program_index);
     return next;
 }
 
-static void cycle_sample(context_t *context)
+static void cycle_program(context_t *context)
 {
     if (context->mode == YSW_EDITOR_MODE_MELODY) {
-        context->pattern->melody_sample = next_sample(context->music->samples, context->pattern->melody_sample);
+        context->pattern->melody_program = next_program(context->music->programs, context->pattern->melody_program);
         ysw_event_program_change_t program_change = {
             .channel = 0,
-            .program = ysw_array_find(context->music->samples, context->pattern->melody_sample),
+            .program = ysw_array_find(context->music->programs, context->pattern->melody_program),
         };
         ysw_event_fire_program_change(context->bus, YSW_ORIGIN_EDITOR, &program_change);
     } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
-        context->pattern->chord_sample = next_sample(context->music->samples, context->pattern->chord_sample);
+        context->pattern->chord_program = next_program(context->music->programs, context->pattern->chord_program);
     }
-    display_sample(context);
+    display_program(context);
 }
 
 static void cycle_key_signature(context_t *context)
@@ -556,10 +556,10 @@ static void on_cycle_mode(ysw_menu_t *menu, ysw_event_t *event, void *value)
     display_mode(context);
 }
 
-static void on_sample(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_program(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     context_t *context = menu->caller_context;
-    cycle_sample(context);
+    cycle_program(context);
 }
 
 static void on_quality(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -787,7 +787,7 @@ static void initialize_editor_task(void *caller_context)
     lv_obj_set_size(context->header, 320, 30);
     lv_obj_align(context->header, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
     display_mode(context);
-    display_sample(context);
+    display_program(context);
 
     context->staff = ysw_staff_create(context->container);
     assert(context->staff);
@@ -882,7 +882,7 @@ static const ysw_menu_item_t base_menu[] = {
 
     /* 05 */ { "Chord\nQuality", YSW_MF_COMMAND, on_quality, 0 },
     /* 06 */ { "Chord\nStyle", YSW_MF_COMMAND, on_style, 0 },
-    /* 07 */ { "Sample", YSW_MF_COMMAND, on_sample, 0 },
+    /* 07 */ { "Program", YSW_MF_COMMAND, on_program, 0 },
     /* 08 */ { "Up", YSW_MF_COMMAND_EOL, on_up, 0 },
 
     /* 09 */ { "C6", YSW_MF_BUTTON, on_note, VP 72 },
@@ -931,7 +931,7 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     assert(music);
     assert(lvgl_init);
 
-    assert(ysw_array_get_count(music->samples));
+    assert(ysw_array_get_count(music->programs));
     assert(ysw_array_get_count(music->qualities) > DEFAULT_QUALITY);
     assert(ysw_array_get_count(music->styles));
 
@@ -949,8 +949,8 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
         context->pattern->key = ZM_KEY_C;
         context->pattern->time = ZM_TIME_4_4;
         context->pattern->tempo = ZM_TEMPO_100;
-        context->pattern->melody_sample = ysw_array_get(music->samples, 0);
-        context->pattern->chord_sample = context->pattern->melody_sample;
+        context->pattern->melody_program = ysw_array_get(music->programs, 0);
+        context->pattern->chord_program = context->pattern->melody_program;
     }
 
     context->quality = ysw_array_get(music->qualities, DEFAULT_QUALITY);

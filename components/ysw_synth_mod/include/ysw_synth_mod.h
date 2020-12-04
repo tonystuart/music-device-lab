@@ -9,7 +9,29 @@
 
 #pragma once
 
+#include "stdint.h"
 #include "ysw_bus.h"
 
-void ysw_synth_mod_create_task(ysw_bus_h bus);
+typedef enum {
+    YSW_MOD_PAN_LEFT,
+    YSW_MOD_PAN_CENTER,
+    YSW_MOD_PAN_RIGHT,
+} ysw_mod_pan_t;
 
+typedef struct {
+    int8_t  *data;
+    uint16_t   length;
+    uint16_t   reppnt;
+    uint16_t   replen;
+    uint8_t  volume;
+    ysw_mod_pan_t pan;
+} ysw_mod_sample_t;
+
+typedef ysw_mod_sample_t *(*ysw_mod_sample_provider_t)(void *host_context, uint8_t program, uint8_t note);
+
+typedef struct {
+    void* host_context;
+    ysw_mod_sample_provider_t provide_sample;
+} ysw_mod_host_t;
+
+void ysw_synth_mod_create_task(ysw_bus_h bus, ysw_mod_host_t *mod_host);

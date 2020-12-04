@@ -17,8 +17,13 @@
 
 #include "assert.h"
 #include "errno.h"
+#include "fcntl.h"
 #include "stdio.h"
 #include "stdlib.h"
+#include "unistd.h"
+
+#include "sys/types.h"
+#include "sys/stat.h"
 
 #define TAG "ZM_MUSIC"
 
@@ -26,6 +31,7 @@
 #define ZM_MF_CSV ZM_MF_PARTITION "/music.csv"
 #define ZM_MF_TEMP ZM_MF_PARTITION "/music.tmp"
 
+#define PATH_SIZE 128
 #define RECORD_SIZE 128
 #define TOKENS_SIZE 20
 
@@ -131,6 +137,7 @@ static void parse_program(zm_mfr_t *zm_mfr)
 
     zm_program_t *program = ysw_heap_allocate(sizeof(zm_program_t));
     program->name = ysw_heap_strdup(zm_mfr->tokens[2]);
+    program->gm = atoi(zm_mfr->tokens[3]);
     program->patches = ysw_array_create(1);
 
     zm_yesno_t done = false;
@@ -238,8 +245,8 @@ static void parse_pattern(zm_mfr_t *zm_mfr)
     pattern->tempo = atoi(zm_mfr->tokens[3]);
     pattern->key = atoi(zm_mfr->tokens[4]);
     pattern->time = atoi(zm_mfr->tokens[5]);
-    pattern->melody_sample = ysw_array_get(zm_mfr->music->samples, atoi(zm_mfr->tokens[6]));
-    pattern->chord_sample = ysw_array_get(zm_mfr->music->samples, atoi(zm_mfr->tokens[7]));
+    pattern->melody_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[6]));
+    pattern->chord_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[7]));
     pattern->divisions = ysw_array_create(16);
 
     zm_yesno_t done = false;
@@ -437,7 +444,7 @@ zm_music_t *zm_read_from_file(FILE *file)
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
         if (type == ZM_MF_SAMPLE && zm_mfr->token_count == 7) {
             parse_sample(zm_mfr);
-        } else if (type == ZM_MF_PROGRAM && zm_mfr->token_count == 3) {
+        } else if (type == ZM_MF_PROGRAM && zm_mfr->token_count == 4) {
             parse_program(zm_mfr);
         } else if (type == ZM_MF_QUALITY && zm_mfr->token_count > 4) {
             parse_quality(zm_mfr);
@@ -483,6 +490,49 @@ zm_music_t *zm_read(void)
     return music;
 }
 
+void *zm_load_sample(const char* name, uint16_t *word_count)
+{
+    char path[PATH_SIZE];
+    snprintf(path, sizeof(path), "%s/samples/%s", ZM_MF_PARTITION, name);
+
+    struct stat sb;
+    int rc = stat(path, &sb);
+    if (rc == -1) {
+        ESP_LOGE(TAG, "stat failed, file=%s", path);
+        abort();
+    }
+
+    int sample_size = sb.st_size;
+
+    void *sample_data = ysw_heap_allocate(sample_size);
+
+    int fd = open(path, O_RDONLY);
+    if (fd == -1) {
+        ESP_LOGE(TAG, "open failed, file=%s", path);
+        abort();
+    }
+
+    rc = read(fd, sample_data, sample_size);
+    if (rc != sample_size) {
+        ESP_LOGE(TAG, "read failed, rc=%d, sample_size=%d", rc, sample_size);
+        abort();
+    }
+
+    rc = close(fd);
+    if (rc == -1) {
+        ESP_LOGE(TAG, "close failed");
+        abort();
+    }
+
+    ESP_LOGD(TAG, "zm_load_sample: path=%s, sample_size=%d (%d words)", path, sample_size, sample_size / 2);
+
+    if (word_count) {
+        *word_count = sample_size / 2; // length is in 2 byte (16 bit) words
+    }
+
+    return sample_data;
+}
+
 #include "ysw_midi.h"
 #include "ysw_note.h"
 #include "ysw_ticks.h"
@@ -510,7 +560,7 @@ int zm_note_compare(const void *left, const void *right)
     return delta;
 }
 
-void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_sample_x sample_index, zm_tie_x tie)
+void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_program_x program_index, zm_tie_x tie)
 {
     if (tie && ysw_array_get_count(notes)) {
         ysw_note_t *tied_previous = ysw_array_get_top(notes);
@@ -525,11 +575,11 @@ void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_
     note->start = melody_start;
     note->duration = melody->duration;
     note->velocity = 100;
-    note->program = sample_index;
+    note->program = program_index;
     ysw_array_push(notes, note);
 }
 
-void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_sample_x sample_index)
+void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_program_x program_index)
 {
     zm_medium_t distance_count = ysw_array_get_count(chord->quality->distances);
     zm_medium_t sound_count = ysw_array_get_count(chord->style->sounds);
@@ -546,7 +596,7 @@ void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_star
         note->start = chord_start + (sound->start * chord->duration) / YSW_TICKS_PER_MEASURE;
         note->duration = (sound->duration * chord->duration) / YSW_TICKS_PER_MEASURE;
         note->velocity = sound->velocity;
-        note->program = sample_index;
+        note->program = program_index;
         ysw_array_push(notes, note);
     }
 }
@@ -613,12 +663,12 @@ ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_chan
     zm_time_x division_time = 0;
     ysw_array_t *notes = ysw_array_create(512);
     zm_division_x division_count = ysw_array_get_count(pattern->divisions);
-    zm_sample_x melody_sample_index = ysw_array_find(music->samples, pattern->melody_sample);
-    zm_sample_x chord_sample_index = ysw_array_find(music->samples, pattern->chord_sample);
+    zm_program_x melody_program_index = ysw_array_find(music->programs, pattern->melody_program);
+    zm_program_x chord_program_index = ysw_array_find(music->programs, pattern->chord_program);
     for (zm_division_x i = 0; i < division_count; i++) {
         zm_division_t *division = ysw_array_get(pattern->divisions, i);
         if (division->melody.note) {
-            zm_render_melody(notes, &division->melody, division_time, base_channel, melody_sample_index, tie);
+            zm_render_melody(notes, &division->melody, division_time, base_channel, melody_program_index, tie);
             if (division->melody.tie) {
                 tie = division->melody.tie;
             } else if (tie) {
@@ -626,7 +676,7 @@ ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_chan
             }
         }
         if (division->chord.root) {
-            zm_render_chord(notes, &division->chord, division_time, base_channel + 1, chord_sample_index);
+            zm_render_chord(notes, &division->chord, division_time, base_channel + 1, chord_program_index);
         }
         division_time += division->melody.duration;
     }

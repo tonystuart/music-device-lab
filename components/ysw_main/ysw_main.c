@@ -10,13 +10,16 @@
 #include "ysw_editor.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
+#include "ysw_midi.h"
 #include "ysw_sequencer.h"
 #include "ysw_staff.h"
 #include "ysw_synth_mod.h"
 #include "zm_music.h"
+#include "hash.h"
 #include "esp_log.h"
 #include "sys/types.h"
 #include "sys/stat.h"
+#include "assert.h"
 #include "fcntl.h"
 #include "pthread.h"
 #include "stdio.h"
@@ -26,13 +29,11 @@
 
 #define TAG "YSW_MAIN"
 
-#define YSW_MUSIC_PARTITION "/spiffs"
-
 #if YSW_MAIN_SYNTH_MODEL == 1
 
 #include "ysw_synth_bt.h"
 
-void initialize_synthesizer(ysw_bus_h bus)
+void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
 {
     ESP_LOGD(TAG, "initialize_synthesizer: configuring BlueTooth synth");
     ysw_synth_bt_create_task(bus);
@@ -42,7 +43,7 @@ void initialize_synthesizer(ysw_bus_h bus)
 
 #include "ysw_synth_vs.h"
 
-void initialize_synthesizer(ysw_bus_h bus)
+void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
 {
     ESP_LOGD(TAG, "initialize_synthesizer: configuring VS1053 synth");
     ysw_vs1053_config_t config = {
@@ -62,7 +63,7 @@ void initialize_synthesizer(ysw_bus_h bus)
 
 #include "ysw_synth_fs.h"
 
-void initialize_synthesizer(ysw_bus_h bus)
+void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
 {
     ESP_LOGD(TAG, "initialize_synthesizer: configuring FluidSynth synth");
     ysw_synth_fs_create_task(bus, YSW_MUSIC_SOUNDFONT);
@@ -72,10 +73,68 @@ void initialize_synthesizer(ysw_bus_h bus)
 
 #include "ysw_synth_mod.h"
 
-void initialize_synthesizer(ysw_bus_h bus)
+typedef struct {
+    zm_music_t *music;
+    hash_t *sample_map;
+} host_context_t;
+
+ysw_mod_sample_t *provide_sample(void *caller_context, uint8_t program_index, uint8_t midi_note)
+{
+    assert(caller_context);
+    assert(program_index <= YSW_MIDI_MAX);
+    assert(program_index <= YSW_MIDI_MAX); // TODO: consider GM number versus program_index
+
+    host_context_t *host_context = caller_context;
+
+    zm_sample_t *sample = NULL;
+    ysw_mod_sample_t *mod_sample = NULL;
+    if (program_index >= ysw_array_get_count(host_context->music->programs)) {
+        ESP_LOGW(TAG, "invalid program=%d, substituting program=0", program_index);
+        program_index = 0;
+    }
+    zm_program_t *program = ysw_array_get(host_context->music->programs, program_index);
+    zm_patch_x patch_count = ysw_array_get_count(program->patches);
+    for (zm_patch_x i = 0; i < patch_count && !sample; i++) {
+        zm_patch_t *patch = ysw_array_get(program->patches, i);
+        if (midi_note <= patch->up_to) {
+            sample = patch->sample;
+        }
+    }
+    if (!sample) {
+        ESP_LOGE(TAG, "no sample found, program_index=%d, midi_note=%d", program_index, midi_note);
+        abort();
+    }
+    hnode_t *node = hash_lookup(host_context->sample_map, sample);
+    if (node) {
+        mod_sample = hnode_get(node);
+    } else {
+        mod_sample = ysw_heap_allocate(sizeof(ysw_mod_sample_t));
+        mod_sample->data = zm_load_sample(sample->name, &mod_sample->length);
+        mod_sample->reppnt = sample->reppnt;
+        mod_sample->replen = sample->replen;
+        mod_sample->volume = sample->volume;
+        mod_sample->pan = sample->pan;
+        if (!hash_alloc_insert(host_context->sample_map, sample, mod_sample)) {
+            ESP_LOGE(TAG, "hash_alloc_insert failed");
+            abort();
+        }
+    }
+    return mod_sample;
+}
+
+void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
 {
     ESP_LOGD(TAG, "initialize_synthesizer: configuring MOD synth");
-    ysw_synth_mod_create_task(bus);
+
+    host_context_t *host_context = ysw_heap_allocate(sizeof(host_context_t));
+    host_context->music = music;
+    host_context->sample_map = hash_create(50, NULL, NULL);
+
+    ysw_mod_host_t *mod_host = ysw_heap_allocate(sizeof(ysw_mod_host_t));
+    mod_host->host_context = host_context;
+    mod_host->provide_sample = provide_sample;
+
+    ysw_synth_mod_create_task(bus, mod_host);
 }
 
 #else
@@ -216,25 +275,6 @@ static void initialize_touch_screen(void)
 
 #endif
 
-
-static void initialize_samples(ysw_bus_h bus, zm_music_t *music)
-{
-    zm_sample_x sample_count = ysw_array_get_count(music->samples);
-    for (zm_sample_x i = 0; i < sample_count; i++) {
-        zm_sample_t *sample = ysw_array_get(music->samples, i);
-        ysw_event_sample_load_t sample_load = {
-            .index = i,
-            .reppnt = sample->reppnt,
-            .replen = sample->replen,
-            .volume = sample->volume,
-            .pan = sample->pan,
-        };
-        snprintf(sample_load.name, sizeof(sample_load.name),
-                "%s/samples/%s", YSW_MUSIC_PARTITION, sample->name);
-        ysw_event_fire_sample_load(bus, &sample_load);
-    };
-}
-
 #ifdef IDF_VER
 #include "ysw_keyboard.h"
 #include "ysw_led.h"
@@ -253,7 +293,7 @@ int main(int argc, char *argv[])
     zm_music_t *music = zm_read();
     ysw_bus_h bus = ysw_event_create_bus();
 
-    initialize_synthesizer(bus);
+    initialize_synthesizer(bus, music);
 
     ysw_sequencer_create_task(bus);
     ysw_editor_create_task(bus, music, initialize_touch_screen);
@@ -270,8 +310,6 @@ int main(int argc, char *argv[])
     };
     ysw_keyboard_create_task(bus, &keyboard_config);
 #endif
-
-    initialize_samples(bus, music);
 
 #ifdef IDF_VER
 #if configUSE_TRACE_FACILITY && configTASKLIST_INCLUDE_COREID

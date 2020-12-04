@@ -18,7 +18,7 @@
 typedef struct {
     lv_cont_ext_t cont_ext; // base class data
     lv_obj_t *mode_field;
-    lv_obj_t *sample_field;
+    lv_obj_t *program_field;
 } ysw_header_ext_t;
 
 lv_obj_t *ysw_header_create(lv_obj_t *par)
@@ -34,8 +34,8 @@ lv_obj_t *ysw_header_create(lv_obj_t *par)
     ext->mode_field = ysw_field_create(header);
     ysw_field_set_name(ext->mode_field, "Mode");
 
-    ext->sample_field = ysw_field_create(header);
-    ysw_field_set_name(ext->sample_field, "Sample");
+    ext->program_field = ysw_field_create(header);
+    ysw_field_set_name(ext->program_field, "Program");
 
     lv_cont_set_layout(header, LV_LAYOUT_PRETTY_TOP);
 
@@ -49,9 +49,9 @@ void ysw_header_set_mode(lv_obj_t *header, const char *name, const char *value)
     ysw_field_set_value(ext->mode_field, value);
 }
 
-void ysw_header_set_sample(lv_obj_t *header, const char *sample_name)
+void ysw_header_set_program(lv_obj_t *header, const char *program_name)
 {
     ysw_header_ext_t *ext = lv_obj_get_ext_attr(header);
-    ysw_field_set_value(ext->sample_field, sample_name);
+    ysw_field_set_value(ext->program_field, program_name);
 }
 

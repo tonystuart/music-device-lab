@@ -15,71 +15,49 @@
 #include "ysw_heap.h"
 #include "ysw_midi.h"
 #include "ysw_task.h"
-#include "zm_music.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "assert.h"
-#include "fcntl.h"
 #include "limits.h"
 #include "stdlib.h"
-#include "unistd.h"
-#include "sys/types.h"
-#include "sys/stat.h"
+
+// TODO: rename ysw_synth_mod to ysw_mod_synth so that externs begin with ysw_mod
 
 #define TAG "YSW_SYNTH_MOD"
 
 #define MAX_VOICES 32
-#define MAX_SAMPLES 32
-
-// Basic type
-typedef unsigned char   muchar;
-typedef signed   char   mchar;
-typedef unsigned short  muint;
-typedef          short  mint;
-typedef unsigned long   mulong;
-typedef unsigned long   mssize;
-typedef signed short    msample;
 
 typedef struct {
-    mchar  *data;
-    muint   length;
-    muint   reppnt;
-    muint   replen;
-    muchar  volume;
-    zm_pan_t pan;
-} sample_t;
-
-typedef struct {
-    sample_t *sample;
-    mulong  samppos;
-    mulong  sampinc;
-    mulong  time;
-    muint   length;
-    muint   reppnt;
-    muint   replen;
-    muint   period;
-    muchar  volume;
-    muchar  channel;
-    muchar  midi_note;
+    ysw_mod_sample_t *sample;
+    uint32_t  samppos;
+    uint32_t  sampinc;
+    uint32_t  time;
+    uint16_t   length;
+    uint16_t   reppnt;
+    uint16_t   replen;
+    uint16_t   period;
+    uint8_t  volume;
+    uint8_t  channel;
+    uint8_t  midi_note;
 } voice_t;
 
 typedef struct {
-    sample_t samples[MAX_SAMPLES];
     uint8_t active_notes[YSW_MIDI_MAX_CHANNELS][YSW_MIDI_MAX_COUNT];
-    uint8_t channel_samples[YSW_MIDI_MAX_CHANNELS];
-    mulong  playrate;
-    mulong  sampleticksconst;
-    mulong  voice_time;
+    uint8_t channel_programs[YSW_MIDI_MAX_CHANNELS];
+    uint32_t  playrate;
+    uint32_t  sampleticksconst;
+    uint32_t  voice_time;
     voice_t voices[MAX_VOICES];
-    muint   voice_count;
-    muint   mod_loaded;
-    mint    last_left_sample;
-    mint    last_right_sample;;
-    mint    stereo;
-    mint    stereo_separation;
-    mint    filter;
+    uint16_t   voice_count;
+    uint16_t   mod_loaded;
+    int16_t    last_left_sample;
+    int16_t    last_right_sample;;
+    int16_t    stereo;
+    int16_t    stereo_separation;
+    int16_t    filter;
     SemaphoreHandle_t mutex;
+    ysw_mod_host_t *mod_host;
 } context_t;
 
 static const short period_map[] = {
@@ -116,7 +94,6 @@ static void initialize_synthesizer(context_t *context)
 {
     assert(context);
 
-    memset(context, 0, sizeof(context_t));
     context->playrate = 44100;
     context->stereo = 1;
     context->stereo_separation = 1;
@@ -126,7 +103,7 @@ static void initialize_synthesizer(context_t *context)
     context->mutex = xSemaphoreCreateMutex();
 }
 
-static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
+static void fill_buffer(context_t *context, int16_t *outbuffer, uint32_t nbsample)
 {
     assert(context);
     assert(outbuffer);
@@ -134,7 +111,7 @@ static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
     enter_critical_section(context);
 
     if (!context->mod_loaded) {
-        for (mssize i = 0; i < nbsample; i++)
+        for (uint32_t i = 0; i < nbsample; i++)
         {
             *outbuffer++ = 0;
             *outbuffer++ = 0;
@@ -145,14 +122,14 @@ static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
     int last_left = context->last_left_sample;
     int last_right = context->last_right_sample;;
 
-    for (mssize i = 0; i < nbsample; i++) {
+    for (uint32_t i = 0; i < nbsample; i++) {
 
         int left = 0;
         int right = 0;
 
         voice_t *voice = context->voices;
 
-        for (muint j = 0; j < context->voice_count; j++, voice++) {
+        for (uint16_t j = 0; j < context->voice_count; j++, voice++) {
             if (voice->period != 0) {
                 voice->samppos += voice->sampinc;
 
@@ -177,13 +154,13 @@ static void fill_buffer(context_t *context, msample *outbuffer, mssize nbsample)
 #endif
 
                 switch (voice->sample->pan) {
-                    case ZM_PAN_LEFT:
+                    case YSW_MOD_PAN_LEFT:
                         left += (voice->sample->data[k] * voice->volume);
                         break;
-                    case ZM_PAN_RIGHT:
+                    case YSW_MOD_PAN_RIGHT:
                         right += (voice->sample->data[k] * voice->volume);
                         break;
-                    case ZM_PAN_CENTER:
+                    case YSW_MOD_PAN_CENTER:
                     default:
                         left += (voice->sample->data[k] * voice->volume);
                         right += (voice->sample->data[k] * voice->volume);
@@ -242,7 +219,7 @@ static uint8_t allocate_voice(context_t *context, uint8_t channel, uint8_t midi_
         voice = &context->voices[voice_index];
     } else {
         // steal oldest voice
-        mulong time = UINT_MAX;
+        uint32_t time = UINT_MAX;
         for (uint8_t i = 0; i < context->voice_count; i++) {
             if (context->voices[i].time < time) {
                 time = context->voices[i].time = time;
@@ -277,13 +254,14 @@ static void start_note(context_t *context, uint8_t channel, uint8_t midi_note, u
     enter_critical_section(context);
 
     uint8_t voice_index = allocate_voice(context, channel, midi_note);
-    uint8_t sample_index = context->channel_samples[channel];
+    uint8_t program_index = context->channel_programs[channel];
 
     uint16_t period = period_map[midi_note];
-    sample_t *sample = &context->samples[sample_index];
+    ysw_mod_sample_t *sample = context->mod_host->provide_sample(
+            context->mod_host->host_context, program_index, midi_note);
 
-    ESP_LOGD(TAG, "channel=%d, sample=%d, midi_note=%d, velocity=%d, period=%d, voices=%d",
-            channel, sample_index, midi_note, velocity, period, context->voice_count);
+    ESP_LOGD(TAG, "channel=%d, program=%d, midi_note=%d, velocity=%d, period=%d, voices=%d",
+            channel, program_index, midi_note, velocity, period, context->voice_count);
 
     voice_t *voice = &context->voices[voice_index];
     voice->sample = sample;
@@ -330,65 +308,7 @@ static void on_program_change(context_t *context, ysw_event_program_change_t *m)
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
     assert(m->program < YSW_MIDI_MAX_COUNT);
 
-    if (m->program >= MAX_SAMPLES || !context->samples[m->program].data) {
-        ESP_LOGW(TAG, "ignoring invalid program change, channel=%d, program=%d", m->channel, m->program);
-        return;
-    }
-
-    context->channel_samples[m->channel] = m->program;
-}
-
-static void on_sample_load(context_t *context, ysw_event_sample_load_t *m)
-{
-    assert(m->index < MAX_SAMPLES);
-    assert(m->volume < YSW_MIDI_MAX_COUNT);
-
-    if (context->samples[m->index].data) {
-        return;
-    }
-
-    struct stat sb;
-    int rc = stat(m->name, &sb);
-    if (rc == -1) {
-        ESP_LOGE(TAG, "stat failed, file=%s", m->name);
-        abort();
-    }
-
-    int sample_size = sb.st_size;
-
-    void *sample_data = ysw_heap_allocate(sample_size);
-
-    int fd = open(m->name, O_RDONLY);
-    if (fd == -1) {
-        ESP_LOGE(TAG, "open failed, file=%s", m->name);
-        abort();
-    }
-
-    rc = read(fd, sample_data, sample_size);
-    if (rc != sample_size) {
-        ESP_LOGE(TAG, "read failed, rc=%d, sample_size=%d", rc, sample_size);
-        abort();
-    }
-
-    rc = close(fd);
-    if (rc == -1) {
-        ESP_LOGE(TAG, "close failed");
-        abort();
-    }
-
-    enter_critical_section(context);
-
-    sample_t *sample = &context->samples[m->index];
-    sample->data = sample_data;
-    sample->length = sample_size / 2; // length is in 2 byte (16 bit) words
-    sample->reppnt = m->reppnt;
-    sample->replen = m->replen;
-    sample->volume = m->volume;
-    sample->pan = m->pan;
-
-    ESP_LOGD(TAG, "on_sample_load: m->index=%d, sample=%p, data=%p", m->index, sample, sample->data);
-
-    leave_critical_section(context);
+    context->channel_programs[m->channel] = m->program;
 }
 
 static void process_event(void *caller_context, ysw_event_t *event)
@@ -404,9 +324,6 @@ static void process_event(void *caller_context, ysw_event_t *event)
         case YSW_EVENT_PROGRAM_CHANGE:
             on_program_change(context, &event->program_change);
             break;
-        case YSW_EVENT_SAMPLE_LOAD:
-            on_sample_load(context, &event->sample_load);
-            break;
         default:
             break;
     }
@@ -418,7 +335,7 @@ static int32_t data_cb(uint8_t *data, int32_t len)
     if (len < 0 || data == NULL) {
         return 0;
     }
-    fill_buffer(data_cb_context, (msample*)data, len / 4);
+    fill_buffer(data_cb_context, (int16_t*)data, len / 4);
     return len;
 }
 
@@ -450,10 +367,11 @@ static void initialize_audio_source(context_t *context)
 
 #endif
 
-void ysw_synth_mod_create_task(ysw_bus_h bus)
+void ysw_synth_mod_create_task(ysw_bus_h bus, ysw_mod_host_t *mod_host)
 {
     context_t *context = ysw_heap_allocate(sizeof(context_t));
     data_cb_context = context;
+    context->mod_host = mod_host;
 
     initialize_synthesizer(context);
     initialize_audio_source(context);

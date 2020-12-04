@@ -15,5 +15,5 @@ lv_obj_t *ysw_header_create(lv_obj_t *par);
 
 void ysw_header_set_mode(lv_obj_t *header, const char *name, const char *value);
 
-void ysw_header_set_sample(lv_obj_t *header, const char *sample_name);
+void ysw_header_set_program(lv_obj_t *header, const char *sample_name);
 
