@@ -174,7 +174,7 @@ static void parse_quality(zm_mfr_t *zm_mfr)
     quality->name = ysw_heap_strdup(zm_mfr->tokens[2]);
     quality->label = ysw_heap_strdup(zm_mfr->tokens[3]);
     quality->distances = ysw_array_create(8);
-    
+
     zm_distance_x distances_specified = zm_mfr->token_count - 4;
     zm_distance_x distances_allowed = min(distances_specified, MAX_DISTANCES);
 
@@ -230,6 +230,38 @@ static void parse_style(zm_mfr_t *zm_mfr)
     ysw_array_push(zm_mfr->music->styles, style);
 }
 
+static void parse_beat(zm_mfr_t *zm_mfr)
+{
+    zm_beat_x index = atoi(zm_mfr->tokens[1]);
+    zm_beat_x count = ysw_array_get_count(zm_mfr->music->beats);
+
+    if (index != count) {
+        ESP_LOGW(TAG, "parse_beat expected count=%d, got index=%d", count, index);
+        return;
+    }
+
+    zm_beat_t *beat = ysw_heap_allocate(sizeof(zm_beat_t));
+    beat->name = ysw_heap_strdup(zm_mfr->tokens[2]);
+    beat->strokes = ysw_array_create(32);
+
+    zm_yesno_t done = false;
+
+    while (!done && get_tokens(zm_mfr)) {
+        zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
+        if (type == ZM_MF_STROKE && zm_mfr->token_count == 3) {
+            zm_stroke_t *stroke = ysw_heap_allocate(sizeof(zm_stroke_t));
+            stroke->start = atoi(zm_mfr->tokens[1]);
+            stroke->surface = atoi(zm_mfr->tokens[2]);
+            ysw_array_push(beat->strokes, stroke);
+        } else {
+            push_back_tokens(zm_mfr);
+            done = true;
+        }
+    }
+
+    ysw_array_push(zm_mfr->music->beats, beat);
+}
+
 static void parse_pattern(zm_mfr_t *zm_mfr)
 {
     zm_pattern_x index = atoi(zm_mfr->tokens[1]);
@@ -247,6 +279,7 @@ static void parse_pattern(zm_mfr_t *zm_mfr)
     pattern->time = atoi(zm_mfr->tokens[5]);
     pattern->melody_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[6]));
     pattern->chord_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[7]));
+    pattern->rhythm_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[8]));
     pattern->divisions = ysw_array_create(16);
 
     zm_yesno_t done = false;
@@ -269,6 +302,8 @@ static void parse_pattern(zm_mfr_t *zm_mfr)
             division->chord.quality = ysw_array_get(zm_mfr->music->qualities, atoi(zm_mfr->tokens[2]));
             division->chord.style = ysw_array_get(zm_mfr->music->styles, atoi(zm_mfr->tokens[3]));
             division->chord.duration = atoi(zm_mfr->tokens[4]);
+        } else if (division && type == ZM_MF_RHYTHM && zm_mfr->token_count == 2) {
+            division->rhythm.beat = ysw_array_get(zm_mfr->music->beats, atoi(zm_mfr->tokens[1]));
         } else {
             push_back_tokens(zm_mfr);
             done = true;
@@ -355,6 +390,7 @@ static zm_music_t *create_music()
     music->programs = ysw_array_create(8);
     music->qualities = ysw_array_create(32);
     music->styles = ysw_array_create(64);
+    music->beats = ysw_array_create(8);
     music->patterns = ysw_array_create(64);
     music->models = ysw_array_create(64);
     music->songs = ysw_array_create(16);
@@ -374,6 +410,7 @@ void zm_pattern_free(zm_pattern_t *pattern)
 }
 
 // TODO: factor type-specific delete functions out for reuse and invoke them
+// TODO: make sure everything is being freed that was allocated
 
 void zm_music_free(zm_music_t *music)
 {
@@ -408,6 +445,14 @@ void zm_music_free(zm_music_t *music)
         ysw_array_free_all(style->sounds);
     }
     ysw_array_free(music->styles);
+
+    zm_medium_t beat_count = ysw_array_get_count(music->qualities);
+    for (zm_medium_t i = 0; i < beat_count; i++) {
+        zm_beat_t *beat = ysw_array_get(music->qualities, i);
+        ysw_heap_free(beat->name);
+        ysw_array_free_all(beat->strokes);
+    }
+    ysw_array_free(music->beats);
 
     zm_medium_t pattern_count = ysw_array_get_count(music->patterns);
     for (zm_medium_t i = 0; i < pattern_count; i++) {
@@ -450,7 +495,9 @@ zm_music_t *zm_read_from_file(FILE *file)
             parse_quality(zm_mfr);
         } else if (type == ZM_MF_STYLE && zm_mfr->token_count == 3) {
             parse_style(zm_mfr);
-        } else if (type == ZM_MF_PATTERN && zm_mfr->token_count == 8) {
+        } else if (type == ZM_MF_BEAT && zm_mfr->token_count == 3) {
+            parse_beat(zm_mfr);
+        } else if (type == ZM_MF_PATTERN && zm_mfr->token_count == 9) {
             parse_pattern(zm_mfr);
         } else if (type == ZM_MF_MODEL && zm_mfr->token_count == 4) {
             parse_model(zm_mfr);

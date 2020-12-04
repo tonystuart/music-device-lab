@@ -25,6 +25,7 @@ typedef bool zm_yesno_t;
 
 typedef int8_t zm_distance_t;
 
+typedef uint8_t zm_beat_x;
 typedef uint8_t zm_bpm_x;
 typedef uint8_t zm_channel_x;
 typedef uint8_t zm_distance_x;
@@ -32,6 +33,7 @@ typedef uint8_t zm_gm_x;
 typedef uint8_t zm_note_t;
 typedef uint8_t zm_patch_x;
 typedef uint8_t zm_program_x;
+typedef uint8_t zm_stroke_x;
 typedef uint8_t zm_tie_x;
 typedef uint8_t zm_velocity_x;
 
@@ -208,9 +210,18 @@ typedef struct {
 } zm_melody_t;
 
 typedef struct {
+    zm_time_x start;
+    zm_note_t surface;
+} zm_stroke_t;
+
+typedef struct {
     char *name;
-    ysw_array_t *models;
+    ysw_array_t *strokes;
     zm_duration_t duration;
+} zm_beat_t;
+
+typedef struct {
+    zm_beat_t *beat;
 } zm_rhythm_t;
 
 typedef enum {
@@ -234,6 +245,7 @@ typedef struct {
     ysw_array_t *divisions;
     zm_program_t *melody_program;
     zm_program_t *chord_program;
+    zm_program_t *rhythm_program;
 } zm_pattern_t;
 
 typedef struct {
@@ -241,6 +253,7 @@ typedef struct {
     ysw_array_t *programs;
     ysw_array_t *qualities;
     ysw_array_t *styles;
+    ysw_array_t *beats;
     ysw_array_t *patterns;
     ysw_array_t *models;
     ysw_array_t *songs;
