@@ -242,16 +242,18 @@ static void parse_beat(zm_mfr_t *zm_mfr)
 
     zm_beat_t *beat = ysw_heap_allocate(sizeof(zm_beat_t));
     beat->name = ysw_heap_strdup(zm_mfr->tokens[2]);
+    beat->label = ysw_heap_strdup(zm_mfr->tokens[3]);
     beat->strokes = ysw_array_create(32);
 
     zm_yesno_t done = false;
 
     while (!done && get_tokens(zm_mfr)) {
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_STROKE && zm_mfr->token_count == 3) {
+        if (type == ZM_MF_STROKE && zm_mfr->token_count == 4) {
             zm_stroke_t *stroke = ysw_heap_allocate(sizeof(zm_stroke_t));
             stroke->start = atoi(zm_mfr->tokens[1]);
             stroke->surface = atoi(zm_mfr->tokens[2]);
+            stroke->velocity = atoi(zm_mfr->tokens[3]);
             ysw_array_push(beat->strokes, stroke);
         } else {
             push_back_tokens(zm_mfr);
@@ -495,7 +497,7 @@ zm_music_t *zm_read_from_file(FILE *file)
             parse_quality(zm_mfr);
         } else if (type == ZM_MF_STYLE && zm_mfr->token_count == 3) {
             parse_style(zm_mfr);
-        } else if (type == ZM_MF_BEAT && zm_mfr->token_count == 3) {
+        } else if (type == ZM_MF_BEAT && zm_mfr->token_count == 4) {
             parse_beat(zm_mfr);
         } else if (type == ZM_MF_PATTERN && zm_mfr->token_count == 9) {
             parse_pattern(zm_mfr);
@@ -607,7 +609,8 @@ int zm_note_compare(const void *left, const void *right)
     return delta;
 }
 
-void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_program_x program_index, zm_tie_x tie)
+void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start,
+        zm_channel_x channel, zm_program_x program_index, zm_tie_x tie)
 {
     if (tie && ysw_array_get_count(notes)) {
         ysw_note_t *tied_previous = ysw_array_get_top(notes);
@@ -626,7 +629,8 @@ void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_
     ysw_array_push(notes, note);
 }
 
-void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_program_x program_index)
+void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start,
+        zm_channel_x channel, zm_program_x program_index)
 {
     zm_medium_t distance_count = ysw_array_get_count(chord->quality->distances);
     zm_medium_t sound_count = ysw_array_get_count(chord->style->sounds);
@@ -643,6 +647,23 @@ void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_star
         note->start = chord_start + (sound->start * chord->duration) / YSW_TICKS_PER_MEASURE;
         note->duration = (sound->duration * chord->duration) / YSW_TICKS_PER_MEASURE;
         note->velocity = sound->velocity;
+        note->program = program_index;
+        ysw_array_push(notes, note);
+    }
+}
+
+void zm_render_beat(ysw_array_t *notes, zm_beat_t *beat, zm_time_x beat_start,
+        zm_channel_x channel, zm_program_x program_index)
+{
+    zm_stroke_x stroke_count = ysw_array_get_count(beat->strokes);
+    for (zm_stroke_x i = 0; i < stroke_count; i++) {
+        zm_stroke_t *stroke = ysw_array_get(beat->strokes, i);
+        ysw_note_t *note = ysw_heap_allocate(sizeof(ysw_note_t));
+        note->channel = channel;
+        note->midi_note = stroke->surface;
+        note->start = beat_start + stroke->start;
+        note->duration = 128;
+        note->velocity = stroke->velocity;
         note->program = program_index;
         ysw_array_push(notes, note);
     }
@@ -704,28 +725,53 @@ ysw_array_t *zm_render_song(zm_song_t *song)
     return notes;
 }
 
+ysw_array_t *zm_render_division(zm_music_t *m, zm_pattern_t *p, zm_division_t *d, zm_channel_x bc)
+{
+    ysw_array_t *notes = ysw_array_create(16);
+    if (d->melody.note) {
+        zm_program_x mx = ysw_array_find(m->programs, p->melody_program);
+        zm_render_melody(notes, &d->melody, 0, bc, mx, 0);
+    }
+    if (d->chord.root) {
+        zm_program_x cx = ysw_array_find(m->programs, p->chord_program);
+        zm_render_chord(notes, &d->chord, 0, bc + 1, cx);
+    }
+    if (d->rhythm.beat) {
+        zm_program_x bx = ysw_array_find(m->programs, p->rhythm_program);
+        zm_render_beat(notes, d->rhythm.beat, 0, bc + 2, bx);
+    }
+    ysw_array_sort(notes, zm_note_compare);
+    return notes;
+}
+
 ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_channel_x base_channel)
 {
     zm_tie_x tie = 0;
-    zm_time_x division_time = 0;
     ysw_array_t *notes = ysw_array_create(512);
     zm_division_x division_count = ysw_array_get_count(pattern->divisions);
-    zm_program_x melody_program_index = ysw_array_find(music->programs, pattern->melody_program);
-    zm_program_x chord_program_index = ysw_array_find(music->programs, pattern->chord_program);
+    zm_program_x melody_program = ysw_array_find(music->programs, pattern->melody_program);
+    zm_program_x chord_program = ysw_array_find(music->programs, pattern->chord_program);
+    zm_program_x rhythm_program = ysw_array_find(music->programs, pattern->rhythm_program);
+    // two passes: one to enable melody note ties, the other for chords and rhythms
     for (zm_division_x i = 0; i < division_count; i++) {
         zm_division_t *division = ysw_array_get(pattern->divisions, i);
         if (division->melody.note) {
-            zm_render_melody(notes, &division->melody, division_time, base_channel, melody_program_index, tie);
+            zm_render_melody(notes, &division->melody, division->start, base_channel, melody_program, tie);
             if (division->melody.tie) {
                 tie = division->melody.tie;
             } else if (tie) {
                 tie--;
             }
         }
+    }
+    for (zm_division_x i = 0; i < division_count; i++) {
+        zm_division_t *division = ysw_array_get(pattern->divisions, i);
         if (division->chord.root) {
-            zm_render_chord(notes, &division->chord, division_time, base_channel + 1, chord_program_index);
+            zm_render_chord(notes, &division->chord, division->start, base_channel + 1, chord_program);
         }
-        division_time += division->melody.duration;
+        if (division->rhythm.beat) {
+            zm_render_beat(notes, division->rhythm.beat, division->start, base_channel + 2, rhythm_program);
+        }
     }
     ysw_array_sort(notes, zm_note_compare);
     return notes;

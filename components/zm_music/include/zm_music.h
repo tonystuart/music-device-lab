@@ -212,10 +212,12 @@ typedef struct {
 typedef struct {
     zm_time_x start;
     zm_note_t surface;
+    zm_velocity_x velocity;
 } zm_stroke_t;
 
 typedef struct {
     char *name;
+    char *label;
     ysw_array_t *strokes;
     zm_duration_t duration;
 } zm_beat_t;
@@ -271,6 +273,7 @@ void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_
 void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_program_x program_index);
 zm_large_t zm_render_model(ysw_array_t *notes, zm_model_t *model, zm_large_t start_time, zm_small_t channel);
 ysw_array_t *zm_render_song(zm_song_t *song);
+ysw_array_t *zm_render_division(zm_music_t *m, zm_pattern_t *p, zm_division_t *d, zm_channel_x bc);
 ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_channel_x base_channel);
 
 const zm_key_signature_t *zm_get_key_signature(zm_key_signature_x key_index);

@@ -272,7 +272,7 @@ static void draw_melody(draw_context_t *dc, zm_division_t *division)
     }
 }
 
-static void draw_chord(draw_context_t *dc, zm_division_t *division)
+static void draw_chord(draw_context_t *dc, zm_chord_t *chord)
 {
     lv_area_t coords = {
         .x1 = dc->point.x,
@@ -285,9 +285,25 @@ static void draw_chord(draw_context_t *dc, zm_division_t *division)
         .font = &lv_font_unscii_8,
         .opa = LV_OPA_COVER,
     };
-    lv_draw_label(&coords, dc->clip_area, &dsc, zm_get_note_name(division->chord.root), NULL);
+    lv_draw_label(&coords, dc->clip_area, &dsc, zm_get_note_name(chord->root), NULL);
     coords.y1 += 9;
-    lv_draw_label(&coords, dc->clip_area, &dsc, division->chord.quality->label, NULL);
+    lv_draw_label(&coords, dc->clip_area, &dsc, chord->quality->label, NULL);
+}
+
+static void draw_beat(draw_context_t *dc, zm_beat_t *beat)
+{
+    lv_area_t coords = {
+        .x1 = dc->point.x,
+        .x2 = dc->point.x + 50,
+        .y1 = 170,
+        .y2 = 200,
+    };
+    lv_draw_label_dsc_t dsc = {
+        .color = dc->color,
+        .font = &lv_font_unscii_8,
+        .opa = LV_OPA_COVER,
+    };
+    lv_draw_label(&coords, dc->clip_area, &dsc, beat->label,  NULL);
 }
 
 static void draw_signature(draw_context_t *dc, zm_time_signature_x time)
@@ -331,11 +347,17 @@ static void draw_division(draw_context_t *dc, zm_division_t *division)
         }
         draw_melody(dc, division);
         if (division->chord.root) {
-            draw_chord(dc, division);
+            draw_chord(dc, &division->chord);
+        }
+        if (division->rhythm.beat) {
+            draw_beat(dc, division->rhythm.beat);
         }
     } else if (dc->draw_type == YSW_STAFF_RIGHT) {
         if (division->chord.root) {
-            draw_chord(dc, division);
+            draw_chord(dc, &division->chord);
+        }
+        if (division->rhythm.beat) {
+            draw_beat(dc, division->rhythm.beat);
         }
         draw_melody(dc, division);
         if (division->melody.tie) {

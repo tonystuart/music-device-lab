@@ -268,7 +268,7 @@ static void start_note(context_t *context, uint8_t channel, uint8_t midi_note, u
     voice->length = sample->length;
     voice->reppnt = sample->reppnt;
     voice->replen = sample->replen;
-    voice->volume = sample->volume;
+    voice->volume = velocity / 2; // mod volume range is 0-63
     voice->sampinc = context->sampleticksconst / period;
     voice->period = period;
     voice->samppos = 0;

@@ -29,9 +29,7 @@
 
 // channels
 
-#define FOREGROUND_MELODY 0
-#define FOREGROUND_CHORD 1
-#define FOREGROUND_RHYTHM 2
+#define BASE_CHANNEL 0
 
 #define BACKGROUND_BASE 3
 
@@ -139,16 +137,7 @@ static void recalculate(context_t *context)
 
 static void play_division(context_t *context, zm_division_t *division)
 {
-    ysw_array_t *notes = ysw_array_create(16);
-    if (division->melody.note) {
-        zm_program_x program_index = ysw_array_find(context->music->programs, context->pattern->melody_program);
-        zm_render_melody(notes, &division->melody, 0, FOREGROUND_MELODY, program_index, 0);
-    }
-    if (division->chord.root) {
-        zm_program_x program_index = ysw_array_find(context->music->programs, context->pattern->chord_program);
-        zm_render_chord(notes, &division->chord, 0, FOREGROUND_CHORD, program_index);
-    }
-    ysw_array_sort(notes, zm_note_compare);
+    ysw_array_t *notes = zm_render_division(context->music, context->pattern, division, BASE_CHANNEL);
     zm_bpm_x bpm = zm_tempo_to_bpm(context->pattern->tempo);
     ysw_event_fire_play(context->bus, notes, bpm);
 }
@@ -684,7 +673,7 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
         if (context->mode == YSW_EDITOR_MODE_MELODY) {
             if (midi_note) {
                 ysw_event_note_on_t note_on = {
-                    .channel = FOREGROUND_MELODY,
+                    .channel = BASE_CHANNEL,
                     .midi_note = midi_note,
                     .velocity = 80,
                 };
@@ -730,11 +719,10 @@ static void on_note_status(context_t *context, ysw_event_t *event)
         ysw_array_match_t flags = YSW_ARRAY_MATCH_EXACT;
         int32_t result = ysw_array_search(context->pattern->divisions, &needle, compare_divisions, flags);
         if (result != -1) {
-            ESP_LOGD(TAG, "found start=%d at index=%d", needle.start, result);
             context->position = division_index_to_position(result);
             ysw_staff_set_position(context->staff, context->position);
         } else {
-            ESP_LOGD(TAG, "could not find start=%d", needle.start);
+            // e.g. a stroke in a beat
         }
     }
 }
