@@ -297,6 +297,8 @@ zm_duration_t zm_round_duration(zm_duration_t duration, uint8_t *index, bool *is
 const char *zm_get_duration_label(zm_duration_t duration);
 zm_duration_t zm_get_next_duration(zm_duration_t duration);
 
+zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note);
+
 // See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
 
 static inline const char *zm_get_note_name(zm_note_t note)

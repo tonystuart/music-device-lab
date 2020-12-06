@@ -55,20 +55,20 @@
 1,9,Snare1,0,0,60,1
 1,10,thehihatclosed,0,0,60,1
 2,7,Standard Kit,1,0
-3,60,7,Bass
+3,60,7,Kick
 3,62,9,Snare
-3,64,10,Hi-hat
-3,127,8,Cymbal
+3,64,10,Hihat
+3,127,8,Cym
 
 1,11,bass.drum,0,0,60,1
 1,12,ridecymbal,0,0,60,1
 1,13,snare1.ss,0,0,60,1
 1,14,hhat.ss,0,0,60,1
 2,8,Drum Set,1,0
-3,60,11,Bass
+3,60,11,Kick
 3,62,13,Snare
-3,64,14,Hi-hat
-3,127,12,Cymbal
+3,64,14,Hihat
+3,127,12,Cym
 
 #type(quality),index,name,distances
 4,0,Root Only,1,0

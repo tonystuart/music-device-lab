@@ -150,7 +150,7 @@ static void parse_program(zm_mfr_t *zm_mfr)
             patch->up_to = atoi(zm_mfr->tokens[1]);
             patch->sample = ysw_array_get(zm_mfr->music->samples, atoi(zm_mfr->tokens[2]));
             if (zm_mfr->token_count == 4) {
-                patch->name = ysw_heap_strdup(zm_mfr->tokens[4]);
+                patch->name = ysw_heap_strdup(zm_mfr->tokens[3]);
             }
             ysw_array_push(program->patches, patch);
         } else {
@@ -253,7 +253,7 @@ static void parse_beat(zm_mfr_t *zm_mfr)
 
     while (!done && get_tokens(zm_mfr)) {
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_STROKE && zm_mfr->token_count == 5) {
+        if (type == ZM_MF_STROKE && zm_mfr->token_count == 4) {
             zm_stroke_t *stroke = ysw_heap_allocate(sizeof(zm_stroke_t));
             stroke->start = atoi(zm_mfr->tokens[1]);
             stroke->surface = atoi(zm_mfr->tokens[2]);
@@ -961,3 +961,17 @@ zm_duration_t zm_get_next_duration(zm_duration_t duration)
     }
     return next_duration;
 }
+
+zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note)
+{
+    zm_patch_t *patch = NULL;
+    zm_patch_x patch_count = ysw_array_get_count(patches);
+    for (zm_patch_x i = 0; i < patch_count && !patch; i++) {
+        zm_patch_t *candidate = ysw_array_get(patches, i);
+        if (midi_note <= candidate->up_to || i == (patch_count - 1)) {
+            patch = candidate;
+        }
+    }
+    return patch;
+}
+

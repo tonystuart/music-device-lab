@@ -121,9 +121,10 @@ typedef enum {
 typedef struct {
     lv_point_t point;
     lv_color_t color;
-    const lv_area_t *clip_area;
-    const lv_font_t *font;
+    ysw_array_t *patches;
     draw_type_t draw_type;
+    const lv_font_t *font;
+    const lv_area_t *clip_area;
     const zm_key_signature_t *key_signature;
 } draw_context_t;
 
@@ -276,7 +277,7 @@ static void draw_chord(draw_context_t *dc, zm_chord_t *chord)
 {
     lv_area_t coords = {
         .x1 = dc->point.x,
-        .x2 = dc->point.x + 50,
+        .x2 = dc->point.x + 40,
         .y1 = 40,
         .y2 = 60,
     };
@@ -294,7 +295,7 @@ static void draw_rhythm(draw_context_t *dc, zm_rhythm_t *rhythm)
 {
     lv_area_t coords = {
         .x1 = dc->point.x,
-        .x2 = dc->point.x + 50,
+        .x2 = dc->point.x + 40,
         .y1 = 170,
         .y2 = 200,
     };
@@ -303,14 +304,15 @@ static void draw_rhythm(draw_context_t *dc, zm_rhythm_t *rhythm)
         .font = &lv_font_unscii_8,
         .opa = LV_OPA_COVER,
     };
-    if (rhythm->surface) {
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%d", rhythm->surface);
-        lv_draw_label(&coords, dc->clip_area, &dsc, buf,  NULL);
-        coords.y1 += 9;
-    }
     if (rhythm->beat) {
         lv_draw_label(&coords, dc->clip_area, &dsc, rhythm->beat->label,  NULL);
+        coords.y1 += 9;
+    }
+    if (rhythm->surface) {
+        zm_patch_t *patch = zm_get_patch(dc->patches, rhythm->surface);
+        if (patch && patch->name) {
+            lv_draw_label(&coords, dc->clip_area, &dsc, patch->name,  NULL);
+        }
     }
 }
 
@@ -346,8 +348,7 @@ static void draw_division(draw_context_t *dc, zm_division_t *division)
 {
     if (dc->draw_type == YSW_STAFF_LEFT) {
         draw_letter(dc, YSW_STAFF_SPACE);
-        if (division->chord.root) {
-            // TODO: measure width of chord name to determine number of spaces
+        if (division->chord.root || division->rhythm.beat || division->rhythm.surface) {
             draw_letter(dc, YSW_STAFF_SPACE);
         }
         if (division->melody.tie) {
@@ -372,8 +373,7 @@ static void draw_division(draw_context_t *dc, zm_division_t *division)
             draw_tie(dc, division);
         }
         draw_letter(dc, YSW_STAFF_SPACE);
-        if (division->chord.root) {
-            // TODO: measure width of chord name to determine number of spaces
+        if (division->chord.root || division->rhythm.beat || division->rhythm.surface) {
             draw_letter(dc, YSW_STAFF_SPACE);
         }
     }
@@ -447,6 +447,7 @@ static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
             .clip_area = clip_area,
             .font = &MusiQwikT_48,
             .key_signature = zm_get_key_signature(ext->pattern->key),
+            .patches = ext->pattern->rhythm_program->patches,
         };
         draw_staff(ext, &dc);
     }

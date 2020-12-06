@@ -80,25 +80,21 @@ typedef struct {
 
 ysw_mod_sample_t *provide_sample(void *caller_context, uint8_t program_index, uint8_t midi_note)
 {
-    ESP_LOGD(TAG, "provide_sample program_index=%d, midi_note=%d", program_index, midi_note);
     assert(caller_context);
     assert(program_index <= YSW_MIDI_MAX);
+
     host_context_t *host_context = caller_context;
-    zm_sample_t *sample = NULL;
-    ysw_mod_sample_t *mod_sample = NULL;
     if (program_index >= ysw_array_get_count(host_context->music->programs)) {
         ESP_LOGW(TAG, "invalid program=%d, substituting program=0", program_index);
         program_index = 0;
     }
+
     zm_program_t *program = ysw_array_get(host_context->music->programs, program_index);
-    zm_patch_x patch_count = ysw_array_get_count(program->patches);
-    assert(patch_count > 0);
-    for (zm_patch_x i = 0; i < patch_count && !sample; i++) {
-        zm_patch_t *patch = ysw_array_get(program->patches, i);
-        if (midi_note <= patch->up_to || i == (patch_count - 1)) {
-            sample = patch->sample;
-        }
-    }
+    zm_patch_t *patch = zm_get_patch(program->patches, midi_note);
+    assert(patch && patch->sample);
+    zm_sample_t *sample = patch->sample;
+
+    ysw_mod_sample_t *mod_sample = NULL;
     hnode_t *node = hash_lookup(host_context->sample_map, sample);
     if (node) {
         mod_sample = hnode_get(node);
@@ -114,6 +110,7 @@ ysw_mod_sample_t *provide_sample(void *caller_context, uint8_t program_index, ui
             abort();
         }
     }
+
     return mod_sample;
 }
 
