@@ -74,28 +74,7 @@ void ysw_footer_set_tempo(lv_obj_t *footer, zm_tempo_t tempo_index)
 
 void ysw_footer_set_duration(lv_obj_t *footer, zm_duration_t duration)
 {
-    const char *value = NULL;
-    switch (duration) {
-        default:
-        case ZM_AS_PLAYED:
-            value = "As Played";
-            break;
-        case ZM_SIXTEENTH:
-            value = "1/16";
-            break;
-        case ZM_EIGHTH:
-            value = "1/8";
-            break;
-        case ZM_QUARTER:
-            value = "1/4";
-            break;
-        case ZM_HALF:
-            value = "1/2";
-            break;
-        case ZM_WHOLE:
-            value = "1/1";
-            break;
-    }
+    const char *value = zm_get_duration_label(duration);
     ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
     ysw_field_set_value(ext->duration_field, value);
 }

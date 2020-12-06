@@ -290,7 +290,7 @@ static void draw_chord(draw_context_t *dc, zm_chord_t *chord)
     lv_draw_label(&coords, dc->clip_area, &dsc, chord->quality->label, NULL);
 }
 
-static void draw_beat(draw_context_t *dc, zm_beat_t *beat)
+static void draw_rhythm(draw_context_t *dc, zm_rhythm_t *rhythm)
 {
     lv_area_t coords = {
         .x1 = dc->point.x,
@@ -303,7 +303,15 @@ static void draw_beat(draw_context_t *dc, zm_beat_t *beat)
         .font = &lv_font_unscii_8,
         .opa = LV_OPA_COVER,
     };
-    lv_draw_label(&coords, dc->clip_area, &dsc, beat->label,  NULL);
+    if (rhythm->surface) {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%d", rhythm->surface);
+        lv_draw_label(&coords, dc->clip_area, &dsc, buf,  NULL);
+        coords.y1 += 9;
+    }
+    if (rhythm->beat) {
+        lv_draw_label(&coords, dc->clip_area, &dsc, rhythm->beat->label,  NULL);
+    }
 }
 
 static void draw_signature(draw_context_t *dc, zm_time_signature_x time)
@@ -349,15 +357,15 @@ static void draw_division(draw_context_t *dc, zm_division_t *division)
         if (division->chord.root) {
             draw_chord(dc, &division->chord);
         }
-        if (division->rhythm.beat) {
-            draw_beat(dc, division->rhythm.beat);
+        if (division->rhythm.beat || division->rhythm.surface) {
+            draw_rhythm(dc, &division->rhythm);
         }
     } else if (dc->draw_type == YSW_STAFF_RIGHT) {
         if (division->chord.root) {
             draw_chord(dc, &division->chord);
         }
-        if (division->rhythm.beat) {
-            draw_beat(dc, division->rhythm.beat);
+        if (division->rhythm.beat || division->rhythm.surface) {
+            draw_rhythm(dc, &division->rhythm);
         }
         draw_melody(dc, division);
         if (division->melody.tie) {

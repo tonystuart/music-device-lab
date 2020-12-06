@@ -137,17 +137,21 @@ static void parse_program(zm_mfr_t *zm_mfr)
 
     zm_program_t *program = ysw_heap_allocate(sizeof(zm_program_t));
     program->name = ysw_heap_strdup(zm_mfr->tokens[2]);
-    program->gm = atoi(zm_mfr->tokens[3]);
+    program->type = atoi(zm_mfr->tokens[3]);
+    program->gm = atoi(zm_mfr->tokens[4]);
     program->patches = ysw_array_create(1);
 
     zm_yesno_t done = false;
 
     while (!done && get_tokens(zm_mfr)) {
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_PATCH && zm_mfr->token_count == 3) {
+        if (type == ZM_MF_PATCH && (zm_mfr->token_count == 3 || zm_mfr->token_count == 4)) {
             zm_patch_t *patch = ysw_heap_allocate(sizeof(zm_patch_t));
             patch->up_to = atoi(zm_mfr->tokens[1]);
             patch->sample = ysw_array_get(zm_mfr->music->samples, atoi(zm_mfr->tokens[2]));
+            if (zm_mfr->token_count == 4) {
+                patch->name = ysw_heap_strdup(zm_mfr->tokens[4]);
+            }
             ysw_array_push(program->patches, patch);
         } else {
             push_back_tokens(zm_mfr);
@@ -249,7 +253,7 @@ static void parse_beat(zm_mfr_t *zm_mfr)
 
     while (!done && get_tokens(zm_mfr)) {
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_STROKE && zm_mfr->token_count == 4) {
+        if (type == ZM_MF_STROKE && zm_mfr->token_count == 5) {
             zm_stroke_t *stroke = ysw_heap_allocate(sizeof(zm_stroke_t));
             stroke->start = atoi(zm_mfr->tokens[1]);
             stroke->surface = atoi(zm_mfr->tokens[2]);
@@ -480,7 +484,7 @@ void zm_music_free(zm_music_t *music)
     ysw_array_free(music->songs);
 }
 
-zm_music_t *zm_read_from_file(FILE *file)
+zm_music_t *zm_parse_file(FILE *file)
 {
     zm_mfr_t *zm_mfr = &(zm_mfr_t){};
 
@@ -491,7 +495,7 @@ zm_music_t *zm_read_from_file(FILE *file)
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
         if (type == ZM_MF_SAMPLE && zm_mfr->token_count == 7) {
             parse_sample(zm_mfr);
-        } else if (type == ZM_MF_PROGRAM && zm_mfr->token_count == 4) {
+        } else if (type == ZM_MF_PROGRAM && zm_mfr->token_count == 5) {
             parse_program(zm_mfr);
         } else if (type == ZM_MF_QUALITY && zm_mfr->token_count > 4) {
             parse_quality(zm_mfr);
@@ -516,7 +520,7 @@ zm_music_t *zm_read_from_file(FILE *file)
     return zm_mfr->music;
 }
 
-zm_music_t *zm_read(void)
+zm_music_t *zm_load_music(void)
 {
     zm_music_t *music = NULL;
     FILE *file = fopen(ZM_MF_CSV, "r");
@@ -534,7 +538,7 @@ zm_music_t *zm_read(void)
             abort();
         }
     }
-    music = zm_read_from_file(file);
+    music = zm_parse_file(file);
     fclose(file);
     return music;
 }
@@ -609,6 +613,19 @@ int zm_note_compare(const void *left, const void *right)
     return delta;
 }
 
+void zm_render_note(ysw_array_t *notes, zm_channel_x channel, zm_note_t midi_note,
+        zm_time_x start, zm_duration_t duration, zm_program_x program_index)
+{
+    ysw_note_t *note = ysw_heap_allocate(sizeof(ysw_note_t));
+    note->channel = channel;
+    note->midi_note = midi_note;
+    note->start = start;
+    note->duration = duration;
+    note->velocity = 100;
+    note->program = program_index;
+    ysw_array_push(notes, note);
+}
+
 void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start,
         zm_channel_x channel, zm_program_x program_index, zm_tie_x tie)
 {
@@ -619,14 +636,7 @@ void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_
             return;
         }
     }
-    ysw_note_t *note = ysw_heap_allocate(sizeof(ysw_note_t));
-    note->channel = channel;
-    note->midi_note = melody->note;
-    note->start = melody_start;
-    note->duration = melody->duration;
-    note->velocity = 100;
-    note->program = program_index;
-    ysw_array_push(notes, note);
+    zm_render_note(notes, channel, melody->note, melody_start, melody->duration, program_index);
 }
 
 void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start,
@@ -666,6 +676,17 @@ void zm_render_beat(ysw_array_t *notes, zm_beat_t *beat, zm_time_x beat_start,
         note->velocity = stroke->velocity;
         note->program = program_index;
         ysw_array_push(notes, note);
+    }
+}
+
+void zm_render_rhythm(ysw_array_t *notes, zm_rhythm_t *rhythm, zm_time_x rhythm_start,
+        zm_channel_x channel, zm_program_x program_index)
+{
+    if (rhythm->beat) {
+        zm_render_beat(notes, rhythm->beat, rhythm_start, channel, program_index);
+    }
+    if (rhythm->surface) {
+        zm_render_note(notes, channel, rhythm->surface, rhythm_start, 128, program_index);
     }
 }
 
@@ -736,9 +757,9 @@ ysw_array_t *zm_render_division(zm_music_t *m, zm_pattern_t *p, zm_division_t *d
         zm_program_x cx = ysw_array_find(m->programs, p->chord_program);
         zm_render_chord(notes, &d->chord, 0, bc + 1, cx);
     }
-    if (d->rhythm.beat) {
+    if (d->rhythm.beat || d->rhythm.surface) {
         zm_program_x bx = ysw_array_find(m->programs, p->rhythm_program);
-        zm_render_beat(notes, d->rhythm.beat, 0, bc + 2, bx);
+        zm_render_rhythm(notes, &d->rhythm, 0, bc + 2, bx);
     }
     ysw_array_sort(notes, zm_note_compare);
     return notes;
@@ -769,8 +790,8 @@ ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_chan
         if (division->chord.root) {
             zm_render_chord(notes, &division->chord, division->start, base_channel + 1, chord_program);
         }
-        if (division->rhythm.beat) {
-            zm_render_beat(notes, division->rhythm.beat, division->start, base_channel + 2, rhythm_program);
+        if (division->rhythm.beat || division->rhythm.surface) {
+            zm_render_rhythm(notes, &division->rhythm, division->start, base_channel + 2, rhythm_program);
         }
     }
     ysw_array_sort(notes, zm_note_compare);
@@ -895,3 +916,48 @@ zm_duration_t zm_round_duration(zm_duration_t duration, uint8_t *ret_index, bool
     return rounded_duration;
 }
 
+const char *zm_get_duration_label(zm_duration_t duration)
+{
+    const char *label = NULL;
+    switch (duration) {
+        default:
+        case ZM_AS_PLAYED:
+            label = "As Played";
+            break;
+        case ZM_SIXTEENTH:
+            label = "1/16";
+            break;
+        case ZM_EIGHTH:
+            label = "1/8";
+            break;
+        case ZM_QUARTER:
+            label = "1/4";
+            break;
+        case ZM_HALF:
+            label = "1/2";
+            break;
+        case ZM_WHOLE:
+            label = "1/1";
+            break;
+    }
+    return label;
+}
+
+zm_duration_t zm_get_next_duration(zm_duration_t duration)
+{
+    zm_duration_t next_duration;
+    if (duration == ZM_AS_PLAYED) {
+        next_duration = ZM_SIXTEENTH;
+    } else if (duration <= ZM_SIXTEENTH) {
+        next_duration = ZM_EIGHTH;
+    } else if (duration <= ZM_EIGHTH) {
+        next_duration = ZM_QUARTER;
+    } else if (duration <= ZM_QUARTER) {
+        next_duration = ZM_HALF;
+    } else if (duration <= ZM_HALF) {
+        next_duration = ZM_WHOLE;
+    } else {
+        next_duration = ZM_AS_PLAYED;
+    }
+    return next_duration;
+}

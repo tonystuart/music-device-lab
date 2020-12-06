@@ -131,8 +131,14 @@ typedef struct {
     zm_pan_t pan;
 } zm_sample_t;
 
+typedef enum {
+    ZM_PROGRAM_NOTE,
+    ZM_PROGRAM_BEAT,
+} zm_program_type_t;
+
 typedef struct {
     char *name;
+    zm_program_type_t type;
     zm_gm_x gm;
     ysw_array_t *patches;
 } zm_program_t;
@@ -140,6 +146,7 @@ typedef struct {
 typedef struct {
     zm_note_t up_to;
     zm_sample_t *sample;
+    char *name;
 } zm_patch_t;
 
 typedef struct {
@@ -219,10 +226,10 @@ typedef struct {
     char *name;
     char *label;
     ysw_array_t *strokes;
-    zm_duration_t duration;
 } zm_beat_t;
 
 typedef struct {
+    zm_note_t surface;
     zm_beat_t *beat;
 } zm_rhythm_t;
 
@@ -262,8 +269,8 @@ typedef struct {
 } zm_music_t;
 
 void zm_music_free(zm_music_t *music);
-zm_music_t *zm_read_from_file(FILE *file);
-zm_music_t *zm_read(void);
+zm_music_t *zm_parse_file(FILE *file);
+zm_music_t *zm_load_music(void);
 
 void *zm_load_sample(const char* name, uint16_t *word_count);
 
@@ -287,6 +294,8 @@ const zm_tempo_signature_t *zm_get_tempo_signature(zm_tempo_t tempo_index);
 zm_bpm_x zm_tempo_to_bpm(zm_tempo_t tempo);
 
 zm_duration_t zm_round_duration(zm_duration_t duration, uint8_t *index, bool *is_dotted);
+const char *zm_get_duration_label(zm_duration_t duration);
+zm_duration_t zm_get_next_duration(zm_duration_t duration);
 
 // See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
 

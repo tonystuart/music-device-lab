@@ -80,12 +80,10 @@ typedef struct {
 
 ysw_mod_sample_t *provide_sample(void *caller_context, uint8_t program_index, uint8_t midi_note)
 {
+    ESP_LOGD(TAG, "provide_sample program_index=%d, midi_note=%d", program_index, midi_note);
     assert(caller_context);
     assert(program_index <= YSW_MIDI_MAX);
-    assert(program_index <= YSW_MIDI_MAX); // TODO: consider GM number versus program_index
-
     host_context_t *host_context = caller_context;
-
     zm_sample_t *sample = NULL;
     ysw_mod_sample_t *mod_sample = NULL;
     if (program_index >= ysw_array_get_count(host_context->music->programs)) {
@@ -94,15 +92,12 @@ ysw_mod_sample_t *provide_sample(void *caller_context, uint8_t program_index, ui
     }
     zm_program_t *program = ysw_array_get(host_context->music->programs, program_index);
     zm_patch_x patch_count = ysw_array_get_count(program->patches);
+    assert(patch_count > 0);
     for (zm_patch_x i = 0; i < patch_count && !sample; i++) {
         zm_patch_t *patch = ysw_array_get(program->patches, i);
-        if (midi_note <= patch->up_to) {
+        if (midi_note <= patch->up_to || i == (patch_count - 1)) {
             sample = patch->sample;
         }
-    }
-    if (!sample) {
-        ESP_LOGE(TAG, "no sample found, program_index=%d, midi_note=%d", program_index, midi_note);
-        abort();
     }
     hnode_t *node = hash_lookup(host_context->sample_map, sample);
     if (node) {
@@ -290,7 +285,7 @@ int main(int argc, char *argv[])
 {
 #endif
 
-    zm_music_t *music = zm_read();
+    zm_music_t *music = zm_load_music();
     ysw_bus_h bus = ysw_event_create_bus();
 
     initialize_synthesizer(bus, music);

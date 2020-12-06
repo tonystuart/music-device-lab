@@ -26,12 +26,22 @@
 
 #define DEFAULT_QUALITY 2 // TODO: make "major" 0 default or search by name
 #define DEFAULT_STYLE 2 // TODO: make "stacked" 0 default or search by name
+#define DEFAULT_BEAT 0 // TODO: search by name
+
+#define DEFAULT_MELODY_PROGRAM 0
+#define DEFAULT_CHORD_PROGRAM 1
+#define DEFAULT_RHYTHM_PROGRAM 7
 
 // channels
 
 #define BASE_CHANNEL 0
+#define MELODY_CHANNEL (BASE_CHANNEL+0)
+#define CHORD_CHANNEL (BASE_CHANNEL+1)
+#define RHYTHM_CHANNEL (BASE_CHANNEL+2)
 
 #define BACKGROUND_BASE 3
+
+// TODO: change to NOTE, CHORD, BEAT
 
 typedef enum {
     YSW_EDITOR_MODE_MELODY,
@@ -55,6 +65,7 @@ typedef struct {
     zm_pattern_t *pattern;
     zm_quality_t *quality;
     zm_style_t *style;
+    zm_beat_t *beat;
     zm_duration_t duration;
 
     bool loop;
@@ -158,6 +169,8 @@ static void display_program(context_t *context)
         value = context->pattern->melody_program->name;
     } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
         value = context->pattern->chord_program->name;
+    } else if (context->mode == YSW_EDITOR_MODE_RHYTHM) {
+        value = context->pattern->rhythm_program->name;
     }
     ysw_header_set_program(context->header, value);
 }
@@ -215,7 +228,17 @@ static void display_chord_mode(context_t *context)
 
 static void display_rhythm_mode(context_t *context)
 {
-    ysw_header_set_mode(context->header, modes[context->mode], "");
+    char value[32] = {};
+    zm_division_t *division = NULL;
+    if (is_division_position(context)) {
+        division = ysw_array_get(context->pattern->divisions, context->position / 2);
+    }
+    if (division && division->rhythm.beat) {
+        snprintf(value, sizeof(value), "%s", division->rhythm.beat->name);
+    } else {
+        snprintf(value, sizeof(value), "%s", context->beat->name);
+    }
+    ysw_header_set_mode(context->header, modes[context->mode], value);
 }
 
 static void display_mode(context_t *context)
@@ -235,26 +258,46 @@ static void display_mode(context_t *context)
     display_program(context);
 }
 
-static zm_program_t *next_program(ysw_array_t *programs, zm_program_t *previous)
+// TODO: Move to zm_music (or move the other "next" functions here)
+
+static zm_program_t *next_program(ysw_array_t *programs, zm_program_t *current, zm_program_type_t type)
 {
+    zm_program_t *next = current;
     zm_program_x program_count = ysw_array_get_count(programs);
-    zm_program_x program_index = ysw_array_find(programs, previous);
-    program_index = (program_index + 1) % program_count;
-    zm_program_t *next = ysw_array_get(programs, program_index);
+    zm_program_x program_index = ysw_array_find(programs, current);
+    for (zm_program_x i = 0; i < program_count && next == current; i++) {
+        program_index = (program_index + 1) % program_count;
+        zm_program_t *program = ysw_array_get(programs, program_index);
+        if (program->type == type) {
+            next = program;
+        }
+    }
     return next;
+}
+
+static void fire_program_change(context_t *context, zm_program_t *program, zm_channel_x channel)
+{
+    ysw_event_program_change_t program_change = {
+        .channel = channel,
+        .program = ysw_array_find(context->music->programs, program),
+    };
+    ysw_event_fire_program_change(context->bus, YSW_ORIGIN_EDITOR, &program_change);
 }
 
 static void cycle_program(context_t *context)
 {
     if (context->mode == YSW_EDITOR_MODE_MELODY) {
-        context->pattern->melody_program = next_program(context->music->programs, context->pattern->melody_program);
-        ysw_event_program_change_t program_change = {
-            .channel = 0,
-            .program = ysw_array_find(context->music->programs, context->pattern->melody_program),
-        };
-        ysw_event_fire_program_change(context->bus, YSW_ORIGIN_EDITOR, &program_change);
+        context->pattern->melody_program = next_program(context->music->programs,
+                context->pattern->melody_program, ZM_PROGRAM_NOTE);
+        fire_program_change(context, context->pattern->melody_program, MELODY_CHANNEL);
     } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
-        context->pattern->chord_program = next_program(context->music->programs, context->pattern->chord_program);
+        context->pattern->chord_program = next_program(context->music->programs,
+                context->pattern->chord_program, ZM_PROGRAM_NOTE);
+        fire_program_change(context, context->pattern->chord_program, CHORD_CHANNEL);
+    } else if (context->mode == YSW_EDITOR_MODE_RHYTHM) {
+        context->pattern->rhythm_program = next_program(context->music->programs,
+                context->pattern->rhythm_program, ZM_PROGRAM_BEAT);
+        fire_program_change(context, context->pattern->rhythm_program, RHYTHM_CHANNEL);
     }
     display_program(context);
 }
@@ -290,19 +333,7 @@ static void cycle_duration(context_t *context)
     }
     // Cycle default duration if not on a division or if division duration is already default duration
     if (!division || division->melody.duration == context->duration) {
-        if (context->duration == ZM_AS_PLAYED) {
-            context->duration = ZM_SIXTEENTH;
-        } else if (context->duration <= ZM_SIXTEENTH) {
-            context->duration = ZM_EIGHTH;
-        } else if (context->duration <= ZM_EIGHTH) {
-            context->duration = ZM_QUARTER;
-        } else if (context->duration <= ZM_QUARTER) {
-            context->duration = ZM_HALF;
-        } else if (context->duration <= ZM_HALF) {
-            context->duration = ZM_WHOLE;
-        } else {
-            context->duration = ZM_AS_PLAYED;
-        }
+        context->duration = zm_get_next_duration(context->duration);
         ysw_footer_set_duration(context->footer, context->duration);
     }
     if (division) {
@@ -330,6 +361,7 @@ static void cycle_tie(context_t *context)
 
 static zm_style_t *find_matching_style(context_t *context, bool preincrement)
 {
+
     zm_style_x current = ysw_array_find(context->music->styles, context->style);
     zm_style_x style_count = ysw_array_get_count(context->music->styles);
     zm_distance_x distance_count = ysw_array_get_count(context->quality->distances);
@@ -417,6 +449,10 @@ static void process_division(context_t *context, zm_note_t midi_note, zm_time_x 
             division->melody.duration = division->chord.duration;
         }
     } else if (context -> mode == YSW_EDITOR_MODE_RHYTHM) {
+        division->rhythm.surface = midi_note;
+        if (!division->melody.duration) {
+            division->melody.duration = duration;
+        }
     }
 
     zm_division_x division_count = ysw_array_get_count(context->pattern->divisions);
@@ -665,6 +701,25 @@ static void on_down(ysw_menu_t *menu, ysw_event_t *event, void *value)
     process_down(context);
 }
 
+static void fire_note_on(context_t *context, zm_note_t midi_note, zm_channel_x channel)
+{
+    ysw_event_note_on_t note_on = {
+        .channel = channel,
+        .midi_note = midi_note,
+        .velocity = 80,
+    };
+    ysw_event_fire_note_on(context->bus, YSW_ORIGIN_EDITOR, &note_on);
+}
+
+static void fire_note_off(context_t *context, zm_note_t midi_note, zm_channel_x channel)
+{
+    ysw_event_note_off_t note_off = {
+        .channel = channel,
+        .midi_note = midi_note,
+    };
+    ysw_event_fire_note_off(context->bus, YSW_ORIGIN_EDITOR, &note_off);
+}
+
 static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     context_t *context = menu->caller_context;
@@ -672,12 +727,7 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
     if (event->header.type == YSW_EVENT_KEY_DOWN) {
         if (context->mode == YSW_EDITOR_MODE_MELODY) {
             if (midi_note) {
-                ysw_event_note_on_t note_on = {
-                    .channel = BASE_CHANNEL,
-                    .midi_note = midi_note,
-                    .velocity = 80,
-                };
-                ysw_event_fire_note_on(context->bus, YSW_ORIGIN_EDITOR, &note_on);
+                fire_note_on(context, midi_note, MELODY_CHANNEL);
             }
         } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
             zm_division_t division = {
@@ -687,15 +737,19 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
                 .chord.duration = 512,
             };
             play_division(context, &division);
+        } else if (context->mode == YSW_EDITOR_MODE_RHYTHM) {
+            if (midi_note) {
+                fire_note_on(context, midi_note, RHYTHM_CHANNEL);
+            }
         }
     } else if (event->header.type == YSW_EVENT_KEY_UP) {
         if (context->mode == YSW_EDITOR_MODE_MELODY) {
             if (midi_note) {
-                ysw_event_note_off_t note_off = {
-                    .channel = 0,
-                    .midi_note = midi_note,
-                };
-                ysw_event_fire_note_off(context->bus, YSW_ORIGIN_EDITOR, &note_off);
+                fire_note_off(context, midi_note, MELODY_CHANNEL);
+            }
+        } else if (context->mode == YSW_EDITOR_MODE_RHYTHM) {
+            if (midi_note) {
+                fire_note_off(context, midi_note, RHYTHM_CHANNEL);
             }
         }
         process_division(context, midi_note, event->key_pressed.duration);
@@ -937,17 +991,23 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
         context->pattern->key = ZM_KEY_C;
         context->pattern->time = ZM_TIME_4_4;
         context->pattern->tempo = ZM_TEMPO_100;
-        context->pattern->melody_program = ysw_array_get(music->programs, 0);
-        context->pattern->chord_program = context->pattern->melody_program;
+        context->pattern->melody_program = ysw_array_get(music->programs, DEFAULT_MELODY_PROGRAM);
+        context->pattern->chord_program = ysw_array_get(music->programs, DEFAULT_CHORD_PROGRAM);
+        context->pattern->rhythm_program = ysw_array_get(music->programs, DEFAULT_RHYTHM_PROGRAM);
     }
 
     context->quality = ysw_array_get(music->qualities, DEFAULT_QUALITY);
     context->style = ysw_array_get(music->styles, DEFAULT_STYLE);
+    context->beat = ysw_array_get(music->beats, DEFAULT_BEAT);
     context->duration = ZM_AS_PLAYED;
 
     context->advance = 2;
     context->position = 0;
     context->mode = YSW_EDITOR_MODE_MELODY;
+
+    fire_program_change(context, context->pattern->melody_program, MELODY_CHANNEL);
+    fire_program_change(context, context->pattern->chord_program, CHORD_CHANNEL);
+    fire_program_change(context, context->pattern->rhythm_program, RHYTHM_CHANNEL);
 
     context->menu = ysw_menu_create(base_menu, context);
 

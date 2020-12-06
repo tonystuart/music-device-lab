@@ -20,45 +20,55 @@
 # 60 61 62 63 64 65 66 67 68 69 70 71
 
 #type(1=sample),index,name,reppnt,replen,volume,pan
-#type(2=program),index,name,gm
-#type(3=patch),up_to,sample
+#type(2=program),index,name,type,gm
+#type(3=patch),up_to,sample[,name]
 1,0,Steinway,0,0,60,0
-2,0,Electric Piano 1,5
+2,0,Electric Piano 1,0,5
 3,127,0
 
 1,1,Celeste,0,0,60,2
-2,1,Celesta,9
+2,1,Celesta,0,9
 3,127,1
 
 1,2,walker-guitar,0,0,60,2
-2,2,Distortion Guitar,31
+2,2,Distortion Guitar,0,31
 3,127,2
 
 1,3,bassguitar,0,0,60,2
-2,3,Acoustic Bass,33
+2,3,Acoustic Bass,0,33
 3,127,3
 
 1,4,voices47,0,0,60,2
-2,4,Synth Voice,55
+2,4,Synth Voice,0,55
 3,127,4
 
 1,5,k77.saxio2,0,0,60,2
-2,5,Alto Sax,66
+2,5,Alto Sax,0,66
 3,127,5
 
 1,6,flute,0,0,60,2
-2,6,Flute,74
+2,6,Flute,0,74
 3,127,6
 
 1,7,BassDrum1,0,0,60,1
 1,8,Cymbal1,0,0,60,1
 1,9,Snare1,0,0,60,1
 1,10,thehihatclosed,0,0,60,1
-2,7,Standard Kit,0
-3,60,7 # bass
-3,62,9 # snare
-3,64,10 # hi-hat
-3,127,8 # cymbal
+2,7,Standard Kit,1,0
+3,60,7,Bass
+3,62,9,Snare
+3,64,10,Hi-hat
+3,127,8,Cymbal
+
+1,11,bass.drum,0,0,60,1
+1,12,ridecymbal,0,0,60,1
+1,13,snare1.ss,0,0,60,1
+1,14,hhat.ss,0,0,60,1
+2,8,Drum Set,1,0
+3,60,11,Bass
+3,62,13,Snare
+3,64,14,Hi-hat
+3,127,12,Cymbal
 
 #type(quality),index,name,distances
 4,0,Root Only,1,0
@@ -214,7 +224,7 @@
 
 #type(7=beat),index,name,label
 #type(8=stroke),time,surface,velocity
-7,0,Standard 8th Note Groove,8th Note Groove
+7,0,8th Note Groove,8NG
 8,0,60,16 # bass
 8,0,62,16 # snare
 8,0,64,16 # hi-hat
@@ -234,6 +244,22 @@
 8,768,62,16 # snare
 8,768,64,16 # hi-hat
 8,768,65,16 # cymbal
+8,896,64,16 # hi-hat
+
+#type(7=beat),index,name,label
+#type(8=stroke),time,surface,velocity
+7,1,Basic Rock,BR
+8,0,60,16 # bass
+8,0,64,16 # hi-hat
+8,128,64,16 # hi-hat
+8,256,62,16 # snare
+8,256,64,16 # hi-hat
+8,328,64,16 # hi-hat
+8,512,60,16 # bass
+8,512,64,16 # hi-hat
+8,640,64,16 # hi-hat
+8,768,62,16 # snare
+8,768,64,16 # hi-hat
 8,896,64,16 # hi-hat
 
 #type(9=pattern),index,name,tempo,key,time,melody,chord,rhythm
