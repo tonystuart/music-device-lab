@@ -401,6 +401,7 @@ static void cycle_quality(context_t *context)
         ysw_staff_invalidate(context->staff);
     }
     display_mode(context);
+    play_position(context);
 }
 
 static void cycle_style(context_t *context)
@@ -417,9 +418,31 @@ static void cycle_style(context_t *context)
         division->chord.style = context->style;
     }
     display_mode(context);
+    play_position(context);
 }
 
-static void process_division(context_t *context, zm_note_t midi_note, zm_time_x duration_millis)
+static void cycle_beat(context_t *context)
+{
+    zm_division_t *division = NULL;
+    if (is_division_position(context)) {
+        zm_division_x division_index = context->position / 2;
+        division = ysw_array_get(context->pattern->divisions, division_index);
+    }
+    if (!division || !division->rhythm.beat || division->rhythm.beat == context->beat) {
+        zm_beat_x previous = ysw_array_find(context->music->beats, context->beat);
+        zm_beat_x beat_count = ysw_array_get_count(context->music->beats);
+        zm_beat_x next = (previous + 1) % beat_count;
+        context->beat = ysw_array_get(context->music->beats, next);
+    }
+    if (division) {
+        division->rhythm.beat = context->beat;
+        ysw_staff_invalidate(context->staff);
+    }
+    display_mode(context);
+    play_position(context);
+}
+
+static zm_division_t *apply_note_to_division(context_t *context, zm_note_t midi_note, zm_time_x duration_millis)
 {
     zm_division_t *division = NULL;
     int32_t division_index = context->position / 2;
@@ -441,7 +464,7 @@ static void process_division(context_t *context, zm_note_t midi_note, zm_time_x 
         division->melody.note = midi_note; // rest == 0
         division->melody.duration = duration;
     } else if (context ->mode == YSW_EDITOR_MODE_CHORD) {
-        division->chord.root = midi_note;
+        division->chord.root = midi_note; // rest == 0
         division->chord.quality = context->quality;
         division->chord.style = context->style;
         division->chord.duration = duration;
@@ -449,7 +472,10 @@ static void process_division(context_t *context, zm_note_t midi_note, zm_time_x 
             division->melody.duration = division->chord.duration;
         }
     } else if (context -> mode == YSW_EDITOR_MODE_RHYTHM) {
-        division->rhythm.surface = midi_note;
+        division->rhythm.surface = midi_note; // rest == 0
+        if (!midi_note) {
+            division->rhythm.beat = NULL;
+        }
         if (!division->melody.duration) {
             division->melody.duration = duration;
         }
@@ -460,6 +486,36 @@ static void process_division(context_t *context, zm_note_t midi_note, zm_time_x 
     ysw_staff_set_position(context->staff, context->position);
     display_mode(context);
     recalculate(context);
+    return division;
+}
+
+static void insert_beat(context_t *context)
+{
+    uint32_t last_start = 0;
+    assert(context->beat);
+    if (!is_space_position(context)) {
+        context->position++;
+    }
+    zm_duration_t saved_duration = context->duration;
+    zm_beat_x stroke_count = ysw_array_get_count(context->beat->strokes);
+    for (zm_beat_x i = 0; i <= stroke_count; i++) {
+        zm_time_x start;
+        if (i < stroke_count) {
+            zm_stroke_t *stroke = ysw_array_get(context->beat->strokes, i);
+            start = stroke->start;
+        } else {
+            start = 1024;
+        }
+        if (start != last_start) {
+            context->duration = zm_round_duration(start - last_start, NULL, NULL);
+            zm_division_t *division = apply_note_to_division(context, 0, 0);
+            if (!last_start) {
+                division->rhythm.beat = context->beat;
+            }
+            last_start = start;
+        }
+    }
+    context->duration = saved_duration;
 }
 
 static void process_delete(context_t *context)
@@ -629,6 +685,18 @@ static void on_tie(ysw_menu_t *menu, ysw_event_t *event, void *value)
     cycle_tie(context);
 }
 
+static void on_cycle_beat(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    context_t *context = menu->caller_context;
+    cycle_beat(context);
+}
+
+static void on_insert_beat(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    context_t *context = menu->caller_context;
+    insert_beat(context);
+}
+
 static void on_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     context_t *context = menu->caller_context;
@@ -752,7 +820,7 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
                 fire_note_off(context, midi_note, RHYTHM_CHANNEL);
             }
         }
-        process_division(context, midi_note, event->key_pressed.duration);
+        apply_note_to_division(context, midi_note, event->key_pressed.duration);
     }
 }
 
@@ -863,6 +931,8 @@ static void initialize_editor_task(void *caller_context)
 #define YSW_MF_PLUS (YSW_MENU_DOWN|YSW_MENU_OPEN|YSW_MENU_SOFTKEY_LABEL)
 #define YSW_MF_MINUS (YSW_MENU_UP|YSW_MENU_POP|YSW_MENU_SOFTKEY_LABEL|YSW_MF_BUTTON)
 
+// TODO: Rework menus to use lookup (with layering of menus in stack) instead of offset
+
 static const ysw_menu_item_t menu_2[] = {
     /* 00 */ { "C#6", YSW_MF_BUTTON, on_note, VP 73 },
     /* 01 */ { "D#6", YSW_MF_BUTTON, on_note, VP 75 },
@@ -884,8 +954,8 @@ static const ysw_menu_item_t menu_2[] = {
     /* 15 */ { "B6", YSW_MF_BUTTON, on_note, VP 83 },
 
     /* 16 */ { "Demo", YSW_MF_COMMAND, on_demo, 0 },
-    /* 17 */ { " ", YSW_MF_BLANK, ysw_menu_nop, 0 },
-    /* 18 */ { " ", YSW_MF_BLANK, ysw_menu_nop, 0 },
+    /* 17 */ { "Cycle\nBeat", YSW_MF_COMMAND, on_cycle_beat, 0 },
+    /* 18 */ { "Insert\nBeat", YSW_MF_COMMAND, on_insert_beat, 0 },
     /* 19 */ { "Down", YSW_MF_COMMAND_EOL, on_down, 0 },
 
     /* 20 */ { "C#5", YSW_MF_BUTTON, on_note, VP 61 },
