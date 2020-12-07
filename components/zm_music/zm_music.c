@@ -18,6 +18,7 @@
 #include "assert.h"
 #include "errno.h"
 #include "fcntl.h"
+#include "limits.h"
 #include "stdio.h"
 #include "stdlib.h"
 #include "unistd.h"
@@ -777,6 +778,7 @@ ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_chan
     for (zm_division_x i = 0; i < division_count; i++) {
         zm_division_t *division = ysw_array_get(pattern->divisions, i);
         if (division->melody.note) {
+            ESP_LOGD(TAG, "articulation=%d, duration=%d", division->articulation, division->melody.duration);
             zm_render_melody(notes, &division->melody, division->start, base_channel, melody_program, tie);
             if (division->melody.tie) {
                 tie = division->melody.tie;
@@ -881,6 +883,7 @@ zm_bpm_x zm_tempo_to_bpm(zm_tempo_t tempo)
     return zm_tempo_signatures[tempo % ZM_TEMPO_SIGNATURES].bpm;
 }
 
+#if 0
 static const zm_duration_t durations[] = {
     ZM_SIXTEENTH,
     ZM_EIGHTH,
@@ -914,6 +917,43 @@ zm_duration_t zm_round_duration(zm_duration_t duration, uint8_t *ret_index, bool
         *ret_dotted = dotted;
     }
     return rounded_duration;
+}
+#endif
+
+typedef struct {
+    uint8_t index;
+    zm_duration_t duration;
+    zm_duration_t midpoint;
+    bool dotted;
+} zm_duration_map_t;
+
+static const zm_duration_map_t durations[] = {
+    { 0, ZM_SIXTEENTH, ZM_SIXTEENTH + ((ZM_EIGHTH - ZM_SIXTEENTH) / 2), false },
+    { 1, ZM_EIGHTH, ZM_EIGHTH + ((ZM_QUARTER - ZM_EIGHTH) / 2), false },
+    { 2, ZM_QUARTER, ZM_QUARTER + ((ZM_HALF - ZM_QUARTER) / 4), false },
+    { 2, ZM_QUARTER, ZM_QUARTER + ((3 * (ZM_HALF - ZM_QUARTER)) / 4), true },
+    { 3, ZM_HALF, ZM_HALF + ((ZM_WHOLE - ZM_HALF) / 2), false },
+    { 3, ZM_HALF, ZM_HALF + ((3 * (ZM_WHOLE - ZM_HALF)) / 4), true },
+    { 4, ZM_WHOLE, UINT_MAX, false },
+};
+
+#define DURATION_SZ (sizeof(durations)/sizeof(durations[0]))
+
+zm_duration_t zm_round_duration(zm_duration_t duration, uint8_t *ret_index, bool *ret_dotted)
+{
+    for (zm_duration_t i = 0; i < DURATION_SZ; i++) {
+        if (duration < durations[i].midpoint) {
+            if (ret_index) {
+                *ret_index = durations[i].index;
+            }
+            if (ret_dotted) {
+                *ret_dotted = durations[i].dotted;
+            }
+            return durations[i].duration;
+        }
+    }
+    assert(false);
+    return 0;
 }
 
 const char *zm_get_duration_label(zm_duration_t duration)

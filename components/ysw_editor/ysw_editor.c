@@ -68,6 +68,10 @@ typedef struct {
     zm_beat_t *beat;
     zm_duration_t duration;
 
+    zm_time_x down_at;
+    zm_time_x up_at;
+    zm_time_x delta;
+
     bool loop;
     uint8_t advance;
     uint32_t position;
@@ -131,6 +135,7 @@ static void recalculate(context_t *context)
     zm_division_x division_count = ysw_array_get_count(context->pattern->divisions);
     for (zm_division_x i = 0; i < division_count; i++) {
         zm_division_t *division = ysw_array_get(context->pattern->divisions, i);
+        start += division->articulation;
         division->start = start;
         division->flags = 0;
         division->measure = measure;
@@ -140,7 +145,7 @@ static void recalculate(context_t *context)
             ticks_in_measure = 0;
             measure++;
         }
-        start += division->melody.duration; // TODO: add articulation, use division->start in zm_render_pattern
+        start += division->melody.duration;
     }
 
     ysw_staff_invalidate(context->staff);
@@ -442,7 +447,7 @@ static void cycle_beat(context_t *context)
     play_position(context);
 }
 
-static zm_division_t *apply_note_to_division(context_t *context, zm_note_t midi_note, zm_time_x duration_millis)
+static zm_division_t *apply_note(context_t *context, zm_note_t midi_note, zm_time_x duration_millis)
 {
     zm_division_t *division = NULL;
     int32_t division_index = context->position / 2;
@@ -454,15 +459,19 @@ static zm_division_t *apply_note_to_division(context_t *context, zm_note_t midi_
         division = ysw_array_get(context->pattern->divisions, division_index);
     }
 
+    zm_bpm_x bpm = zm_tempo_to_bpm(context->pattern->tempo);
     zm_duration_t duration = context->duration;
     if (duration == ZM_AS_PLAYED) {
-        zm_bpm_x bpm = zm_tempo_to_bpm(context->pattern->tempo);
         duration = ysw_millis_to_ticks(duration_millis, bpm);
     }
 
     if (context->mode == YSW_EDITOR_MODE_MELODY) {
         division->melody.note = midi_note; // rest == 0
         division->melody.duration = duration;
+        zm_time_x articulation = ysw_millis_to_ticks(context->delta, bpm);
+        if (articulation < 1024) {
+            division->articulation = articulation;
+        }
     } else if (context ->mode == YSW_EDITOR_MODE_CHORD) {
         division->chord.root = midi_note; // rest == 0
         division->chord.quality = context->quality;
@@ -508,7 +517,7 @@ static void insert_beat(context_t *context)
         }
         if (start != last_start) {
             context->duration = zm_round_duration(start - last_start, NULL, NULL);
-            zm_division_t *division = apply_note_to_division(context, 0, 0);
+            zm_division_t *division = apply_note(context, 0, 0);
             if (!last_start) {
                 division->rhythm.beat = context->beat;
             }
@@ -794,6 +803,8 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
     zm_note_t midi_note = (uintptr_t)value;
     if (event->header.type == YSW_EVENT_KEY_DOWN) {
         if (context->mode == YSW_EDITOR_MODE_MELODY) {
+            context->down_at = event->key_down.time;
+            context->delta = context->down_at - context->up_at;
             if (midi_note) {
                 fire_note_on(context, midi_note, MELODY_CHANNEL);
             }
@@ -812,6 +823,7 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
         }
     } else if (event->header.type == YSW_EVENT_KEY_UP) {
         if (context->mode == YSW_EDITOR_MODE_MELODY) {
+            context->up_at = event->key_up.time;
             if (midi_note) {
                 fire_note_off(context, midi_note, MELODY_CHANNEL);
             }
@@ -820,7 +832,7 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
                 fire_note_off(context, midi_note, RHYTHM_CHANNEL);
             }
         }
-        apply_note_to_division(context, midi_note, event->key_pressed.duration);
+        apply_note(context, midi_note, event->key_pressed.duration);
     }
 }
 
