@@ -135,7 +135,6 @@ static void recalculate(context_t *context)
     zm_division_x division_count = ysw_array_get_count(context->pattern->divisions);
     for (zm_division_x i = 0; i < division_count; i++) {
         zm_division_t *division = ysw_array_get(context->pattern->divisions, i);
-        start += division->articulation;
         division->start = start;
         division->flags = 0;
         division->measure = measure;
@@ -449,30 +448,35 @@ static void cycle_beat(context_t *context)
 
 static zm_division_t *apply_note(context_t *context, zm_note_t midi_note, zm_time_x duration_millis)
 {
+    zm_time_x articulation = 0;
+    zm_duration_t duration = context->duration;
+    if (duration == ZM_AS_PLAYED) {
+        zm_bpm_x bpm = zm_tempo_to_bpm(context->pattern->tempo);
+        duration = ysw_millis_to_ticks(duration_millis, bpm);
+        articulation = ysw_millis_to_ticks(context->delta, bpm);
+    }
+
     zm_division_t *division = NULL;
     int32_t division_index = context->position / 2;
     bool is_new_division = is_space_position(context);
     if (is_new_division) {
+        if (articulation && division_index) {
+            zm_division_t *rest = ysw_heap_allocate(sizeof(zm_division_t));
+            rest->melody.duration = min(articulation, 1024);
+            ysw_array_insert(context->pattern->divisions, division_index, rest);
+            division_index++;
+            context->position = division_index * 2 + 1;
+        }
         division = ysw_heap_allocate(sizeof(zm_division_t));
         ysw_array_insert(context->pattern->divisions, division_index, division);
     } else {
         division = ysw_array_get(context->pattern->divisions, division_index);
     }
 
-    zm_bpm_x bpm = zm_tempo_to_bpm(context->pattern->tempo);
-    zm_duration_t duration = context->duration;
-    if (duration == ZM_AS_PLAYED) {
-        duration = ysw_millis_to_ticks(duration_millis, bpm);
-    }
-
     if (context->mode == YSW_EDITOR_MODE_MELODY) {
         division->melody.note = midi_note; // rest == 0
         division->melody.duration = duration;
-        zm_time_x articulation = ysw_millis_to_ticks(context->delta, bpm);
-        if (articulation < 1024) {
-            division->articulation = articulation;
-        }
-    } else if (context ->mode == YSW_EDITOR_MODE_CHORD) {
+    } else if (context->mode == YSW_EDITOR_MODE_CHORD) {
         division->chord.root = midi_note; // rest == 0
         division->chord.quality = context->quality;
         division->chord.style = context->style;
@@ -480,7 +484,7 @@ static zm_division_t *apply_note(context_t *context, zm_note_t midi_note, zm_tim
         if (!division->melody.duration) {
             division->melody.duration = division->chord.duration;
         }
-    } else if (context -> mode == YSW_EDITOR_MODE_RHYTHM) {
+    } else if (context->mode == YSW_EDITOR_MODE_RHYTHM) {
         division->rhythm.surface = midi_note; // rest == 0
         if (!midi_note) {
             division->rhythm.beat = NULL;
@@ -933,120 +937,89 @@ static void initialize_editor_task(void *caller_context)
 //   20, 21,     22, 23, 24,     25, 26, 27, 28,
 // 29, 30, 31, 32, 33, 34, 35,   36, 37, 38, 39,
 
+static const ysw_menu_softmap_t softmap[] = {
+    5, 6, 7, 8, YSW_MENU_ENDLINE,
+    16, 17, 18, 19, YSW_MENU_ENDLINE,
+    25, 26, 27, 28, YSW_MENU_ENDLINE,
+    36, 37, 38, 39, YSW_MENU_ENDGRID,
+};
+
 #define VP (void *)(uintptr_t)
 
 #define YSW_MF_BUTTON (YSW_MENU_DOWN|YSW_MENU_UP)
-#define YSW_MF_COMMAND (YSW_MENU_PRESS|YSW_MENU_SOFTKEY_LABEL|YSW_MENU_CLOSE)
-#define YSW_MF_COMMAND_EOL (YSW_MENU_PRESS|YSW_MENU_SOFTKEY_LABEL|YSW_MENU_CLOSE|YSW_MENU_SOFTKEY_NEWLINE)
-#define YSW_MF_BUTTON_COMMAND (YSW_MENU_DOWN|YSW_MENU_UP|YSW_MENU_SOFTKEY_LABEL|YSW_MENU_CLOSE)
-#define YSW_MF_BLANK (YSW_MENU_SOFTKEY_LABEL)
-#define YSW_MF_PLUS (YSW_MENU_DOWN|YSW_MENU_OPEN|YSW_MENU_SOFTKEY_LABEL)
-#define YSW_MF_MINUS (YSW_MENU_UP|YSW_MENU_POP|YSW_MENU_SOFTKEY_LABEL|YSW_MF_BUTTON)
-
-// TODO: Rework menus to use lookup (with layering of menus in stack) instead of offset
+#define YSW_MF_COMMAND (YSW_MENU_PRESS|YSW_MENU_CLOSE)
+#define YSW_MF_BUTTON_COMMAND (YSW_MENU_DOWN|YSW_MENU_UP|YSW_MENU_CLOSE)
+#define YSW_MF_PLUS (YSW_MENU_DOWN|YSW_MENU_OPEN)
+#define YSW_MF_MINUS (YSW_MENU_UP|YSW_MENU_POP|YSW_MF_BUTTON)
 
 static const ysw_menu_item_t menu_2[] = {
-    /* 00 */ { "C#6", YSW_MF_BUTTON, on_note, VP 73 },
-    /* 01 */ { "D#6", YSW_MF_BUTTON, on_note, VP 75 },
-    /* 02 */ { "F#6", YSW_MF_BUTTON, on_note, VP 78 },
-    /* 03 */ { "G#6", YSW_MF_BUTTON, on_note, VP 80 },
-    /* 04 */ { "A#6", YSW_MF_BUTTON, on_note, VP 82 },
+    { 5, "Play", YSW_MF_COMMAND, on_play, 0 },
+    { 6, "Stop", YSW_MF_COMMAND, on_stop, 0 },
+    { 7, "Loop", YSW_MF_COMMAND, on_loop, 0 },
 
-    /* 05 */ { "Play", YSW_MF_COMMAND, on_play, 0 },
-    /* 06 */ { "Stop", YSW_MF_COMMAND, on_stop, 0 },
-    /* 07 */ { "Loop", YSW_MF_COMMAND, on_loop, 0 },
-    /* 08 */ { "Up", YSW_MF_COMMAND_EOL, on_up, 0 },
+    { 16, "Demo", YSW_MF_COMMAND, on_demo, 0 },
+    { 17, "Cycle\nBeat", YSW_MF_COMMAND, on_cycle_beat, 0 },
+    { 18, "Insert\nBeat", YSW_MF_COMMAND, on_insert_beat, 0 },
 
-    /* 09 */ { "C6", YSW_MF_BUTTON, on_note, VP 72 },
-    /* 10 */ { "D6", YSW_MF_BUTTON, on_note, VP 74 },
-    /* 11 */ { "E6", YSW_MF_BUTTON, on_note, VP 76 },
-    /* 12 */ { "F6", YSW_MF_BUTTON, on_note, VP 77 },
-    /* 13 */ { "G6", YSW_MF_BUTTON, on_note, VP 79 },
-    /* 14 */ { "A6", YSW_MF_BUTTON, on_note, VP 81 },
-    /* 15 */ { "B6", YSW_MF_BUTTON, on_note, VP 83 },
+    { 25, "Tie", YSW_MF_COMMAND, on_tie, 0 },
+    { 26, "Previous", YSW_MF_COMMAND, on_previous, 0 },
+    { 27, "Next", YSW_MF_COMMAND, on_next, 0 },
 
-    /* 16 */ { "Demo", YSW_MF_COMMAND, on_demo, 0 },
-    /* 17 */ { "Cycle\nBeat", YSW_MF_COMMAND, on_cycle_beat, 0 },
-    /* 18 */ { "Insert\nBeat", YSW_MF_COMMAND, on_insert_beat, 0 },
-    /* 19 */ { "Down", YSW_MF_COMMAND_EOL, on_down, 0 },
+    { 36, "Menu+", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
-    /* 20 */ { "C#5", YSW_MF_BUTTON, on_note, VP 61 },
-    /* 21 */ { "D#5", YSW_MF_BUTTON, on_note, VP 63 },
-    /* 22 */ { "F#5", YSW_MF_BUTTON, on_note, VP 66 },
-    /* 23 */ { "G#5", YSW_MF_BUTTON, on_note, VP 68 },
-    /* 24 */ { "A#5", YSW_MF_BUTTON, on_note, VP 70 },
-
-    /* 25 */ { "Tie", YSW_MF_COMMAND, on_tie, 0 },
-    /* 26 */ { " ", YSW_MF_BLANK, ysw_menu_nop, 0 },
-    /* 27 */ { " ", YSW_MF_BLANK, ysw_menu_nop, 0 },
-    /* 28 */ { "Previous", YSW_MF_COMMAND_EOL, on_previous, 0 },
-
-    /* 29 */ { "C5", YSW_MF_BUTTON, on_note, VP 60 },
-    /* 30 */ { "D5", YSW_MF_BUTTON, on_note, VP 62 },
-    /* 31 */ { "E5", YSW_MF_BUTTON, on_note, VP 64 },
-    /* 32 */ { "F5", YSW_MF_BUTTON, on_note, VP 65 },
-    /* 33 */ { "G5", YSW_MF_BUTTON, on_note, VP 67 },
-    /* 34 */ { "A5", YSW_MF_BUTTON, on_note, VP 69 },
-    /* 35 */ { "B5", YSW_MF_BUTTON, on_note, VP 71 },
-
-    /* 36 */ { "Menu+", YSW_MF_PLUS, ysw_menu_nop, 0 },
-    /* 37 */ { " ", YSW_MF_BLANK, ysw_menu_nop, 0 },
-    /* 38 */ { "Menu-", YSW_MF_MINUS, ysw_menu_nop, 0 },
-    /* 39 */ { "Next", YSW_MF_COMMAND, on_next, 0 },
-
-    /* 40 */ { NULL, 0, NULL, NULL },
+    { 40, NULL, 0, NULL, NULL },
 };
 
 static const ysw_menu_item_t base_menu[] = {
-    /* 00 */ { "C#6", YSW_MF_BUTTON, on_note, VP 73 },
-    /* 01 */ { "D#6", YSW_MF_BUTTON, on_note, VP 75 },
-    /* 02 */ { "F#6", YSW_MF_BUTTON, on_note, VP 78 },
-    /* 03 */ { "G#6", YSW_MF_BUTTON, on_note, VP 80 },
-    /* 04 */ { "A#6", YSW_MF_BUTTON, on_note, VP 82 },
+    { 0, "C#6", YSW_MF_BUTTON, on_note, VP 73 },
+    { 1, "D#6", YSW_MF_BUTTON, on_note, VP 75 },
+    { 2, "F#6", YSW_MF_BUTTON, on_note, VP 78 },
+    { 3, "G#6", YSW_MF_BUTTON, on_note, VP 80 },
+    { 4, "A#6", YSW_MF_BUTTON, on_note, VP 82 },
 
-    /* 05 */ { "Chord\nQuality", YSW_MF_COMMAND, on_quality, 0 },
-    /* 06 */ { "Chord\nStyle", YSW_MF_COMMAND, on_style, 0 },
-    /* 07 */ { "Program", YSW_MF_COMMAND, on_program, 0 },
-    /* 08 */ { "Up", YSW_MF_COMMAND_EOL, on_up, 0 },
+    { 5, "Chord\nQuality", YSW_MF_COMMAND, on_quality, 0 },
+    { 6, "Chord\nStyle", YSW_MF_COMMAND, on_style, 0 },
+    { 7, "Program", YSW_MF_COMMAND, on_program, 0 },
+    { 8, "Up", YSW_MF_COMMAND, on_up, 0 },
 
-    /* 09 */ { "C6", YSW_MF_BUTTON, on_note, VP 72 },
-    /* 10 */ { "D6", YSW_MF_BUTTON, on_note, VP 74 },
-    /* 11 */ { "E6", YSW_MF_BUTTON, on_note, VP 76 },
-    /* 12 */ { "F6", YSW_MF_BUTTON, on_note, VP 77 },
-    /* 13 */ { "G6", YSW_MF_BUTTON, on_note, VP 79 },
-    /* 14 */ { "A6", YSW_MF_BUTTON, on_note, VP 81 },
-    /* 15 */ { "B6", YSW_MF_BUTTON, on_note, VP 83 },
+    { 9, "C6", YSW_MF_BUTTON, on_note, VP 72 },
+    { 10, "D6", YSW_MF_BUTTON, on_note, VP 74 },
+    { 11, "E6", YSW_MF_BUTTON, on_note, VP 76 },
+    { 12, "F6", YSW_MF_BUTTON, on_note, VP 77 },
+    { 13, "G6", YSW_MF_BUTTON, on_note, VP 79 },
+    { 14, "A6", YSW_MF_BUTTON, on_note, VP 81 },
+    { 15, "B6", YSW_MF_BUTTON, on_note, VP 83 },
 
-    /* 16 */ { "Key\nSig", YSW_MF_COMMAND, on_key_signature, 0 },
-    /* 17 */ { "Time\nSig", YSW_MF_COMMAND, on_time_signature, 0 },
-    /* 18 */ { "Tempo\n(BPM)", YSW_MF_COMMAND, on_tempo, 0 },
-    /* 19 */ { "Down", YSW_MF_COMMAND_EOL, on_down, 0 },
+    { 16, "Key\nSig", YSW_MF_COMMAND, on_key_signature, 0 },
+    { 17, "Time\nSig", YSW_MF_COMMAND, on_time_signature, 0 },
+    { 18, "Tempo\n(BPM)", YSW_MF_COMMAND, on_tempo, 0 },
+    { 19, "Down", YSW_MF_COMMAND, on_down, 0 },
 
-    /* 20 */ { "C#5", YSW_MF_BUTTON, on_note, VP 61 },
-    /* 21 */ { "D#5", YSW_MF_BUTTON, on_note, VP 63 },
-    /* 22 */ { "F#5", YSW_MF_BUTTON, on_note, VP 66 },
-    /* 23 */ { "G#5", YSW_MF_BUTTON, on_note, VP 68 },
-    /* 24 */ { "A#5", YSW_MF_BUTTON, on_note, VP 70 },
+    { 20, "C#5", YSW_MF_BUTTON, on_note, VP 61 },
+    { 21, "D#5", YSW_MF_BUTTON, on_note, VP 63 },
+    { 22, "F#5", YSW_MF_BUTTON, on_note, VP 66 },
+    { 23, "G#5", YSW_MF_BUTTON, on_note, VP 68 },
+    { 24, "A#5", YSW_MF_BUTTON, on_note, VP 70 },
 
-    /* 25 */ { "Input\nMode", YSW_MF_COMMAND, on_cycle_mode, 0 },
-    /* 26 */ { "Add\nRest", YSW_MF_BUTTON_COMMAND, on_note, VP 0 },
-    /* 27 */ { "Note\nDuration", YSW_MF_COMMAND, on_duration, 0 },
-    /* 28 */ { "Left", YSW_MF_COMMAND_EOL, on_left, 0 },
+    { 25, "Input\nMode", YSW_MF_COMMAND, on_cycle_mode, 0 },
+    { 26, "Add\nRest", YSW_MF_BUTTON_COMMAND, on_note, VP 0 },
+    { 27, "Note\nDuration", YSW_MF_COMMAND, on_duration, 0 },
+    { 28, "Left", YSW_MF_COMMAND, on_left, 0 },
 
-    /* 29 */ { "C5", YSW_MF_BUTTON, on_note, VP 60 },
-    /* 30 */ { "D5", YSW_MF_BUTTON, on_note, VP 62 },
-    /* 31 */ { "E5", YSW_MF_BUTTON, on_note, VP 64 },
-    /* 32 */ { "F5", YSW_MF_BUTTON, on_note, VP 65 },
-    /* 33 */ { "G5", YSW_MF_BUTTON, on_note, VP 67 },
-    /* 34 */ { "A5", YSW_MF_BUTTON, on_note, VP 69 },
-    /* 35 */ { "B5", YSW_MF_BUTTON, on_note, VP 71 },
+    { 29, "C5", YSW_MF_BUTTON, on_note, VP 60 },
+    { 30, "D5", YSW_MF_BUTTON, on_note, VP 62 },
+    { 31, "E5", YSW_MF_BUTTON, on_note, VP 64 },
+    { 32, "F5", YSW_MF_BUTTON, on_note, VP 65 },
+    { 33, "G5", YSW_MF_BUTTON, on_note, VP 67 },
+    { 34, "A5", YSW_MF_BUTTON, on_note, VP 69 },
+    { 35, "B5", YSW_MF_BUTTON, on_note, VP 71 },
 
-    /* 36 */ { "Menu+", YSW_MF_PLUS, ysw_menu_nop, (void*)menu_2 },
-    /* 37 */ { "Delete", YSW_MF_COMMAND, on_delete, 0 },
-    /* 38 */ { "Menu-", YSW_MF_MINUS, ysw_menu_nop, 0 },
-    /* 39 */ { "Right", YSW_MF_COMMAND, on_right, 0 },
+    { 36, "Menu+", YSW_MF_PLUS, ysw_menu_nop, (void*)menu_2 },
+    { 37, "Delete", YSW_MF_COMMAND, on_delete, 0 },
+    { 38, "Menu-", YSW_MF_MINUS, ysw_menu_nop, 0 },
+    { 39, "Right", YSW_MF_COMMAND, on_right, 0 },
 
-    /* 40 */ { NULL, 0, NULL, NULL },
+    { 0, NULL, 0, NULL, NULL },
 };
 
 void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_init lvgl_init)
@@ -1091,7 +1064,7 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     fire_program_change(context, context->pattern->chord_program, CHORD_CHANNEL);
     fire_program_change(context, context->pattern->rhythm_program, RHYTHM_CHANNEL);
 
-    context->menu = ysw_menu_create(base_menu, context);
+    context->menu = ysw_menu_create(base_menu, softmap, context);
 
     ysw_task_config_t config = ysw_task_default_config;
 

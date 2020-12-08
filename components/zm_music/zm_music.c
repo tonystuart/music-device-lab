@@ -778,7 +778,6 @@ ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_chan
     for (zm_division_x i = 0; i < division_count; i++) {
         zm_division_t *division = ysw_array_get(pattern->divisions, i);
         if (division->melody.note) {
-            ESP_LOGD(TAG, "articulation=%d, duration=%d", division->articulation, division->melody.duration);
             zm_render_melody(notes, &division->melody, division->start, base_channel, melody_program, tie);
             if (division->melody.tie) {
                 tie = division->melody.tie;
@@ -882,43 +881,6 @@ zm_bpm_x zm_tempo_to_bpm(zm_tempo_t tempo)
 {
     return zm_tempo_signatures[tempo % ZM_TEMPO_SIGNATURES].bpm;
 }
-
-#if 0
-static const zm_duration_t durations[] = {
-    ZM_SIXTEENTH,
-    ZM_EIGHTH,
-    ZM_QUARTER,
-    ZM_HALF,
-    ZM_WHOLE,
-};
-
-#define DURATION_SZ (sizeof(durations)/sizeof(durations[0]))
-
-zm_duration_t zm_round_duration(zm_duration_t duration, uint8_t *ret_index, bool *ret_dotted)
-{
-    zm_duration_t rounded_duration = 0;
-    uint8_t index = 0;
-    bool dotted = false;
-    for (uint8_t i = 0; i < DURATION_SZ && !rounded_duration; i++) {
-        if (duration < durations[i] + (durations[i] / 4)) {
-            index = i;
-            dotted = false;
-            rounded_duration =  durations[i];
-        } else if ((duration < durations[i] + ((3 * durations[i]) / 4)) || i == (DURATION_SZ - 1)) {
-            index = i;
-            dotted = true;
-            rounded_duration = durations[i] + (durations[i] / 2);
-        }
-    }
-    if (ret_index) {
-        *ret_index = index;
-    }
-    if (ret_dotted) {
-        *ret_dotted = dotted;
-    }
-    return rounded_duration;
-}
-#endif
 
 typedef struct {
     uint8_t index;

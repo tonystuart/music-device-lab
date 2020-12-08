@@ -240,7 +240,6 @@ typedef enum {
 
 typedef struct {
     zm_time_x start;
-    zm_time_x articulation;
     zm_measure_x measure;
     zm_division_flags_t flags;
     zm_melody_t melody;
