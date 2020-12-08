@@ -26,7 +26,8 @@ typedef struct {
     uint32_t size;
 } ysw_array_t;
 
-typedef void (*ysw_on_array_clear_t)(void *p);
+typedef void (*ysw_array_clear_cb_t)(void *p);
+typedef void (*ysw_array_visit_cb_t)(void *p);
 typedef int (*ysw_array_comparator)(const void *, const void *);
 
 ysw_array_t *ysw_array_create(uint32_t initial_size);
@@ -49,9 +50,11 @@ int32_t ysw_array_find(ysw_array_t *array, void *value);
 uint32_t ysw_array_get_free_space(ysw_array_t *array);
 void ysw_array_sort(ysw_array_t *array, ysw_array_comparator comparator);
 int32_t ysw_array_search(ysw_array_t *array, void *needle, ysw_array_comparator comparator, ysw_array_match_t match_type);
-void ysw_array_free_node(void *p);
-void ysw_array_clear(ysw_array_t *array, ysw_on_array_clear_t on_clear);
+void ysw_array_visit(ysw_array_t *array, ysw_array_clear_cb_t clear_cb);
+void ysw_array_clear(ysw_array_t *array, ysw_array_clear_cb_t clear_cb);
 void ysw_array_free(ysw_array_t *array);
+void ysw_array_free_node(void *p);
 void ysw_array_free_all(ysw_array_t *array);
+
 static inline void *ysw_array_get_fast(ysw_array_t *a, uint32_t i) {return a->data[i];}
 static inline uint32_t ysw_array_get_count_fast(ysw_array_t *a) {return a->count;}

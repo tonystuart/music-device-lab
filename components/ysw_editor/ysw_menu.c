@@ -200,8 +200,12 @@ static void open_menu(ysw_menu_t *menu, ysw_event_t *event, void *value)
             show_softkeys(menu);
         }
     } else {
+        while (ysw_array_get_count(menu->stack) > 1) {
+            ysw_array_pop(menu->stack);
+        }
         show_softkeys(menu);
     }
+    menu->wait_release = true;
 }
 
 static void close_menu(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -229,6 +233,7 @@ void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event)
 
 void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
 {
+    menu->wait_release = false;
     const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_up.key);
     if (menu_item->flags & YSW_MENU_UP) {
         menu_item->cb(menu, event, menu_item->value);
@@ -242,9 +247,11 @@ void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
 
 void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event)
 {
-    const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_pressed.key);
-    if (menu_item->flags & YSW_MENU_PRESS) {
-        menu_item->cb(menu, event, menu_item->value);
+    if (!menu->wait_release) {
+        const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_pressed.key);
+        if (menu_item->flags & YSW_MENU_PRESS) {
+            menu_item->cb(menu, event, menu_item->value);
+        }
     }
 }
 

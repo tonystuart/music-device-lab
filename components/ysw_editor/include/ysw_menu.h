@@ -47,6 +47,7 @@ typedef struct {
 } ysw_softkeys_t;
 
 typedef struct ysw_menu_s {
+    bool wait_release; // suppress key press event after swapping in new menu on key down
     uint32_t softmap_size; // number of scan codes in softmap
     const ysw_menu_softmap_t *softmap; // scan codes comprising soft keys
     ysw_array_t *stack; // each element is the base of an array of menu items

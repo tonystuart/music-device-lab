@@ -248,19 +248,22 @@ int32_t ysw_array_search(ysw_array_t *array, void *needle, ysw_array_comparator 
     return found;
 }
 
-void ysw_array_free_node(void *p)
+void ysw_array_visit(ysw_array_t *array, ysw_array_visit_cb_t visit_cb)
 {
-    if (p) {
-        ysw_heap_free(p);
+    assert(array);
+    assert(visit_cb);
+    for (uint32_t i = 0; i < array->count; i++) {
+        visit_cb(array->data[i]);
     }
 }
 
-void ysw_array_clear(ysw_array_t *array, ysw_on_array_clear_t on_clear)
+void ysw_array_clear(ysw_array_t *array, ysw_array_clear_cb_t clear_cb)
 {
     assert(array);
-    assert(on_clear);
-    for (uint32_t i = 0; i < array->count; i++) {
-        on_clear(array->data[i]);
+    if (clear_cb) {
+        for (uint32_t i = 0; i < array->count; i++) {
+            clear_cb(array->data[i]);
+        }
     }
     array->count = 0;
 }
@@ -270,6 +273,13 @@ void ysw_array_free(ysw_array_t *array)
     assert(array);
     ysw_heap_free(array->data);
     ysw_heap_free(array);
+}
+
+void ysw_array_free_node(void *p)
+{
+    if (p) {
+        ysw_heap_free(p);
+    }
 }
 
 void ysw_array_free_all(ysw_array_t *array)

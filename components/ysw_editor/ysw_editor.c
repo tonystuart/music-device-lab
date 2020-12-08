@@ -956,7 +956,7 @@ static const ysw_menu_item_t menu_2[] = {
     { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
-    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
     { 40, NULL, 0, NULL, NULL },
 };
@@ -974,7 +974,7 @@ static const ysw_menu_item_t melody_menu[] = {
     { 26, "Note\nLength-", YSW_MF_COMMAND, ysw_menu_nop, 0 },
     { 27, "Clear\nNote", YSW_MF_COMMAND, ysw_menu_nop, 0 },
 
-    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
     { 40, NULL, 0, NULL, NULL },
 };
@@ -992,7 +992,7 @@ static const ysw_menu_item_t chord_menu[] = {
     { 26, "Chord\nLength-", YSW_MF_COMMAND, ysw_menu_nop, 0 },
     { 27, "Clear\nChord", YSW_MF_COMMAND, ysw_menu_nop, 0 },
 
-    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
     { 40, NULL, 0, NULL, NULL },
 };
@@ -1010,7 +1010,7 @@ static const ysw_menu_item_t rhythm_menu[] = {
     { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 27, "Clear\nBeat", YSW_MF_COMMAND, ysw_menu_nop, 0 },
 
-    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
     { 40, NULL, 0, NULL, NULL },
 };
@@ -1028,7 +1028,7 @@ static const ysw_menu_item_t file_menu[] = {
     { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
-    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
     { 40, NULL, 0, NULL, NULL },
 };
@@ -1046,7 +1046,7 @@ static const ysw_menu_item_t edit_menu[] = {
     { 26, "Next", YSW_MF_COMMAND, on_next, 0 },
     { 27, "Delete", YSW_MF_NOP, ysw_menu_nop, 0 },
 
-    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
     { 40, NULL, 0, NULL, NULL },
 };
@@ -1064,7 +1064,7 @@ static const ysw_menu_item_t defs_menu[] = {
     { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
-    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
     { 40, NULL, 0, NULL, NULL },
 };
@@ -1082,7 +1082,7 @@ static const ysw_menu_item_t listen_menu[] = {
     { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 27, "Cycle\nDemo", YSW_MF_COMMAND, on_demo, 0 },
 
-    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
     { 40, NULL, 0, NULL, NULL },
 };
@@ -1100,7 +1100,7 @@ static const ysw_menu_item_t settings_menu[] = {
     { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
-    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
     { 40, NULL, 0, NULL, NULL },
 };
@@ -1118,7 +1118,7 @@ static const ysw_menu_item_t preferences_menu[] = {
     { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
-    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
     { 40, NULL, 0, NULL, NULL },
 };
