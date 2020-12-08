@@ -619,34 +619,24 @@ static void process_down(context_t *context)
     }
 }
 
-UNUSED
-static void on_mode_melody(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_melody(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     context_t *context = menu->caller_context;
     context->mode = YSW_EDITOR_MODE_MELODY;
     display_mode(context);
 }
 
-UNUSED
-static void on_mode_chord(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_chord(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     context_t *context = menu->caller_context;
     context->mode = YSW_EDITOR_MODE_CHORD;
     display_mode(context);
 }
 
-UNUSED
-static void on_mode_rhythm(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_rhythm(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     context_t *context = menu->caller_context;
     context->mode = YSW_EDITOR_MODE_RHYTHM;
-    display_mode(context);
-}
-
-static void on_cycle_mode(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    context_t *context = menu->caller_context;
-    context->mode = (context->mode + 1) % 3;
     display_mode(context);
 }
 
@@ -951,35 +941,198 @@ static const ysw_menu_softmap_t softmap[] = {
 #define YSW_MF_BUTTON_COMMAND (YSW_MENU_DOWN|YSW_MENU_UP|YSW_MENU_CLOSE)
 #define YSW_MF_PLUS (YSW_MENU_DOWN|YSW_MENU_OPEN)
 #define YSW_MF_MINUS (YSW_MENU_UP|YSW_MENU_POP|YSW_MF_BUTTON)
+#define YSW_MF_NOP (0)
 
 static const ysw_menu_item_t menu_2[] = {
-    { 5, "Play", YSW_MF_COMMAND, on_play, 0 },
-    { 6, "Stop", YSW_MF_COMMAND, on_stop, 0 },
-    { 7, "Loop", YSW_MF_COMMAND, on_loop, 0 },
+    { 5, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 6, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 7, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
-    { 16, "Demo", YSW_MF_COMMAND, on_demo, 0 },
-    { 17, "Cycle\nBeat", YSW_MF_COMMAND, on_cycle_beat, 0 },
-    { 18, "Insert\nBeat", YSW_MF_COMMAND, on_insert_beat, 0 },
+    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
-    { 25, "Tie", YSW_MF_COMMAND, on_tie, 0 },
-    { 26, "Previous", YSW_MF_COMMAND, on_previous, 0 },
-    { 27, "Next", YSW_MF_COMMAND, on_next, 0 },
+    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
-    { 36, "Menu+", YSW_MF_PLUS, ysw_menu_nop, 0 },
+    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
     { 40, NULL, 0, NULL, NULL },
 };
 
-static const ysw_menu_item_t base_menu[] = {
+static const ysw_menu_item_t melody_menu[] = {
+    { 5, "Tie\nNotes", YSW_MF_COMMAND, on_tie, 0 },
+    { 6, "Insert\nRest", YSW_MF_COMMAND, on_note, 0 },
+    { 7, "Melody\nSound", YSW_MF_COMMAND, on_program, 0 },
+
+    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 25, "Note\nLength+", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 26, "Note\nLength-", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 27, "Clear\nNote", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+
+    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 40, NULL, 0, NULL, NULL },
+};
+
+static const ysw_menu_item_t chord_menu[] = {
+    { 5, "Chord\nQuality", YSW_MF_COMMAND, on_quality, 0 },
+    { 6, "Chord\nStyle", YSW_MF_COMMAND, on_style, 0 },
+    { 7, "Chord\nSound", YSW_MF_COMMAND, on_program, 0 },
+
+    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 25, "Chord\nLength+", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 26, "Chord\nLength-", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 27, "Clear\nChord", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+
+    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 40, NULL, 0, NULL, NULL },
+};
+
+static const ysw_menu_item_t rhythm_menu[] = {
+    { 5, "Cycle\nBeat", YSW_MF_COMMAND, on_cycle_beat, 0 },
+    { 6, "Insert\nBeat", YSW_MF_COMMAND, on_insert_beat, 0 },
+    { 7, "Rhythm\nSound", YSW_MF_COMMAND, on_program, 0 },
+
+    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 18, "Clear\nStroke", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+
+    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 27, "Clear\nBeat", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+
+    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 40, NULL, 0, NULL, NULL },
+};
+
+static const ysw_menu_item_t file_menu[] = {
+    { 5, "New", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 6, "Save", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 7, "Save As", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+
+    { 16, "Open", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 40, NULL, 0, NULL, NULL },
+};
+
+static const ysw_menu_item_t edit_menu[] = {
+    { 5, "Select\nLeft", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 6, "Select\nRight", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 7, "Select\nAll", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+
+    { 16, "Copy", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 17, "Paste", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 18, "Cut", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 25, "Previous", YSW_MF_COMMAND, on_previous, 0 },
+    { 26, "Next", YSW_MF_COMMAND, on_next, 0 },
+    { 27, "Delete", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 40, NULL, 0, NULL, NULL },
+};
+
+static const ysw_menu_item_t defs_menu[] = {
+    { 5, "Sounds", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 6, "Qualities", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 7, "Styles", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+
+    { 16, "Beats", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 40, NULL, 0, NULL, NULL },
+};
+
+static const ysw_menu_item_t listen_menu[] = {
+    { 5, "Play", YSW_MF_COMMAND, on_play, 0 },
+    { 6, "Pause", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 7, "Resume", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+
+    { 16, "Stop", YSW_MF_COMMAND, on_stop, 0 },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 25, "Loop", YSW_MF_COMMAND, on_loop, 0 },
+    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 27, "Cycle\nDemo", YSW_MF_COMMAND, on_demo, 0 },
+
+    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 40, NULL, 0, NULL, NULL },
+};
+
+static const ysw_menu_item_t settings_menu[] = {
+    { 5, "Key\nSig", YSW_MF_COMMAND, on_key_signature, 0 },
+    { 6, "Time\nSig", YSW_MF_COMMAND, on_time_signature, 0 },
+    { 7, "Tempo\n(BPM)", YSW_MF_COMMAND, on_tempo, 0 },
+
+    { 16, "Note\nDuration", YSW_MF_COMMAND, on_duration, 0 },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 40, NULL, 0, NULL, NULL },
+};
+
+static const ysw_menu_item_t preferences_menu[] = {
+    { 5, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 6, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 7, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 36, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+
+    { 40, NULL, 0, NULL, NULL },
+};
+
+static const ysw_menu_item_t main_menu[] = {
     { 0, "C#6", YSW_MF_BUTTON, on_note, VP 73 },
     { 1, "D#6", YSW_MF_BUTTON, on_note, VP 75 },
     { 2, "F#6", YSW_MF_BUTTON, on_note, VP 78 },
     { 3, "G#6", YSW_MF_BUTTON, on_note, VP 80 },
     { 4, "A#6", YSW_MF_BUTTON, on_note, VP 82 },
 
-    { 5, "Chord\nQuality", YSW_MF_COMMAND, on_quality, 0 },
-    { 6, "Chord\nStyle", YSW_MF_COMMAND, on_style, 0 },
-    { 7, "Program", YSW_MF_COMMAND, on_program, 0 },
+    { 5, "Melody", YSW_MF_PLUS, on_melody, (void*)melody_menu },
+    { 6, "Chord", YSW_MF_PLUS, on_chord, (void*)chord_menu },
+    { 7, "Rhythm", YSW_MF_PLUS, on_rhythm, (void*)rhythm_menu },
     { 8, "Up", YSW_MF_COMMAND, on_up, 0 },
 
     { 9, "C6", YSW_MF_BUTTON, on_note, VP 72 },
@@ -990,9 +1143,9 @@ static const ysw_menu_item_t base_menu[] = {
     { 14, "A6", YSW_MF_BUTTON, on_note, VP 81 },
     { 15, "B6", YSW_MF_BUTTON, on_note, VP 83 },
 
-    { 16, "Key\nSig", YSW_MF_COMMAND, on_key_signature, 0 },
-    { 17, "Time\nSig", YSW_MF_COMMAND, on_time_signature, 0 },
-    { 18, "Tempo\n(BPM)", YSW_MF_COMMAND, on_tempo, 0 },
+    { 16, "File", YSW_MF_PLUS, ysw_menu_nop, (void*)file_menu },
+    { 17, "Edit", YSW_MF_PLUS, ysw_menu_nop, (void*)edit_menu },
+    { 18, "Music\nDefs", YSW_MF_PLUS, ysw_menu_nop, (void*)defs_menu },
     { 19, "Down", YSW_MF_COMMAND, on_down, 0 },
 
     { 20, "C#5", YSW_MF_BUTTON, on_note, VP 61 },
@@ -1001,9 +1154,9 @@ static const ysw_menu_item_t base_menu[] = {
     { 23, "G#5", YSW_MF_BUTTON, on_note, VP 68 },
     { 24, "A#5", YSW_MF_BUTTON, on_note, VP 70 },
 
-    { 25, "Input\nMode", YSW_MF_COMMAND, on_cycle_mode, 0 },
-    { 26, "Add\nRest", YSW_MF_BUTTON_COMMAND, on_note, VP 0 },
-    { 27, "Note\nDuration", YSW_MF_COMMAND, on_duration, 0 },
+    { 25, "Listen", YSW_MF_PLUS, ysw_menu_nop, (void*)listen_menu },
+    { 26, "Song\nSettings", YSW_MF_PLUS, ysw_menu_nop, (void*)settings_menu },
+    { 27, "Prefs", YSW_MF_PLUS, ysw_menu_nop, (void*)preferences_menu },
     { 28, "Left", YSW_MF_COMMAND, on_left, 0 },
 
     { 29, "C5", YSW_MF_BUTTON, on_note, VP 60 },
@@ -1064,7 +1217,7 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     fire_program_change(context, context->pattern->chord_program, CHORD_CHANNEL);
     fire_program_change(context, context->pattern->rhythm_program, RHYTHM_CHANNEL);
 
-    context->menu = ysw_menu_create(base_menu, softmap, context);
+    context->menu = ysw_menu_create(main_menu, softmap, context);
 
     ysw_task_config_t config = ysw_task_default_config;
 
