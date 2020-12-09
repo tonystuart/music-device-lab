@@ -28,10 +28,6 @@
 
 #define TAG "ZM_MUSIC"
 
-#define ZM_MF_PARTITION "/spiffs"
-#define ZM_MF_CSV ZM_MF_PARTITION "/music.csv"
-#define ZM_MF_TEMP ZM_MF_PARTITION "/music.tmp"
-
 #define PATH_SIZE 128
 #define RECORD_SIZE 128
 #define TOKENS_SIZE 20
@@ -407,12 +403,7 @@ static zm_music_t *create_music()
 void zm_pattern_free(zm_pattern_t *pattern)
 {
     ysw_heap_free(pattern->name);
-    zm_pattern_x count = ysw_array_get_count(pattern->divisions);
-    for (zm_pattern_x i = 0; i < count; i++) {
-        zm_pattern_t *pattern = ysw_array_get(pattern->divisions, i);
-        ysw_array_free_all(pattern->divisions);
-        ysw_array_free(pattern->divisions);
-    }
+    ysw_array_free_all(pattern->divisions);
     ysw_heap_free(pattern);
 }
 

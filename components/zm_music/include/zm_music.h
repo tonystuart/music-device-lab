@@ -15,6 +15,10 @@
 #include "stdint.h"
 #include "stdio.h"
 
+#define ZM_MF_PARTITION "/spiffs"
+#define ZM_MF_CSV ZM_MF_PARTITION "/music.csv"
+#define ZM_MF_TEMP ZM_MF_PARTITION "/music.tmp"
+
 typedef uint8_t zm_small_t;
 typedef uint16_t zm_medium_t;
 typedef uint32_t zm_large_t;

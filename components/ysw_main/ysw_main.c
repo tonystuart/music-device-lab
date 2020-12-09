@@ -275,7 +275,7 @@ void app_main()
 {
     esp_log_level_set("efuse", ESP_LOG_INFO);
     esp_log_level_set("TRACE_HEAP", ESP_LOG_INFO);
-    ysw_spiffs_initialize(YSW_MUSIC_PARTITION);
+    ysw_spiffs_initialize(ZM_MF_PARTITION);
 #else
 #include <ysw_simulator.h>
 int main(int argc, char *argv[])

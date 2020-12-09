@@ -184,5 +184,5 @@ void ysw_keyboard_create_task(ysw_bus_h bus, ysw_keyboard_config_t *keyboard_con
     config.caller_context = context;
     config.wait_millis = 10;
 
-    ysw_task_h task = ysw_task_create(&config);
+    ysw_task_create(&config);
 }
