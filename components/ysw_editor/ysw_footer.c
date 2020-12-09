@@ -35,16 +35,16 @@ lv_obj_t *ysw_footer_create(lv_obj_t *par)
     memset(ext, 0, sizeof(ysw_footer_ext_t));
 
     ext->key_field = ysw_field_create(footer);
-    ysw_field_set_name(ext->key_field, "Key");
+    ysw_field_set_name_text(ext->key_field, "Key");
 
     ext->time_field = ysw_field_create(footer);
-    ysw_field_set_name(ext->time_field, "Time");
+    ysw_field_set_name_text(ext->time_field, "Time");
 
     ext->tempo_field = ysw_field_create(footer);
-    ysw_field_set_name(ext->tempo_field, "Tempo");
+    ysw_field_set_name_text(ext->tempo_field, "Tempo");
 
     ext->duration_field = ysw_field_create(footer);
-    ysw_field_set_name(ext->duration_field, "Duration");
+    ysw_field_set_name_text(ext->duration_field, "Duration");
 
     lv_cont_set_layout(footer, LV_LAYOUT_PRETTY_TOP);
 
@@ -55,27 +55,27 @@ void ysw_footer_set_key(lv_obj_t *footer, zm_key_signature_x key_index)
 {
     const zm_key_signature_t *key_signature = zm_get_key_signature(key_index);
     ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
-    ysw_field_set_value(ext->key_field, key_signature->label);
+    ysw_field_set_value_text(ext->key_field, key_signature->label);
 }
 
 void ysw_footer_set_time(lv_obj_t *footer, zm_time_signature_x time_index)
 {
     const zm_time_signature_t *time_signature = zm_get_time_signature(time_index);
     ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
-    ysw_field_set_value(ext->time_field, time_signature->name);
+    ysw_field_set_value_text(ext->time_field, time_signature->name);
 }
 
 void ysw_footer_set_tempo(lv_obj_t *footer, zm_tempo_t tempo_index)
 {
     const zm_tempo_signature_t *tempo_signature = zm_get_tempo_signature(tempo_index);
     ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
-    ysw_field_set_value(ext->tempo_field, tempo_signature->label);
+    ysw_field_set_value_text(ext->tempo_field, tempo_signature->label);
 }
 
 void ysw_footer_set_duration(lv_obj_t *footer, zm_duration_t duration)
 {
     const char *value = zm_get_duration_label(duration);
     ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
-    ysw_field_set_value(ext->duration_field, value);
+    ysw_field_set_value_text(ext->duration_field, value);
 }
 

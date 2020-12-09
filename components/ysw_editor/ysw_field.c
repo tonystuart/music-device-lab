@@ -55,11 +55,9 @@ lv_obj_t *ysw_field_create(lv_obj_t *par)
     lv_obj_set_design_cb(field, ysw_field_on_design);
 
     ext->name = lv_label_create(field, NULL);
-    lv_label_set_align(ext->name, LV_LABEL_ALIGN_CENTER);
     lv_obj_set_style_local_text_font(ext->name, 0, 0, &lv_font_unscii_8);
 
     ext->value = lv_label_create(field, NULL);
-    lv_label_set_align(ext->value, LV_LABEL_ALIGN_CENTER);
 
     lv_obj_set_style_local_pad_top(field, 0, 0, 2);
     lv_obj_set_style_local_pad_left(field, 0, 0, 2);
@@ -70,15 +68,27 @@ lv_obj_t *ysw_field_create(lv_obj_t *par)
     return field;
 }
 
-void ysw_field_set_name(lv_obj_t *field, const char *name)
+void ysw_field_set_name_text(lv_obj_t *field, const char *name)
 {
     ysw_field_ext_t *ext = lv_obj_get_ext_attr(field);
     lv_label_set_text(ext->name, name);
 }
 
-void ysw_field_set_value(lv_obj_t *field, const char *value)
+void ysw_field_set_value_text(lv_obj_t *field, const char *value)
 {
     ysw_field_ext_t *ext = lv_obj_get_ext_attr(field);
     lv_label_set_text(ext->value, value);
+}
+
+lv_obj_t *ysw_field_get_name_label(lv_obj_t *field)
+{
+    ysw_field_ext_t *ext = lv_obj_get_ext_attr(field);
+    return ext->name;
+}
+
+lv_obj_t *ysw_field_get_value_label(lv_obj_t *field)
+{
+    ysw_field_ext_t *ext = lv_obj_get_ext_attr(field);
+    return ext->value;
 }
 

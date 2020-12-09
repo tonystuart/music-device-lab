@@ -13,7 +13,11 @@
 
 lv_obj_t *ysw_field_create(lv_obj_t *par);
 
-void ysw_field_set_name(lv_obj_t *field, const char *name);
+void ysw_field_set_name_text(lv_obj_t *field, const char *name);
 
-void ysw_field_set_value(lv_obj_t *field, const char *value);
+void ysw_field_set_value_text(lv_obj_t *field, const char *value);
+
+lv_obj_t *ysw_field_get_name_label(lv_obj_t *field);
+
+lv_obj_t *ysw_field_get_value_label(lv_obj_t *field);
 

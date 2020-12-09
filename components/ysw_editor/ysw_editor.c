@@ -304,6 +304,7 @@ static void cycle_program(context_t *context)
         fire_program_change(context, context->pattern->rhythm_program, RHYTHM_CHANNEL);
     }
     display_program(context);
+    play_position(context);
 }
 
 static void cycle_key_signature(context_t *context)

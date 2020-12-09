@@ -71,7 +71,7 @@
 3,127,12,Cym
 
 #type(quality),index,name,distances
-4,0,Root Only,1,0
+4,0,Root,1,0
 4,1,Power,5,0,7
 4,2,Major,,0,4,7
 4,3,Minor,min,0,3,7
