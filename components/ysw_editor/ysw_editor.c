@@ -120,6 +120,16 @@ static inline uint32_t division_index_to_position(zm_division_x division_index)
     return (division_index * 2) + 1;
 }
 
+static zm_division_t *get_division(context_t *context)
+{
+    zm_division_t *division = NULL;
+    if (is_division_position(context)) {
+        zm_division_x division_index = context->position / 2;
+        division = ysw_array_get(context->pattern->divisions, division_index);
+    }
+    return division;
+}
+
 // TODO: remove unnecessary calls to recalculate (e.g. increase/decrease pitch)
 
 static void recalculate(context_t *context)
@@ -887,6 +897,20 @@ static void on_new(ysw_menu_t *menu, ysw_event_t *event, void *value)
     ysw_event_fire_pattern_edit(context->bus, pattern);
 }
 
+static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    context_t *context = menu->caller_context;
+    int32_t direction = (intptr_t)value;
+    ESP_LOGD(TAG, "direction=%d", direction);
+    zm_division_t *division = get_division(context);
+    if (division) {
+        division->melody.duration = zm_get_next_dotted_duration(division->melody.duration, direction);
+        play_position(context);
+        recalculate(context);
+        display_mode(context);
+    }
+}
+
 static void on_pattern_edit(context_t *context, ysw_event_t *event)
 {
     context->position = 0;
@@ -1033,8 +1057,8 @@ static const ysw_menu_item_t melody_menu[] = {
     { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
-    { 25, "Note\nLength+", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 26, "Note\nLength-", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 25, "Note\nLength-", YSW_MF_COMMAND, on_note_length, VP -1 },
+    { 26, "Note\nLength+", YSW_MF_COMMAND, on_note_length, VP +1 },
     { 27, "Clear\nNote", YSW_MF_COMMAND, ysw_menu_nop, 0 },
 
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
@@ -1051,8 +1075,8 @@ static const ysw_menu_item_t chord_menu[] = {
     { 17, "Apply\nQ&S", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
-    { 25, "Chord\nLength+", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 26, "Chord\nLength-", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 25, " ", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 26, " ", YSW_MF_COMMAND, ysw_menu_nop, 0 },
     { 27, "Clear\nChord", YSW_MF_COMMAND, ysw_menu_nop, 0 },
 
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },

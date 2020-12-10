@@ -892,9 +892,9 @@ static const zm_duration_map_t durations[] = {
     { 0, ZM_SIXTEENTH, ZM_SIXTEENTH + ((ZM_EIGHTH - ZM_SIXTEENTH) / 2), false },
     { 1, ZM_EIGHTH, ZM_EIGHTH + ((ZM_QUARTER - ZM_EIGHTH) / 2), false },
     { 2, ZM_QUARTER, ZM_QUARTER + ((ZM_HALF - ZM_QUARTER) / 4), false },
-    { 2, ZM_QUARTER, ZM_QUARTER + ((3 * (ZM_HALF - ZM_QUARTER)) / 4), true },
+    { 2, ZM_QUARTER + ((ZM_HALF - ZM_QUARTER) / 2), ZM_QUARTER + ((3 * (ZM_HALF - ZM_QUARTER)) / 4), true },
     { 3, ZM_HALF, ZM_HALF + ((ZM_WHOLE - ZM_HALF) / 2), false },
-    { 3, ZM_HALF, ZM_HALF + ((3 * (ZM_WHOLE - ZM_HALF)) / 4), true },
+    { 3, ZM_HALF + ((ZM_WHOLE - ZM_HALF) / 2), ZM_HALF + ((3 * (ZM_WHOLE - ZM_HALF)) / 4), true },
     { 4, ZM_WHOLE, UINT_MAX, false },
 };
 
@@ -911,6 +911,23 @@ zm_duration_t zm_round_duration(zm_duration_t duration, uint8_t *ret_index, bool
                 *ret_dotted = durations[i].dotted;
             }
             return durations[i].duration;
+        }
+    }
+    assert(false);
+    return 0;
+}
+
+zm_duration_t zm_get_next_dotted_duration(zm_duration_t duration, int direction)
+{
+    for (zm_duration_t i = 0; i < DURATION_SZ; i++) {
+        if (duration < durations[i].midpoint) {
+            int j = i + direction;
+            if (j < 0) {
+                j = DURATION_SZ - 1;
+            } else if (j >= DURATION_SZ) {
+                j = 0;
+            }
+            return durations[j].duration;
         }
     }
     assert(false);
