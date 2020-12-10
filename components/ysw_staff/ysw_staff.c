@@ -126,7 +126,6 @@ typedef struct {
     const lv_font_t *font;
     const lv_area_t *clip_area;
     const zm_key_signature_t *key_signature;
-    const char *title;
 } draw_context_t;
 
 void ysw_draw_letter(const lv_point_t * pos_p, const lv_area_t * clip_area, const lv_font_t * font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode);
@@ -317,22 +316,6 @@ static void draw_rhythm(draw_context_t *dc, zm_rhythm_t *rhythm)
     }
 }
 
-static void draw_title(draw_context_t *dc)
-{
-    lv_area_t coords = {
-        .x1 = dc->point.x - 75,
-        .x2 = dc->point.x,
-        .y1 = 100,
-        .y2 = 200,
-    };
-    lv_draw_label_dsc_t dsc = {
-        .color = dc->color,
-        .font = &lv_font_unscii_8,
-        .opa = LV_OPA_COVER,
-    };
-    lv_draw_label(&coords, dc->clip_area, &dsc, dc->title,  NULL);
-}
-
 static void draw_signature(draw_context_t *dc, zm_time_signature_x time)
 {
     draw_letter(dc, YSW_TIME_BASE + time);
@@ -348,7 +331,6 @@ static void draw_signature(draw_context_t *dc, zm_time_signature_x time)
 
     draw_letter(dc, YSW_TREBLE_CLEF);
     draw_letter(dc, YSW_LEFT_BAR);
-    draw_title(dc);
 }
 
 static void draw_tie(draw_context_t *dc, zm_division_t *division)
@@ -466,7 +448,6 @@ static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
             .font = &MusiQwikT_48,
             .key_signature = zm_get_key_signature(ext->pattern->key),
             .patches = ext->pattern->rhythm_program->patches,
-            .title = ext->pattern->name,
         };
         draw_staff(ext, &dc);
     }
@@ -535,6 +516,7 @@ void ysw_staff_set_pattern(lv_obj_t *staff, zm_pattern_t *pattern)
 {
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
+    ext->position = 0;
     ext->pattern = pattern;
     lv_obj_invalidate(staff);
 }

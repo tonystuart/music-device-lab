@@ -98,6 +98,7 @@ typedef struct {
     const char *name;
     const zm_small_t count;
     const zm_duration_t unit;
+    const zm_time_x ticks_per_measure;
 } zm_time_signature_t;
 
 typedef enum {
@@ -304,6 +305,8 @@ zm_duration_t zm_get_next_duration(zm_duration_t duration);
 
 zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note);
 
+zm_pattern_t *zm_music_create_pattern(zm_music_t *music);
+
 // See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
 
 static inline const char *zm_get_note_name(zm_note_t note)
@@ -312,5 +315,10 @@ static inline const char *zm_get_note_name(zm_note_t note)
         "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
     };
     return note_names[note % 12];
+}
+
+static inline zm_time_x zm_get_ticks_per_measure(zm_time_signature_x t)
+{
+    return zm_get_time_signature(t)->ticks_per_measure;
 }
 

@@ -28,10 +28,6 @@
 #define DEFAULT_STYLE 2 // TODO: make "stacked" 0 default or search by name
 #define DEFAULT_BEAT 0 // TODO: search by name
 
-#define DEFAULT_MELODY_PROGRAM 0
-#define DEFAULT_CHORD_PROGRAM 1
-#define DEFAULT_RHYTHM_PROGRAM 7
-
 // channels
 
 #define BASE_CHANNEL 0
@@ -132,19 +128,44 @@ static void recalculate(context_t *context)
     zm_measure_x measure = 1;
     uint32_t ticks_in_measure = 0;
 
+    zm_division_t *division = NULL;
+    zm_division_t *previous = NULL;
+
+    zm_time_x ticks_per_measure = zm_get_ticks_per_measure(context->pattern->time);
     zm_division_x division_count = ysw_array_get_count(context->pattern->divisions);
+
+    // TODO: Should ties be processed here instead of in zm_render_pattern? I don't think so.
+
     for (zm_division_x i = 0; i < division_count; i++) {
-        zm_division_t *division = ysw_array_get(context->pattern->divisions, i);
+        division = ysw_array_get(context->pattern->divisions, i);
         division->start = start;
         division->flags = 0;
         division->measure = measure;
+        if (division->chord.root) {
+            if (previous) {
+                zm_time_x chord_delta_time = start - previous->start;
+                previous->chord.duration = min(chord_delta_time, ticks_per_measure);
+            }
+            previous = division;
+        }
         ticks_in_measure += zm_round_duration(division->melody.duration, NULL, NULL);
-        if (ticks_in_measure >= 1024) {
+        if (ticks_in_measure >= ticks_per_measure) {
             division->flags |= ZM_DIVISION_END_OF_MEASURE;
             ticks_in_measure = 0;
             measure++;
         }
         start += division->melody.duration;
+    }
+
+    if (previous) {
+        if (previous == division) {
+            // piece ends on this chord, set it's duration to what's left in the measure
+            previous->chord.duration = (previous->measure * ticks_per_measure) - previous->start;
+        } else {
+            // otherwise piece ends after previous chord, adjust previous chord's duration
+            zm_time_x chord_delta_time = start - previous->start;
+            previous->chord.duration = min(chord_delta_time, ticks_per_measure);
+        }
     }
 
     ysw_staff_invalidate(context->staff);
@@ -184,9 +205,9 @@ static void display_melody_mode(context_t *context)
     // 1. on a division - show note or rest
     // 2. between divisions - show previous (to left) note or rest
     // 3. no divisions - show blank
-    char value[32] = {};
+    char value[32];
     zm_division_x division_count = ysw_array_get_count(context->pattern->divisions);
-    if (division_count) {
+    if (context->position > 0) {
         zm_division_x division_index = context->position / 2;
         if (division_index >= division_count) {
             division_index = division_count - 1;
@@ -202,6 +223,8 @@ static void display_melody_mode(context_t *context)
         } else {
             snprintf(value, sizeof(value), "Rest (%d ms)", millis);
         }
+    } else {
+        snprintf(value, sizeof(value), "%s", context->pattern->name);
     }
     ysw_header_set_mode(context->header, modes[context->mode], value);
 }
@@ -463,7 +486,7 @@ static zm_division_t *apply_note(context_t *context, zm_note_t midi_note, zm_tim
     if (is_new_division) {
         if (articulation && division_index) {
             zm_division_t *rest = ysw_heap_allocate(sizeof(zm_division_t));
-            rest->melody.duration = min(articulation, 1024);
+            rest->melody.duration = min(articulation, ZM_WHOLE);
             ysw_array_insert(context->pattern->divisions, division_index, rest);
             division_index++;
             context->position = division_index * 2 + 1;
@@ -481,9 +504,9 @@ static zm_division_t *apply_note(context_t *context, zm_note_t midi_note, zm_tim
         division->chord.root = midi_note; // rest == 0
         division->chord.quality = context->quality;
         division->chord.style = context->style;
-        division->chord.duration = duration;
+        division->chord.duration = 0; // set by recalculate
         if (!division->melody.duration) {
-            division->melody.duration = division->chord.duration;
+            division->melody.duration = duration;
         }
     } else if (context->mode == YSW_EDITOR_MODE_RHYTHM) {
         division->rhythm.surface = midi_note; // rest == 0
@@ -518,7 +541,7 @@ static void insert_beat(context_t *context)
             zm_stroke_t *stroke = ysw_array_get(context->beat->strokes, i);
             start = stroke->start;
         } else {
-            start = 1024;
+            start = zm_get_ticks_per_measure(context->pattern->time);
         }
         if (start != last_start) {
             context->duration = zm_round_duration(start - last_start, NULL, NULL);
@@ -553,6 +576,7 @@ static void process_delete(context_t *context)
         }
         ysw_staff_set_position(context->staff, context->position);
         recalculate(context);
+        display_mode(context);
     }
 }
 
@@ -808,7 +832,7 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
                 .chord.root = midi_note,
                 .chord.quality = context->quality,
                 .chord.style = context->style,
-                .chord.duration = 512,
+                .chord.duration = zm_get_ticks_per_measure(context->pattern->time),
             };
             play_division(context, &division);
         } else if (context->mode == YSW_EDITOR_MODE_RHYTHM) {
@@ -856,25 +880,69 @@ static void on_note_status(context_t *context, ysw_event_t *event)
     }
 }
 
+static void on_new(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    context_t *context = menu->caller_context;
+    zm_pattern_t *pattern = zm_music_create_pattern(context->music);
+    ysw_event_fire_pattern_edit(context->bus, pattern);
+}
+
+static void on_pattern_edit(context_t *context, ysw_event_t *event)
+{
+    context->position = 0;
+    context->pattern = event->pattern_edit.pattern;
+    ysw_staff_set_pattern(context->staff, context->pattern);
+    ysw_footer_set_key(context->footer, context->pattern->key);
+    ysw_footer_set_time(context->footer, context->pattern->time);
+    ysw_footer_set_tempo(context->footer, context->pattern->tempo);
+    fire_program_change(context, context->pattern->melody_program, MELODY_CHANNEL);
+    fire_program_change(context, context->pattern->chord_program, CHORD_CHANNEL);
+    fire_program_change(context, context->pattern->rhythm_program, RHYTHM_CHANNEL);
+    display_mode(context); // mode displays program
+}
+
+static void process_event_with_pattern(context_t *context, ysw_event_t *event)
+{
+    switch (event->header.type) {
+        case YSW_EVENT_KEY_DOWN:
+            ysw_menu_on_key_down(context->menu, event);
+            break;
+        case YSW_EVENT_KEY_UP:
+            ysw_menu_on_key_up(context->menu, event);
+            break;
+        case YSW_EVENT_KEY_PRESSED:
+            ysw_menu_on_key_pressed(context->menu, event);
+            break;
+        case YSW_EVENT_NOTE_STATUS:
+            on_note_status(context, event);
+            break;
+        case YSW_EVENT_PATTERN_EDIT:
+            on_pattern_edit(context, event);
+            break;
+        default:
+            break;
+    }
+}
+
+static void process_event_without_pattern(context_t *context, ysw_event_t *event)
+{
+    switch (event->header.type) {
+        case YSW_EVENT_PATTERN_EDIT:
+            on_pattern_edit(context, event);
+            break;
+        default:
+            break;
+    }
+}
+
 static void process_event(void *caller_context, ysw_event_t *event)
 {
     context_t *context = caller_context;
     if (event) {
-        switch (event->header.type) {
-            case YSW_EVENT_KEY_DOWN:
-                ysw_menu_on_key_down(context->menu, event);
-                break;
-            case YSW_EVENT_KEY_UP:
-                ysw_menu_on_key_up(context->menu, event);
-                break;
-            case YSW_EVENT_KEY_PRESSED:
-                ysw_menu_on_key_pressed(context->menu, event);
-                break;
-            case YSW_EVENT_NOTE_STATUS:
-                on_note_status(context, event);
-                break;
-            default:
-                break;
+        if (context->pattern) {
+            process_event_with_pattern(context, event);
+        } else {
+            process_event_without_pattern(context, event);
         }
     }
     lv_task_handler();
@@ -903,21 +971,15 @@ static void initialize_editor_task(void *caller_context)
     context->header = ysw_header_create(context->container);
     lv_obj_set_size(context->header, 320, 30);
     lv_obj_align(context->header, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    display_mode(context);
-    display_program(context);
 
     context->staff = ysw_staff_create(context->container);
     assert(context->staff);
     lv_obj_set_size(context->staff, 320, 180);
     lv_obj_align(context->staff, NULL, LV_ALIGN_CENTER, 0, 0);
-    ysw_staff_set_pattern(context->staff, context->pattern);
 
     context->footer = ysw_footer_create(context->container);
     lv_obj_set_size(context->footer, 320, 30);
     lv_obj_align(context->footer, NULL, LV_ALIGN_IN_BOTTOM_LEFT, 0, 0);
-    ysw_footer_set_key(context->footer, context->pattern->key);
-    ysw_footer_set_time(context->footer, context->pattern->time);
-    ysw_footer_set_tempo(context->footer, context->pattern->tempo);
     ysw_footer_set_duration(context->footer, context->duration);
 }
 
@@ -986,7 +1048,7 @@ static const ysw_menu_item_t chord_menu[] = {
     { 7, "Chord\nSound", YSW_MF_COMMAND, on_program, 0 },
 
     { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 17, "Apply\nQ&S", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
     { 25, "Chord\nLength+", YSW_MF_COMMAND, ysw_menu_nop, 0 },
@@ -1017,7 +1079,7 @@ static const ysw_menu_item_t rhythm_menu[] = {
 };
 
 static const ysw_menu_item_t file_menu[] = {
-    { 5, "New", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 5, "New", YSW_MF_COMMAND, on_new, 0 },
     { 6, "Save", YSW_MF_COMMAND, ysw_menu_nop, 0 },
     { 7, "Save As", YSW_MF_COMMAND, ysw_menu_nop, 0 },
 
@@ -1192,19 +1254,6 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     context->lvgl_init = lvgl_init;
     context->music = music;
 
-    if (ysw_array_get_count(music->patterns) > 0) {
-        context->pattern = ysw_array_get(music->patterns, 0);
-    } else {
-        context->pattern = ysw_heap_allocate(sizeof(zm_pattern_t));
-        context->pattern->divisions = ysw_array_create(64);
-        context->pattern->key = ZM_KEY_C;
-        context->pattern->time = ZM_TIME_4_4;
-        context->pattern->tempo = ZM_TEMPO_100;
-        context->pattern->melody_program = ysw_array_get(music->programs, DEFAULT_MELODY_PROGRAM);
-        context->pattern->chord_program = ysw_array_get(music->programs, DEFAULT_CHORD_PROGRAM);
-        context->pattern->rhythm_program = ysw_array_get(music->programs, DEFAULT_RHYTHM_PROGRAM);
-    }
-
     context->quality = ysw_array_get(music->qualities, DEFAULT_QUALITY);
     context->style = ysw_array_get(music->styles, DEFAULT_STYLE);
     context->beat = ysw_array_get(music->beats, DEFAULT_BEAT);
@@ -1213,10 +1262,6 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     context->advance = 2;
     context->position = 0;
     context->mode = YSW_EDITOR_MODE_MELODY;
-
-    fire_program_change(context, context->pattern->melody_program, MELODY_CHANNEL);
-    fire_program_change(context, context->pattern->chord_program, CHORD_CHANNEL);
-    fire_program_change(context, context->pattern->rhythm_program, RHYTHM_CHANNEL);
 
     context->menu = ysw_menu_create(main_menu, softmap, context);
 
@@ -1234,6 +1279,7 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
 
     ysw_task_h task = ysw_task_create(&config);
 
+    ysw_task_subscribe(task, YSW_ORIGIN_FILE);
     ysw_task_subscribe(task, YSW_ORIGIN_KEYBOARD);
     ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);
 }

@@ -267,6 +267,17 @@ static void initialize_touch_screen(void)
 
 #endif
 
+static void edit_pattern(ysw_bus_h bus, zm_music_t *music)
+{
+    zm_pattern_t *pattern;
+    if (ysw_array_get_count(music->patterns) > 0) {
+        pattern = ysw_array_get(music->patterns, 0);
+    } else {
+        pattern = zm_music_create_pattern(music);
+    }
+    ysw_event_fire_pattern_edit(bus, pattern);
+}
+
 #ifdef IDF_VER
 #include "ysw_keyboard.h"
 #include "ysw_led.h"
@@ -289,6 +300,7 @@ int main(int argc, char *argv[])
 
     ysw_sequencer_create_task(bus);
     ysw_editor_create_task(bus, music, initialize_touch_screen);
+    edit_pattern(bus, music);
 
 #ifdef IDF_VER
     ysw_led_config_t led_config = {

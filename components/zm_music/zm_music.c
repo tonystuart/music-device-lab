@@ -631,6 +631,14 @@ void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_
     zm_render_note(notes, channel, melody->note, melody_start, melody->duration, program_index);
 }
 
+#define STYLE_DURATION 1024
+
+// NB: The start and duration of sounds in a style are based on a 1024 tick time scale,
+// which is not related to ticks_per_measure.
+
+// The chord duration is the number of ticks to fit those 1024 style ticks into.
+// For example, the chord duration would be 768 for a full measure chord in 3/4 time.
+
 void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start,
         zm_channel_x channel, zm_program_x program_index)
 {
@@ -646,8 +654,8 @@ void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_star
         ysw_note_t *note = ysw_heap_allocate(sizeof(ysw_note_t));
         note->channel = channel;
         note->midi_note = chord->root + distance;
-        note->start = chord_start + (sound->start * chord->duration) / YSW_TICKS_PER_MEASURE;
-        note->duration = (sound->duration * chord->duration) / YSW_TICKS_PER_MEASURE;
+        note->start = chord_start + (sound->start * chord->duration) / STYLE_DURATION;
+        note->duration = (sound->duration * chord->duration) / STYLE_DURATION;
         note->velocity = sound->velocity;
         note->program = program_index;
         ysw_array_push(notes, note);
@@ -825,11 +833,11 @@ const zm_key_signature_t *zm_get_key_signature(zm_key_signature_x key_index)
 // https://en.wikipedia.org/wiki/Time_signature
 
 static const zm_time_signature_t zm_time_signatures[] = {
-    { "2/2", 2, ZM_HALF },
-    { "2/4", 2, ZM_QUARTER },
-    { "3/4", 3, ZM_QUARTER },
-    { "4/4", 4, ZM_QUARTER },
-    { "6/8", 6, ZM_EIGHTH },
+    { "2/2", 2, ZM_HALF, (2 * ZM_WHOLE) / 2 },
+    { "2/4", 2, ZM_QUARTER, (2 * ZM_WHOLE) / 4},
+    { "3/4", 3, ZM_QUARTER, (3 * ZM_WHOLE) / 4 },
+    { "4/4", 4, ZM_QUARTER, (4 * ZM_WHOLE) / 4 },
+    { "6/8", 6, ZM_EIGHTH, (6 * ZM_WHOLE) / 8 },
 };
 
 #define ZM_TIME_SIGNATURES (sizeof(zm_time_signatures) / sizeof(zm_time_signatures[0]))
@@ -968,3 +976,28 @@ zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note)
     return patch;
 }
 
+// TODO: consider whether this function belongs in this module
+
+#include "ysw_name.h"
+
+// TODO: find a better way to get the default programs
+
+#define DEFAULT_MELODY_PROGRAM 0
+#define DEFAULT_CHORD_PROGRAM 1
+#define DEFAULT_RHYTHM_PROGRAM 7
+
+zm_pattern_t *zm_music_create_pattern(zm_music_t *music)
+{
+    char name[32];
+    ysw_name_create(name, sizeof(name));
+    zm_pattern_t *pattern = ysw_heap_allocate(sizeof(zm_pattern_t));
+    pattern->name = ysw_heap_strdup(name);
+    pattern->divisions = ysw_array_create(64);
+    pattern->key = ZM_KEY_C;
+    pattern->time = ZM_TIME_4_4;
+    pattern->tempo = ZM_TEMPO_100;
+    pattern->melody_program = ysw_array_get(music->programs, DEFAULT_MELODY_PROGRAM);
+    pattern->chord_program = ysw_array_get(music->programs, DEFAULT_CHORD_PROGRAM);
+    pattern->rhythm_program = ysw_array_get(music->programs, DEFAULT_RHYTHM_PROGRAM);
+    return pattern;
+}

@@ -16,6 +16,7 @@ typedef enum {
     YSW_ORIGIN_SAMPLER,
     YSW_ORIGIN_SEQUENCER,
     YSW_ORIGIN_SINK,
+    YSW_ORIGIN_FILE,
     YSW_ORIGIN_LAST,
 } ysw_origin_t;
 

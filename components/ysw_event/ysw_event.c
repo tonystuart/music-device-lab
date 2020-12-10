@@ -161,3 +161,13 @@ void ysw_event_fire_sample_load(ysw_bus_h bus, ysw_event_sample_load_t *sample_l
     ysw_event_publish(bus, &event);
 }
 
+void ysw_event_fire_pattern_edit(ysw_bus_h bus, zm_pattern_t *pattern)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_FILE,
+        .header.type = YSW_EVENT_PATTERN_EDIT,
+        .pattern_edit.pattern = pattern,
+    };
+    ysw_event_publish(bus, &event);
+}
+

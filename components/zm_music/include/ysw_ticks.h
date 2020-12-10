@@ -11,8 +11,7 @@
 
 #include "ysw_ticks.h"
 
-#define YSW_TICKS_PER_MEASURE 1024
-#define YSW_TICKS_PER_QUARTER_NOTE 256
+#define YSW_TICKS_PER_QUARTER_NOTE 256 // should use ZM_QUARTER, but that creates a circular dependency
 
 // We use the term Beats per Minute (BPM) for Quarter Notes per Minute, regardless of time signature
 
