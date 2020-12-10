@@ -62,6 +62,7 @@ static void event_handler(lv_obj_t *btnmatrix, lv_event_t button_event)
         if (button_index != LV_BTNMATRIX_BTN_NONE) {
             int32_t item_index = find_scan_code_by_button_index(menu, button_index);
             if (item_index != -1) {
+                //ESP_LOGD(TAG, "event_handler event=%d", button_event);
                 if (button_event == LV_EVENT_PRESSED) {
                     ysw_event_t event = {
                         .header.origin = YSW_ORIGIN_KEYBOARD,
@@ -69,20 +70,20 @@ static void event_handler(lv_obj_t *btnmatrix, lv_event_t button_event)
                         .key_down.key = item_index,
                     };
                     ysw_menu_on_key_down(menu, &event);
-                } else if (button_event == LV_EVENT_RELEASED) {
-                    ysw_event_t event = {
-                        .header.origin = YSW_ORIGIN_KEYBOARD,
-                        .header.type = YSW_EVENT_KEY_UP,
-                        .key_up.key = item_index,
-                    };
-                    ysw_menu_on_key_up(menu, &event);
-                } else if (button_event == LV_EVENT_VALUE_CHANGED) {
-                    ysw_event_t event = {
+                    event = (ysw_event_t){
                         .header.origin = YSW_ORIGIN_KEYBOARD,
                         .header.type = YSW_EVENT_KEY_PRESSED,
                         .key_pressed.key = item_index,
                     };
                     ysw_menu_on_key_pressed(menu, &event);
+                    event = (ysw_event_t){
+                        .header.origin = YSW_ORIGIN_KEYBOARD,
+                        .header.type = YSW_EVENT_KEY_UP,
+                        .key_up.key = item_index,
+                    };
+                    ysw_menu_on_key_up(menu, &event);
+                    // btnmatrix generates an extra key down when key is down and new btnmatrix is set
+                    lv_indev_wait_release(lv_indev_get_act());
                 }
             }
         }
@@ -184,7 +185,6 @@ static void pop_menu(ysw_menu_t *menu)
         if (ysw_array_get_count(menu->stack) > 1) {
             ysw_array_pop(menu->stack);
             show_softkeys(menu);
-            lv_indev_wait_release(lv_indev_get_act()); // suppress events while button is still down
         }
     } else {
         show_softkeys(menu);
@@ -205,7 +205,6 @@ static void open_menu(ysw_menu_t *menu, ysw_event_t *event, void *value)
         }
         show_softkeys(menu);
     }
-    menu->wait_release = true;
 }
 
 static void close_menu(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -218,40 +217,36 @@ static void close_menu(ysw_menu_t *menu, ysw_event_t *event, void *value)
 void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event)
 {
     const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_down.key);
-    if (menu_item) {
-        if (menu_item->flags & YSW_MENU_CLOSE) {
-            close_menu(menu, event, menu_item->value);
-        }
-        if (menu_item->flags & YSW_MENU_DOWN) {
-            menu_item->cb(menu, event, menu_item->value);
-        }
-        if (menu_item->flags & YSW_MENU_OPEN) {
-            open_menu(menu, event, menu_item->value);
-        }
+    ESP_LOGD(TAG, "on_key_down, name=%s", menu_item->name);
+    if (menu_item->flags & YSW_MENU_DOWN) {
+        menu_item->cb(menu, event, menu_item->value);
     }
 }
 
 void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
 {
-    menu->wait_release = false;
     const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_up.key);
+    ESP_LOGD(TAG, "on_key_up, name=%s", menu_item->name);
     if (menu_item->flags & YSW_MENU_UP) {
         menu_item->cb(menu, event, menu_item->value);
     }
-    if (menu_item->flags & YSW_MENU_POP_ALL) {
-        pop_all(menu);
+    if (menu_item->flags & YSW_MENU_OPEN) {
+        open_menu(menu, event, menu_item->value);
+    } else if (menu_item->flags & YSW_MENU_CLOSE) {
+        close_menu(menu, event, menu_item->value);
     } else if (menu_item->flags & YSW_MENU_POP) {
         pop_menu(menu);
+    } else if (menu_item->flags & YSW_MENU_POP_ALL) {
+        pop_all(menu);
     }
 }
 
 void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event)
 {
-    if (!menu->wait_release) {
-        const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_pressed.key);
-        if (menu_item->flags & YSW_MENU_PRESS) {
-            menu_item->cb(menu, event, menu_item->value);
-        }
+    const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_pressed.key);
+    ESP_LOGD(TAG, "on_key_pressed, name=%s", menu_item->name);
+    if (menu_item->flags & YSW_MENU_PRESS) {
+        menu_item->cb(menu, event, menu_item->value);
     }
 }
 
