@@ -21,16 +21,16 @@
 
 typedef void *ysw_task_h;
 
-typedef void (*ysw_task_event_handler_t)(void *caller_context, ysw_event_t *event);
+typedef void (*ysw_task_event_handler_t)(void *opaque_context, ysw_event_t *event);
 
-typedef void (*ysw_task_initializer)(void *caller_context);
+typedef void (*ysw_task_initializer)(void *opaque_context);
 
 // 1. Specify queue and/or bus if you want a queue allocated
 // 2. Specify queue_size and item_size if you want a queue allocated
 // 3. Specify event_handler if you want an event handler wrapper
 // 4. Specify function if you do not want an event handler wrapper
 // 5. Specify either event_handler or function but not both
-// 6. Specify caller_context if you want to pass context to event_handler or function
+// 6. Specify opaque_context if you want to pass context to event_handler or function
 // 7. Specify task and/or queue if you want the created task or queue handle returned
 // 8. Specify non-transient (i.e. not stack) address for task or queue
 
@@ -41,7 +41,7 @@ typedef struct {
     TaskFunction_t function;
     ysw_task_event_handler_t event_handler;
     ysw_task_initializer initializer;
-    void *caller_context;
+    void *opaque_context;
     uint16_t stack_size;
     int8_t priority;
     QueueHandle_t *queue;

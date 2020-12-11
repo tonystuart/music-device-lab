@@ -10,6 +10,6 @@
 #pragma once
 
 #include "ysw_bus.h"
+#include "ysw_vs1053.h"
 
-void ysw_synth_wt_create_task(ysw_bus_h bus, uint8_t dac_left_gpio, uint8_t dac_right_gpio);
-
+void ysw_vs_synth_create_task(ysw_bus_h bus, ysw_vs1053_config_t *vs1053_config);

@@ -7,14 +7,14 @@
 #define SERVICE_UUID        "03b80e5a-ede8-4b33-a751-6ce34ec4c700"
 #define CHARACTERISTIC_UUID "7772e5db-3868-4112-a1a9-f2669d106bf3"
 
-#define TAG "YSW_SYNTH_BT"
+#define TAG "YSW_BT_SYNTH"
 
 extern "C" {
 #include "ysw_task.h"
 #include "ysw_common.h"
 #include "ysw_heap.h"
 #include "ysw_event.h"
-#include "ysw_synth_bt.h"
+#include "ysw_bt_synth.h"
 #include "esp_log.h"
 }
 
@@ -121,8 +121,8 @@ static inline void on_program_change(context_t *context, ysw_event_program_chang
     }
 }
 
-static void process_event(void *caller_context, ysw_event_t *event) {
-    context_t *context = (context_t*)caller_context;
+static void process_event(void *opaque_context, ysw_event_t *event) {
+    context_t *context = (context_t*)opaque_context;
     switch (event->header.type) {
         case YSW_EVENT_NOTE_ON:
             on_note_on(context, &event->note_on);
@@ -138,7 +138,7 @@ static void process_event(void *caller_context, ysw_event_t *event) {
     }
 }
 
-void ysw_synth_bt_create_task(ysw_bus_h bus)
+void ysw_bt_synth_create_task(ysw_bus_h bus)
 {
     context_t *context = (context_t*)ysw_heap_allocate(sizeof(context_t));
     initialize_synthesizer(context);
@@ -148,7 +148,7 @@ void ysw_synth_bt_create_task(ysw_bus_h bus)
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.caller_context = context;
+    config.opaque_context = context;
 
     ysw_task_h task = ysw_task_create(&config);
 

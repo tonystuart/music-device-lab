@@ -51,7 +51,7 @@ typedef struct ysw_menu_s {
     const ysw_menu_softmap_t *softmap; // scan codes comprising soft keys
     ysw_array_t *stack; // each element is the base of an array of menu items
     ysw_softkeys_t *softkeys; // null if not currently displaying softkeys
-    void *caller_context; // arbitrary context passed through from caller
+    void *opaque_context; // arbitrary context passed through from caller
 } ysw_menu_t;
 
 void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event);
@@ -62,4 +62,4 @@ void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event);
 
 void ysw_menu_nop(ysw_menu_t *menu, ysw_event_t *event, void *value);
 
-ysw_menu_t *ysw_menu_create(const ysw_menu_item_t *menu_items, const ysw_menu_softmap_t softkeys[], void *caller_context);
+ysw_menu_t *ysw_menu_create(const ysw_menu_item_t *menu_items, const ysw_menu_softmap_t softkeys[], void *opaque_context);

@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_synth_fs.h"
+#include "ysw_fluid_synth.h"
 #include "ysw_common.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
@@ -16,7 +16,7 @@
 #include "fluidsynth.h"
 #include "stdlib.h"
 
-#define TAG "YSW_SYNTH_FS"
+#define TAG "YSW_FLUID_SYNTH"
 
 typedef struct {
     const char *sf_filename;
@@ -42,9 +42,9 @@ static inline void on_program_change(context_t *context, ysw_event_program_chang
     fluid_synth_program_change(context->synth, m->channel, m->program);
 }
 
-static void process_event(void *caller_context, ysw_event_t *event)
+static void process_event(void *opaque_context, ysw_event_t *event)
 {
-    context_t *context = caller_context;
+    context_t *context = opaque_context;
     switch (event->header.type) {
         case YSW_EVENT_NOTE_ON:
             on_note_on(context, &event->note_on);
@@ -92,7 +92,7 @@ static void initialize_synthesizer(context_t *context)
     context->driver = new_fluid_audio_driver(settings, context->synth);
 }
 
-void ysw_synth_fs_create_task(ysw_bus_h bus, const char *sf_filename)
+void ysw_fluid_synth_create_task(ysw_bus_h bus, const char *sf_filename)
 {
     context_t *context = ysw_heap_allocate(sizeof(context_t));
     context->sf_filename = sf_filename;
@@ -103,7 +103,7 @@ void ysw_synth_fs_create_task(ysw_bus_h bus, const char *sf_filename)
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.caller_context = context;
+    config.opaque_context = context;
 
     ysw_task_h task = ysw_task_create(&config);
 

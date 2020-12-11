@@ -141,9 +141,9 @@ static void scan_keyboard(context_t *context)
     }
 }
 
-static void process_event(void *caller_context, ysw_event_t *event)
+static void process_event(void *opaque_context, ysw_event_t *event)
 {
-    context_t *context = caller_context;
+    context_t *context = opaque_context;
     if (event) {
         switch (event->header.type) {
             default:
@@ -181,7 +181,7 @@ void ysw_keyboard_create_task(ysw_bus_h bus, ysw_keyboard_config_t *keyboard_con
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.caller_context = context;
+    config.opaque_context = context;
     config.wait_millis = 10;
 
     ysw_task_create(&config);

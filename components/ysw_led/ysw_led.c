@@ -76,9 +76,9 @@ static void on_note_off(context_t *context, ysw_event_note_off_t *event)
     control_led(event->channel, event->midi_note, false);
 }
 
-static void process_event(void *caller_context, ysw_event_t *event)
+static void process_event(void *opaque_context, ysw_event_t *event)
 {
-    context_t *context = caller_context;
+    context_t *context = opaque_context;
     if (event) {
         switch (event->header.type) {
             case YSW_EVENT_NOTE_ON:
@@ -103,7 +103,7 @@ void ysw_led_create_task(ysw_bus_h bus, ysw_led_config_t *led_config)
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.caller_context = context;
+    config.opaque_context = context;
 
     ysw_task_h task = ysw_task_create(&config);
     ysw_task_subscribe(task, YSW_ORIGIN_EDITOR);

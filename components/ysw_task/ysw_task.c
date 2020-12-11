@@ -22,7 +22,7 @@ typedef struct {
     QueueHandle_t queue;
     ysw_task_event_handler_t event_handler;
     ysw_task_initializer initializer;
-    void *caller_context;
+    void *opaque_context;
     uint32_t wait_millis;
 } context_t;
 
@@ -30,7 +30,7 @@ static void ysw_task_event_handler(void *parameter)
 {
     context_t *context = parameter;
     if (context->initializer) {
-        context->initializer(context->caller_context);
+        context->initializer(context->opaque_context);
     }
     for (;;) {
         ysw_event_t item;
@@ -40,7 +40,7 @@ static void ysw_task_event_handler(void *parameter)
         if (is_message) {
             event = &item;
         } 
-        context->event_handler(context->caller_context, event);
+        context->event_handler(context->opaque_context, event);
     }
 }
 
@@ -75,11 +75,11 @@ ysw_task_h ysw_task_create(ysw_task_config_t *config)
         function = ysw_task_event_handler;
         parameter = context;
         context->event_handler = config->event_handler;
-        context->caller_context = config->caller_context;
+        context->opaque_context = config->opaque_context;
     } else {
         assert(config->function);
         function = config->function;
-        parameter = config->caller_context;
+        parameter = config->opaque_context;
     }
 
     if (config->queue || config->bus) {

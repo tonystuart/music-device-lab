@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_synth_wt.h"
+#include "ysw_wt_synth.h"
 #include "ysw_common.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
@@ -19,7 +19,7 @@
 #include "driver/dac.h"
 #include "driver/i2s.h"
 
-#define TAG "YSW_SYNTH_WT"
+#define TAG "YSW_WT_SYNTH"
 
 #define GAIN_IN_DB (-10.0f)
 #define BUFFER_COUNT 16
@@ -238,9 +238,9 @@ static inline void on_program_change(context_t *context, ysw_event_program_chang
 {
 }
 
-static void process_event(void *caller_context, ysw_event_t *event)
+static void process_event(void *opaque_context, ysw_event_t *event)
 {
-    context_t *context = caller_context;
+    context_t *context = opaque_context;
     switch (event->header.type) {
         case YSW_EVENT_NOTE_ON:
             on_note_on(context, &event->note_on);
@@ -256,7 +256,7 @@ static void process_event(void *caller_context, ysw_event_t *event)
     }
 }
 
-void ysw_synth_wt_create_task(ysw_bus_h bus, uint8_t dac_left_gpio, uint8_t dac_right_gpio)
+void ysw_wt_synth_create_task(ysw_bus_h bus, uint8_t dac_left_gpio, uint8_t dac_right_gpio)
 {
     create_synth_task(dac_left_gpio, dac_right_gpio);
     context_t *context = ysw_heap_allocate(sizeof(context_t));
@@ -266,7 +266,7 @@ void ysw_synth_wt_create_task(ysw_bus_h bus, uint8_t dac_left_gpio, uint8_t dac_
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.caller_context = context;
+    config.opaque_context = context;
 
     ysw_task_h task = ysw_task_create(&config);
 

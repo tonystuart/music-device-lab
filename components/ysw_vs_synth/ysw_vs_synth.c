@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_synth_vs.h"
+#include "ysw_vs_synth.h"
 #include "ysw_common.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
@@ -18,7 +18,7 @@
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 
-#define TAG "YSW_SYNTH_VS"
+#define TAG "YSW_VS_SYNTH"
 
 typedef struct {
     ysw_vs1053_config_t config;
@@ -41,9 +41,9 @@ static inline void on_program_change(context_t *context, ysw_event_program_chang
     ysw_vs1053_select_program(m->channel, m->program);
 }
 
-static void process_event(void *caller_context, ysw_event_t *event)
+static void process_event(void *opaque_context, ysw_event_t *event)
 {
-    context_t *context = caller_context;
+    context_t *context = opaque_context;
     switch (event->header.type) {
         case YSW_EVENT_NOTE_ON:
             on_note_on(context, &event->note_on);
@@ -59,7 +59,7 @@ static void process_event(void *caller_context, ysw_event_t *event)
     }
 }
 
-void ysw_synth_vs_create_task(ysw_bus_h bus, ysw_vs1053_config_t *vs1053_config)
+void ysw_vs_synth_create_task(ysw_bus_h bus, ysw_vs1053_config_t *vs1053_config)
 {
     assert(portTICK_PERIOD_MS == 1);
     context_t *context = ysw_heap_allocate(sizeof(context_t));
@@ -71,7 +71,7 @@ void ysw_synth_vs_create_task(ysw_bus_h bus, ysw_vs1053_config_t *vs1053_config)
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.caller_context = context;
+    config.opaque_context = context;
 
     ysw_task_h task = ysw_task_create(&config);
 

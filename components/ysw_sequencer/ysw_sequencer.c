@@ -338,9 +338,9 @@ static TickType_t process_notes(context_t *context)
     return ticks_to_wait;
 }
 
-static void process_event(void *caller_context, ysw_event_t *event)
+static void process_event(void *opaque_context, ysw_event_t *event)
 {
-    context_t *context = caller_context;
+    context_t *context = opaque_context;
     if (event) {
         switch (event->header.type) {
             case YSW_EVENT_PLAY:
@@ -393,7 +393,7 @@ void ysw_sequencer_create_task(ysw_bus_h bus)
     config.bus = bus;
     config.task = &context->task;
     config.event_handler = process_event;
-    config.caller_context = context;
+    config.opaque_context = context;
 
     ysw_task_create(&config);
     ysw_task_subscribe(context->task, YSW_ORIGIN_COMMAND);

@@ -10,6 +10,5 @@
 #pragma once
 
 #include "ysw_bus.h"
-#include "ysw_vs1053.h"
 
-void ysw_synth_vs_create_task(ysw_bus_h bus, ysw_vs1053_config_t *vs1053_config);
+void ysw_fluid_synth_create_task(ysw_bus_h bus, const char *sf_filename);

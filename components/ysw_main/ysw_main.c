@@ -13,7 +13,7 @@
 #include "ysw_midi.h"
 #include "ysw_sequencer.h"
 #include "ysw_staff.h"
-#include "ysw_synth_mod.h"
+#include "ysw_mod_synth.h"
 #include "zm_music.h"
 #include "hash.h"
 #include "esp_log.h"
@@ -31,17 +31,17 @@
 
 #if YSW_MAIN_SYNTH_MODEL == 1
 
-#include "ysw_synth_bt.h"
+#include "ysw_bt_synth.h"
 
 void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
 {
     ESP_LOGD(TAG, "initialize_synthesizer: configuring BlueTooth synth");
-    ysw_synth_bt_create_task(bus);
+    ysw_bt_synth_create_task(bus);
 }
 
 #elif YSW_MAIN_SYNTH_MODEL == 2
 
-#include "ysw_synth_vs.h"
+#include "ysw_vs_synth.h"
 
 void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
 {
@@ -56,34 +56,34 @@ void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
         .xdcs_gpio = 4,
         .spi_host = VSPI_HOST,
     };
-    ysw_synth_vs_create_task(bus, &config);
+    ysw_vs_synth_create_task(bus, &config);
 }
 
 #elif YSW_MAIN_SYNTH_MODEL == 3
 
-#include "ysw_synth_fs.h"
+#include "ysw_fluid_synth.h"
 
 void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
 {
     ESP_LOGD(TAG, "initialize_synthesizer: configuring FluidSynth synth");
-    ysw_synth_fs_create_task(bus, YSW_MUSIC_SOUNDFONT);
+    ysw_fluid_synth_create_task(bus, YSW_MUSIC_SOUNDFONT);
 }
 
 #elif YSW_MAIN_SYNTH_MODEL == 4
 
-#include "ysw_synth_mod.h"
+#include "ysw_mod_synth.h"
 
 typedef struct {
     zm_music_t *music;
     hash_t *sample_map;
 } host_context_t;
 
-ysw_mod_sample_t *provide_sample(void *caller_context, uint8_t program_index, uint8_t midi_note)
+ysw_mod_sample_t *provide_sample(void *opaque_context, uint8_t program_index, uint8_t midi_note)
 {
-    assert(caller_context);
+    assert(opaque_context);
     assert(program_index <= YSW_MIDI_MAX);
 
-    host_context_t *host_context = caller_context;
+    host_context_t *host_context = opaque_context;
     if (program_index >= ysw_array_get_count(host_context->music->programs)) {
         ESP_LOGW(TAG, "invalid program=%d, substituting program=0", program_index);
         program_index = 0;
@@ -126,7 +126,7 @@ void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
     mod_host->host_context = host_context;
     mod_host->provide_sample = provide_sample;
 
-    ysw_synth_mod_create_task(bus, mod_host);
+    ysw_mod_synth_create_task(bus, mod_host);
 }
 
 #else

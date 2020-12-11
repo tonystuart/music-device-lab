@@ -144,7 +144,7 @@ ysw_bus_h ysw_bus_create(uint16_t origins_size, uint16_t listeners_size, uint32_
 
     config.name = TAG;
     config.function = task_handler;
-    config.caller_context = context;
+    config.opaque_context = context;
     config.queue = &context->queue;
     config.queue_size = queue_size;
     config.item_size = context->bus_message_size;

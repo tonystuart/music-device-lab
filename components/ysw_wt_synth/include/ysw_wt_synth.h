@@ -11,4 +11,5 @@
 
 #include "ysw_bus.h"
 
-void ysw_synth_bt_create_task(ysw_bus_h bus);
+void ysw_wt_synth_create_task(ysw_bus_h bus, uint8_t dac_left_gpio, uint8_t dac_right_gpio);
+

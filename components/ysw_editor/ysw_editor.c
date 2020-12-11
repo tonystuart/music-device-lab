@@ -656,94 +656,94 @@ static void process_down(context_t *context)
 
 static void on_melody(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     context->mode = YSW_EDITOR_MODE_MELODY;
     display_mode(context);
 }
 
 static void on_chord(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     context->mode = YSW_EDITOR_MODE_CHORD;
     display_mode(context);
 }
 
 static void on_rhythm(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     context->mode = YSW_EDITOR_MODE_RHYTHM;
     display_mode(context);
 }
 
 static void on_program(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     cycle_program(context);
 }
 
 static void on_quality(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     cycle_quality(context);
 }
 
 static void on_style(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     cycle_style(context);
 }
 
 static void on_key_signature(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     cycle_key_signature(context);
 }
 
 static void on_time_signature(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     cycle_time_signature(context);
 }
 
 static void on_tempo(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     cycle_tempo(context);
 }
 
 static void on_duration(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     cycle_duration(context);
 }
 
 static void on_tie(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     cycle_tie(context);
 }
 
 static void on_cycle_beat(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     cycle_beat(context);
 }
 
 static void on_insert_beat(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     insert_beat(context);
 }
 
 static void on_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     process_delete(context);
 }
 
 static void on_play(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     ysw_array_t *notes = zm_render_pattern(context->music, context->pattern, BACKGROUND_BASE);
     zm_bpm_x bpm = zm_tempo_to_bpm(context->pattern->tempo);
     ysw_event_fire_play(context->bus, notes, bpm);
@@ -751,7 +751,7 @@ static void on_play(ysw_menu_t *menu, ysw_event_t *event, void *value)
 
 static void on_demo(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     zm_song_t *song = ysw_array_get(context->music->songs, 0);
     ysw_array_t *notes = zm_render_song(song);
     ysw_event_fire_play(context->bus, notes, song->bpm);
@@ -759,13 +759,13 @@ static void on_demo(ysw_menu_t *menu, ysw_event_t *event, void *value)
 
 static void on_stop(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     ysw_event_fire_stop(context->bus);
 }
 
 static void on_loop(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     context->loop = !context->loop;
     ysw_event_fire_loop(context->bus, context->loop);
 }
@@ -773,37 +773,37 @@ static void on_loop(ysw_menu_t *menu, ysw_event_t *event, void *value)
 static void on_left(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ESP_LOGD(TAG, "on_left");
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     process_left(context, 1);
 }
 
 static void on_right(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     process_right(context, 1);
 }
 
 static void on_previous(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     process_left(context, 2);
 }
 
 static void on_next(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     process_right(context, 2);
 }
 
 static void on_up(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     process_up(context);
 }
 
 static void on_down(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     process_down(context);
 }
 
@@ -828,7 +828,7 @@ static void fire_note_off(context_t *context, zm_note_t midi_note, zm_channel_x 
 
 static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     zm_note_t midi_note = (uintptr_t)value;
     if (event->header.type == YSW_EVENT_KEY_DOWN) {
         if (context->mode == YSW_EDITOR_MODE_MELODY) {
@@ -892,14 +892,14 @@ static void on_note_status(context_t *context, ysw_event_t *event)
 
 static void on_new(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     zm_pattern_t *pattern = zm_music_create_pattern(context->music);
     ysw_event_fire_pattern_edit(context->bus, pattern);
 }
 
 static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
-    context_t *context = menu->caller_context;
+    context_t *context = menu->opaque_context;
     int32_t direction = (intptr_t)value;
     ESP_LOGD(TAG, "direction=%d", direction);
     zm_division_t *division = get_division(context);
@@ -959,9 +959,9 @@ static void process_event_without_pattern(context_t *context, ysw_event_t *event
     }
 }
 
-static void process_event(void *caller_context, ysw_event_t *event)
+static void process_event(void *opaque_context, ysw_event_t *event)
 {
-    context_t *context = caller_context;
+    context_t *context = opaque_context;
     if (event) {
         if (context->pattern) {
             process_event_with_pattern(context, event);
@@ -972,9 +972,9 @@ static void process_event(void *caller_context, ysw_event_t *event)
     lv_task_handler();
 }
 
-static void initialize_editor_task(void *caller_context)
+static void initialize_editor_task(void *opaque_context)
 {
-    context_t *context = caller_context;
+    context_t *context = opaque_context;
 
     context->lvgl_init();
     context->container = lv_obj_create(lv_scr_act(), NULL);
@@ -1295,7 +1295,7 @@ void ysw_editor_create_task(ysw_bus_h bus, zm_music_t *music, ysw_editor_lvgl_in
     config.bus = bus;
     config.initializer = initialize_editor_task;
     config.event_handler = process_event;
-    config.caller_context = context;
+    config.opaque_context = context;
     config.wait_millis = 5;
     //config.priority = YSW_TASK_DEFAULT_PRIORITY + 1;
     //config.priority = configMAX_PRIORITIES - 1;

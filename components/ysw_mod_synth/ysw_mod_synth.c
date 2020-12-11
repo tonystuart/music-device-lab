@@ -9,7 +9,7 @@
 
 // Inspired by Jean-François del Nero's public domain hxcmod.c
 
-#include "ysw_synth_mod.h"
+#include "ysw_mod_synth.h"
 #include "ysw_common.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
@@ -22,9 +22,7 @@
 #include "limits.h"
 #include "stdlib.h"
 
-// TODO: rename ysw_synth_mod to ysw_mod_synth so that externs begin with ysw_mod
-
-#define TAG "YSW_SYNTH_MOD"
+#define TAG "YSW_MOD_SYNTH"
 
 #define MAX_VOICES 32
 
@@ -311,9 +309,9 @@ static void on_program_change(context_t *context, ysw_event_program_change_t *m)
     context->channel_programs[m->channel] = m->program;
 }
 
-static void process_event(void *caller_context, ysw_event_t *event)
+static void process_event(void *opaque_context, ysw_event_t *event)
 {
-    context_t *context = caller_context;
+    context_t *context = opaque_context;
     switch (event->header.type) {
         case YSW_EVENT_NOTE_ON:
             on_note_on(context, &event->note_on);
@@ -367,7 +365,7 @@ static void initialize_audio_source(context_t *context)
 
 #endif
 
-void ysw_synth_mod_create_task(ysw_bus_h bus, ysw_mod_host_t *mod_host)
+void ysw_mod_synth_create_task(ysw_bus_h bus, ysw_mod_host_t *mod_host)
 {
     context_t *context = ysw_heap_allocate(sizeof(context_t));
     data_cb_context = context;
@@ -381,7 +379,7 @@ void ysw_synth_mod_create_task(ysw_bus_h bus, ysw_mod_host_t *mod_host)
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.caller_context = context;
+    config.opaque_context = context;
 
     ysw_task_h task = ysw_task_create(&config);
 

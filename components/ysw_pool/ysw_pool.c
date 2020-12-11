@@ -36,7 +36,7 @@ void ysw_pool_add(ysw_pool_h pool, void *item)
     ysw_array_push(context->array, item);
 }
 
-void* ysw_pool_visit_items(ysw_pool_h pool, ysw_pool_visitor_t visitor, void *caller_context)
+void* ysw_pool_visit_items(ysw_pool_h pool, ysw_pool_visitor_t visitor, void *opaque_context)
 {
     assert(pool);
     assert(visitor);
@@ -48,7 +48,7 @@ void* ysw_pool_visit_items(ysw_pool_h pool, ysw_pool_visitor_t visitor, void *ca
     uint32_t count = ysw_array_get_count(context->array);
     while (index < count && !done) {
         item = ysw_array_get(context->array, index);
-        ysw_pool_action_t action = visitor(caller_context, index, count, item);
+        ysw_pool_action_t action = visitor(opaque_context, index, count, item);
         if (action & YSW_POOL_ACTION_FREE) {
             uint32_t top = count - 1;
             if (index < top) {
