@@ -23,37 +23,37 @@ typedef struct {
     QueueHandle_t queue;
     fluid_synth_t *synth;
     fluid_audio_driver_t *driver; // TODO: delete this when done with it
-} context_t;
+} ysw_fluid_synth_t;
 
-static inline void on_note_on(context_t *context, ysw_event_note_on_t *m)
+static inline void on_note_on(ysw_fluid_synth_t *ysw_fluid_synth, ysw_event_note_on_t *m)
 {
     ESP_LOGD(TAG, "on_note_on channel=%d, note=%d, velocity=%d", m->channel, m->midi_note, m->velocity);
-    fluid_synth_noteon(context->synth, m->channel, m->midi_note, m->velocity);
+    fluid_synth_noteon(ysw_fluid_synth->synth, m->channel, m->midi_note, m->velocity);
 }
 
-static inline void on_note_off(context_t *context, ysw_event_note_off_t *m)
+static inline void on_note_off(ysw_fluid_synth_t *ysw_fluid_synth, ysw_event_note_off_t *m)
 {
     ESP_LOGD(TAG, "on_note_off channel=%d, note=%d", m->channel, m->midi_note);
-    fluid_synth_noteoff(context->synth, m->channel, m->midi_note);
+    fluid_synth_noteoff(ysw_fluid_synth->synth, m->channel, m->midi_note);
 }
 
-static inline void on_program_change(context_t *context, ysw_event_program_change_t *m)
+static inline void on_program_change(ysw_fluid_synth_t *ysw_fluid_synth, ysw_event_program_change_t *m)
 {
-    fluid_synth_program_change(context->synth, m->channel, m->program);
+    fluid_synth_program_change(ysw_fluid_synth->synth, m->channel, m->program);
 }
 
-static void process_event(void *opaque_context, ysw_event_t *event)
+static void process_event(void *context, ysw_event_t *event)
 {
-    context_t *context = opaque_context;
+    ysw_fluid_synth_t *ysw_fluid_synth = context;
     switch (event->header.type) {
         case YSW_EVENT_NOTE_ON:
-            on_note_on(context, &event->note_on);
+            on_note_on(ysw_fluid_synth, &event->note_on);
             break;
         case YSW_EVENT_NOTE_OFF:
-            on_note_off(context, &event->note_off);
+            on_note_off(ysw_fluid_synth, &event->note_off);
             break;
         case YSW_EVENT_PROGRAM_CHANGE:
-            on_program_change(context, &event->program_change);
+            on_program_change(ysw_fluid_synth, &event->program_change);
             break;
         default:
             break;
@@ -65,7 +65,7 @@ static void process_event(void *opaque_context, ysw_event_t *event)
 #define MAXIMUM_GAIN (10f)
 #define DEFAULT_GAIN (0.200f)
 
-static void initialize_synthesizer(context_t *context)
+static void initialize_synthesizer(ysw_fluid_synth_t *ysw_fluid_synth)
 {
     fluid_settings_t *settings = new_fluid_settings();
 
@@ -74,38 +74,38 @@ static void initialize_synthesizer(context_t *context)
     fluid_settings_setint(settings, "synth.reverb.active", 0);
     fluid_settings_setint(settings, "synth.chorus.active", 0);
 
-    context->synth = new_fluid_synth(settings);
+    ysw_fluid_synth->synth = new_fluid_synth(settings);
 
-    int sfont_id = fluid_synth_sfload(context->synth, context->sf_filename, 1);
+    int sfont_id = fluid_synth_sfload(ysw_fluid_synth->synth, ysw_fluid_synth->sf_filename, 1);
     if (sfont_id == FLUID_FAILED) {
-        ESP_LOGE(TAG, "fluid_synth_sfload failed, sf_filename=%s", context->sf_filename);
+        ESP_LOGE(TAG, "fluid_synth_sfload failed, sf_filename=%s", ysw_fluid_synth->sf_filename);
         abort();
     }
 
-    fluid_synth_set_gain(context->synth, INITIAL_GAIN);
+    fluid_synth_set_gain(ysw_fluid_synth->synth, INITIAL_GAIN);
 
 #ifdef IDF_VER
     fluid_settings_setstr(settings, "audio.driver", "a2dp");
 #else
     fluid_settings_setstr(settings, "audio.driver", "alsa");
 #endif
-    context->driver = new_fluid_audio_driver(settings, context->synth);
+    ysw_fluid_synth->driver = new_fluid_audio_driver(settings, ysw_fluid_synth->synth);
 }
 
-void ysw_fluid_synth_create_task(ysw_bus_h bus, const char *sf_filename)
+void ysw_fluid_synth_create_task(ysw_bus_t *bus, const char *sf_filename)
 {
-    context_t *context = ysw_heap_allocate(sizeof(context_t));
-    context->sf_filename = sf_filename;
-    initialize_synthesizer(context);
+    ysw_fluid_synth_t *ysw_fluid_synth = ysw_heap_allocate(sizeof(ysw_fluid_synth_t));
+    ysw_fluid_synth->sf_filename = sf_filename;
+    initialize_synthesizer(ysw_fluid_synth);
 
     ysw_task_config_t config = ysw_task_default_config;
 
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.opaque_context = context;
+    config.context = ysw_fluid_synth;
 
-    ysw_task_h task = ysw_task_create(&config);
+    ysw_task_t *task = ysw_task_create(&config);
 
     ysw_task_subscribe(task, YSW_ORIGIN_EDITOR);
     ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);

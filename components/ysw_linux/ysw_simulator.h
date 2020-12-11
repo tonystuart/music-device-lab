@@ -11,4 +11,4 @@
 
 #include "ysw_bus.h"
 
-void ysw_simulator_initialize(ysw_bus_h bus);
+void ysw_simulator_initialize(ysw_bus_t *bus);

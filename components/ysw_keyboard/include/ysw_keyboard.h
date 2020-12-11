@@ -17,4 +17,4 @@ typedef struct {
     ysw_array_t *columns;
 } ysw_keyboard_config_t;
 
-void ysw_keyboard_create_task(ysw_bus_h bus, ysw_keyboard_config_t *keyboard_config);
+void ysw_keyboard_create_task(ysw_bus_t *bus, ysw_keyboard_config_t *keyboard_config);

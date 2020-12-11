@@ -34,4 +34,4 @@ typedef struct {
     ysw_mod_sample_provider_t provide_sample;
 } ysw_mod_host_t;
 
-void ysw_mod_synth_create_task(ysw_bus_h bus, ysw_mod_host_t *mod_host);
+void ysw_mod_synth_create_task(ysw_bus_t *bus, ysw_mod_host_t *mod_host);

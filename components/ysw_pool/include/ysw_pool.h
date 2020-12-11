@@ -20,11 +20,11 @@ typedef enum {
     YSW_POOL_ACTION_FREE = 0x02,
 } ysw_pool_action_t;
 
-typedef ysw_pool_action_t (*ysw_pool_visitor_t)(void *opaque_context, uint32_t index, uint32_t count, void *item);
+typedef ysw_pool_action_t (*ysw_pool_visitor_t)(void *context, uint32_t index, uint32_t count, void *item);
 
 ysw_pool_h ysw_pool_create(uint32_t initial_size);
 void ysw_pool_add(ysw_pool_h pool, void *item);
-void *ysw_pool_visit_items(ysw_pool_h pool, ysw_pool_visitor_t visitor, void *opaque_context);
+void *ysw_pool_visit_items(ysw_pool_h pool, ysw_pool_visitor_t visitor, void *context);
 void ysw_pool_free(ysw_pool_h pool);
 
 

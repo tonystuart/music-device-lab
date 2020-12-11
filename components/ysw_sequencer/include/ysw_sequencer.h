@@ -13,4 +13,4 @@
 
 #define YSW_SEQUENCER_SPEED_DEFAULT 100
 
-void ysw_sequencer_create_task(ysw_bus_h bus);
+void ysw_sequencer_create_task(ysw_bus_t *bus);

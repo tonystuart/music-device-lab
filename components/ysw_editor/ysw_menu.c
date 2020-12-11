@@ -250,11 +250,11 @@ void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event)
     }
 }
 
-ysw_menu_t *ysw_menu_create(const ysw_menu_item_t *menu_items, const ysw_menu_softmap_t softmap[], void *opaque_context)
+ysw_menu_t *ysw_menu_create(const ysw_menu_item_t *menu_items, const ysw_menu_softmap_t softmap[], void *context)
 {
     ysw_menu_t *menu = ysw_heap_allocate(sizeof(ysw_menu_t));
     menu->softmap = softmap;
-    menu->opaque_context = opaque_context;
+    menu->context = context;
     menu->stack = ysw_array_create(4);
     menu->softmap_size = get_button_map_size(menu);
     ysw_array_push(menu->stack, (void*)menu_items);

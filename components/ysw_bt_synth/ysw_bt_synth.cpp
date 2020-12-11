@@ -121,8 +121,8 @@ static inline void on_program_change(context_t *context, ysw_event_program_chang
     }
 }
 
-static void process_event(void *opaque_context, ysw_event_t *event) {
-    context_t *context = (context_t*)opaque_context;
+static void process_event(void *context, ysw_event_t *event) {
+    context_t *context = (context_t*)context;
     switch (event->header.type) {
         case YSW_EVENT_NOTE_ON:
             on_note_on(context, &event->note_on);
@@ -138,7 +138,7 @@ static void process_event(void *opaque_context, ysw_event_t *event) {
     }
 }
 
-void ysw_bt_synth_create_task(ysw_bus_h bus)
+void ysw_bt_synth_create_task(ysw_bus_t *bus)
 {
     context_t *context = (context_t*)ysw_heap_allocate(sizeof(context_t));
     initialize_synthesizer(context);
@@ -148,9 +148,9 @@ void ysw_bt_synth_create_task(ysw_bus_h bus)
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.opaque_context = context;
+    config.context = context;
 
-    ysw_task_h task = ysw_task_create(&config);
+    ysw_task_t *task = ysw_task_create(&config);
 
     ysw_task_subscribe(task, YSW_ORIGIN_EDITOR);
     ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);

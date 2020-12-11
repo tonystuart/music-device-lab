@@ -10,7 +10,6 @@
 #include "ysw_bus.h"
 #include "ysw_heap.h"
 #include "ysw_message.h"
-#include "ysw_pool.h"
 #include "ysw_task.h"
 #include "freertos/task.h"
 #include "assert.h"
@@ -49,14 +48,6 @@ typedef struct {
     };
 } ysw_bus_msg_t;
 
-typedef struct {
-    QueueHandle_t queue;
-    uint16_t origins_size;
-    uint16_t listeners_size;
-    uint16_t bus_message_size;
-    ysw_pool_h listeners[]; // flexible array member
-} context_t;
-
 static ysw_pool_action_t publish(void *message, uint32_t index, uint32_t count, void *item)
 {
     ysw_message_send(item, message);
@@ -72,92 +63,91 @@ static ysw_pool_action_t unsubscribe(void *queue, uint32_t index, uint32_t count
     return action;
 }
 
-static void process_subscribe(context_t *context, ysw_bus_subscribe_t *info)
+static void process_subscribe(ysw_bus_t *bus, ysw_bus_subscribe_t *info)
 {
-    if (!context->listeners[info->origin]) {
-        context->listeners[info->origin] = ysw_pool_create(context->listeners_size);
+    if (!bus->listeners[info->origin]) {
+        bus->listeners[info->origin] = ysw_pool_create(bus->listeners_size);
     }
-    ysw_pool_add(context->listeners[info->origin], info->queue);
+    ysw_pool_add(bus->listeners[info->origin], info->queue);
 }
 
-static void process_publish(context_t *context, ysw_bus_publish_t *info)
+static void process_publish(ysw_bus_t *bus, ysw_bus_publish_t *info)
 {
-    if (context->listeners[info->origin]) {
-        ysw_pool_visit_items(context->listeners[info->origin], publish, &info->message);
-    }
-}
-
-static void process_unsubscribe(context_t *context, ysw_bus_unsubscribe_t *info)
-{
-    if (context->listeners[info->origin]) {
-        ysw_pool_visit_items(context->listeners[info->origin], unsubscribe, &info->queue);
+    if (bus->listeners[info->origin]) {
+        ysw_pool_visit_items(bus->listeners[info->origin], publish, &info->message);
     }
 }
 
-static void process_free(context_t *context)
+static void process_unsubscribe(ysw_bus_t *bus, ysw_bus_unsubscribe_t *info)
 {
-    ysw_pool_free(context->listeners);
-    ysw_heap_free(context);
+    if (bus->listeners[info->origin]) {
+        ysw_pool_visit_items(bus->listeners[info->origin], unsubscribe, &info->queue);
+    }
+}
+
+static void process_free(ysw_bus_t *bus)
+{
+    ysw_pool_free(bus->listeners);
+    ysw_heap_free(bus);
     vTaskDelete(NULL);
 }
 
-static void process_message(context_t *context, ysw_bus_msg_t *message)
+static void process_message(ysw_bus_t *bus, ysw_bus_msg_t *message)
 {
     switch (message->type) {
         case YSW_BUS_SUBSCRIBE:
-            process_subscribe(context, &message->subscribe_info);
+            process_subscribe(bus, &message->subscribe_info);
             break;
         case YSW_BUS_PUBLISH:
-            process_publish(context, &message->publish_info);
+            process_publish(bus, &message->publish_info);
             break;
         case YSW_BUS_UNSUBSCRIBE:
-            process_unsubscribe(context, &message->unsubscribe_info);
+            process_unsubscribe(bus, &message->unsubscribe_info);
             break;
         case YSW_BUS_FREE:
-            process_free(context);
+            process_free(bus);
             break;
     }
 }
 
 static void task_handler(void *parameters)
 {
-    context_t *context = parameters;
-    ysw_bus_msg_t *message = alloca(context->bus_message_size);
+    ysw_bus_t *bus = parameters;
+    ysw_bus_msg_t *message = alloca(bus->bus_message_size);
     for (;;) {
-        BaseType_t is_message = xQueueReceive(context->queue, message, portMAX_DELAY);
+        BaseType_t is_message = xQueueReceive(bus->queue, message, portMAX_DELAY);
         if (is_message) {
-            process_message(context, message);
+            process_message(bus, message);
         }
     }
 }
 
-ysw_bus_h ysw_bus_create(uint16_t origins_size, uint16_t listeners_size, uint32_t queue_size, uint32_t message_size)
+ysw_bus_t *ysw_bus_create(uint16_t origins_size, uint16_t listeners_size, uint32_t queue_size, uint32_t message_size)
 {
-    uint32_t context_size = sizeof(context_t) + (origins_size * sizeof(ysw_pool_h));
-    context_t *context = ysw_heap_allocate(context_size);
+    uint32_t bus_size = sizeof(ysw_bus_t) + (origins_size * sizeof(ysw_pool_h));
+    ysw_bus_t *bus = ysw_heap_allocate(bus_size);
 
-    context->origins_size = origins_size;
-    context->listeners_size = listeners_size;
-    context->bus_message_size = sizeof(ysw_bus_msg_t) + message_size;
+    bus->origins_size = origins_size;
+    bus->listeners_size = listeners_size;
+    bus->bus_message_size = sizeof(ysw_bus_msg_t) + message_size;
 
     ysw_task_config_t config = ysw_task_default_config;
 
     config.name = TAG;
     config.function = task_handler;
-    config.opaque_context = context;
-    config.queue = &context->queue;
+    config.context = bus;
+    config.queue = &bus->queue;
     config.queue_size = queue_size;
-    config.item_size = context->bus_message_size;
+    config.item_size = bus->bus_message_size;
 
     ysw_task_create(&config);
 
-    return context;
+    return bus;
 }
 
-void ysw_bus_subscribe(ysw_bus_h bus, ysw_origin_t origin, QueueHandle_t queue)
+void ysw_bus_subscribe(ysw_bus_t *bus, ysw_origin_t origin, QueueHandle_t queue)
 {
-    context_t *context = bus;
-    assert(origin < context->origins_size);
+    assert(origin < bus->origins_size);
 
     ysw_bus_msg_t msg = {
         .type = YSW_BUS_SUBSCRIBE,
@@ -165,33 +155,30 @@ void ysw_bus_subscribe(ysw_bus_h bus, ysw_origin_t origin, QueueHandle_t queue)
         .subscribe_info.queue = queue,
     };
 
-    ysw_message_send(context->queue, &msg);
+    ysw_message_send(bus->queue, &msg);
 }
 
-void ysw_bus_publish(ysw_bus_h bus, ysw_origin_t origin, void *message, uint32_t length)
+void ysw_bus_publish(ysw_bus_t *bus, ysw_origin_t origin, void *message, uint32_t length)
 {
-    context_t *context = bus;
-
     uint32_t message_length = sizeof(ysw_bus_msg_t) + length;
 
-    assert(origin < context->origins_size);
-    assert(message_length <= context->bus_message_size);
+    assert(origin < bus->origins_size);
+    assert(message_length <= bus->bus_message_size);
 
-    ysw_bus_msg_t *msg = alloca(context->bus_message_size);
+    ysw_bus_msg_t *msg = alloca(bus->bus_message_size);
 
-    memset(msg, 0, context->bus_message_size);
+    memset(msg, 0, bus->bus_message_size);
     memcpy(msg->publish_info.message, message, length);
 
     msg->type = YSW_BUS_PUBLISH;
     msg->publish_info.origin = origin;
 
-    ysw_message_send(context->queue, msg);
+    ysw_message_send(bus->queue, msg);
 }
 
-void ysw_bus_unsubscribe(ysw_bus_h bus, ysw_origin_t origin, QueueHandle_t queue)
+void ysw_bus_unsubscribe(ysw_bus_t *bus, ysw_origin_t origin, QueueHandle_t queue)
 {
-    context_t *context = bus;
-    assert(origin < context->origins_size);
+    assert(origin < bus->origins_size);
 
     ysw_bus_msg_t msg = {
         .type = YSW_BUS_UNSUBSCRIBE,
@@ -199,16 +186,14 @@ void ysw_bus_unsubscribe(ysw_bus_h bus, ysw_origin_t origin, QueueHandle_t queue
         .unsubscribe_info.queue = queue,
     };
 
-    ysw_message_send(context->queue, &msg);
+    ysw_message_send(bus->queue, &msg);
 }
 
-void ysw_bus_free(ysw_bus_h bus)
+void ysw_bus_free(ysw_bus_t *bus)
 {
-    context_t *context = bus;
-
     ysw_bus_msg_t msg = {
         .type = YSW_BUS_FREE,
     };
 
-    ysw_message_send(context->queue, &msg);
+    ysw_message_send(bus->queue, &msg);
 }

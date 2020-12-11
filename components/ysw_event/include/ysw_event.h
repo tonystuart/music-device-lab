@@ -143,21 +143,21 @@ typedef struct {
     };
 } ysw_event_t;
 
-ysw_bus_h ysw_event_create_bus();
-void ysw_event_publish(ysw_bus_h bus, ysw_event_t *event);
+ysw_bus_t *ysw_event_create_bus();
+void ysw_event_publish(ysw_bus_t *bus, ysw_event_t *event);
 
-void ysw_event_fire_note_on(ysw_bus_h bus, ysw_origin_t origin, ysw_event_note_on_t *note_on);
-void ysw_event_fire_note_off(ysw_bus_h bus, ysw_origin_t origin, ysw_event_note_off_t *note_off);
-void ysw_event_fire_program_change(ysw_bus_h bus, ysw_origin_t origin, ysw_event_program_change_t *program);
-void ysw_event_fire_loop_done(ysw_bus_h bus);
-void ysw_event_fire_play_done(ysw_bus_h bus);
-void ysw_event_fire_idle(ysw_bus_h bus);
-void ysw_event_fire_note_status(ysw_bus_h bus, ysw_note_t *note);
-void ysw_event_fire_key_down(ysw_bus_h bus, ysw_event_key_down_t *key_down);
-void ysw_event_fire_key_pressed(ysw_bus_h bus, ysw_event_key_pressed_t *key_pressed);
-void ysw_event_fire_key_up(ysw_bus_h bus, ysw_event_key_up_t *key_up);
-void ysw_event_fire_loop(ysw_bus_h bus, bool loop);
-void ysw_event_fire_play(ysw_bus_h bus, ysw_array_t *notes, uint8_t bpm);
-void ysw_event_fire_stop(ysw_bus_h bus);
-void ysw_event_fire_sample_load(ysw_bus_h bus, ysw_event_sample_load_t *sample_load);
-void ysw_event_fire_pattern_edit(ysw_bus_h bus, zm_pattern_t *pattern);
+void ysw_event_fire_note_on(ysw_bus_t *bus, ysw_origin_t origin, ysw_event_note_on_t *note_on);
+void ysw_event_fire_note_off(ysw_bus_t *bus, ysw_origin_t origin, ysw_event_note_off_t *note_off);
+void ysw_event_fire_program_change(ysw_bus_t *bus, ysw_origin_t origin, ysw_event_program_change_t *program);
+void ysw_event_fire_loop_done(ysw_bus_t *bus);
+void ysw_event_fire_play_done(ysw_bus_t *bus);
+void ysw_event_fire_idle(ysw_bus_t *bus);
+void ysw_event_fire_note_status(ysw_bus_t *bus, ysw_note_t *note);
+void ysw_event_fire_key_down(ysw_bus_t *bus, ysw_event_key_down_t *key_down);
+void ysw_event_fire_key_pressed(ysw_bus_t *bus, ysw_event_key_pressed_t *key_pressed);
+void ysw_event_fire_key_up(ysw_bus_t *bus, ysw_event_key_up_t *key_up);
+void ysw_event_fire_loop(ysw_bus_t *bus, bool loop);
+void ysw_event_fire_play(ysw_bus_t *bus, ysw_array_t *notes, uint8_t bpm);
+void ysw_event_fire_stop(ysw_bus_t *bus);
+void ysw_event_fire_sample_load(ysw_bus_t *bus, ysw_event_sample_load_t *sample_load);
+void ysw_event_fire_pattern_edit(ysw_bus_t *bus, zm_pattern_t *pattern);

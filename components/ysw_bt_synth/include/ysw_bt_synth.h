@@ -11,4 +11,4 @@
 
 #include "ysw_bus.h"
 
-void ysw_bt_synth_create_task(ysw_bus_h bus);
+void ysw_bt_synth_create_task(ysw_bus_t *bus);

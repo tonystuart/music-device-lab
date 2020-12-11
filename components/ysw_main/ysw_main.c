@@ -33,7 +33,7 @@
 
 #include "ysw_bt_synth.h"
 
-void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
+void initialize_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
     ESP_LOGD(TAG, "initialize_synthesizer: configuring BlueTooth synth");
     ysw_bt_synth_create_task(bus);
@@ -43,7 +43,7 @@ void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
 
 #include "ysw_vs_synth.h"
 
-void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
+void initialize_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
     ESP_LOGD(TAG, "initialize_synthesizer: configuring VS1053 synth");
     ysw_vs1053_config_t config = {
@@ -63,7 +63,7 @@ void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
 
 #include "ysw_fluid_synth.h"
 
-void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
+void initialize_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
     ESP_LOGD(TAG, "initialize_synthesizer: configuring FluidSynth synth");
     ysw_fluid_synth_create_task(bus, YSW_MUSIC_SOUNDFONT);
@@ -78,12 +78,12 @@ typedef struct {
     hash_t *sample_map;
 } host_context_t;
 
-ysw_mod_sample_t *provide_sample(void *opaque_context, uint8_t program_index, uint8_t midi_note)
+ysw_mod_sample_t *provide_sample(void *context, uint8_t program_index, uint8_t midi_note)
 {
-    assert(opaque_context);
+    assert(context);
     assert(program_index <= YSW_MIDI_MAX);
 
-    host_context_t *host_context = opaque_context;
+    host_context_t *host_context = context;
     if (program_index >= ysw_array_get_count(host_context->music->programs)) {
         ESP_LOGW(TAG, "invalid program=%d, substituting program=0", program_index);
         program_index = 0;
@@ -114,7 +114,7 @@ ysw_mod_sample_t *provide_sample(void *opaque_context, uint8_t program_index, ui
     return mod_sample;
 }
 
-void initialize_synthesizer(ysw_bus_h bus, zm_music_t *music)
+void initialize_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
     ESP_LOGD(TAG, "initialize_synthesizer: configuring MOD synth");
 
@@ -267,7 +267,7 @@ static void initialize_touch_screen(void)
 
 #endif
 
-static void edit_pattern(ysw_bus_h bus, zm_music_t *music)
+static void edit_pattern(ysw_bus_t *bus, zm_music_t *music)
 {
     zm_pattern_t *pattern;
     if (ysw_array_get_count(music->patterns) > 0) {
@@ -294,7 +294,7 @@ int main(int argc, char *argv[])
 #endif
 
     zm_music_t *music = zm_load_music();
-    ysw_bus_h bus = ysw_event_create_bus();
+    ysw_bus_t *bus = ysw_event_create_bus();
 
     initialize_synthesizer(bus, music);
 

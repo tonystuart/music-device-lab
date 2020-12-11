@@ -126,11 +126,11 @@ typedef struct {
     const lv_font_t *font;
     const lv_area_t *clip_area;
     const zm_key_signature_t *key_signature;
-} draw_context_t;
+} ysw_staff_t;
 
 void ysw_draw_letter(const lv_point_t * pos_p, const lv_area_t * clip_area, const lv_font_t * font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode);
 
-static void draw_letter(draw_context_t *dc, uint32_t letter)
+static void draw_letter(ysw_staff_t *dc, uint32_t letter)
 {
     lv_font_glyph_dsc_t g;
     if (lv_font_get_glyph_dsc(dc->font, &g, letter, '\0')) {
@@ -144,7 +144,7 @@ static void draw_letter(draw_context_t *dc, uint32_t letter)
     }
 }
 
-static void draw_measure_label(draw_context_t *dc, uint32_t measure)
+static void draw_measure_label(ysw_staff_t *dc, uint32_t measure)
 {
     char buf[32];
     ysw_itoa(measure, buf, sizeof(buf));
@@ -171,7 +171,7 @@ static const uint8_t rest_time_base[] = {
     YSW_1_REST,
 };
 
-static void draw_rest(draw_context_t *dc, zm_duration_t duration)
+static void draw_rest(ysw_staff_t *dc, zm_duration_t duration)
 {
     uint8_t index = 0;
     zm_round_duration(duration, &index, NULL);
@@ -186,7 +186,7 @@ static const uint8_t note_time_base[] = {
     YSW_1_BASE,
 };
 
-static void draw_note(draw_context_t *dc, uint8_t step, zm_duration_t duration)
+static void draw_note(ysw_staff_t *dc, uint8_t step, zm_duration_t duration)
 {
     uint8_t index = 0;
     bool dotted = false;
@@ -200,7 +200,7 @@ static void draw_note(draw_context_t *dc, uint8_t step, zm_duration_t duration)
     }
 }
 
-static void draw_black(draw_context_t *dc, uint8_t note, zm_duration_t duration)
+static void draw_black(ysw_staff_t *dc, uint8_t note, zm_duration_t duration)
 {
     uint8_t accidental = 0;
     uint8_t step = sharp_map[note];
@@ -232,7 +232,7 @@ static void draw_black(draw_context_t *dc, uint8_t note, zm_duration_t duration)
     }
 }
 
-static void draw_white(draw_context_t *dc, uint8_t note, zm_duration_t duration)
+static void draw_white(ysw_staff_t *dc, uint8_t note, zm_duration_t duration)
 {
     uint8_t accidental = 0;
     uint8_t step = sharp_map[note];
@@ -258,7 +258,7 @@ static void draw_white(draw_context_t *dc, uint8_t note, zm_duration_t duration)
     }
 }
 
-static void draw_melody(draw_context_t *dc, zm_division_t *division)
+static void draw_melody(ysw_staff_t *dc, zm_division_t *division)
 {
     zm_duration_t duration = division->melody.duration;
     if (division->melody.note) {
@@ -273,7 +273,7 @@ static void draw_melody(draw_context_t *dc, zm_division_t *division)
     }
 }
 
-static void draw_chord(draw_context_t *dc, zm_chord_t *chord)
+static void draw_chord(ysw_staff_t *dc, zm_chord_t *chord)
 {
     lv_area_t coords = {
         .x1 = dc->point.x,
@@ -291,7 +291,7 @@ static void draw_chord(draw_context_t *dc, zm_chord_t *chord)
     lv_draw_label(&coords, dc->clip_area, &dsc, chord->quality->label, NULL);
 }
 
-static void draw_rhythm(draw_context_t *dc, zm_rhythm_t *rhythm)
+static void draw_rhythm(ysw_staff_t *dc, zm_rhythm_t *rhythm)
 {
     lv_area_t coords = {
         .x1 = dc->point.x,
@@ -316,7 +316,7 @@ static void draw_rhythm(draw_context_t *dc, zm_rhythm_t *rhythm)
     }
 }
 
-static void draw_signature(draw_context_t *dc, zm_time_signature_x time)
+static void draw_signature(ysw_staff_t *dc, zm_time_signature_x time)
 {
     draw_letter(dc, YSW_TIME_BASE + time);
 
@@ -333,7 +333,7 @@ static void draw_signature(draw_context_t *dc, zm_time_signature_x time)
     draw_letter(dc, YSW_LEFT_BAR);
 }
 
-static void draw_tie(draw_context_t *dc, zm_division_t *division)
+static void draw_tie(ysw_staff_t *dc, zm_division_t *division)
 {
     lv_coord_t x = dc->point.x;
     if (division->melody.note >= 72) {
@@ -344,7 +344,7 @@ static void draw_tie(draw_context_t *dc, zm_division_t *division)
     dc->point.x = x;
 }
 
-static void draw_division(draw_context_t *dc, zm_division_t *division)
+static void draw_division(ysw_staff_t *dc, zm_division_t *division)
 {
     if (dc->draw_type == YSW_STAFF_LEFT) {
         draw_letter(dc, YSW_STAFF_SPACE);
@@ -379,7 +379,7 @@ static void draw_division(draw_context_t *dc, zm_division_t *division)
     }
 }
 
-static void draw_staff(ysw_staff_ext_t *ext, draw_context_t *dc)
+static void draw_staff(ysw_staff_ext_t *ext, ysw_staff_t *dc)
 {
     uint32_t division_count = ysw_array_get_count(ext->pattern->divisions);
     uint32_t symbol_count = division_count * 2;
@@ -441,7 +441,7 @@ static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
 {
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
     if (ext->pattern) {
-        draw_context_t dc = {
+        ysw_staff_t dc = {
             .point.y = 70,
             .color = LV_COLOR_WHITE,
             .clip_area = clip_area,

@@ -10,15 +10,22 @@
 #pragma once
 
 #include "ysw_origin.h"
+#include "ysw_pool.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "stdint.h"
 
-typedef void *ysw_bus_h;
+typedef struct {
+    QueueHandle_t queue;
+    uint16_t origins_size;
+    uint16_t listeners_size;
+    uint16_t bus_message_size;
+    ysw_pool_h listeners[]; // flexible array member
+} ysw_bus_t;
 
-ysw_bus_h ysw_bus_create(uint16_t origins_size, uint16_t listeners_size, uint32_t queue_size, uint32_t message_size);
-void ysw_bus_subscribe(ysw_bus_h bus, ysw_origin_t origin, QueueHandle_t queue);
-void ysw_bus_publish(ysw_bus_h bus, ysw_origin_t origin, void *message, uint32_t length);
-void ysw_bus_unsubscribe(ysw_bus_h bus, ysw_origin_t origin, QueueHandle_t queue);
-void ysw_bus_free(ysw_bus_h bus);
+ysw_bus_t *ysw_bus_create(uint16_t origins_size, uint16_t listeners_size, uint32_t queue_size, uint32_t message_size);
+void ysw_bus_subscribe(ysw_bus_t *bus, ysw_origin_t origin, QueueHandle_t queue);
+void ysw_bus_publish(ysw_bus_t *bus, ysw_origin_t origin, void *message, uint32_t length);
+void ysw_bus_unsubscribe(ysw_bus_t *bus, ysw_origin_t origin, QueueHandle_t queue);
+void ysw_bus_free(ysw_bus_t *bus);
 

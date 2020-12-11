@@ -17,30 +17,21 @@
 
 #define TAG "YSW_TASK"
 
-typedef struct {
-    ysw_bus_h bus;
-    QueueHandle_t queue;
-    ysw_task_event_handler_t event_handler;
-    ysw_task_initializer initializer;
-    void *opaque_context;
-    uint32_t wait_millis;
-} context_t;
-
 static void ysw_task_event_handler(void *parameter)
 {
-    context_t *context = parameter;
-    if (context->initializer) {
-        context->initializer(context->opaque_context);
+    ysw_task_t *ysw_task = parameter;
+    if (ysw_task->initializer) {
+        ysw_task->initializer(ysw_task->context);
     }
     for (;;) {
         ysw_event_t item;
         ysw_event_t *event = NULL;
-        TickType_t wait_ticks = ysw_millis_to_rtos_ticks(context->wait_millis);
-        BaseType_t is_message = xQueueReceive(context->queue, &item, wait_ticks);
+        TickType_t wait_ticks = ysw_millis_to_rtos_ticks(ysw_task->wait_millis);
+        BaseType_t is_message = xQueueReceive(ysw_task->queue, &item, wait_ticks);
         if (is_message) {
             event = &item;
         } 
-        context->event_handler(context->opaque_context, event);
+        ysw_task->event_handler(ysw_task->context, event);
     }
 }
 
@@ -53,19 +44,19 @@ const ysw_task_config_t ysw_task_default_config = {
     .wait_millis = -1, // portDELAY_MAX,
 };
 
-ysw_task_h ysw_task_create(ysw_task_config_t *config)
+ysw_task_t *ysw_task_create(ysw_task_config_t *config)
 {
     assert(config->stack_size);
 
-    context_t *context = ysw_heap_allocate(sizeof(context_t));
+    ysw_task_t *ysw_task = ysw_heap_allocate(sizeof(ysw_task_t));
 
     if (config->task) {
-        *config->task = context;
+        *config->task = ysw_task;
     }
 
-    context->bus = config->bus;
-    context->wait_millis = config->wait_millis;
-    context->initializer = config->initializer;
+    ysw_task->bus = config->bus;
+    ysw_task->wait_millis = config->wait_millis;
+    ysw_task->initializer = config->initializer;
 
     TaskFunction_t function = NULL;
     void *parameter = NULL;
@@ -73,25 +64,25 @@ ysw_task_h ysw_task_create(ysw_task_config_t *config)
     if (config->event_handler) {
         assert(!config->function);
         function = ysw_task_event_handler;
-        parameter = context;
-        context->event_handler = config->event_handler;
-        context->opaque_context = config->opaque_context;
+        parameter = ysw_task;
+        ysw_task->event_handler = config->event_handler;
+        ysw_task->context = config->context;
     } else {
         assert(config->function);
         function = config->function;
-        parameter = config->opaque_context;
+        parameter = config->context;
     }
 
     if (config->queue || config->bus) {
         assert(config->queue_size);
         assert(config->item_size);
-        context->queue = xQueueCreate(config->queue_size, config->item_size);
-        if (!context->queue) {
+        ysw_task->queue = xQueueCreate(config->queue_size, config->item_size);
+        if (!ysw_task->queue) {
             ESP_LOGE(config->name, "ysw_task_create xQueueCreate failed");
             abort();
         }
         if (config->queue) {
-            *config->queue = context->queue;
+            *config->queue = ysw_task->queue;
         }
     }
 
@@ -108,26 +99,26 @@ ysw_task_h ysw_task_create(ysw_task_config_t *config)
         abort();
     }
 
-    return context;
+    return ysw_task;
 }
 
-void ysw_task_subscribe(ysw_task_h task, ysw_origin_t origin)
+void ysw_task_subscribe(ysw_task_t *task, ysw_origin_t origin)
 {
-    context_t *context = task;
+    ysw_task_t *ysw_task = task;
 
-    assert(context);
-    assert(context->bus);
-    assert(context->queue);
+    assert(ysw_task);
+    assert(ysw_task->bus);
+    assert(ysw_task->queue);
 
-    ysw_bus_subscribe(context->bus, origin, context->queue);
+    ysw_bus_subscribe(ysw_task->bus, origin, ysw_task->queue);
 }
 
-void ysw_task_set_wait_millis(ysw_task_h task, uint32_t wait_millis)
+void ysw_task_set_wait_millis(ysw_task_t *task, uint32_t wait_millis)
 {
-    context_t *context = task;
+    ysw_task_t *ysw_task = task;
 
-    assert(context);
+    assert(ysw_task);
 
-    context->wait_millis = wait_millis;
+    ysw_task->wait_millis = wait_millis;
 }
 

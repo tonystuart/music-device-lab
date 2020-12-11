@@ -13,17 +13,17 @@
 
 #define TAG "YSW_EVENT"
 
-ysw_bus_h ysw_event_create_bus()
+ysw_bus_t *ysw_event_create_bus()
 {
     return ysw_bus_create(YSW_ORIGIN_LAST, 4, 16, sizeof(ysw_event_t));
 }
 
-void ysw_event_publish(ysw_bus_h bus, ysw_event_t *event)
+void ysw_event_publish(ysw_bus_t *bus, ysw_event_t *event)
 {
     ysw_bus_publish(bus, event->header.origin, event, sizeof(ysw_event_t));
 }
 
-void ysw_event_fire_note_on(ysw_bus_h bus, ysw_origin_t origin, ysw_event_note_on_t *note_on)
+void ysw_event_fire_note_on(ysw_bus_t *bus, ysw_origin_t origin, ysw_event_note_on_t *note_on)
 {
     ysw_event_t event = {
         .header.origin = origin,
@@ -33,7 +33,7 @@ void ysw_event_fire_note_on(ysw_bus_h bus, ysw_origin_t origin, ysw_event_note_o
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_note_off(ysw_bus_h bus, ysw_origin_t origin, ysw_event_note_off_t *note_off)
+void ysw_event_fire_note_off(ysw_bus_t *bus, ysw_origin_t origin, ysw_event_note_off_t *note_off)
 {
     ysw_event_t event = {
         .header.origin = origin,
@@ -43,7 +43,7 @@ void ysw_event_fire_note_off(ysw_bus_h bus, ysw_origin_t origin, ysw_event_note_
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_program_change(ysw_bus_h bus, ysw_origin_t origin, ysw_event_program_change_t *program)
+void ysw_event_fire_program_change(ysw_bus_t *bus, ysw_origin_t origin, ysw_event_program_change_t *program)
 {
     ysw_event_t event = {
         .header.origin = origin,
@@ -53,7 +53,7 @@ void ysw_event_fire_program_change(ysw_bus_h bus, ysw_origin_t origin, ysw_event
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_loop_done(ysw_bus_h bus)
+void ysw_event_fire_loop_done(ysw_bus_t *bus)
 {
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_SEQUENCER,
@@ -62,7 +62,7 @@ void ysw_event_fire_loop_done(ysw_bus_h bus)
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_play_done(ysw_bus_h bus)
+void ysw_event_fire_play_done(ysw_bus_t *bus)
 {
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_SEQUENCER,
@@ -71,7 +71,7 @@ void ysw_event_fire_play_done(ysw_bus_h bus)
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_idle(ysw_bus_h bus)
+void ysw_event_fire_idle(ysw_bus_t *bus)
 {
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_SEQUENCER,
@@ -80,7 +80,7 @@ void ysw_event_fire_idle(ysw_bus_h bus)
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_note_status(ysw_bus_h bus, ysw_note_t *note)
+void ysw_event_fire_note_status(ysw_bus_t *bus, ysw_note_t *note)
 {
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_SEQUENCER,
@@ -90,7 +90,7 @@ void ysw_event_fire_note_status(ysw_bus_h bus, ysw_note_t *note)
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_key_down(ysw_bus_h bus, ysw_event_key_down_t *key_down)
+void ysw_event_fire_key_down(ysw_bus_t *bus, ysw_event_key_down_t *key_down)
 {
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_KEYBOARD,
@@ -100,7 +100,7 @@ void ysw_event_fire_key_down(ysw_bus_h bus, ysw_event_key_down_t *key_down)
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_key_pressed(ysw_bus_h bus, ysw_event_key_pressed_t *key_pressed)
+void ysw_event_fire_key_pressed(ysw_bus_t *bus, ysw_event_key_pressed_t *key_pressed)
 {
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_KEYBOARD,
@@ -110,7 +110,7 @@ void ysw_event_fire_key_pressed(ysw_bus_h bus, ysw_event_key_pressed_t *key_pres
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_key_up(ysw_bus_h bus, ysw_event_key_up_t *key_up)
+void ysw_event_fire_key_up(ysw_bus_t *bus, ysw_event_key_up_t *key_up)
 {
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_KEYBOARD,
@@ -120,7 +120,7 @@ void ysw_event_fire_key_up(ysw_bus_h bus, ysw_event_key_up_t *key_up)
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_loop(ysw_bus_h bus, bool loop)
+void ysw_event_fire_loop(ysw_bus_t *bus, bool loop)
 {
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_COMMAND,
@@ -130,7 +130,7 @@ void ysw_event_fire_loop(ysw_bus_h bus, bool loop)
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_play(ysw_bus_h bus, ysw_array_t *notes, uint8_t bpm)
+void ysw_event_fire_play(ysw_bus_t *bus, ysw_array_t *notes, uint8_t bpm)
 {
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_COMMAND,
@@ -142,7 +142,7 @@ void ysw_event_fire_play(ysw_bus_h bus, ysw_array_t *notes, uint8_t bpm)
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_stop(ysw_bus_h bus)
+void ysw_event_fire_stop(ysw_bus_t *bus)
 {
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_COMMAND,
@@ -151,7 +151,7 @@ void ysw_event_fire_stop(ysw_bus_h bus)
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_sample_load(ysw_bus_h bus, ysw_event_sample_load_t *sample_load)
+void ysw_event_fire_sample_load(ysw_bus_t *bus, ysw_event_sample_load_t *sample_load)
 {
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_SAMPLER,
@@ -161,7 +161,7 @@ void ysw_event_fire_sample_load(ysw_bus_h bus, ysw_event_sample_load_t *sample_l
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_pattern_edit(ysw_bus_h bus, zm_pattern_t *pattern)
+void ysw_event_fire_pattern_edit(ysw_bus_t *bus, zm_pattern_t *pattern)
 {
     ysw_event_t event = {
         .header.origin = YSW_ORIGIN_FILE,
