@@ -249,18 +249,14 @@ static void free_voice(ysw_mod_synth_t *ysw_mod_synth, uint8_t channel, uint8_t 
 
 static void start_note(ysw_mod_synth_t *ysw_mod_synth, uint8_t channel, uint8_t midi_note, uint8_t velocity)
 {
+    uint16_t period = period_map[midi_note];
+    uint8_t program_index = ysw_mod_synth->channel_programs[channel];
+    ysw_mod_sample_t *sample = ysw_mod_synth->mod_host->provide_sample(
+            ysw_mod_synth->mod_host->context, program_index, midi_note);
+
     enter_critical_section(ysw_mod_synth);
 
     uint8_t voice_index = allocate_voice(ysw_mod_synth, channel, midi_note);
-    uint8_t program_index = ysw_mod_synth->channel_programs[channel];
-
-    uint16_t period = period_map[midi_note];
-    ysw_mod_sample_t *sample = ysw_mod_synth->mod_host->provide_sample(
-            ysw_mod_synth->mod_host->host_context, program_index, midi_note);
-
-    ESP_LOGD(TAG, "channel=%d, program=%d, midi_note=%d, velocity=%d, period=%d, voices=%d",
-            channel, program_index, midi_note, velocity, period, ysw_mod_synth->voice_count);
-
     voice_t *voice = &ysw_mod_synth->voices[voice_index];
     voice->sample = sample;
     voice->length = sample->length;
@@ -273,6 +269,9 @@ static void start_note(ysw_mod_synth_t *ysw_mod_synth, uint8_t channel, uint8_t 
     voice->time = ysw_mod_synth->voice_time++;
 
     leave_critical_section(ysw_mod_synth);
+
+    ESP_LOGD(TAG, "channel=%d, program=%d, midi_note=%d, velocity=%d, period=%d, voices=%d",
+            channel, program_index, midi_note, velocity, period, ysw_mod_synth->voice_count);
 }
 
 static void stop_note(ysw_mod_synth_t *ysw_mod_synth, uint8_t channel, uint8_t midi_note)
