@@ -22,37 +22,37 @@ typedef struct {
     BLECharacteristic *pCharacteristic;
     bool deviceConnected = false;
     uint8_t midiPacket[5];
-} context_t;
+} ysw_bt_synth_t;
 
 class MyServerCallbacks: public BLEServerCallbacks {
-    context_t *context;
+    ysw_bt_synth_t *ysw_bt_synth;
 
     public:
-    MyServerCallbacks(context_t *context) {
-        this->context = context;
+    MyServerCallbacks(ysw_bt_synth_t *ysw_bt_synth) {
+        this->ysw_bt_synth = ysw_bt_synth;
     }
 
     void onConnect(BLEServer* pServer) {
-        context->deviceConnected = true;
+        ysw_bt_synth->deviceConnected = true;
     };
 
     void onDisconnect(BLEServer* pServer) {
-        context->deviceConnected = false;
+        ysw_bt_synth->deviceConnected = false;
     }
 };
 
-static void initialize_synthesizer(context_t *context) {
+static void initialize_synthesizer(ysw_bt_synth_t *ysw_bt_synth) {
     BLEDevice::init("ESP32 MIDI");
 
     // Create the BLE Server
     BLEServer *pServer = BLEDevice::createServer();
-    pServer->setCallbacks(new MyServerCallbacks(context));
+    pServer->setCallbacks(new MyServerCallbacks(ysw_bt_synth));
 
     // Create the BLE Service
     BLEService *pService = pServer->createService(BLEUUID(SERVICE_UUID));
 
     // Create a BLE Characteristic
-    context->pCharacteristic = pService->createCharacteristic(
+    ysw_bt_synth->pCharacteristic = pService->createCharacteristic(
             BLEUUID(CHARACTERISTIC_UUID),
             BLECharacteristic::PROPERTY_READ   |
             BLECharacteristic::PROPERTY_WRITE  |
@@ -62,7 +62,7 @@ static void initialize_synthesizer(context_t *context) {
 
     // https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.descriptor.gatt.client_characteristic_configuration.xml
     // Create a BLE Descriptor
-    context->pCharacteristic->addDescriptor(new BLE2902());
+    ysw_bt_synth->pCharacteristic->addDescriptor(new BLE2902());
 
     // Start the service
     pService->start();
@@ -73,65 +73,65 @@ static void initialize_synthesizer(context_t *context) {
     pAdvertising->start();
 }
 
-static inline void on_note_on(context_t *context, ysw_event_note_on_t *m)
+static inline void on_note_on(ysw_bt_synth_t *ysw_bt_synth, ysw_event_note_on_t *m)
 {
-    if (context->deviceConnected) {
+    if (ysw_bt_synth->deviceConnected) {
         ESP_LOGD(TAG, "on_note_on channel=%d, note=%d, velocity=%d", m->channel, m->midi_note, m->velocity);
-        context->midiPacket[0] = 0x80; // header;
-        context->midiPacket[1] = 0x80; // timestamp (not implemented);
-        context->midiPacket[2] = 0x90 | m->channel;
-        context->midiPacket[3] = m->midi_note;
-        context->midiPacket[4] = m->velocity;
-        context->pCharacteristic->setValue(context->midiPacket, sizeof(context->midiPacket));
-        context->pCharacteristic->notify();
+        ysw_bt_synth->midiPacket[0] = 0x80; // header;
+        ysw_bt_synth->midiPacket[1] = 0x80; // timestamp (not implemented);
+        ysw_bt_synth->midiPacket[2] = 0x90 | m->channel;
+        ysw_bt_synth->midiPacket[3] = m->midi_note;
+        ysw_bt_synth->midiPacket[4] = m->velocity;
+        ysw_bt_synth->pCharacteristic->setValue(ysw_bt_synth->midiPacket, sizeof(ysw_bt_synth->midiPacket));
+        ysw_bt_synth->pCharacteristic->notify();
     } else {
         ESP_LOGE(TAG, "on_note_on not connected");
     }
 }
 
-static inline void on_note_off(context_t *context, ysw_event_note_off_t *m)
+static inline void on_note_off(ysw_bt_synth_t *ysw_bt_synth, ysw_event_note_off_t *m)
 {
-    if (context->deviceConnected) {
+    if (ysw_bt_synth->deviceConnected) {
         ESP_LOGD(TAG, "on_note_off channel=%d, note=%d", m->channel, m->midi_note);
-        context->midiPacket[0] = 0x80; // header;
-        context->midiPacket[1] = 0x80; // timestamp (not implemented);
-        context->midiPacket[2] = 0x80 | m->channel;
-        context->midiPacket[3] = m->midi_note;
-        context->midiPacket[4] = 0;
-        context->pCharacteristic->setValue(context->midiPacket, sizeof(context->midiPacket));
-        context->pCharacteristic->notify();
+        ysw_bt_synth->midiPacket[0] = 0x80; // header;
+        ysw_bt_synth->midiPacket[1] = 0x80; // timestamp (not implemented);
+        ysw_bt_synth->midiPacket[2] = 0x80 | m->channel;
+        ysw_bt_synth->midiPacket[3] = m->midi_note;
+        ysw_bt_synth->midiPacket[4] = 0;
+        ysw_bt_synth->pCharacteristic->setValue(ysw_bt_synth->midiPacket, sizeof(ysw_bt_synth->midiPacket));
+        ysw_bt_synth->pCharacteristic->notify();
     } else {
         ESP_LOGE(TAG, "on_note_off not connected");
     }
 }
 
-static inline void on_program_change(context_t *context, ysw_event_program_change_t *m)
+static inline void on_program_change(ysw_bt_synth_t *ysw_bt_synth, ysw_event_program_change_t *m)
 {
-    if (context->deviceConnected) {
+    if (ysw_bt_synth->deviceConnected) {
         ESP_LOGD(TAG, "on_program_change channel=%d, program=%d", m->channel, m->program);
-        context->midiPacket[0] = 0x80; // header;
-        context->midiPacket[1] = 0x80; // timestamp (not implemented);
-        context->midiPacket[2] = 0xC0 | m->channel;
-        context->midiPacket[3] = m->program;
-        context->midiPacket[4] = 0;
-        context->pCharacteristic->setValue(context->midiPacket, sizeof(context->midiPacket));
-        context->pCharacteristic->notify();
+        ysw_bt_synth->midiPacket[0] = 0x80; // header;
+        ysw_bt_synth->midiPacket[1] = 0x80; // timestamp (not implemented);
+        ysw_bt_synth->midiPacket[2] = 0xC0 | m->channel;
+        ysw_bt_synth->midiPacket[3] = m->program;
+        ysw_bt_synth->midiPacket[4] = 0;
+        ysw_bt_synth->pCharacteristic->setValue(ysw_bt_synth->midiPacket, sizeof(ysw_bt_synth->midiPacket));
+        ysw_bt_synth->pCharacteristic->notify();
     } else {
         ESP_LOGE(TAG, "on_program_change not connected");
     }
 }
 
 static void process_event(void *context, ysw_event_t *event) {
-    context_t *context = (context_t*)context;
+    ysw_bt_synth_t *ysw_bt_synth = (ysw_bt_synth_t*)context;
     switch (event->header.type) {
         case YSW_EVENT_NOTE_ON:
-            on_note_on(context, &event->note_on);
+            on_note_on(ysw_bt_synth, &event->note_on);
             break;
         case YSW_EVENT_NOTE_OFF:
-            on_note_off(context, &event->note_off);
+            on_note_off(ysw_bt_synth, &event->note_off);
             break;
         case YSW_EVENT_PROGRAM_CHANGE:
-            on_program_change(context, &event->program_change);
+            on_program_change(ysw_bt_synth, &event->program_change);
             break;
         default:
             break;
@@ -140,15 +140,15 @@ static void process_event(void *context, ysw_event_t *event) {
 
 void ysw_bt_synth_create_task(ysw_bus_t *bus)
 {
-    context_t *context = (context_t*)ysw_heap_allocate(sizeof(context_t));
-    initialize_synthesizer(context);
+    ysw_bt_synth_t *ysw_bt_synth = (ysw_bt_synth_t*)ysw_heap_allocate(sizeof(ysw_bt_synth_t));
+    initialize_synthesizer(ysw_bt_synth);
 
     ysw_task_config_t config = ysw_task_default_config;
 
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.context = context;
+    config.context = ysw_bt_synth;
 
     ysw_task_t *task = ysw_task_create(&config);
 

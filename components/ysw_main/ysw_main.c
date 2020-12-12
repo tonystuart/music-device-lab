@@ -22,7 +22,7 @@
 
 #define TAG "YSW_MAIN"
 
-#if YSW_MAIN_SYNTH_MODEL == 1
+#if YSW_MAIN_SYNTH_MODEL == 1 // bluetooth
 
 #include "ysw_bt_synth.h"
 
@@ -32,7 +32,7 @@ void initialize_synthesizer(ysw_bus_t *bus, zm_music_t *music)
     ysw_bt_synth_create_task(bus);
 }
 
-#elif YSW_MAIN_SYNTH_MODEL == 2
+#elif YSW_MAIN_SYNTH_MODEL == 2 // vs1053b
 
 #include "ysw_vs_synth.h"
 
@@ -52,7 +52,7 @@ void initialize_synthesizer(ysw_bus_t *bus, zm_music_t *music)
     ysw_vs_synth_create_task(bus, &config);
 }
 
-#elif YSW_MAIN_SYNTH_MODEL == 3
+#elif YSW_MAIN_SYNTH_MODEL == 3 // fluid synth
 
 #include "ysw_fluid_synth.h"
 
@@ -62,19 +62,68 @@ void initialize_synthesizer(ysw_bus_t *bus, zm_music_t *music)
     ysw_fluid_synth_create_task(bus, YSW_MUSIC_SOUNDFONT);
 }
 
-#elif YSW_MAIN_SYNTH_MODEL == 4
+#elif YSW_MAIN_SYNTH_MODEL == 4 // mod synth
 
 #include "ysw_mod_synth.h"
 
+// TODO: pass ysw_mod_synth to ALSA and I2S task event handlers
+
+ysw_mod_synth_t *ysw_mod_synth;
+
+#ifdef IDF_VER
+static ysw_mod_sample_type_t sample_type = YSW_MOD_16BIT_UNSIGNED;
+#else
+static ysw_mod_sample_type_t sample_type = YSW_MOD_16BIT_SIGNED;
+#endif
+
+static int32_t generate_audio(uint8_t *buffer, int32_t bytes_requested)
+{
+    int32_t bytes_generated = 0;
+    if (buffer && bytes_requested) {
+        ysw_mod_generate_samples(ysw_mod_synth, (int16_t*)buffer, bytes_requested / 4, sample_type);
+        bytes_generated = bytes_requested;
+    }
+    return bytes_generated;
+}
+
+#ifdef IDF_VER
+
+#include "ysw_i2s.h"
+
 void initialize_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
-    ESP_LOGD(TAG, "initialize_synthesizer: configuring MOD synth");
+    ESP_LOGD(TAG, "initialize_synthesizer: configuring MOD synth with I2S");
 
     ysw_mod_host_t *mod_host = ysw_mod_music_create_host(music);
-    ysw_mod_synth_create_task(bus, mod_host);
+    ysw_mod_synth = ysw_mod_synth_create_task(bus, mod_host);
+    // ysw_a2dp_source_initialize(generate_audio); // for bluetooth speaker
+    ysw_i2s_create_task(generate_audio); // for i2s builtin dac mode
 }
 
 #else
+
+#include "ysw_alsa.h"
+#include "pthread.h"
+
+static void* alsa_thread(void *p)
+{
+    ysw_alsa_initialize(generate_audio);
+    return NULL;
+}
+
+void initialize_synthesizer(ysw_bus_t *bus, zm_music_t *music)
+{
+    ESP_LOGD(TAG, "initialize_synthesizer: configuring MOD synth with ALSA");
+
+    ysw_mod_host_t *mod_host = ysw_mod_music_create_host(music);
+    ysw_mod_synth = ysw_mod_synth_create_task(bus, mod_host);
+    pthread_t p;
+    pthread_create(&p, NULL, &alsa_thread, NULL);
+}
+
+#endif
+
+#else // no synthesizer defined
 
 #error Define YSW_MAIN_SYNTH_MODEL
 

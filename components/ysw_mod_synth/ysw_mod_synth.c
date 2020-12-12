@@ -13,50 +13,13 @@
 #include "ysw_common.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
-#include "ysw_midi.h"
 #include "ysw_task.h"
 #include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
 #include "assert.h"
 #include "limits.h"
 #include "stdlib.h"
 
 #define TAG "YSW_MOD_SYNTH"
-
-#define MAX_VOICES 32
-
-typedef struct {
-    ysw_mod_sample_t *sample;
-    uint32_t  samppos;
-    uint32_t  sampinc;
-    uint32_t  time;
-    uint16_t   length;
-    uint16_t   reppnt;
-    uint16_t   replen;
-    uint16_t   period;
-    uint8_t  volume;
-    uint8_t  channel;
-    uint8_t  midi_note;
-} voice_t;
-
-typedef struct {
-    uint8_t active_notes[YSW_MIDI_MAX_CHANNELS][YSW_MIDI_MAX_COUNT];
-    uint8_t channel_programs[YSW_MIDI_MAX_CHANNELS];
-    uint32_t  playrate;
-    uint32_t  sampleticksconst;
-    uint32_t  voice_time;
-    voice_t voices[MAX_VOICES];
-    uint16_t   voice_count;
-    uint16_t   mod_loaded;
-    int16_t    last_left_sample;
-    int16_t    last_right_sample;;
-    int16_t    stereo;
-    int16_t    stereo_separation;
-    int16_t    filter;
-    SemaphoreHandle_t mutex;
-    ysw_mod_host_t *mod_host;
-} ysw_mod_synth_t;
 
 static const short period_map[] = {
     /*  0 */ 13696, 12928, 12192, 11520, 10848, 10240,  9664,  9120,  8606,  8128,  7680,  7248,
@@ -73,10 +36,6 @@ static const short period_map[] = {
 };
 
 #define PERIOD_MAP_SIZE (sizeof(period_map) / sizeof(period_map[0]))
-
-// TODO: Consider using thread local storage instead of static variable
-
-static ysw_mod_synth_t *data_cb_context;
 
 static void enter_critical_section(ysw_mod_synth_t *ysw_mod_synth)
 {
@@ -101,18 +60,26 @@ static void initialize_synthesizer(ysw_mod_synth_t *ysw_mod_synth)
     ysw_mod_synth->mutex = xSemaphoreCreateMutex();
 }
 
-static void fill_buffer(ysw_mod_synth_t *ysw_mod_synth, int16_t *outbuffer, uint32_t nbsample)
+/**
+ * Generate two-channel 16-bit signed audio samples. There are four bytes per sample (LLRR).
+ * @param caller_context pointer to context returned by ysw_mod_synth_create_task
+ * @param buffer to be filled with signed 16 bit audio samples for left and right channels
+ * @param number of four byte samples to generate (i.e. sizeof(outbuffer) / 4)
+ */
+
+void ysw_mod_generate_samples(ysw_mod_synth_t *ysw_mod_synth,
+        int16_t *buffer, uint32_t number, ysw_mod_sample_type_t sample_type)
 {
     assert(ysw_mod_synth);
-    assert(outbuffer);
+    assert(buffer);
 
     enter_critical_section(ysw_mod_synth);
 
     if (!ysw_mod_synth->mod_loaded) {
-        for (uint32_t i = 0; i < nbsample; i++)
+        for (uint32_t i = 0; i < number; i++)
         {
-            *outbuffer++ = 0;
-            *outbuffer++ = 0;
+            *buffer++ = 0;
+            *buffer++ = 0;
         }
         return;
     }
@@ -120,7 +87,7 @@ static void fill_buffer(ysw_mod_synth_t *ysw_mod_synth, int16_t *outbuffer, uint
     int last_left = ysw_mod_synth->last_left_sample;
     int last_right = ysw_mod_synth->last_right_sample;;
 
-    for (uint32_t i = 0; i < nbsample; i++) {
+    for (uint32_t i = 0; i < number; i++) {
 
         int left = 0;
         int right = 0;
@@ -138,12 +105,12 @@ static void fill_buffer(ysw_mod_synth_t *ysw_mod_synth, int16_t *outbuffer, uint
                         voice->samppos = 0;
                     }
                 } else {
-                    if ((voice->samppos >> 11) >= (unsigned long)(voice->replen + voice->reppnt)) {
-                        voice->samppos = ((unsigned long)(voice->reppnt)<<11) + (voice->samppos % ((unsigned long)(voice->replen + voice->reppnt)<<11));
+                    if ((voice->samppos >> 11) >= (uint32_t)(voice->replen + voice->reppnt)) {
+                        voice->samppos = ((uint32_t)(voice->reppnt)<<11) + (voice->samppos % ((uint32_t)(voice->replen + voice->reppnt)<<11));
                     }
                 }
 
-                unsigned long k = voice->samppos >> 10;
+                uint32_t k = voice->samppos >> 10;
 
 #if 0
                 if (voice->samppos) {
@@ -182,19 +149,23 @@ static void fill_buffer(ysw_mod_synth_t *ysw_mod_synth, int16_t *outbuffer, uint
 
         if (left > 32767) {
             left = 32767;
-        }
-        if (left < -32768) {
+        } else if (left < -32768) {
             left = -32768;
         }
+
         if (right > 32767) {
             right = 32767;
-        }
-        if (right < -32768) {
+        } else if (right < -32768) {
             right = -32768;
         }
 
-        *outbuffer++ = left;
-        *outbuffer++ = right;
+        if (sample_type == YSW_MOD_16BIT_UNSIGNED) {
+            left += 32768;
+            right += 32768;
+        }
+
+        *buffer++ = left;
+        *buffer++ = right;
 
         last_left = temp_left;
         last_right = temp_right;
@@ -326,52 +297,12 @@ static void process_event(void *context, ysw_event_t *event)
     }
 }
 
-// NB: len is in bytes (typically 512 when called from a2dp_source)
-static int32_t data_cb(uint8_t *data, int32_t len)
-{
-    if (len < 0 || data == NULL) {
-        return 0;
-    }
-    fill_buffer(data_cb_context, (int16_t*)data, len / 4);
-    return len;
-}
-
-#ifdef IDF_VER
-
-#include "ysw_a2dp_source.h"
-
-static void initialize_audio_source(ysw_mod_synth_t *ysw_mod_synth)
-{
-    ysw_a2dp_source_initialize(data_cb);
-}
-
-#else
-
-#include "ysw_alsa.h"
-#include "pthread.h"
-
-static void* alsa_thread(void *p)
-{
-    ysw_alsa_initialize(data_cb);
-    return NULL;
-}
-
-static void initialize_audio_source(ysw_mod_synth_t *ysw_mod_synth)
-{
-    pthread_t p;
-    pthread_create(&p, NULL, &alsa_thread, NULL);
-}
-
-#endif
-
-void ysw_mod_synth_create_task(ysw_bus_t *bus, ysw_mod_host_t *mod_host)
+ysw_mod_synth_t *ysw_mod_synth_create_task(ysw_bus_t *bus, ysw_mod_host_t *mod_host)
 {
     ysw_mod_synth_t *ysw_mod_synth = ysw_heap_allocate(sizeof(ysw_mod_synth_t));
-    data_cb_context = ysw_mod_synth;
     ysw_mod_synth->mod_host = mod_host;
 
     initialize_synthesizer(ysw_mod_synth);
-    initialize_audio_source(ysw_mod_synth);
 
     ysw_task_config_t config = ysw_task_default_config;
 
@@ -386,4 +317,6 @@ void ysw_mod_synth_create_task(ysw_bus_t *bus, ysw_mod_host_t *mod_host)
     ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);
     ysw_task_subscribe(task, YSW_ORIGIN_SAMPLER);
     ysw_task_subscribe(task, YSW_ORIGIN_SINK);
+
+    return ysw_mod_synth;
 }
