@@ -14,6 +14,7 @@
 #include "ysw_heap.h"
 
 #include "esp_log.h"
+#include "hash.h"
 
 #include "assert.h"
 #include "errno.h"
@@ -31,6 +32,7 @@
 #define PATH_SIZE 128
 #define RECORD_SIZE 128
 #define TOKENS_SIZE 20
+#define NAME_SIZE 32
 
 // For drum beat and stroke, see https://en.wikipedia.org/wiki/Drum_beat
 
@@ -69,6 +71,52 @@ typedef struct {
     zm_large_t record_count;
     zm_yesno_t reuse_tokens;
 } zm_mfr_t;
+
+typedef struct {
+    FILE *file;
+    zm_music_t *music;
+    hash_t *sample_map;
+    hash_t *program_map;
+    hash_t *quality_map;
+    hash_t *style_map;
+    hash_t *beat_map;
+    hash_t *pattern_map;
+    hash_t *composition_map;
+} zm_mfw_t;
+
+static hash_t *create_map(hashcount_t max_items)
+{
+    hash_t *hash = hash_create(max_items, NULL, NULL);
+    if (!hash) {
+        ESP_LOGE(TAG, "hash_create failed");
+        abort();
+    }
+    return hash;
+}
+
+static void put_map(hash_t *map, void *key, uint32_t value)
+{
+    if (!hash_alloc_insert(map, key, YSW_INT_PTR value)) {
+        ESP_LOGE(TAG, "hash_alloc_insert failed");
+        abort();
+    }
+}
+
+static uint32_t get_map(hash_t *map, void *key)
+{
+    hnode_t *node = hash_lookup(map, key);
+    if (!node) {
+        ESP_LOGE(TAG, "hash_lookup failed");
+        abort();
+    }
+    return YSW_PTR_INT hnode_get(node);
+}
+
+static void free_map(hash_t *map)
+{
+    hash_free_nodes(map);
+    hash_destroy(map);
+}
 
 static int get_tokens(zm_mfr_t *zm_mfr)
 {
@@ -116,6 +164,25 @@ static void parse_sample(zm_mfr_t *zm_mfr)
     ysw_array_push(zm_mfr->music->samples, sample);
 }
 
+static void emit_samples(zm_mfw_t *zm_mfw)
+{
+    uint32_t sample_count = ysw_array_get_count(zm_mfw->music->samples);
+    for (uint32_t i = 0; i < sample_count; i++) {
+        char name[NAME_SIZE];
+        zm_sample_t *sample = ysw_array_get(zm_mfw->music->samples, i);
+        put_map(zm_mfw->sample_map, sample, i);
+        ysw_csv_escape(sample->name, name, sizeof(name));
+        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d\n",
+                ZM_MF_SAMPLE,
+                i,
+                name,
+                sample->reppnt,
+                sample->replen,
+                sample->volume,
+                sample->pan);
+    }
+}
+
 static void parse_program(zm_mfr_t *zm_mfr)
 {
     zm_program_x index = atoi(zm_mfr->tokens[1]);
@@ -153,6 +220,42 @@ static void parse_program(zm_mfr_t *zm_mfr)
     ysw_array_push(zm_mfr->music->programs, program);
 }
 
+static void emit_programs(zm_mfw_t *zm_mfw)
+{
+    uint32_t program_count = ysw_array_get_count(zm_mfw->music->programs);
+    for (uint32_t i = 0; i < program_count; i++) {
+        char name[NAME_SIZE];
+        zm_program_t *program = ysw_array_get(zm_mfw->music->programs, i);
+        put_map(zm_mfw->program_map, program, i);
+        ysw_csv_escape(program->name, name, sizeof(name));
+        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d\n",
+                ZM_MF_PROGRAM,
+                i,
+                name,
+                program->type,
+                program->gm);
+
+        uint32_t patch_count = ysw_array_get_count(program->patches);
+        for (uint32_t j = 0; j < patch_count; j++) {
+            zm_patch_t *patch = ysw_array_get(program->patches, j);
+            zm_patch_x patch_index = get_map(zm_mfw->sample_map, patch->sample);
+            if (patch->name) {
+                ysw_csv_escape(patch->name, name, sizeof(name));
+                fprintf(zm_mfw->file, "%d,%d,%d,%s\n",
+                        ZM_MF_PATCH,
+                        patch->up_to,
+                        patch_index,
+                        name);
+            } else {
+                fprintf(zm_mfw->file, "%d,%d,%d\n",
+                        ZM_MF_PATCH,
+                        patch->up_to,
+                        patch_index);
+            }
+        }
+    }
+}
+
 #define MAX_DISTANCES 16
 
 static void parse_quality(zm_mfr_t *zm_mfr)
@@ -179,6 +282,30 @@ static void parse_quality(zm_mfr_t *zm_mfr)
     }
 
     ysw_array_push(zm_mfr->music->qualities, quality);
+}
+
+static void emit_qualities(zm_mfw_t *zm_mfw)
+{
+    uint32_t quality_count = ysw_array_get_count(zm_mfw->music->qualities);
+    for (uint32_t i = 0; i < quality_count; i++) {
+        char name[NAME_SIZE];
+        char label[NAME_SIZE];
+        zm_quality_t *quality = ysw_array_get(zm_mfw->music->qualities, i);
+        put_map(zm_mfw->quality_map, quality, i);
+        ysw_csv_escape(quality->name, name, sizeof(name));
+        ysw_csv_escape(quality->label, label, sizeof(label));
+        fprintf(zm_mfw->file, "%d,%d,%s,%s",
+                ZM_MF_QUALITY,
+                i,
+                name,
+                label);
+        zm_distance_x distance_count = ysw_array_get_count(quality->distances);
+        for (uint32_t j = 0; j < distance_count; j++) {
+            zm_distance_t distance = YSW_PTR_INT ysw_array_get(quality->distances, j);
+            fprintf(zm_mfw->file, ",%d", distance);
+        }
+        fprintf(zm_mfw->file, "\n");
+    }
 }
 
 static void parse_style(zm_mfr_t *zm_mfr)
@@ -225,6 +352,32 @@ static void parse_style(zm_mfr_t *zm_mfr)
     ysw_array_push(zm_mfr->music->styles, style);
 }
 
+static void emit_styles(zm_mfw_t *zm_mfw)
+{
+    uint32_t style_count = ysw_array_get_count(zm_mfw->music->styles);
+    for (uint32_t i = 0; i < style_count; i++) {
+        char name[NAME_SIZE];
+        zm_style_t *style = ysw_array_get(zm_mfw->music->styles, i);
+        put_map(zm_mfw->style_map, style, i);
+        ysw_csv_escape(style->name, name, sizeof(name));
+        fprintf(zm_mfw->file, "%d,%d,%s\n",
+                ZM_MF_STYLE,
+                i,
+                name);
+
+        uint32_t sound_count = ysw_array_get_count(style->sounds);
+        for (uint32_t j = 0; j < sound_count; j++) {
+            zm_sound_t *sound = ysw_array_get(style->sounds, j);
+            fprintf(zm_mfw->file, "%d,%d,%d,%d,%d\n",
+                    ZM_MF_SOUND,
+                    sound->distance_index,
+                    sound->velocity,
+                    sound->start,
+                    sound->duration);
+        }
+    }
+}
+
 static void parse_beat(zm_mfr_t *zm_mfr)
 {
     zm_beat_x index = atoi(zm_mfr->tokens[1]);
@@ -257,6 +410,34 @@ static void parse_beat(zm_mfr_t *zm_mfr)
     }
 
     ysw_array_push(zm_mfr->music->beats, beat);
+}
+
+static void emit_beats(zm_mfw_t *zm_mfw)
+{
+    uint32_t beat_count = ysw_array_get_count(zm_mfw->music->beats);
+    for (uint32_t i = 0; i < beat_count; i++) {
+        char name[NAME_SIZE];
+        char label[NAME_SIZE];
+        zm_beat_t *beat = ysw_array_get(zm_mfw->music->beats, i);
+        put_map(zm_mfw->beat_map, beat, i);
+        ysw_csv_escape(beat->name, name, sizeof(name));
+        ysw_csv_escape(beat->label, label, sizeof(label));
+        fprintf(zm_mfw->file, "%d,%d,%s,%s\n",
+                ZM_MF_BEAT,
+                i,
+                name,
+                label);
+
+        uint32_t stroke_count = ysw_array_get_count(beat->strokes);
+        for (uint32_t j = 0; j < stroke_count; j++) {
+            zm_stroke_t *stroke = ysw_array_get(beat->strokes, j);
+            fprintf(zm_mfw->file, "%d,%d,%d,%d\n",
+                    ZM_MF_STROKE,
+                    stroke->start,
+                    stroke->surface,
+                    stroke->velocity);
+        }
+    }
 }
 
 static void parse_pattern(zm_mfr_t *zm_mfr)
@@ -299,8 +480,9 @@ static void parse_pattern(zm_mfr_t *zm_mfr)
             division->chord.quality = ysw_array_get(zm_mfr->music->qualities, atoi(zm_mfr->tokens[2]));
             division->chord.style = ysw_array_get(zm_mfr->music->styles, atoi(zm_mfr->tokens[3]));
             division->chord.duration = atoi(zm_mfr->tokens[4]);
-        } else if (division && type == ZM_MF_RHYTHM && zm_mfr->token_count == 2) {
+        } else if (division && type == ZM_MF_RHYTHM && zm_mfr->token_count == 3) {
             division->rhythm.beat = ysw_array_get(zm_mfr->music->beats, atoi(zm_mfr->tokens[1]));
+            division->rhythm.surface = atoi(zm_mfr->tokens[2]);
         } else {
             push_back_tokens(zm_mfr);
             done = true;
@@ -308,6 +490,58 @@ static void parse_pattern(zm_mfr_t *zm_mfr)
     }
 
     ysw_array_push(zm_mfr->music->patterns, pattern);
+}
+
+static void emit_patterns(zm_mfw_t *zm_mfw)
+{
+    uint32_t pattern_count = ysw_array_get_count(zm_mfw->music->patterns);
+    for (uint32_t i = 0; i < pattern_count; i++) {
+        char name[NAME_SIZE];
+        zm_pattern_t *pattern = ysw_array_get(zm_mfw->music->patterns, i);
+        put_map(zm_mfw->pattern_map, pattern, i);
+        ysw_csv_escape(pattern->name, name, sizeof(name));
+        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d\n",
+                ZM_MF_PATTERN,
+                i,
+                name,
+                pattern->tempo,
+                pattern->key,
+                pattern->time,
+                get_map(zm_mfw->program_map, pattern->melody_program),
+                get_map(zm_mfw->program_map, pattern->chord_program),
+                get_map(zm_mfw->program_map, pattern->rhythm_program));
+
+        uint32_t division_count = ysw_array_get_count(pattern->divisions);
+        for (uint32_t j = 0; j < division_count; j++) {
+            zm_division_t *division = ysw_array_get(pattern->divisions, j);
+            fprintf(zm_mfw->file, "%d,%d,%d,%d\n",
+                    ZM_MF_DIVISION,
+                    division->start,
+                    division->measure,
+                    division->flags);
+            if (division->melody.duration) {
+                fprintf(zm_mfw->file, "%d,%d,%d,%d\n",
+                        ZM_MF_MELODY,
+                        division->melody.note,
+                        division->melody.duration,
+                        division->melody.tie);
+            }
+            if (division->chord.root) {
+                fprintf(zm_mfw->file, "%d,%d,%d,%d,%d\n",
+                        ZM_MF_CHORD,
+                        division->chord.root,
+                        get_map(zm_mfw->quality_map, division->chord.quality),
+                        get_map(zm_mfw->style_map, division->chord.style),
+                        division->chord.duration);
+            }
+            if (division->rhythm.beat) {
+                fprintf(zm_mfw->file, "%d,%d,%d\n",
+                        ZM_MF_RHYTHM,
+                        get_map(zm_mfw->beat_map, division->rhythm.beat),
+                        division->rhythm.surface);
+            }
+        }
+    }
 }
 
 static void parse_composition(zm_mfr_t *zm_mfr)
@@ -344,6 +578,34 @@ static void parse_composition(zm_mfr_t *zm_mfr)
     }
 
     ysw_array_push(zm_mfr->music->compositions, composition);
+}
+
+static void emit_compositions(zm_mfw_t *zm_mfw)
+{
+    uint32_t composition_count = ysw_array_get_count(zm_mfw->music->compositions);
+    for (uint32_t i = 0; i < composition_count; i++) {
+        char name[NAME_SIZE];
+        zm_composition_t *composition = ysw_array_get(zm_mfw->music->compositions, i);
+        put_map(zm_mfw->composition_map, composition, i);
+        ysw_csv_escape(composition->name, name, sizeof(name));
+        fprintf(zm_mfw->file, "%d,%d,%s,%d\n",
+                ZM_MF_COMPOSITION,
+                i,
+                name,
+                composition->bpm);
+
+        uint32_t part_count = ysw_array_get_count(composition->parts);
+        for (uint32_t j = 0; j < part_count; j++) {
+            zm_part_t *part = ysw_array_get(composition->parts, j);
+            fprintf(zm_mfw->file, "%d,%d,%d,%d,%d,%d\n",
+                    ZM_MF_PART,
+                    get_map(zm_mfw->pattern_map, part->pattern),
+                    part->percent_volume,
+                    part->when.type,
+                    part->when.part_index,
+                    part->fit);
+        }
+    }
 }
 
 static zm_music_t *create_music()
@@ -429,10 +691,10 @@ void zm_music_free(zm_music_t *music)
 
 zm_music_t *zm_parse_file(FILE *file)
 {
-    zm_mfr_t *zm_mfr = &(zm_mfr_t){};
-
-    zm_mfr->file = file;
-    zm_mfr->music = create_music();
+    zm_mfr_t *zm_mfr = &(zm_mfr_t) {
+        .file = file,
+        .music = create_music(),
+    };
 
     while (get_tokens(zm_mfr)) {
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
@@ -462,6 +724,40 @@ zm_music_t *zm_parse_file(FILE *file)
     return zm_mfr->music;
 }
 
+void zm_emit_file(FILE *file, zm_music_t *music)
+{
+    extern void hash_ensure_assert_off();
+    hash_ensure_assert_off();
+
+    zm_mfw_t *zm_mfw = &(zm_mfw_t){
+        .file = file,
+        .music = music,
+        .sample_map = create_map(100),
+        .program_map = create_map(100),
+        .quality_map = create_map(100),
+        .style_map = create_map(100),
+        .beat_map = create_map(100),
+        .pattern_map = create_map(100),
+        .composition_map = create_map(100),
+    };
+
+    emit_samples(zm_mfw);
+    emit_programs(zm_mfw);
+    emit_qualities(zm_mfw);
+    emit_styles(zm_mfw);
+    emit_beats(zm_mfw);
+    emit_patterns(zm_mfw);
+    emit_compositions(zm_mfw);
+
+    free_map(zm_mfw->sample_map);
+    free_map(zm_mfw->program_map);
+    free_map(zm_mfw->quality_map);
+    free_map(zm_mfw->style_map);
+    free_map(zm_mfw->beat_map);
+    free_map(zm_mfw->pattern_map);
+    free_map(zm_mfw->composition_map);
+}
+
 zm_music_t *zm_load_music(void)
 {
     zm_music_t *music = NULL;
@@ -483,6 +779,31 @@ zm_music_t *zm_load_music(void)
     music = zm_parse_file(file);
     fclose(file);
     return music;
+}
+
+void zm_save_music(zm_music_t *music)
+{
+    FILE *file = fopen(ZM_MF_TEMP, "w");
+    if (!file) {
+        ESP_LOGE(TAG, "fopen file=%s failed, errno=%d", ZM_MF_TEMP, errno);
+        abort();
+    }
+
+    zm_emit_file(file, music);
+    fclose(file);
+
+    // spiffs doesn't provide atomic rename, zm_mfr_read handles recovery of partial rename
+    int rc = unlink(ZM_MF_CSV);
+    if (rc == -1) {
+        ESP_LOGE(TAG, "unlink file=%s failed, errno=%d", ZM_MF_CSV, errno);
+        abort();
+    }
+
+    rc = rename(ZM_MF_TEMP, ZM_MF_CSV);
+    if (rc == -1) {
+        ESP_LOGE(TAG, "rename old=%s, new=%s failed, errno=%d", ZM_MF_TEMP, ZM_MF_CSV, errno);
+        abort();
+    }
 }
 
 void *zm_load_sample(const char* name, uint16_t *word_count)

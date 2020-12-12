@@ -891,8 +891,16 @@ static void on_note_status(ysw_editor_t *ysw_editor, ysw_event_t *event)
 static void on_new(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *ysw_editor = menu->context;
+    // TODO: see if current pattern is modified, and if so, prompt to save or cancel
     zm_pattern_t *pattern = zm_music_create_pattern(ysw_editor->music);
     ysw_event_fire_pattern_edit(ysw_editor->bus, pattern);
+}
+
+static void on_save(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    ysw_editor_t *ysw_editor = menu->context;
+    // TODO: see if current pattern has been added to music->patterns, and if not, add it
+    zm_save_music(ysw_editor->music);
 }
 
 static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -1102,7 +1110,7 @@ static const ysw_menu_item_t rhythm_menu[] = {
 
 static const ysw_menu_item_t file_menu[] = {
     { 5, "New", YSW_MF_COMMAND, on_new, 0 },
-    { 6, "Save", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 6, "Save", YSW_MF_COMMAND, on_save, 0 },
     { 7, "Save As", YSW_MF_COMMAND, ysw_menu_nop, 0 },
 
     { 16, "Open", YSW_MF_COMMAND, ysw_menu_nop, 0 },
