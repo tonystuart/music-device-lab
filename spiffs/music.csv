@@ -19,6 +19,10 @@
 # C     D     E  F     G     A     B
 # 60 61 62 63 64 65 66 67 68 69 70 71
 
+# Key of D-Major:
+# D     E     F# G     A     B     C#
+# 62 63 64 65 66 67 68 69 70 71 72 73
+
 #type(1=sample),index,name,reppnt,replen,volume,pan
 #type(2=program),index,name,type,gm
 #type(3=patch),up_to,sample[,name]
@@ -263,8 +267,8 @@
 8,896,64,16 # hi-hat
 
 #type(9=pattern),index,name,tempo,key,time,melody,chord,rhythm
-#type(10=division),start,measure,flags # measure 1
-#type(11=melody),note,duration
+#type(10=division),start,measure,flags
+#type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat
 
@@ -457,257 +461,102 @@
 10,11136,11,1
 11,62,128,0 # D
 
-# Key of C-Major:
-# C     D     E  F     G     A     B
-# 60 61 62 63 64 65 66 67 68 69 70 71
-
-################################
-################################
-
-#type(model),index,name,sample
-45,0,Twelve Bar Blues,0
-
-#type(step),root,quality,style,duration
-46,60,9,0,1024
-46,60,9,0,1024
-46,60,9,0,1024
-46,60,9,0,1024
-46,65,9,0,1024
-46,65,9,0,1024
-46,60,9,0,1024
-46,60,9,0,1024
-46,67,9,0,1024
-46,65,9,0,1024
-46,60,9,0,1024
-46,60,9,0,1024
-
-################################
-################################
-
-# Key of D-Major:
-# D     E     F# G     A     B     C#
-# 62 63 64 65 66 67 68 69 70 71 72 73
-
-#type(model),index,name,sample
-45,1,Summer Nights Chords,0
-
-#type(step),root,quality,style,duration
-46,62,2,2,512 # D line 1
-46,67,2,2,512 # G
-
-46,69,2,2,512 # A
-46,67,2,2,512 # G
-
-46,62,2,2,512 # D
-46,67,2,2,512 # G
-
-46,69,2,2,512 # A
-46,67,2,2,512 # G
-
-46,62,2,2,512 # D line 2 < next
-46,67,2,2,512 # G
-
-46,69,2,2,512 # A
-46,71,2,2,512 # B
-
-46,64,2,2,512 # E
-46,69,2,2,512 # A
-
-46,64,2,2,512 # E
-46,69,2,2,512 # A
-
-46,62,2,2,512 # D line 3
-46,67,2,2,512 # G
-
-46,69,2,2,512 # A
-46,71,2,2,512 # B
-
-46,64,5,3,512 # Em7
-46,69,2,2,512 # A
-
-# Key of D-Major:
-# D     E     F# G     A     B     C#
-# 62 63 64 65 66 67 68 69 70 71 72 73
-
-#type(model),index,name,sample
-45,2,Summer Nights Melody,1
-
-#type(step),root,quality,style,duration
-# Line 1 - Measure 1
-46,00,0,4,256 # Rest
-46,66,0,4,128 # F#
-46,62,0,4,128 # D
-46,67,0,4,128 # G
-46,64,0,4,128 # E
-46,00,0,4,256 # Rest
-# Line 1 - Measure 2
-46,69,0,4,128 # A
-46,66,0,4,128 # F#
-46,69,0,4,128 # A
-46,69,0,4,256 # A
-46,67,0,4,384 # G
-# Line 1 - Measure 3
-46,00,0,4,256 # Rest
-46,66,0,4,128 # F#
-46,62,0,4,128 # D
-46,67,0,4,128 # G
-46,64,0,4,128 # E
-46,00,0,4,256 # Rest
-# Line 1 - Measure 4
-46,69,0,4,128 # A
-46,66,0,4,128 # F#
-46,69,0,4,128 # A
-46,69,0,4,256 # A
-46,67,0,4,384 # G
-# Line 2 - Measure 1
-46,00,0,4,256 # Rest
-46,66,0,4,128 # F#
-46,62,0,4,128 # D
-46,67,0,4,256 # G
-46,00,0,4,256 # Rest
-# Line 2 - Measure 2
-46,69,0,4,128 # A
-46,66,0,4,128 # F#
-46,69,0,4,128 # A
-46,71,0,4,384 # B
-46,00,0,4,256 # Rest
-# Line 2 - Measure 3
-46,00,0,4,256 # Rest
-46,68,0,4,128 # G#
-46,64,0,4,128 # E
-46,69,0,4,256 # A
-46,00,0,4,256 # Rest
-# Line 2 - Measure 4
-46,68,0,4,128 # G#
-46,64,0,4,128 # E
-46,68,0,4,128 # G#
-46,69,0,4,384 # A
-46,00,0,4,256 # Rest
-# Line 3 - Measure 1
-46,00,0,4,256 # Rest
-46,74,0,4,128 # D
-46,69,0,4,128 # A
-46,71,0,4,256 # B
-46,00,0,4,256 # Rest
-# Line 3 - Measure 2
-46,69,0,4,128 # A
-46,71,0,4,128 # B
-46,69,0,4,128 # A
-46,66,0,4,384 # F#
-46,71,0,4,128 # B
-46,69,0,4,128 # A
-# Line 3 - Measure 3
-46,67,0,4,128 # G
-46,00,0,4,128 # Rest
-46,64,0,4,128 # E
-46,71,0,4,128 # B
-46,69,0,4,128 # A
-46,71,0,4,128 # B
-46,69,0,4,128 # A
-46,62,0,4,128 # D
-
-#type(model),index,name,sample
-45,3,Summer Nights Bass Guitar,10
+#type(9=pattern),index,name,tempo,key,time,melody,chord,rhythm
+#type(10=division),start,measure,flags
+#type(11=melody),note,duration,tie
+#type(12=chord),root,quality,style,duration
+#type(13=rhythm),beat
+9,1,Summer Nights Walking Scale,3,2,3,1,3,7
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
 # 62 63 64 65 66 67 68 69 70 71 72 73
 
 #type(step),root,quality,style,duration
-46,62,0,4,128
-46,64,0,4,128
-46,66,0,4,128
-46,67,0,4,128
-46,69,0,4,128
-46,71,0,4,128
-46,73,0,4,128
-46,74,0,4,128
+10,0,1,0
+11,62,128,0
+10,128,1,0
+11,64,128,0
+10,256,1,0
+11,66,128,0
+10,384,1,0
+11,67,128,0
+10,512,1,0
+11,69,128,0
+10,640,1,0
+11,71,128,0
+10,768,1,0
+11,73,128,0
+10,896,1,1
+11,74,128,0
 
-#type(model),index,name,sample
-45,4,Standard 8th Note Groove Bass Drum,6
-46,60,0,4,256
-46,00,0,4,256
-46,60,0,4,256
-46,00,0,4,256
-
-#type(model),index,name,sample
-45,5,Standard 8th Note Groove Cymbal,7
-46,60,0,4,256
-46,00,0,4,256
-46,60,0,4,256
-46,00,0,4,256
-
-#type(model),index,name,sample
-45,6,Standard 8th Note Groove Snare,8
-46,00,0,4,256
-46,60,0,4,256
-46,00,0,4,256
-46,60,0,4,256
-
-#type(model),index,name,sample
-45,7,Standard 8th Note Groove Hi Hat,9
-46,60,0,4,128
-46,60,0,4,128
-46,60,0,4,128
-46,60,0,4,128
-46,60,0,4,128
-46,60,0,4,128
-46,60,0,4,128
-46,60,0,4,128
+#type(9=pattern),index,name,tempo,key,time,melody,chord,rhythm
+#type(10=division),start,measure,flags
+#type(11=melody),note,duration,tie
+#type(12=chord),root,quality,style,duration
+#type(13=rhythm),beat
+9,2,Summer Nights Intro,3,2,3,1,3,7
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
 # 62 63 64 65 66 67 68 69 70 71 72 73
 
-#type(model),index,name,sample
-45,8,Summer Nights Intro,0
-
-#type(step),root,quality,style,duration
 # Line 0 - Measure 1
-46,50,0,4,256 # D
-46,00,0,4,128 # Rest
-46,50,0,4,128 # D
-46,55,0,4,256 # G
-46,00,0,4,128 # Rest
-46,55,0,4,128 # G
+10,0,1,0
+11,50,256,0 # D
+10,256,1,0
+11,00,128,0 # Rest
+10,384,1,0
+11,50,128,0 # D
+10,512,1,0
+11,55,256,0 # G
+10,768,1,0
+11,00,128,0 # Rest
+10,896,1,1
+11,55,128,0 # G
 # Line 0 - Measure 2
-46,57,0,4,256 # A
-46,00,0,4,128 # Rest
-46,57,0,4,128 # A
-46,55,0,4,128 # G
-46,57,0,4,256 # A
-46,55,0,4,128 # G
+10,1024,2,0
+11,57,256,0 # A
+10,1280,2,0
+11,00,128,0 # Rest
+10,1408,2,0
+11,57,128,0 # A
+10,1536,2,0
+11,55,128,0 # G
+10,1663,2,0
+11,57,256,0 # A
+10,1920,2,1
+11,55,128,0 # G
 # Line 0 - Measure 3
-46,50,0,4,256 # D
-46,00,0,4,128 # Rest
-46,50,0,4,128 # D
-46,55,0,4,256 # G
-46,00,0,4,128 # Rest
-46,55,0,4,128 # G
+10,2048,3,0
+11,50,256,0 # D
+10,2304,3,0
+11,00,128,0 # Rest
+10,2432,3,0
+11,50,128,0 # D
+10,2560,3,0
+11,55,256,0 # G
+10,2816,3,0
+11,00,128,0 # Rest
+10,2944,3,1
+11,55,128,0 # G
 # Line 0 - Measure 4
-46,57,0,4,256 # A
-46,00,0,4,128 # Rest
-46,57,0,4,128 # A
-46,55,0,4,128 # G
-46,57,0,4,256 # A
-46,55,0,4,128 # G
+10,3072,4,0
+11,57,256,0 # A
+10,3328,4,0
+11,00,128,0 # Rest
+10,3456,4,0
+11,57,128,0 # A
+10,3584,4,0
+11,55,128,0 # G
+10,3712,4,0
+11,57,256,0 # A
+10,3968,4,1
+11,55,128,0 # G
 
-#type(song),index,name,bpm
-47,0,Summer Nights,160
-
-#type(role),model,when-type,when-role-index,fit
-48,8,0,0,0 # Intro 0
-# Page 1
-48,1,1,0,0 # Chords 1
-48,2,0,1,0 # Melody 2
-48,3,0,1,1 # Bass Guitar 3
-48,4,0,1,1 # Bass Drum 4
-48,6,0,1,1 # Snare 5
-48,7,0,1,1 # Hi Hat Closed 6
-# Page 2
-48,1,1,1,0 # Chords 7
-48,2,0,7,0 # Melody 8
-48,3,0,7,1 # Bass Guitar 9
-48,4,0,7,1 # Bass Drum 10
-48,6,0,7,1 # Snare 11
-48,7,0,7,1 # Hi Hat Closed 12
+#type(14=composition),index,name,bpm
+#type(15=part),pattern,when-type,when-role-index,fit
+14,0,Summer Nights,160
+15,2,0,0,0 # Intro
+15,0,1,0,0 # Verse 1
+15,1,0,1,1 # Walking Scale

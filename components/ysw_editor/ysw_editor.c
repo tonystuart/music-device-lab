@@ -144,8 +144,6 @@ static void recalculate(ysw_editor_t *ysw_editor)
     zm_time_x ticks_per_measure = zm_get_ticks_per_measure(ysw_editor->pattern->time);
     zm_division_x division_count = ysw_array_get_count(ysw_editor->pattern->divisions);
 
-    // TODO: Should ties be processed here instead of in zm_render_pattern? I don't think so.
-
     for (zm_division_x i = 0; i < division_count; i++) {
         division = ysw_array_get(ysw_editor->pattern->divisions, i);
         division->start = start;
@@ -752,9 +750,9 @@ static void on_play(ysw_menu_t *menu, ysw_event_t *event, void *value)
 static void on_demo(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *ysw_editor = menu->context;
-    zm_song_t *song = ysw_array_get(ysw_editor->music->songs, 0);
-    ysw_array_t *notes = zm_render_song(song);
-    ysw_event_fire_play(ysw_editor->bus, notes, song->bpm);
+    zm_composition_t *composition = ysw_array_get(ysw_editor->music->compositions, 0);
+    ysw_array_t *notes = zm_render_composition(ysw_editor->music, composition, BACKGROUND_BASE);
+    ysw_event_fire_play(ysw_editor->bus, notes, composition->bpm);
 }
 
 static void on_stop(ysw_menu_t *menu, ysw_event_t *event, void *value)
