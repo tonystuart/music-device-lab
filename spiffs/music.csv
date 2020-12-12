@@ -466,7 +466,7 @@
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat
-9,1,Summer Nights Walking Scale,3,2,3,1,3,7
+9,1,Summer Nights Walking Scale,3,2,3,0,3,7
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
@@ -555,8 +555,8 @@
 11,55,128,0 # G
 
 #type(14=composition),index,name,bpm
-#type(15=part),pattern,when-type,when-role-index,fit
+#type(15=part),pattern,pct-volume,when-type,when-role-index,fit
 14,0,Summer Nights,160
-15,2,0,0,0 # Intro
-15,0,1,0,0 # Verse 1
-15,1,0,1,1 # Walking Scale
+15,2,100,0,0,0 # Intro
+15,0,100,1,0,0 # Verse 1
+15,1,10,0,1,1 # Walking Scale

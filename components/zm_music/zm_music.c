@@ -329,12 +329,13 @@ static void parse_composition(zm_mfr_t *zm_mfr)
 
     while (!done && get_tokens(zm_mfr)) {
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_PART && zm_mfr->token_count == 5) {
+        if (type == ZM_MF_PART && zm_mfr->token_count == 6) {
             zm_part_t *part = ysw_heap_allocate(sizeof(zm_part_t));
             part->pattern = ysw_array_get(zm_mfr->music->patterns, atoi(zm_mfr->tokens[1]));
-            part->when.type = atoi(zm_mfr->tokens[2]);
-            part->when.part_index = atoi(zm_mfr->tokens[3]);
-            part->fit = atoi(zm_mfr->tokens[4]);
+            part->percent_volume = atoi(zm_mfr->tokens[2]);
+            part->when.type = atoi(zm_mfr->tokens[3]);
+            part->when.part_index = atoi(zm_mfr->tokens[4]);
+            part->fit = atoi(zm_mfr->tokens[5]);
             ysw_array_push(composition->parts, part);
         } else {
             push_back_tokens(zm_mfr);
@@ -702,6 +703,15 @@ ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_chan
     return notes;
 }
 
+static void adjust_volume(ysw_array_t *notes, zm_note_x first_note, zm_percent_x percent_volume)
+{
+    zm_note_x note_count = ysw_array_get_count(notes);
+    for (zm_note_x i = first_note; i < note_count; i++) {
+        ysw_note_t *note = ysw_array_get(notes, i);
+        note->velocity = (percent_volume * note->velocity) / 100;
+    }
+}
+
 ysw_array_t *zm_render_composition(zm_music_t *music, zm_composition_t *composition,
         zm_channel_x base_channel)
 {
@@ -710,6 +720,7 @@ ysw_array_t *zm_render_composition(zm_music_t *music, zm_composition_t *composit
     ysw_array_t *part_times = ysw_array_create(8);
     zm_medium_t part_count = ysw_array_get_count(composition->parts);
     for (zm_medium_t i = 0; i < part_count; i++) {
+        zm_note_x first_note = ysw_array_get_count(notes);
         zm_time_x begin_time = 0;
         zm_time_x end_time = 0;
         zm_part_t *part = ysw_array_get(composition->parts, i);
@@ -733,6 +744,9 @@ ysw_array_t *zm_render_composition(zm_music_t *music, zm_composition_t *composit
             zm_part_time_t *part_time = ysw_array_get(part_times, part->when.part_index);
             begin_time = part_time->end_time;
             end_time = zm_render_pattern_notes(notes, music, part->pattern, begin_time, channel);
+        }
+        if (part->percent_volume != 100) {
+            adjust_volume(notes, first_note, part->percent_volume);
         }
         zm_part_time_t *part_time = ysw_heap_allocate(sizeof(zm_part_time_t));
         part_time->begin_time = begin_time;

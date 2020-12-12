@@ -36,12 +36,14 @@ typedef uint8_t zm_distance_x;
 typedef uint8_t zm_gm_x;
 typedef uint8_t zm_note_t;
 typedef uint8_t zm_patch_x;
+typedef uint8_t zm_percent_x;
 typedef uint8_t zm_program_x;
 typedef uint8_t zm_stroke_x;
 typedef uint8_t zm_tie_x;
 typedef uint8_t zm_velocity_x;
 
 typedef uint16_t zm_measure_x;
+typedef uint16_t zm_note_x;
 typedef uint16_t zm_pattern_x;
 typedef uint16_t zm_quality_x;
 typedef uint16_t zm_sample_x;
@@ -252,6 +254,7 @@ typedef struct {
 
 typedef struct {
     zm_pattern_t *pattern;
+    zm_percent_x percent_volume;
     zm_when_t when;
     zm_fit_t fit;
 } zm_part_t;
