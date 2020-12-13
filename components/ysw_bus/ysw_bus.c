@@ -87,7 +87,9 @@ static void process_unsubscribe(ysw_bus_t *bus, ysw_bus_unsubscribe_t *info)
 
 static void process_free(ysw_bus_t *bus)
 {
-    ysw_pool_free(bus->listeners);
+    for (uint32_t i = 0; i < bus->listeners_size; i++) {
+        ysw_pool_free(bus->listeners[i]);
+    }
     ysw_heap_free(bus);
     vTaskDelete(NULL);
 }
@@ -124,7 +126,7 @@ static void task_handler(void *parameters)
 
 ysw_bus_t *ysw_bus_create(uint16_t origins_size, uint16_t listeners_size, uint32_t queue_size, uint32_t message_size)
 {
-    uint32_t bus_size = sizeof(ysw_bus_t) + (origins_size * sizeof(ysw_pool_h));
+    uint32_t bus_size = sizeof(ysw_bus_t) + (origins_size * sizeof(ysw_pool_t *));
     ysw_bus_t *bus = ysw_heap_allocate(bus_size);
 
     bus->origins_size = origins_size;

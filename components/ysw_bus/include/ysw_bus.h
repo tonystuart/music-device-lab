@@ -20,7 +20,7 @@ typedef struct {
     uint16_t origins_size;
     uint16_t listeners_size;
     uint16_t bus_message_size;
-    ysw_pool_h listeners[]; // flexible array member
+    ysw_pool_t *listeners[]; // flexible array member
 } ysw_bus_t;
 
 ysw_bus_t *ysw_bus_create(uint16_t origins_size, uint16_t listeners_size, uint32_t queue_size, uint32_t message_size);

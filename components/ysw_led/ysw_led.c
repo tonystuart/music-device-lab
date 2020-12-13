@@ -66,26 +66,26 @@ static void control_led(uint8_t channel, uint8_t midi_note, bool on)
     ws2812_update_display();
 }
 
-static void on_note_on(ysw_led_t *ysw_led, ysw_event_note_on_t *event)
+static void on_note_on(ysw_led_t *led, ysw_event_note_on_t *event)
 {
     control_led(event->channel, event->midi_note, true);
 }
 
-static void on_note_off(ysw_led_t *ysw_led, ysw_event_note_off_t *event)
+static void on_note_off(ysw_led_t *led, ysw_event_note_off_t *event)
 {
     control_led(event->channel, event->midi_note, false);
 }
 
 static void process_event(void *context, ysw_event_t *event)
 {
-    ysw_led_t *ysw_led = context;
+    ysw_led_t *led = context;
     if (event) {
         switch (event->header.type) {
             case YSW_EVENT_NOTE_ON:
-                on_note_on(ysw_led, &event->note_on);
+                on_note_on(led, &event->note_on);
                 break;
             case YSW_EVENT_NOTE_OFF:
-                on_note_off(ysw_led, &event->note_off);
+                on_note_off(led, &event->note_off);
                 break;
             default:
                 break;
@@ -95,7 +95,7 @@ static void process_event(void *context, ysw_event_t *event)
 
 void ysw_led_create_task(ysw_bus_t *bus, ysw_led_config_t *led_config)
 {
-    ysw_led_t *ysw_led = ysw_heap_allocate(sizeof(ysw_led_t));
+    ysw_led_t *led = ysw_heap_allocate(sizeof(ysw_led_t));
     ws2812_initialize(led_config->gpio, LED_COUNT, MAX_POWER);
 
     ysw_task_config_t config = ysw_task_default_config;
@@ -103,7 +103,7 @@ void ysw_led_create_task(ysw_bus_t *bus, ysw_led_config_t *led_config)
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.context = ysw_led;
+    config.context = led;
 
     ysw_task_t *task = ysw_task_create(&config);
     ysw_task_subscribe(task, YSW_ORIGIN_EDITOR);

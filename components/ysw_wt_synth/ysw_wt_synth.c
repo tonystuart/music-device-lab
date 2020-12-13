@@ -224,32 +224,32 @@ void press_midi_key(uint8_t channel, uint8_t midi_key, uint8_t velocity)
     }
 }
 
-static inline void on_note_on(ysw_wt_synth_t *ysw_wt_synth, ysw_event_note_on_t *m)
+static inline void on_note_on(ysw_wt_synth_t *wt_synth, ysw_event_note_on_t *m)
 {
     press_midi_key(m->channel, m->midi_note, m->velocity);
 }
 
-static inline void on_note_off(ysw_wt_synth_t *ysw_wt_synth, ysw_event_note_off_t *m)
+static inline void on_note_off(ysw_wt_synth_t *wt_synth, ysw_event_note_off_t *m)
 {
     release_midi_key(m->channel, m->midi_note);
 }
 
-static inline void on_program_change(ysw_wt_synth_t *ysw_wt_synth, ysw_event_program_change_t *m)
+static inline void on_program_change(ysw_wt_synth_t *wt_synth, ysw_event_program_change_t *m)
 {
 }
 
 static void process_event(void *context, ysw_event_t *event)
 {
-    ysw_wt_synth_t *ysw_wt_synth = context;
+    ysw_wt_synth_t *wt_synth = context;
     switch (event->header.type) {
         case YSW_EVENT_NOTE_ON:
-            on_note_on(ysw_wt_synth, &event->note_on);
+            on_note_on(wt_synth, &event->note_on);
             break;
         case YSW_EVENT_NOTE_OFF:
-            on_note_off(ysw_wt_synth, &event->note_off);
+            on_note_off(wt_synth, &event->note_off);
             break;
         case YSW_EVENT_PROGRAM_CHANGE:
-            on_program_change(ysw_wt_synth, &event->program_change);
+            on_program_change(wt_synth, &event->program_change);
             break;
         default:
             break;
@@ -259,14 +259,14 @@ static void process_event(void *context, ysw_event_t *event)
 void ysw_wt_synth_create_task(ysw_bus_t *bus, uint8_t dac_left_gpio, uint8_t dac_right_gpio)
 {
     create_synth_task(dac_left_gpio, dac_right_gpio);
-    ysw_wt_synth_t *ysw_wt_synth = ysw_heap_allocate(sizeof(ysw_wt_synth_t));
+    ysw_wt_synth_t *wt_synth = ysw_heap_allocate(sizeof(ysw_wt_synth_t));
 
     ysw_task_config_t config = ysw_task_default_config;
 
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.context = ysw_wt_synth;
+    config.context = wt_synth;
 
     ysw_task_t *task = ysw_task_create(&config);
 

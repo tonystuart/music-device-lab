@@ -119,22 +119,22 @@ static void on_key_released(ysw_bus_t *bus, uint8_t key, state_t *state)
     state->down_time = 0;
 }
 
-static void scan_keyboard(ysw_keyboard_t *ysw_keyboard)
+static void scan_keyboard(ysw_keyboard_t *keyboard)
 {
-    uint32_t row_count = ysw_array_get_count(ysw_keyboard->rows);
-    uint32_t column_count = ysw_array_get_count(ysw_keyboard->columns);
+    uint32_t row_count = ysw_array_get_count(keyboard->rows);
+    uint32_t column_count = ysw_array_get_count(keyboard->columns);
     //ESP_LOGD(TAG, "scan_keyboard row_count=%d, column_count=%d", row_count, column_count);
     for (uint32_t column_index = 0; column_index < column_count; column_index++) {
-        uint8_t column_gpio = (uintptr_t)ysw_array_get(ysw_keyboard->columns, column_index);
+        uint8_t column_gpio = (uintptr_t)ysw_array_get(keyboard->columns, column_index);
         $(gpio_set_level(column_gpio, LOW));
         for (int row_index = 0; row_index < row_count; row_index++) {
             uint8_t key = (row_index * column_count) + column_index;
-            uint8_t row_gpio = (uintptr_t)ysw_array_get(ysw_keyboard->rows, row_index);
+            uint8_t row_gpio = (uintptr_t)ysw_array_get(keyboard->rows, row_index);
             int key_pressed = gpio_get_level(row_gpio) == LOW;
             if (key_pressed) {
-                on_key_pressed(ysw_keyboard->bus, key, &ysw_keyboard->state[key]);
-            } else if (ysw_keyboard->state[key].down_time) {
-                on_key_released(ysw_keyboard->bus,key,  &ysw_keyboard->state[key]);
+                on_key_pressed(keyboard->bus, key, &keyboard->state[key]);
+            } else if (keyboard->state[key].down_time) {
+                on_key_released(keyboard->bus,key,  &keyboard->state[key]);
             }
         }
         $(gpio_set_level(column_gpio, HIGH));
@@ -143,14 +143,14 @@ static void scan_keyboard(ysw_keyboard_t *ysw_keyboard)
 
 static void process_event(void *context, ysw_event_t *event)
 {
-    ysw_keyboard_t *ysw_keyboard = context;
+    ysw_keyboard_t *keyboard = context;
     if (event) {
         switch (event->header.type) {
             default:
                 break;
         }
     }
-    scan_keyboard(ysw_keyboard);
+    scan_keyboard(keyboard);
 }
 
 void ysw_keyboard_create_task(ysw_bus_t *bus, ysw_keyboard_config_t *keyboard_config)
@@ -169,19 +169,19 @@ void ysw_keyboard_create_task(ysw_bus_t *bus, ysw_keyboard_config_t *keyboard_co
         configure_column(column_gpio);
     }
 
-    ysw_keyboard_t *ysw_keyboard = ysw_heap_allocate(sizeof(ysw_keyboard_t) +
+    ysw_keyboard_t *keyboard = ysw_heap_allocate(sizeof(ysw_keyboard_t) +
             (sizeof(state_t) * row_count * column_count));
 
-    ysw_keyboard->bus = bus;
-    ysw_keyboard->rows = keyboard_config->rows;
-    ysw_keyboard->columns = keyboard_config->columns;
+    keyboard->bus = bus;
+    keyboard->rows = keyboard_config->rows;
+    keyboard->columns = keyboard_config->columns;
 
     ysw_task_config_t config = ysw_task_default_config;
 
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.context = ysw_keyboard;
+    config.context = keyboard;
     config.wait_millis = 10;
 
     ysw_task_create(&config);

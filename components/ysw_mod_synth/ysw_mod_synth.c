@@ -37,27 +37,27 @@ static const short period_map[] = {
 
 #define PERIOD_MAP_SIZE (sizeof(period_map) / sizeof(period_map[0]))
 
-static void enter_critical_section(ysw_mod_synth_t *ysw_mod_synth)
+static void enter_critical_section(ysw_mod_synth_t *mod_synth)
 {
-    xSemaphoreTake(ysw_mod_synth->mutex, portMAX_DELAY);
+    xSemaphoreTake(mod_synth->mutex, portMAX_DELAY);
 }
 
-static void leave_critical_section(ysw_mod_synth_t *ysw_mod_synth)
+static void leave_critical_section(ysw_mod_synth_t *mod_synth)
 {
-    xSemaphoreGive(ysw_mod_synth->mutex);
+    xSemaphoreGive(mod_synth->mutex);
 }
 
-static void initialize_synthesizer(ysw_mod_synth_t *ysw_mod_synth)
+static void initialize_synthesizer(ysw_mod_synth_t *mod_synth)
 {
-    assert(ysw_mod_synth);
+    assert(mod_synth);
 
-    ysw_mod_synth->playrate = 44100;
-    ysw_mod_synth->stereo = 1;
-    ysw_mod_synth->stereo_separation = 1;
-    ysw_mod_synth->filter = 1;
-    ysw_mod_synth->sampleticksconst = ((3546894UL * 16) / ysw_mod_synth->playrate) << 6; //8287*428/playrate;
-    ysw_mod_synth->mod_loaded = 1;
-    ysw_mod_synth->mutex = xSemaphoreCreateMutex();
+    mod_synth->playrate = 44100;
+    mod_synth->stereo = 1;
+    mod_synth->stereo_separation = 1;
+    mod_synth->filter = 1;
+    mod_synth->sampleticksconst = ((3546894UL * 16) / mod_synth->playrate) << 6; //8287*428/playrate;
+    mod_synth->mod_loaded = 1;
+    mod_synth->mutex = xSemaphoreCreateMutex();
 }
 
 /**
@@ -67,15 +67,15 @@ static void initialize_synthesizer(ysw_mod_synth_t *ysw_mod_synth)
  * @param number of four byte samples to generate (i.e. sizeof(outbuffer) / 4)
  */
 
-void ysw_mod_generate_samples(ysw_mod_synth_t *ysw_mod_synth,
+void ysw_mod_generate_samples(ysw_mod_synth_t *mod_synth,
         int16_t *buffer, uint32_t number, ysw_mod_sample_type_t sample_type)
 {
-    assert(ysw_mod_synth);
+    assert(mod_synth);
     assert(buffer);
 
-    enter_critical_section(ysw_mod_synth);
+    enter_critical_section(mod_synth);
 
-    if (!ysw_mod_synth->mod_loaded) {
+    if (!mod_synth->mod_loaded) {
         for (uint32_t i = 0; i < number; i++)
         {
             *buffer++ = 0;
@@ -84,17 +84,17 @@ void ysw_mod_generate_samples(ysw_mod_synth_t *ysw_mod_synth,
         return;
     }
 
-    int last_left = ysw_mod_synth->last_left_sample;
-    int last_right = ysw_mod_synth->last_right_sample;;
+    int last_left = mod_synth->last_left_sample;
+    int last_right = mod_synth->last_right_sample;;
 
     for (uint32_t i = 0; i < number; i++) {
 
         int left = 0;
         int right = 0;
 
-        voice_t *voice = ysw_mod_synth->voices;
+        voice_t *voice = mod_synth->voices;
 
-        for (uint16_t j = 0; j < ysw_mod_synth->voice_count; j++, voice++) {
+        for (uint16_t j = 0; j < mod_synth->voice_count; j++, voice++) {
             if (voice->period != 0) {
                 voice->samppos += voice->sampinc;
 
@@ -137,12 +137,12 @@ void ysw_mod_generate_samples(ysw_mod_synth_t *ysw_mod_synth,
         int temp_left = (short)left;
         int temp_right = (short)right;
 
-        if (ysw_mod_synth->filter) {
+        if (mod_synth->filter) {
             left = (left + last_left) >> 1;
             right = (right + last_right) >> 1;
         }
 
-        if (ysw_mod_synth->stereo_separation == 1) {
+        if (mod_synth->stereo_separation == 1) {
             left = (left + (right >> 1));
             right = (right + (left >> 1));
         }
@@ -172,125 +172,125 @@ void ysw_mod_generate_samples(ysw_mod_synth_t *ysw_mod_synth,
 
     }
 
-    ysw_mod_synth->last_left_sample = last_left;
-    ysw_mod_synth->last_right_sample = last_right;
+    mod_synth->last_left_sample = last_left;
+    mod_synth->last_right_sample = last_right;
 
-    leave_critical_section(ysw_mod_synth);
+    leave_critical_section(mod_synth);
 }
 
-static uint8_t allocate_voice(ysw_mod_synth_t *ysw_mod_synth, uint8_t channel, uint8_t midi_note)
+static uint8_t allocate_voice(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi_note)
 {
     voice_t *voice = NULL;
     uint8_t voice_index = 0;
     // TODO: use stealing logic to free any voices that have reached end of sample
-    if (ysw_mod_synth->voice_count < MAX_VOICES) {
-        voice_index = ysw_mod_synth->voice_count++;
-        voice = &ysw_mod_synth->voices[voice_index];
+    if (mod_synth->voice_count < MAX_VOICES) {
+        voice_index = mod_synth->voice_count++;
+        voice = &mod_synth->voices[voice_index];
     } else {
         // steal oldest voice
         uint32_t time = UINT_MAX;
-        for (uint8_t i = 0; i < ysw_mod_synth->voice_count; i++) {
-            if (ysw_mod_synth->voices[i].time < time) {
-                time = ysw_mod_synth->voices[i].time = time;
+        for (uint8_t i = 0; i < mod_synth->voice_count; i++) {
+            if (mod_synth->voices[i].time < time) {
+                time = mod_synth->voices[i].time = time;
                 voice_index = i;
             }
         }
-        voice = &ysw_mod_synth->voices[voice_index];
+        voice = &mod_synth->voices[voice_index];
     }
     voice->channel = channel;
     voice->midi_note = midi_note;
-    ysw_mod_synth->active_notes[channel][midi_note] = voice_index;
+    mod_synth->active_notes[channel][midi_note] = voice_index;
     return voice_index;
 }
 
-static void free_voice(ysw_mod_synth_t *ysw_mod_synth, uint8_t channel, uint8_t midi_note)
+static void free_voice(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi_note)
 {
-    uint8_t voice_index = ysw_mod_synth->active_notes[channel][midi_note];
-    voice_t *voice = &ysw_mod_synth->voices[voice_index];
+    uint8_t voice_index = mod_synth->active_notes[channel][midi_note];
+    voice_t *voice = &mod_synth->voices[voice_index];
     // if channel and note don't match, voice was stolen, nothing more to do
     if (voice->channel == channel && voice->midi_note == midi_note) {
         // if we're not freeing the last voice
-        if (--ysw_mod_synth->voice_count != voice_index) {
+        if (--mod_synth->voice_count != voice_index) {
             // move former last item to position of newly freed item
-            *voice = ysw_mod_synth->voices[ysw_mod_synth->voice_count];
-            ysw_mod_synth->active_notes[voice->channel][voice->midi_note] = voice_index;
+            *voice = mod_synth->voices[mod_synth->voice_count];
+            mod_synth->active_notes[voice->channel][voice->midi_note] = voice_index;
         }
     }
 }
 
-static void start_note(ysw_mod_synth_t *ysw_mod_synth, uint8_t channel, uint8_t midi_note, uint8_t velocity)
+static void start_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi_note, uint8_t velocity)
 {
     uint16_t period = period_map[midi_note];
-    uint8_t program_index = ysw_mod_synth->channel_programs[channel];
-    ysw_mod_sample_t *sample = ysw_mod_synth->mod_host->provide_sample(
-            ysw_mod_synth->mod_host->context, program_index, midi_note);
+    uint8_t program_index = mod_synth->channel_programs[channel];
+    ysw_mod_sample_t *sample = mod_synth->mod_host->provide_sample(
+            mod_synth->mod_host->context, program_index, midi_note);
 
-    enter_critical_section(ysw_mod_synth);
+    enter_critical_section(mod_synth);
 
-    uint8_t voice_index = allocate_voice(ysw_mod_synth, channel, midi_note);
-    voice_t *voice = &ysw_mod_synth->voices[voice_index];
+    uint8_t voice_index = allocate_voice(mod_synth, channel, midi_note);
+    voice_t *voice = &mod_synth->voices[voice_index];
     voice->sample = sample;
     voice->length = sample->length;
     voice->reppnt = sample->reppnt;
     voice->replen = sample->replen;
     voice->volume = velocity / 2; // mod volume range is 0-63
-    voice->sampinc = ysw_mod_synth->sampleticksconst / period;
+    voice->sampinc = mod_synth->sampleticksconst / period;
     voice->period = period;
     voice->samppos = 0;
-    voice->time = ysw_mod_synth->voice_time++;
+    voice->time = mod_synth->voice_time++;
 
-    leave_critical_section(ysw_mod_synth);
+    leave_critical_section(mod_synth);
 
     ESP_LOGD(TAG, "channel=%d, program=%d, midi_note=%d, velocity=%d, period=%d, voices=%d",
-            channel, program_index, midi_note, velocity, period, ysw_mod_synth->voice_count);
+            channel, program_index, midi_note, velocity, period, mod_synth->voice_count);
 }
 
-static void stop_note(ysw_mod_synth_t *ysw_mod_synth, uint8_t channel, uint8_t midi_note)
+static void stop_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi_note)
 {
-    enter_critical_section(ysw_mod_synth);
+    enter_critical_section(mod_synth);
 
-    free_voice(ysw_mod_synth, channel, midi_note);
+    free_voice(mod_synth, channel, midi_note);
 
-    leave_critical_section(ysw_mod_synth);
+    leave_critical_section(mod_synth);
 }
 
-static void on_note_on(ysw_mod_synth_t *ysw_mod_synth, ysw_event_note_on_t *m)
+static void on_note_on(ysw_mod_synth_t *mod_synth, ysw_event_note_on_t *m)
 {
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
     assert(m->midi_note < YSW_MIDI_MAX_COUNT);
     assert(m->velocity < YSW_MIDI_MAX_COUNT);
 
-    start_note(ysw_mod_synth, m->channel, m->midi_note, m->velocity);
+    start_note(mod_synth, m->channel, m->midi_note, m->velocity);
 }
 
-static void on_note_off(ysw_mod_synth_t *ysw_mod_synth, ysw_event_note_off_t *m)
+static void on_note_off(ysw_mod_synth_t *mod_synth, ysw_event_note_off_t *m)
 {
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
     assert(m->midi_note < YSW_MIDI_MAX_COUNT);
 
-    stop_note(ysw_mod_synth, m->channel, m->midi_note);
+    stop_note(mod_synth, m->channel, m->midi_note);
 }
 
-static void on_program_change(ysw_mod_synth_t *ysw_mod_synth, ysw_event_program_change_t *m)
+static void on_program_change(ysw_mod_synth_t *mod_synth, ysw_event_program_change_t *m)
 {
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
     assert(m->program < YSW_MIDI_MAX_COUNT);
 
-    ysw_mod_synth->channel_programs[m->channel] = m->program;
+    mod_synth->channel_programs[m->channel] = m->program;
 }
 
 static void process_event(void *context, ysw_event_t *event)
 {
-    ysw_mod_synth_t *ysw_mod_synth = context;
+    ysw_mod_synth_t *mod_synth = context;
     switch (event->header.type) {
         case YSW_EVENT_NOTE_ON:
-            on_note_on(ysw_mod_synth, &event->note_on);
+            on_note_on(mod_synth, &event->note_on);
             break;
         case YSW_EVENT_NOTE_OFF:
-            on_note_off(ysw_mod_synth, &event->note_off);
+            on_note_off(mod_synth, &event->note_off);
             break;
         case YSW_EVENT_PROGRAM_CHANGE:
-            on_program_change(ysw_mod_synth, &event->program_change);
+            on_program_change(mod_synth, &event->program_change);
             break;
         default:
             break;
@@ -299,17 +299,17 @@ static void process_event(void *context, ysw_event_t *event)
 
 ysw_mod_synth_t *ysw_mod_synth_create_task(ysw_bus_t *bus, ysw_mod_host_t *mod_host)
 {
-    ysw_mod_synth_t *ysw_mod_synth = ysw_heap_allocate(sizeof(ysw_mod_synth_t));
-    ysw_mod_synth->mod_host = mod_host;
+    ysw_mod_synth_t *mod_synth = ysw_heap_allocate(sizeof(ysw_mod_synth_t));
+    mod_synth->mod_host = mod_host;
 
-    initialize_synthesizer(ysw_mod_synth);
+    initialize_synthesizer(mod_synth);
 
     ysw_task_config_t config = ysw_task_default_config;
 
     config.name = TAG;
     config.bus = bus;
     config.event_handler = process_event;
-    config.context = ysw_mod_synth;
+    config.context = mod_synth;
 
     ysw_task_t *task = ysw_task_create(&config);
 
@@ -318,5 +318,5 @@ ysw_mod_synth_t *ysw_mod_synth_create_task(ysw_bus_t *bus, ysw_mod_host_t *mod_h
     ysw_task_subscribe(task, YSW_ORIGIN_SAMPLER);
     ysw_task_subscribe(task, YSW_ORIGIN_SINK);
 
-    return ysw_mod_synth;
+    return mod_synth;
 }
