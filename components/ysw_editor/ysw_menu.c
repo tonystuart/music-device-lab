@@ -232,11 +232,14 @@ void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
     }
     if (menu_item->flags & YSW_MENU_OPEN) {
         open_menu(menu, event, menu_item->value);
-    } else if (menu_item->flags & YSW_MENU_CLOSE) {
+    } // not else, open/close can be used to enter modes, like open, chord, etc.
+    if (menu_item->flags & YSW_MENU_CLOSE) {
         close_menu(menu, event, menu_item->value);
-    } else if (menu_item->flags & YSW_MENU_POP) {
+    }
+    if (menu_item->flags & YSW_MENU_POP) {
         pop_menu(menu);
-    } else if (menu_item->flags & YSW_MENU_POP_ALL) {
+    }
+    if (menu_item->flags & YSW_MENU_POP_ALL) {
         pop_all(menu);
     }
 }

@@ -42,6 +42,7 @@ typedef uint8_t zm_stroke_x;
 typedef uint8_t zm_tie_x;
 typedef uint8_t zm_velocity_x;
 
+typedef uint16_t zm_age_x;
 typedef uint16_t zm_measure_x;
 typedef uint16_t zm_note_x;
 typedef uint16_t zm_pattern_x;
@@ -215,6 +216,7 @@ typedef struct {
 
 typedef struct {
     char *name;
+    zm_age_x age;
     zm_tempo_t tempo;
     zm_key_signature_x key;
     zm_time_signature_x time;

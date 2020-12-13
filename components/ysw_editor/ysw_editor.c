@@ -8,6 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_editor.h"
+#include "ysw_chooser.h"
 #include "ysw_common.h"
 #include "ysw_event.h"
 #include "ysw_footer.h"
@@ -79,6 +80,8 @@ typedef struct {
     lv_obj_t *footer;
 
     ysw_menu_t *menu;
+    ysw_chooser_t *chooser;
+
 } ysw_editor_t;
 
 // Note that position is 2x the division index and encodes both the division index and the space before it.
@@ -903,6 +906,49 @@ static void on_save(ysw_menu_t *menu, ysw_event_t *event, void *value)
     zm_save_music(ysw_editor->music);
 }
 
+static void on_chooser_open(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    ysw_editor_t *ysw_editor = menu->context;
+    ysw_editor->chooser = ysw_chooser_create(ysw_editor->music);
+}
+
+static void on_chooser_up(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    ysw_editor_t *ysw_editor = menu->context;
+    ysw_chooser_on_up(ysw_editor->chooser);
+}
+
+static void on_chooser_down(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    ysw_editor_t *ysw_editor = menu->context;
+    ysw_chooser_on_down(ysw_editor->chooser);
+}
+
+static void on_chooser_cancel(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    ysw_editor_t *ysw_editor = menu->context;
+    ysw_chooser_delete(ysw_editor->chooser);
+    ysw_editor->chooser = NULL;
+}
+
+static void on_chooser_edit(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    ysw_editor_t *ysw_editor = menu->context;
+    zm_pattern_t *pattern = ysw_chooser_get_pattern(ysw_editor->chooser);
+    on_chooser_cancel(menu, event, value);
+    if (pattern) {
+        ysw_event_fire_pattern_edit(ysw_editor->bus, pattern);
+    }
+}
+
+static void on_chooser_back(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    if (menu->softkeys) {
+        // handle menu- with menu displayed the same as cancel
+        on_chooser_cancel(menu, event, value);
+    }
+}
+
 static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *ysw_editor = menu->context;
@@ -1033,6 +1079,7 @@ static const ysw_menu_softmap_t softmap[] = {
 #define YSW_MF_COMMAND (YSW_MENU_PRESS|YSW_MENU_CLOSE)
 #define YSW_MF_BUTTON_COMMAND (YSW_MENU_DOWN|YSW_MENU_UP|YSW_MENU_CLOSE)
 #define YSW_MF_PLUS (YSW_MENU_UP|YSW_MENU_OPEN)
+#define YSW_MF_PLUS_SHOW (YSW_MENU_UP|YSW_MENU_OPEN|YSW_MENU_CLOSE)
 #define YSW_MF_MINUS (YSW_MENU_UP|YSW_MENU_POP)
 #define YSW_MF_NOP (0)
 
@@ -1108,12 +1155,33 @@ static const ysw_menu_item_t rhythm_menu[] = {
     { 40, NULL, 0, NULL, NULL },
 };
 
+static const ysw_menu_item_t open_menu[] = {
+    { 5, "Open", YSW_MF_COMMAND, on_chooser_edit, 0 },
+    { 6, " ", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 7, "Cancel", YSW_MF_COMMAND, on_chooser_cancel, 0 },
+    { 8, "Up", YSW_MF_COMMAND, on_chooser_up, 0 },
+
+    { 16, "Sort\nName", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 17, "Sort\nSize", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 18, "Sort\nAge", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 19, "Down", YSW_MF_COMMAND, on_chooser_down, 0 },
+
+    { 25, "Rename", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 27, "Delete", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+
+    { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
+    { 38, "Menu-", YSW_MF_MINUS, on_chooser_back, 0 },
+
+    { 40, NULL, 0, NULL, NULL },
+};
+
 static const ysw_menu_item_t file_menu[] = {
     { 5, "New", YSW_MF_COMMAND, on_new, 0 },
     { 6, "Save", YSW_MF_COMMAND, on_save, 0 },
     { 7, "Save As", YSW_MF_COMMAND, ysw_menu_nop, 0 },
 
-    { 16, "Open", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 16, "Open", YSW_MF_PLUS_SHOW, on_chooser_open, (void*)open_menu },
     { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
