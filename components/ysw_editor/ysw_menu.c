@@ -253,6 +253,10 @@ void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event)
     }
 }
 
+void ysw_menu_nop(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+}
+
 ysw_menu_t *ysw_menu_create(const ysw_menu_item_t *menu_items, const ysw_menu_softmap_t softmap[], void *context)
 {
     ysw_menu_t *menu = ysw_heap_allocate(sizeof(ysw_menu_t));
@@ -264,7 +268,10 @@ ysw_menu_t *ysw_menu_create(const ysw_menu_item_t *menu_items, const ysw_menu_so
     return menu;
 }
 
-void ysw_menu_nop(ysw_menu_t *menu, ysw_event_t *event, void *value)
+void ysw_menu_show(ysw_menu_t *menu)
 {
+    if (!menu->softkeys) {
+        show_softkeys(menu);
+    }
 }
 
