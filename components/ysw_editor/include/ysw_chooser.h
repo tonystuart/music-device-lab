@@ -19,7 +19,7 @@ typedef struct {
     int current_row;
 } ysw_chooser_t;
 
-ysw_chooser_t *ysw_chooser_create(zm_music_t *music);
+ysw_chooser_t *ysw_chooser_create(zm_music_t *music, zm_pattern_t *current_pattern);
 void ysw_chooser_on_up(ysw_chooser_t *chooser);
 void ysw_chooser_on_down(ysw_chooser_t *chooser);
 zm_pattern_t *ysw_chooser_get_pattern(ysw_chooser_t *chooser);

@@ -23,6 +23,18 @@
 #define HEADING_CELL LV_TABLE_PART_CELL2
 #define SELECTED_CELL LV_TABLE_PART_CELL3
 
+static void ensure_current_row_visible(ysw_chooser_t *chooser)
+{
+    lv_table_ext_t *ext = lv_obj_get_ext_attr(chooser->table);
+    if (chooser->current_row < ext->row_cnt) {
+        lv_coord_t h = 0;
+        for (int i = 0; i < chooser->current_row; i++) {
+            h += ext->row_h[i];
+        }
+        lv_page_scroll_ver(chooser->page, 120 - h);
+    }
+}
+
 void ysw_chooser_select_row(ysw_chooser_t *chooser, zm_pattern_x new_row)
 {
     if (chooser->current_row != new_row) {
@@ -33,11 +45,12 @@ void ysw_chooser_select_row(ysw_chooser_t *chooser, zm_pattern_x new_row)
             lv_table_set_cell_type(chooser->table, new_row + 1, i, SELECTED_CELL);
         }
         chooser->current_row = new_row;
+        ensure_current_row_visible(chooser);
         lv_obj_invalidate(chooser->table);
     }
 }
 
-ysw_chooser_t *ysw_chooser_create(zm_music_t *music)
+ysw_chooser_t *ysw_chooser_create(zm_music_t *music, zm_pattern_t *current_pattern)
 {
     lv_obj_t *page = lv_page_create(lv_scr_act(), NULL);
     lv_obj_set_size(page, 320, 240);
@@ -52,14 +65,14 @@ ysw_chooser_t *ysw_chooser_create(zm_music_t *music)
     lv_obj_set_style_local_text_opa(page, 0, 0, LV_OPA_100);
 
     lv_obj_set_style_local_pad_top(table, DATA_CELL, 0, 5);
-    lv_obj_set_style_local_text_color(table, DATA_CELL, 0, LV_COLOR_WHITE);
+    lv_obj_set_style_local_text_color(table, DATA_CELL, 0, LV_COLOR_SILVER);
 
     lv_obj_set_style_local_margin_bottom(table, HEADING_CELL, 0, 20);
     lv_obj_set_style_local_pad_top(table, HEADING_CELL, 0, 5);
     lv_obj_set_style_local_pad_bottom(table, HEADING_CELL, 0, 5);
     lv_obj_set_style_local_text_color(table, HEADING_CELL, 0, LV_COLOR_YELLOW);
 
-    lv_obj_set_style_local_bg_color(table, SELECTED_CELL, 0, LV_COLOR_WHITE);
+    lv_obj_set_style_local_bg_color(table, SELECTED_CELL, 0, LV_COLOR_SILVER);
     lv_obj_set_style_local_bg_opa(table, SELECTED_CELL, 0, LV_OPA_100);
     lv_obj_set_style_local_text_color(table, SELECTED_CELL, 0, LV_COLOR_MAROON);
 
@@ -83,6 +96,8 @@ ysw_chooser_t *ysw_chooser_create(zm_music_t *music)
     lv_table_set_cell_type(table, 0, 2, HEADING_CELL);
     lv_table_set_cell_align(table, 0, 2, LV_LABEL_ALIGN_CENTER);
 
+    int32_t new_row = -1;
+
     for (zm_pattern_x i = 0, data_row = 1; i < pattern_count; i++, data_row++) {
         char buffer[32];
         zm_pattern_t *pattern = ysw_array_get(music->patterns, i);
@@ -93,6 +108,9 @@ ysw_chooser_t *ysw_chooser_create(zm_music_t *music)
         lv_table_set_cell_value(table, data_row, 0, pattern->name);
         lv_table_set_cell_value(table, data_row, 1, ysw_itoa(division_count, buffer, sizeof(buffer)));
         lv_table_set_cell_value(table, data_row, 2, ysw_itoa(pattern->age, buffer, sizeof(buffer)));
+        if (pattern == current_pattern) {
+            new_row = i;
+        }
     }
 
     ysw_chooser_t *chooser = ysw_heap_allocate(sizeof(ysw_chooser_t));
@@ -102,8 +120,8 @@ ysw_chooser_t *ysw_chooser_create(zm_music_t *music)
     chooser->table = table;
     chooser->current_row = -1;
 
-    if (pattern_count) {
-        ysw_chooser_select_row(chooser, 0);
+    if (new_row != -1) {
+        ysw_chooser_select_row(chooser, new_row);
     }
 
     return chooser;

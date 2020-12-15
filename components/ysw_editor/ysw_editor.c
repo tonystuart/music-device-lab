@@ -894,15 +894,14 @@ static void on_note_status(ysw_editor_t *editor, ysw_event_t *event)
 static void on_new(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
-    // TODO: see if current pattern is modified, and if so, prompt to save or cancel
     zm_pattern_t *pattern = zm_music_create_pattern(editor->music);
+    ysw_array_push(editor->music->patterns, pattern);
     ysw_event_fire_pattern_edit(editor->bus, pattern);
 }
 
 static void on_save(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
-    // TODO: see if current pattern has been added to music->patterns, and if not, add it
     zm_save_music(editor->music);
 }
 
@@ -966,6 +965,8 @@ static void on_chooser_event(struct _lv_obj_t *obj, lv_event_t event)
                 } else {
                     ysw_chooser_select_row(editor->chooser, row - 1);
                 }
+            } else {
+                ysw_menu_show(editor->menu);
             }
         }
     }
@@ -974,10 +975,12 @@ static void on_chooser_event(struct _lv_obj_t *obj, lv_event_t event)
 static void on_chooser_open(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
-    editor->chooser = ysw_chooser_create(editor->music);
+    editor->chooser = ysw_chooser_create(editor->music, editor->pattern);
     lv_obj_set_user_data(editor->chooser->table, editor);
     lv_obj_set_event_cb(editor->chooser->table, on_chooser_event);
     lv_obj_set_click(editor->chooser->table, true);
+    lv_obj_set_drag(editor->chooser->table, true);
+    lv_obj_set_drag_dir(editor->chooser->table, LV_DRAG_DIR_VER);
 }
 
 static void on_chooser_cancel(ysw_menu_t *menu, ysw_event_t *event, void *value)
