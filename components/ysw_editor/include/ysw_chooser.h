@@ -24,3 +24,4 @@ void ysw_chooser_on_up(ysw_chooser_t *chooser);
 void ysw_chooser_on_down(ysw_chooser_t *chooser);
 zm_pattern_t *ysw_chooser_get_pattern(ysw_chooser_t *chooser);
 void ysw_chooser_delete(ysw_chooser_t *chooser);
+void ysw_chooser_select_row(ysw_chooser_t *chooser, zm_pattern_x new_row);

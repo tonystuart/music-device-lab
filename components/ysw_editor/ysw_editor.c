@@ -906,10 +906,21 @@ static void on_save(ysw_menu_t *menu, ysw_event_t *event, void *value)
     zm_save_music(editor->music);
 }
 
-static void on_chooser_open(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void close_chooser(ysw_editor_t *editor)
 {
-    ysw_editor_t *editor = menu->context;
-    editor->chooser = ysw_chooser_create(editor->music);
+    if (editor->chooser) {
+        ysw_chooser_delete(editor->chooser);
+        editor->chooser = NULL;
+    }
+}
+
+static void open_pattern(ysw_editor_t *editor)
+{
+    zm_pattern_t *pattern = ysw_chooser_get_pattern(editor->chooser);
+    close_chooser(editor);
+    if (pattern) {
+        ysw_event_fire_pattern_edit(editor->bus, pattern);
+    }
 }
 
 static void on_chooser_up(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -924,29 +935,55 @@ static void on_chooser_down(ysw_menu_t *menu, ysw_event_t *event, void *value)
     ysw_chooser_on_down(editor->chooser);
 }
 
-static void on_chooser_cancel(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    ysw_editor_t *editor = menu->context;
-    ysw_chooser_delete(editor->chooser);
-    editor->chooser = NULL;
-}
-
 static void on_chooser_edit(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
-    zm_pattern_t *pattern = ysw_chooser_get_pattern(editor->chooser);
-    on_chooser_cancel(menu, event, value);
-    if (pattern) {
-        ysw_event_fire_pattern_edit(editor->bus, pattern);
-    }
+    open_pattern(editor);
 }
 
 static void on_chooser_back(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     if (menu->softkeys) {
         // handle menu- with menu displayed the same as cancel
-        on_chooser_cancel(menu, event, value);
+        ysw_editor_t *editor = menu->context;
+        close_chooser(editor);
     }
+}
+
+static void on_chooser_event(struct _lv_obj_t *obj, lv_event_t event)
+{
+    if (event == LV_EVENT_CLICKED) {
+        uint16_t row = 0;
+        uint16_t column = 0;
+        ysw_editor_t *editor = lv_obj_get_user_data(obj);
+        if (lv_table_get_pressed_cell(obj, &row, &column)) {
+            if (row > 0) {
+                zm_pattern_x new_row = row - 1; // -1 for header
+                if (new_row == editor->chooser->current_row) {
+                    // open pattern on double tap
+                    open_pattern(editor);
+                    ysw_menu_pop_all(editor->menu);
+                } else {
+                    ysw_chooser_select_row(editor->chooser, row - 1);
+                }
+            }
+        }
+    }
+}
+
+static void on_chooser_open(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    ysw_editor_t *editor = menu->context;
+    editor->chooser = ysw_chooser_create(editor->music);
+    lv_obj_set_user_data(editor->chooser->table, editor);
+    lv_obj_set_event_cb(editor->chooser->table, on_chooser_event);
+    lv_obj_set_click(editor->chooser->table, true);
+}
+
+static void on_chooser_cancel(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    ysw_editor_t *editor = menu->context;
+    close_chooser(editor);
 }
 
 static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -1042,9 +1079,10 @@ static const ysw_menu_softmap_t softmap[] = {
 
 #define YSW_MF_BUTTON (YSW_MENU_DOWN|YSW_MENU_UP)
 #define YSW_MF_COMMAND (YSW_MENU_PRESS|YSW_MENU_CLOSE)
+#define YSW_MF_COMMAND_POP (YSW_MENU_PRESS|YSW_MENU_POP_ALL)
 #define YSW_MF_BUTTON_COMMAND (YSW_MENU_DOWN|YSW_MENU_UP|YSW_MENU_CLOSE)
 #define YSW_MF_PLUS (YSW_MENU_UP|YSW_MENU_OPEN)
-#define YSW_MF_PLUS_SHOW (YSW_MENU_UP|YSW_MENU_OPEN|YSW_MENU_CLOSE)
+#define YSW_MF_MODE (YSW_MENU_UP|YSW_MENU_OPEN|YSW_MENU_CLOSE)
 #define YSW_MF_MINUS (YSW_MENU_UP|YSW_MENU_POP)
 #define YSW_MF_NOP (0)
 
@@ -1120,8 +1158,8 @@ static const ysw_menu_item_t rhythm_menu[] = {
     { 40, NULL, 0, NULL, NULL },
 };
 
-static const ysw_menu_item_t open_menu[] = {
-    { 5, "Open", YSW_MF_COMMAND, on_chooser_edit, 0 },
+static const ysw_menu_item_t chooser_menu[] = {
+    { 5, "Open", YSW_MF_COMMAND_POP, on_chooser_edit, 0 },
     { 6, " ", YSW_MF_COMMAND, ysw_menu_nop, 0 },
     { 7, "Cancel", YSW_MF_COMMAND, on_chooser_cancel, 0 },
     { 8, "Up", YSW_MF_COMMAND, on_chooser_up, 0 },
@@ -1146,7 +1184,7 @@ static const ysw_menu_item_t file_menu[] = {
     { 6, "Save", YSW_MF_COMMAND, on_save, 0 },
     { 7, "Save As", YSW_MF_COMMAND, ysw_menu_nop, 0 },
 
-    { 16, "Open", YSW_MF_PLUS_SHOW, on_chooser_open, (void*)open_menu },
+    { 16, "Open", YSW_MF_MODE, on_chooser_open, (void*)chooser_menu },
     { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
 
@@ -1256,9 +1294,9 @@ static const ysw_menu_item_t main_menu[] = {
     { 3, "G#6", YSW_MF_BUTTON, on_note, VP 80 },
     { 4, "A#6", YSW_MF_BUTTON, on_note, VP 82 },
 
-    { 5, "Melody", YSW_MF_PLUS, on_melody, (void*)melody_menu },
-    { 6, "Chord", YSW_MF_PLUS, on_chord, (void*)chord_menu },
-    { 7, "Rhythm", YSW_MF_PLUS, on_rhythm, (void*)rhythm_menu },
+    { 5, "Melody", YSW_MF_MODE, on_melody, (void*)melody_menu },
+    { 6, "Chord", YSW_MF_MODE, on_chord, (void*)chord_menu },
+    { 7, "Rhythm", YSW_MF_MODE, on_rhythm, (void*)rhythm_menu },
     { 8, "Up", YSW_MF_COMMAND, on_up, 0 },
 
     { 9, "C6", YSW_MF_BUTTON, on_note, VP 72 },

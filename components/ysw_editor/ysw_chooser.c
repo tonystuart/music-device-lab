@@ -12,7 +12,6 @@
 #include "ysw_common.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
-#include "ysw_menu.h"
 #include "zm_music.h"
 #include "lvgl.h"
 #include "esp_log.h"
@@ -24,7 +23,7 @@
 #define HEADING_CELL LV_TABLE_PART_CELL2
 #define SELECTED_CELL LV_TABLE_PART_CELL3
 
-void select_row(ysw_chooser_t *chooser, zm_pattern_x new_row)
+void ysw_chooser_select_row(ysw_chooser_t *chooser, zm_pattern_x new_row)
 {
     if (chooser->current_row != new_row) {
         for (int i = 0; i < 3; i++) {
@@ -104,7 +103,7 @@ ysw_chooser_t *ysw_chooser_create(zm_music_t *music)
     chooser->current_row = -1;
 
     if (pattern_count) {
-        select_row(chooser, 0);
+        ysw_chooser_select_row(chooser, 0);
     }
 
     return chooser;
@@ -113,7 +112,7 @@ ysw_chooser_t *ysw_chooser_create(zm_music_t *music)
 void ysw_chooser_on_up(ysw_chooser_t *chooser)
 {
     if (chooser->current_row > 0) {
-        select_row(chooser, chooser->current_row - 1);
+        ysw_chooser_select_row(chooser, chooser->current_row - 1);
     }
 }
 
@@ -121,7 +120,7 @@ void ysw_chooser_on_down(ysw_chooser_t *chooser)
 {
     zm_pattern_x pattern_count = ysw_array_get_count(chooser->music->patterns);
     if (chooser->current_row + 1 < pattern_count) {
-        select_row(chooser, chooser->current_row + 1);
+        ysw_chooser_select_row(chooser, chooser->current_row + 1);
     }
 }
 

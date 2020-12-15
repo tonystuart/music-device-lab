@@ -168,13 +168,13 @@ static void hide_softkeys(ysw_menu_t *menu)
     menu->softkeys = NULL;
 }
 
-static void pop_all(ysw_menu_t *menu)
+void ysw_menu_pop_all(ysw_menu_t *menu)
 {
     if (menu->softkeys) {
         hide_softkeys(menu);
-        while (ysw_array_get_count(menu->stack) > 1) {
-            ysw_array_pop(menu->stack);
-        }
+    }
+    while (ysw_array_get_count(menu->stack) > 1) {
+        ysw_array_pop(menu->stack);
     }
 }
 
@@ -230,9 +230,11 @@ void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
     if (menu_item->flags & YSW_MENU_UP) {
         menu_item->cb(menu, event, menu_item->value);
     }
+    // NB: these may be combined in counter-intuitive ways, for example:
+    // 1. open+close to enter a mode, like chooser, or chords
     if (menu_item->flags & YSW_MENU_OPEN) {
         open_menu(menu, event, menu_item->value);
-    } // not else, open/close can be used to enter modes, like open, chord, etc.
+    }
     if (menu_item->flags & YSW_MENU_CLOSE) {
         close_menu(menu, event, menu_item->value);
     }
@@ -240,7 +242,7 @@ void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
         pop_menu(menu);
     }
     if (menu_item->flags & YSW_MENU_POP_ALL) {
-        pop_all(menu);
+        ysw_menu_pop_all(menu);
     }
 }
 
