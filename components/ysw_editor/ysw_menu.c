@@ -11,6 +11,7 @@
 #include "ysw_common.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
+#include "ysw_string.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include "assert.h"
@@ -90,6 +91,22 @@ static void event_handler(lv_obj_t *btnmatrix, lv_event_t button_event)
     }
 }
 
+static void get_menu_name(ysw_menu_t *menu, ysw_string_t *s)
+{
+    uint32_t stack_size = ysw_array_get_count(menu->stack);
+    for (uint32_t i = 0; i < stack_size; i++) {
+        const ysw_menu_item_t *menu_item = ysw_array_get(menu->stack, i);
+        while (menu_item->name) {
+            // find last item
+            menu_item++;
+        }
+        if (ysw_string_get_length(s)) {
+            ysw_string_append_chars(s, " > ");
+        }
+        ysw_string_append_chars(s, menu_item->value);
+    }
+}
+
 static uint32_t get_button_map_size(ysw_menu_t *menu)
 {
     const ysw_menu_softmap_t *softmap = menu->softmap;
@@ -134,6 +151,20 @@ static void show_softkeys(ysw_menu_t *menu)
     lv_obj_set_size(container, 320, 240);
     lv_obj_align(container, NULL, LV_ALIGN_CENTER, 0, 0);
 
+    lv_obj_t *label = lv_label_create(container, NULL);
+
+    lv_label_set_long_mode(label, LV_LABEL_LONG_CROP);
+    lv_obj_set_width(label, 320);
+    lv_obj_align(label, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 2);
+
+    lv_obj_set_style_local_text_font(label, 0, 0, &lv_font_unscii_8);
+    lv_label_set_align(label, LV_LABEL_ALIGN_CENTER);
+
+    ysw_string_t *name = ysw_string_create(128);
+    get_menu_name(menu, name);
+    lv_label_set_text(label, ysw_string_get_chars(name));
+    ysw_string_free(name);
+
     lv_obj_t *btnmatrix = lv_btnmatrix_create(container, NULL);
     lv_btnmatrix_set_align(btnmatrix, LV_LABEL_ALIGN_CENTER);
 
@@ -146,8 +177,8 @@ static void show_softkeys(ysw_menu_t *menu)
     lv_obj_set_style_local_pad_all(btnmatrix, LV_BTNMATRIX_PART_BG, 0, 5);
     lv_obj_set_style_local_pad_inner(btnmatrix, LV_BTNMATRIX_PART_BG, 0, 5);
 
-    lv_obj_set_size(btnmatrix, 320, 240);
-    lv_obj_align(btnmatrix, NULL, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_size(btnmatrix, 320, 230);
+    lv_obj_align(btnmatrix, NULL, LV_ALIGN_IN_BOTTOM_LEFT, 0, 0);
 
     const char **button_map = create_button_map(menu);
     lv_btnmatrix_set_map(btnmatrix, button_map);

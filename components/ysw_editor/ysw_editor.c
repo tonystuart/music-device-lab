@@ -908,6 +908,7 @@ static void on_save(ysw_menu_t *menu, ysw_event_t *event, void *value)
 static void close_chooser(ysw_editor_t *editor)
 {
     if (editor->chooser) {
+        ysw_menu_pop_all(editor->menu);
         ysw_chooser_delete(editor->chooser);
         editor->chooser = NULL;
     }
@@ -1104,7 +1105,7 @@ static const ysw_menu_item_t menu_2[] = {
 
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
-    { 40, NULL, 0, NULL, NULL },
+    { 40, NULL, 0, NULL, "Menu 2" },
 };
 
 static const ysw_menu_item_t melody_menu[] = {
@@ -1122,7 +1123,7 @@ static const ysw_menu_item_t melody_menu[] = {
 
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
-    { 40, NULL, 0, NULL, NULL },
+    { 40, NULL, 0, NULL, "Melody" },
 };
 
 static const ysw_menu_item_t chord_menu[] = {
@@ -1140,7 +1141,7 @@ static const ysw_menu_item_t chord_menu[] = {
 
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
-    { 40, NULL, 0, NULL, NULL },
+    { 40, NULL, 0, NULL, "Chord" },
 };
 
 static const ysw_menu_item_t rhythm_menu[] = {
@@ -1158,7 +1159,7 @@ static const ysw_menu_item_t rhythm_menu[] = {
 
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
-    { 40, NULL, 0, NULL, NULL },
+    { 40, NULL, 0, NULL, "Rhythm" },
 };
 
 static const ysw_menu_item_t chooser_menu[] = {
@@ -1179,7 +1180,7 @@ static const ysw_menu_item_t chooser_menu[] = {
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
     { 38, "Menu-", YSW_MF_MINUS, on_chooser_back, 0 },
 
-    { 40, NULL, 0, NULL, NULL },
+    { 40, NULL, 0, NULL, "Chooser" },
 };
 
 static const ysw_menu_item_t file_menu[] = {
@@ -1197,7 +1198,7 @@ static const ysw_menu_item_t file_menu[] = {
 
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
-    { 40, NULL, 0, NULL, NULL },
+    { 40, NULL, 0, NULL, "File" },
 };
 
 static const ysw_menu_item_t edit_menu[] = {
@@ -1215,7 +1216,7 @@ static const ysw_menu_item_t edit_menu[] = {
 
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
-    { 40, NULL, 0, NULL, NULL },
+    { 40, NULL, 0, NULL, "Edit" },
 };
 
 static const ysw_menu_item_t defs_menu[] = {
@@ -1233,7 +1234,7 @@ static const ysw_menu_item_t defs_menu[] = {
 
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
-    { 40, NULL, 0, NULL, NULL },
+    { 40, NULL, 0, NULL, "Definitions" },
 };
 
 static const ysw_menu_item_t listen_menu[] = {
@@ -1251,7 +1252,7 @@ static const ysw_menu_item_t listen_menu[] = {
 
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
-    { 40, NULL, 0, NULL, NULL },
+    { 40, NULL, 0, NULL, "Listen" },
 };
 
 static const ysw_menu_item_t settings_menu[] = {
@@ -1269,7 +1270,7 @@ static const ysw_menu_item_t settings_menu[] = {
 
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
-    { 40, NULL, 0, NULL, NULL },
+    { 40, NULL, 0, NULL, "Settings" },
 };
 
 static const ysw_menu_item_t preferences_menu[] = {
@@ -1287,7 +1288,7 @@ static const ysw_menu_item_t preferences_menu[] = {
 
     { 36, " ", YSW_MF_PLUS, ysw_menu_nop, 0 },
 
-    { 40, NULL, 0, NULL, NULL },
+    { 40, NULL, 0, NULL, "Preferences" },
 };
 
 static const ysw_menu_item_t main_menu[] = {
@@ -1339,7 +1340,7 @@ static const ysw_menu_item_t main_menu[] = {
     { 38, "Menu-", YSW_MF_MINUS, ysw_menu_nop, 0 },
     { 39, "Right", YSW_MF_COMMAND, on_right, 0 },
 
-    { 0, NULL, 0, NULL, NULL },
+    { 0, NULL, 0, NULL, "Main" },
 };
 
 static void on_glass_event(struct _lv_obj_t *obj, lv_event_t event)
