@@ -211,7 +211,7 @@ static void draw_black(ysw_staff_t *dc, uint8_t note, zm_duration_t duration)
             accidental = YSW_SHARP_BASE + step;
         }
     } else if (dc->key_signature->flats) {
-        uint8_t step = flat_map[note];
+        step = flat_map[note];
         // if this staff position is not a flat in this key
         if (!dc->key_signature->flat_index[step % 7]) {
             // add the flat symbol

@@ -36,11 +36,10 @@ lv_obj_t *ysw_header_create(lv_obj_t *par)
 
     ext->program_field = ysw_field_create(header);
     lv_cont_set_layout(ext->program_field, LV_LAYOUT_COLUMN_RIGHT);
-    ysw_field_set_name_text(ext->program_field, "Program");
+    ysw_field_set_name_text(ext->program_field, "Sound");
 
-    lv_obj_t *value_label = ysw_field_get_value_label(ext->program_field);
-    lv_label_set_long_mode(value_label, LV_LABEL_LONG_CROP);
-    lv_label_set_align(value_label, LV_LABEL_ALIGN_RIGHT);
+    lv_obj_t *program_value = ysw_field_get_value_label(ext->program_field);
+    lv_label_set_align(program_value, LV_LABEL_ALIGN_RIGHT);
 
     lv_cont_set_layout(header, LV_LAYOUT_PRETTY_TOP);
 
@@ -50,21 +49,37 @@ lv_obj_t *ysw_header_create(lv_obj_t *par)
 void ysw_header_set_mode(lv_obj_t *header, const char *name, const char *value)
 {
     ysw_header_ext_t *ext = lv_obj_get_ext_attr(header);
+
+    lv_obj_t *mode_value = ysw_field_get_value_label(ext->mode_field);
+    lv_label_set_long_mode(mode_value, LV_LABEL_LONG_EXPAND);
+
+    lv_obj_t *program_value = ysw_field_get_value_label(ext->program_field);
+    lv_label_set_long_mode(program_value, LV_LABEL_LONG_DOT);
+
     ysw_field_set_name_text(ext->mode_field, name);
     ysw_field_set_value_text(ext->mode_field, value);
 
     // Resize width of program's value label to what's left after setting mode's value
-    lv_obj_t *mode_value_label = ysw_field_get_value_label(ext->mode_field);
-    lv_coord_t mode_width = lv_obj_get_width(mode_value_label);
-    lv_coord_t program_width = 315 - mode_width;
-
-    lv_obj_t *program_value_label = ysw_field_get_value_label(ext->program_field);
-    lv_obj_set_width(program_value_label, program_width);
+    lv_coord_t mode_width = lv_obj_get_width(mode_value);
+    lv_coord_t program_width = 310 - mode_width;
+    lv_obj_set_width(program_value, program_width);
 }
 
 void ysw_header_set_program(lv_obj_t *header, const char *program_name)
 {
     ysw_header_ext_t *ext = lv_obj_get_ext_attr(header);
+
+    lv_obj_t *program_value = ysw_field_get_value_label(ext->program_field);
+    lv_label_set_long_mode(program_value, LV_LABEL_LONG_EXPAND);
+
+    lv_obj_t *mode_value = ysw_field_get_value_label(ext->mode_field);
+    lv_label_set_long_mode(mode_value, LV_LABEL_LONG_DOT);
+
     ysw_field_set_value_text(ext->program_field, program_name);
+
+    // Resize width of mode's value label to what's left after setting program's value
+    lv_coord_t program_width = lv_obj_get_width(program_value);
+    lv_coord_t mode_width = 310 - program_width;
+    lv_obj_set_width(mode_value, mode_width);
 }
 

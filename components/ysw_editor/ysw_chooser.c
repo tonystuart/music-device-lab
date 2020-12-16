@@ -84,7 +84,7 @@ ysw_chooser_t *ysw_chooser_create(zm_music_t *music, zm_pattern_t *current_patte
     lv_table_set_col_width(table, 1, 80);
     lv_table_set_col_width(table, 2, 80);
 
-    lv_table_set_cell_value(table, 0, 0, "Name");
+    lv_table_set_cell_value(table, 0, 0, "Section");
     lv_table_set_cell_type(table, 0, 0, HEADING_CELL);
     lv_table_set_cell_align(table, 0, 0, LV_LABEL_ALIGN_CENTER);
 

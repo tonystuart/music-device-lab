@@ -209,7 +209,7 @@ void ysw_menu_pop_all(ysw_menu_t *menu)
     }
 }
 
-static void pop_menu(ysw_menu_t *menu)
+void ysw_menu_pop(ysw_menu_t *menu)
 {
     if (menu->softkeys) {
         hide_softkeys(menu);
@@ -270,7 +270,7 @@ void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
         close_menu(menu, event, menu_item->value);
     }
     if (menu_item->flags & YSW_MENU_POP) {
-        pop_menu(menu);
+        ysw_menu_pop(menu);
     }
     if (menu_item->flags & YSW_MENU_POP_ALL) {
         ysw_menu_pop_all(menu);

@@ -66,4 +66,6 @@ ysw_menu_t *ysw_menu_create(const ysw_menu_item_t *menu_items, const ysw_menu_so
 
 void ysw_menu_show(ysw_menu_t *menu);
 
+void ysw_menu_pop(ysw_menu_t *menu);
+
 void ysw_menu_pop_all(ysw_menu_t *menu);
