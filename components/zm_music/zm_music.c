@@ -1301,3 +1301,22 @@ zm_section_t *zm_music_create_section(zm_music_t *music)
     section->rhythm_program = ysw_array_get(music->programs, DEFAULT_RHYTHM_PROGRAM);
     return section;
 }
+
+ysw_array_t *zm_get_section_references(zm_music_t *music, zm_section_t *section)
+{
+    ysw_array_t *references = ysw_array_create(8);
+    zm_composition_x composition_count = ysw_array_get_count(music->compositions);
+    for (zm_composition_x i = 0; i < composition_count; i++) {
+        bool found = false;
+        zm_composition_t *composition = ysw_array_get(music->compositions, i);
+        zm_part_x part_count = ysw_array_get_count(composition->parts);
+        for (zm_part_x j = 0; j < part_count && !found; j++) {
+            zm_part_t *part = ysw_array_get(composition->parts, j);
+            if (part->section == section) {
+                found = true;
+                ysw_array_push(references, composition);
+            }
+        }
+    }
+    return references;
+}

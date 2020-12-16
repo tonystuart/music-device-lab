@@ -45,6 +45,7 @@ typedef uint8_t zm_velocity_x;
 typedef uint16_t zm_age_x;
 typedef uint16_t zm_measure_x;
 typedef uint16_t zm_note_x;
+typedef uint16_t zm_part_x;
 typedef uint16_t zm_section_x;
 typedef uint16_t zm_quality_x;
 typedef uint16_t zm_sample_x;
@@ -271,6 +272,7 @@ typedef struct {
     ysw_array_t *compositions;
 } zm_music_t;
 
+void zm_section_free(zm_section_t *section);
 void zm_music_free(zm_music_t *music);
 zm_music_t *zm_parse_file(FILE *file);
 zm_music_t *zm_load_music(void);
@@ -305,6 +307,8 @@ zm_duration_t zm_get_next_duration(zm_duration_t duration);
 zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note);
 
 zm_section_t *zm_music_create_section(zm_music_t *music);
+
+ysw_array_t *zm_get_section_references(zm_music_t *music, zm_section_t *section);
 
 // See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
 

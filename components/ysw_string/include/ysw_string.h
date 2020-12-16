@@ -20,6 +20,7 @@ typedef struct {
 ysw_string_t *ysw_string_create(uint32_t size);
 void ysw_string_append_char(ysw_string_t *s, char c);
 void ysw_string_append_chars(ysw_string_t *s, const char *p);
+void ysw_string_printf(ysw_string_t *s, const char *template, ...);
 uint32_t ysw_string_get_length(ysw_string_t *s);
 char ysw_string_get_char_at(ysw_string_t *s, uint32_t index);
 const char *ysw_string_get_chars(ysw_string_t *s);

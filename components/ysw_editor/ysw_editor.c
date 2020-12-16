@@ -15,7 +15,9 @@
 #include "ysw_header.h"
 #include "ysw_heap.h"
 #include "ysw_menu.h"
+#include "ysw_msgbox.h"
 #include "ysw_staff.h"
+#include "ysw_string.h"
 #include "ysw_task.h"
 #include "ysw_ticks.h"
 #include "zm_music.h"
@@ -81,6 +83,7 @@ typedef struct {
 
     ysw_menu_t *menu;
     ysw_chooser_t *chooser;
+    ysw_msgbox_t *msgbox;
 
 } ysw_editor_t;
 
@@ -951,6 +954,63 @@ static void on_chooser_back(ysw_menu_t *menu, ysw_event_t *event, void *value)
     }
 }
 
+static void on_msgbox_close(void *context)
+{
+    ysw_editor_t *editor = context;
+    ysw_msgbox_free(editor->msgbox);
+    editor->msgbox = NULL;
+}
+
+static void on_confirm_delete(void *context)
+{
+    ysw_editor_t *editor = context;
+    zm_section_t *section = ysw_chooser_get_section(editor->chooser);
+    if (section) {
+        zm_section_free(section);
+        if (section == editor->section) {
+            // TODO: enable selective menu input handling
+            editor->section = NULL;
+        }
+    }
+    close_chooser(editor);
+    on_msgbox_close(context);
+}
+
+static void on_chooser_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_section_t *section = ysw_chooser_get_section(editor->chooser);
+    if (section) {
+        ysw_msgbox_config_t config;
+        ysw_string_t *s = ysw_string_create(128);
+        ysw_array_t *references = zm_get_section_references(editor->music, section);
+        zm_section_x count = ysw_array_get_count(references);
+        if (count) {
+            ysw_string_printf(s, "%s has references:\n", section->name);
+            for (zm_composition_x i = 0; i < count; i++) {
+                zm_composition_t *composition = ysw_array_get(references, i);
+                ysw_string_printf(s, "  %s\n", composition->name);
+            }
+            ysw_string_printf(s, "Please delete these first");
+            config = (ysw_msgbox_config_t) {
+                .type = YSW_MSGBOX_OKAY,
+                .message = ysw_string_get_chars(s),
+                .on_okay = on_msgbox_close,
+            };
+        } else {
+            ysw_string_printf(s, "Delete %s?", section->name);
+            config = (ysw_msgbox_config_t) {
+                .type = YSW_MSGBOX_OKAY_CANCEL,
+                .message = ysw_string_get_chars(s),
+                .on_okay = on_confirm_delete,
+                .on_cancel = on_msgbox_close,
+            };
+        }
+        editor->msgbox = ysw_msgbox_create(&config, editor);
+        ysw_string_free(s);
+    }
+}
+
 static void on_chooser_event(struct _lv_obj_t *obj, lv_event_t event)
 {
     if (event == LV_EVENT_CLICKED) {
@@ -1018,7 +1078,18 @@ static void on_section_edit(ysw_editor_t *editor, ysw_event_t *event)
     display_mode(editor); // mode displays program
 }
 
-static void process_event_with_section(ysw_editor_t *editor, ysw_event_t *event)
+static void process_msgbox_event(ysw_editor_t *editor, ysw_event_t *event)
+{
+    switch (event->header.type) {
+        case YSW_EVENT_KEY_DOWN:
+            ysw_msgbox_on_key_down(editor->msgbox, event);
+            break;
+        default:
+            break;
+    }
+}
+
+static void process_section_event(ysw_editor_t *editor, ysw_event_t *event)
 {
     switch (event->header.type) {
         case YSW_EVENT_KEY_DOWN:
@@ -1041,7 +1112,7 @@ static void process_event_with_section(ysw_editor_t *editor, ysw_event_t *event)
     }
 }
 
-static void process_event_without_section(ysw_editor_t *editor, ysw_event_t *event)
+static void process_initial_event(ysw_editor_t *editor, ysw_event_t *event)
 {
     switch (event->header.type) {
         case YSW_EVENT_SECTION_EDIT:
@@ -1056,10 +1127,12 @@ static void process_event(void *context, ysw_event_t *event)
 {
     ysw_editor_t *editor = context;
     if (event) {
-        if (editor->section) {
-            process_event_with_section(editor, event);
+        if (editor->msgbox) {
+            process_msgbox_event(editor, event);
+        } else if (editor->section) {
+            process_section_event(editor, event);
         } else {
-            process_event_without_section(editor, event);
+            process_initial_event(editor, event);
         }
     }
     lv_task_handler();
@@ -1173,7 +1246,7 @@ static const ysw_menu_item_t chooser_menu[] = {
 
     { 16, "Open\nSection", YSW_MF_COMMAND_POP, on_chooser_open, 0 },
     { 17, "Rename\nSection", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 18, "Delete\nSection", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 18, "Delete\nSection", YSW_MF_COMMAND, on_chooser_delete, 0 },
     { 19, "Down", YSW_MF_COMMAND, on_chooser_down, 0 },
 
     { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
