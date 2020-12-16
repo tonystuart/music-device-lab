@@ -51,7 +51,7 @@ typedef enum {
     ZM_MF_STROKE = 8,
 
     // layers
-    ZM_MF_PATTERN = 9,
+    ZM_MF_SECTION = 9,
     ZM_MF_DIVISION = 10,
     ZM_MF_MELODY = 11,
     ZM_MF_CHORD = 12,
@@ -80,7 +80,7 @@ typedef struct {
     hash_t *quality_map;
     hash_t *style_map;
     hash_t *beat_map;
-    hash_t *pattern_map;
+    hash_t *section_map;
     hash_t *composition_map;
 } zm_mfw_t;
 
@@ -440,25 +440,25 @@ static void emit_beats(zm_mfw_t *zm_mfw)
     }
 }
 
-static void parse_pattern(zm_mfr_t *zm_mfr)
+static void parse_section(zm_mfr_t *zm_mfr)
 {
-    zm_pattern_x index = atoi(zm_mfr->tokens[1]);
-    zm_medium_t count = ysw_array_get_count(zm_mfr->music->patterns);
+    zm_section_x index = atoi(zm_mfr->tokens[1]);
+    zm_medium_t count = ysw_array_get_count(zm_mfr->music->sections);
 
     if (index != count) {
-        ESP_LOGW(TAG, "parse_pattern index=%d, count=%d", index, count);
+        ESP_LOGW(TAG, "parse_section index=%d, count=%d", index, count);
         return;
     }
 
-    zm_pattern_t *pattern = ysw_heap_allocate(sizeof(zm_pattern_t));
-    pattern->name = ysw_heap_strdup(zm_mfr->tokens[2]);
-    pattern->tempo = atoi(zm_mfr->tokens[3]);
-    pattern->key = atoi(zm_mfr->tokens[4]);
-    pattern->time = atoi(zm_mfr->tokens[5]);
-    pattern->melody_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[6]));
-    pattern->chord_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[7]));
-    pattern->rhythm_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[8]));
-    pattern->divisions = ysw_array_create(16);
+    zm_section_t *section = ysw_heap_allocate(sizeof(zm_section_t));
+    section->name = ysw_heap_strdup(zm_mfr->tokens[2]);
+    section->tempo = atoi(zm_mfr->tokens[3]);
+    section->key = atoi(zm_mfr->tokens[4]);
+    section->time = atoi(zm_mfr->tokens[5]);
+    section->melody_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[6]));
+    section->chord_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[7]));
+    section->rhythm_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[8]));
+    section->divisions = ysw_array_create(16);
 
     zm_yesno_t done = false;
     zm_division_t *division = NULL;
@@ -470,7 +470,7 @@ static void parse_pattern(zm_mfr_t *zm_mfr)
             division->start = atoi(zm_mfr->tokens[1]);
             division->measure = atoi(zm_mfr->tokens[2]);
             division->flags = atoi(zm_mfr->tokens[3]);
-            ysw_array_push(pattern->divisions, division);
+            ysw_array_push(section->divisions, division);
         } else if (division && type == ZM_MF_MELODY && zm_mfr->token_count == 4) {
             division->melody.note = atoi(zm_mfr->tokens[1]);
             division->melody.duration = atoi(zm_mfr->tokens[2]);
@@ -489,31 +489,31 @@ static void parse_pattern(zm_mfr_t *zm_mfr)
         }
     }
 
-    ysw_array_push(zm_mfr->music->patterns, pattern);
+    ysw_array_push(zm_mfr->music->sections, section);
 }
 
-static void emit_patterns(zm_mfw_t *zm_mfw)
+static void emit_sections(zm_mfw_t *zm_mfw)
 {
-    uint32_t pattern_count = ysw_array_get_count(zm_mfw->music->patterns);
-    for (uint32_t i = 0; i < pattern_count; i++) {
+    uint32_t section_count = ysw_array_get_count(zm_mfw->music->sections);
+    for (uint32_t i = 0; i < section_count; i++) {
         char name[NAME_SIZE];
-        zm_pattern_t *pattern = ysw_array_get(zm_mfw->music->patterns, i);
-        put_map(zm_mfw->pattern_map, pattern, i);
-        ysw_csv_escape(pattern->name, name, sizeof(name));
+        zm_section_t *section = ysw_array_get(zm_mfw->music->sections, i);
+        put_map(zm_mfw->section_map, section, i);
+        ysw_csv_escape(section->name, name, sizeof(name));
         fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d\n",
-                ZM_MF_PATTERN,
+                ZM_MF_SECTION,
                 i,
                 name,
-                pattern->tempo,
-                pattern->key,
-                pattern->time,
-                get_map(zm_mfw->program_map, pattern->melody_program),
-                get_map(zm_mfw->program_map, pattern->chord_program),
-                get_map(zm_mfw->program_map, pattern->rhythm_program));
+                section->tempo,
+                section->key,
+                section->time,
+                get_map(zm_mfw->program_map, section->melody_program),
+                get_map(zm_mfw->program_map, section->chord_program),
+                get_map(zm_mfw->program_map, section->rhythm_program));
 
-        uint32_t division_count = ysw_array_get_count(pattern->divisions);
+        uint32_t division_count = ysw_array_get_count(section->divisions);
         for (uint32_t j = 0; j < division_count; j++) {
-            zm_division_t *division = ysw_array_get(pattern->divisions, j);
+            zm_division_t *division = ysw_array_get(section->divisions, j);
             fprintf(zm_mfw->file, "%d,%d,%d,%d\n",
                     ZM_MF_DIVISION,
                     division->start,
@@ -565,7 +565,7 @@ static void parse_composition(zm_mfr_t *zm_mfr)
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
         if (type == ZM_MF_PART && zm_mfr->token_count == 6) {
             zm_part_t *part = ysw_heap_allocate(sizeof(zm_part_t));
-            part->pattern = ysw_array_get(zm_mfr->music->patterns, atoi(zm_mfr->tokens[1]));
+            part->section = ysw_array_get(zm_mfr->music->sections, atoi(zm_mfr->tokens[1]));
             part->percent_volume = atoi(zm_mfr->tokens[2]);
             part->when.type = atoi(zm_mfr->tokens[3]);
             part->when.part_index = atoi(zm_mfr->tokens[4]);
@@ -599,7 +599,7 @@ static void emit_compositions(zm_mfw_t *zm_mfw)
             zm_part_t *part = ysw_array_get(composition->parts, j);
             fprintf(zm_mfw->file, "%d,%d,%d,%d,%d,%d\n",
                     ZM_MF_PART,
-                    get_map(zm_mfw->pattern_map, part->pattern),
+                    get_map(zm_mfw->section_map, part->section),
                     part->percent_volume,
                     part->when.type,
                     part->when.part_index,
@@ -616,16 +616,16 @@ static zm_music_t *create_music()
     music->qualities = ysw_array_create(32);
     music->styles = ysw_array_create(64);
     music->beats = ysw_array_create(8);
-    music->patterns = ysw_array_create(64);
+    music->sections = ysw_array_create(64);
     music->compositions = ysw_array_create(16);
     return music;
 }
 
-void zm_pattern_free(zm_pattern_t *pattern)
+void zm_section_free(zm_section_t *section)
 {
-    ysw_heap_free(pattern->name);
-    ysw_array_free_all(pattern->divisions);
-    ysw_heap_free(pattern);
+    ysw_heap_free(section->name);
+    ysw_array_free_all(section->divisions);
+    ysw_heap_free(section);
 }
 
 // TODO: factor type-specific delete functions out for reuse and invoke them
@@ -673,12 +673,12 @@ void zm_music_free(zm_music_t *music)
     }
     ysw_array_free(music->beats);
 
-    zm_medium_t pattern_count = ysw_array_get_count(music->patterns);
-    for (zm_medium_t i = 0; i < pattern_count; i++) {
-        zm_pattern_t *pattern = ysw_array_get(music->patterns, i);
-        zm_pattern_free(pattern);
+    zm_medium_t section_count = ysw_array_get_count(music->sections);
+    for (zm_medium_t i = 0; i < section_count; i++) {
+        zm_section_t *section = ysw_array_get(music->sections, i);
+        zm_section_free(section);
     }
-    ysw_array_free(music->patterns);
+    ysw_array_free(music->sections);
 
     zm_medium_t composition_count = ysw_array_get_count(music->compositions);
     for (zm_medium_t i = 0; i < composition_count; i++) {
@@ -708,8 +708,8 @@ zm_music_t *zm_parse_file(FILE *file)
             parse_style(zm_mfr);
         } else if (type == ZM_MF_BEAT && zm_mfr->token_count == 4) {
             parse_beat(zm_mfr);
-        } else if (type == ZM_MF_PATTERN && zm_mfr->token_count == 9) {
-            parse_pattern(zm_mfr);
+        } else if (type == ZM_MF_SECTION && zm_mfr->token_count == 9) {
+            parse_section(zm_mfr);
         } else if (type == ZM_MF_COMPOSITION && zm_mfr->token_count == 4) {
             parse_composition(zm_mfr);
         } else {
@@ -737,7 +737,7 @@ void zm_emit_file(FILE *file, zm_music_t *music)
         .quality_map = create_map(100),
         .style_map = create_map(100),
         .beat_map = create_map(100),
-        .pattern_map = create_map(100),
+        .section_map = create_map(100),
         .composition_map = create_map(100),
     };
 
@@ -746,7 +746,7 @@ void zm_emit_file(FILE *file, zm_music_t *music)
     emit_qualities(zm_mfw);
     emit_styles(zm_mfw);
     emit_beats(zm_mfw);
-    emit_patterns(zm_mfw);
+    emit_sections(zm_mfw);
     emit_compositions(zm_mfw);
 
     free_map(zm_mfw->sample_map);
@@ -754,7 +754,7 @@ void zm_emit_file(FILE *file, zm_music_t *music)
     free_map(zm_mfw->quality_map);
     free_map(zm_mfw->style_map);
     free_map(zm_mfw->beat_map);
-    free_map(zm_mfw->pattern_map);
+    free_map(zm_mfw->section_map);
     free_map(zm_mfw->composition_map);
 }
 
@@ -961,7 +961,7 @@ void zm_render_rhythm(ysw_array_t *notes, zm_rhythm_t *rhythm, zm_time_x rhythm_
     }
 }
 
-ysw_array_t *zm_render_division(zm_music_t *m, zm_pattern_t *p, zm_division_t *d, zm_channel_x bc)
+ysw_array_t *zm_render_division(zm_music_t *m, zm_section_t *p, zm_division_t *d, zm_channel_x bc)
 {
     ysw_array_t *notes = ysw_array_create(16);
     if (d->melody.note) {
@@ -980,17 +980,17 @@ ysw_array_t *zm_render_division(zm_music_t *m, zm_pattern_t *p, zm_division_t *d
     return notes;
 }
 
-zm_time_x zm_render_pattern_notes(ysw_array_t *notes, zm_music_t *music, zm_pattern_t *pattern,
+zm_time_x zm_render_section_notes(ysw_array_t *notes, zm_music_t *music, zm_section_t *section,
         zm_time_x start_time, zm_channel_x base_channel)
 {
     zm_tie_x tie = 0;
-    zm_division_x division_count = ysw_array_get_count(pattern->divisions);
-    zm_program_x melody_program = ysw_array_find(music->programs, pattern->melody_program);
-    zm_program_x chord_program = ysw_array_find(music->programs, pattern->chord_program);
-    zm_program_x rhythm_program = ysw_array_find(music->programs, pattern->rhythm_program);
+    zm_division_x division_count = ysw_array_get_count(section->divisions);
+    zm_program_x melody_program = ysw_array_find(music->programs, section->melody_program);
+    zm_program_x chord_program = ysw_array_find(music->programs, section->chord_program);
+    zm_program_x rhythm_program = ysw_array_find(music->programs, section->rhythm_program);
     // two passes: one to do melody note ties, the other for chords and rhythms
     for (zm_division_x i = 0; i < division_count; i++) {
-        zm_division_t *division = ysw_array_get(pattern->divisions, i);
+        zm_division_t *division = ysw_array_get(section->divisions, i);
         if (division->melody.note) {
             zm_time_x division_start = start_time + division->start;
             zm_render_melody(notes, &division->melody, division_start, base_channel, melody_program, tie);
@@ -1003,7 +1003,7 @@ zm_time_x zm_render_pattern_notes(ysw_array_t *notes, zm_music_t *music, zm_patt
     }
     zm_time_x division_end = 0;
     for (zm_division_x i = 0; i < division_count; i++) {
-        zm_division_t *division = ysw_array_get(pattern->divisions, i);
+        zm_division_t *division = ysw_array_get(section->divisions, i);
         zm_time_x division_start = start_time + division->start;
         if (division->chord.root) {
             zm_render_chord(notes, &division->chord, division_start, base_channel + 1, chord_program);
@@ -1016,10 +1016,10 @@ zm_time_x zm_render_pattern_notes(ysw_array_t *notes, zm_music_t *music, zm_patt
     return division_end;
 }
 
-ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_channel_x base_channel)
+ysw_array_t *zm_render_section(zm_music_t *music, zm_section_t *section, zm_channel_x base_channel)
 {
     ysw_array_t *notes = ysw_array_create(512);
-    zm_render_pattern_notes(notes, music, pattern, 0, base_channel);
+    zm_render_section_notes(notes, music, section, 0, base_channel);
     ysw_array_sort(notes, zm_note_compare);
     return notes;
 }
@@ -1048,23 +1048,23 @@ ysw_array_t *zm_render_composition(zm_music_t *music, zm_composition_t *composit
         zm_channel_x channel = base_channel + (i * 3);
         if (i == part->when.part_index) {
             begin_time = max_time;
-            end_time = zm_render_pattern_notes(notes, music, part->pattern, begin_time, channel);
+            end_time = zm_render_section_notes(notes, music, part->section, begin_time, channel);
         } else if (part->when.type == ZM_WHEN_TYPE_WITH) {
             zm_part_time_t *part_time = ysw_array_get(part_times, part->when.part_index);
             begin_time = part_time->begin_time;
             if (part->fit == ZM_FIT_LOOP) {
                 zm_time_x loop_time = begin_time;
                 while (end_time < part_time->end_time) {
-                    end_time = zm_render_pattern_notes(notes, music, part->pattern, loop_time, channel);
+                    end_time = zm_render_section_notes(notes, music, part->section, loop_time, channel);
                     loop_time = end_time;
                 } 
             } else {
-                end_time = zm_render_pattern_notes(notes, music, part->pattern, begin_time, channel);
+                end_time = zm_render_section_notes(notes, music, part->section, begin_time, channel);
             }
         } else if (part->when.type == ZM_WHEN_TYPE_AFTER) {
             zm_part_time_t *part_time = ysw_array_get(part_times, part->when.part_index);
             begin_time = part_time->end_time;
-            end_time = zm_render_pattern_notes(notes, music, part->pattern, begin_time, channel);
+            end_time = zm_render_section_notes(notes, music, part->section, begin_time, channel);
         }
         if (part->percent_volume != 100) {
             adjust_volume(notes, first_note, part->percent_volume);
@@ -1286,18 +1286,18 @@ zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note)
 #define DEFAULT_CHORD_PROGRAM 1
 #define DEFAULT_RHYTHM_PROGRAM 7
 
-zm_pattern_t *zm_music_create_pattern(zm_music_t *music)
+zm_section_t *zm_music_create_section(zm_music_t *music)
 {
     char name[32];
     ysw_name_create(name, sizeof(name));
-    zm_pattern_t *pattern = ysw_heap_allocate(sizeof(zm_pattern_t));
-    pattern->name = ysw_heap_strdup(name);
-    pattern->divisions = ysw_array_create(64);
-    pattern->key = ZM_KEY_C;
-    pattern->time = ZM_TIME_4_4;
-    pattern->tempo = ZM_TEMPO_100;
-    pattern->melody_program = ysw_array_get(music->programs, DEFAULT_MELODY_PROGRAM);
-    pattern->chord_program = ysw_array_get(music->programs, DEFAULT_CHORD_PROGRAM);
-    pattern->rhythm_program = ysw_array_get(music->programs, DEFAULT_RHYTHM_PROGRAM);
-    return pattern;
+    zm_section_t *section = ysw_heap_allocate(sizeof(zm_section_t));
+    section->name = ysw_heap_strdup(name);
+    section->divisions = ysw_array_create(64);
+    section->key = ZM_KEY_C;
+    section->time = ZM_TIME_4_4;
+    section->tempo = ZM_TEMPO_100;
+    section->melody_program = ysw_array_get(music->programs, DEFAULT_MELODY_PROGRAM);
+    section->chord_program = ysw_array_get(music->programs, DEFAULT_CHORD_PROGRAM);
+    section->rhythm_program = ysw_array_get(music->programs, DEFAULT_RHYTHM_PROGRAM);
+    return section;
 }

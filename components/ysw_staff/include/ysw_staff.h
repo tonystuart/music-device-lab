@@ -22,7 +22,7 @@ extern "C" {
 
 typedef struct {
     uint32_t position;
-    zm_pattern_t *pattern;
+    zm_section_t *section;
 } ysw_staff_ext_t;
 
 enum {
@@ -32,10 +32,10 @@ enum {
 typedef uint8_t ysw_staff_role_t;
 
 lv_obj_t *ysw_staff_create(lv_obj_t *par);
-void ysw_staff_set_pattern(lv_obj_t *staff, zm_pattern_t *pattern);
+void ysw_staff_set_section(lv_obj_t *staff, zm_section_t *section);
 void ysw_staff_set_position(lv_obj_t *staff, uint32_t position);
 void ysw_staff_invalidate(lv_obj_t *staff);
-zm_pattern_t *ysw_staff_get_pattern(lv_obj_t *staff);
+zm_section_t *ysw_staff_get_section(lv_obj_t *staff);
 uint32_t ysw_staff_get_position(lv_obj_t *staff);
 
 #ifdef __cplusplus

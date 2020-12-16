@@ -59,7 +59,7 @@ typedef struct {
     ysw_editor_lvgl_init lvgl_init;
 
     zm_music_t *music;
-    zm_pattern_t *pattern;
+    zm_section_t *section;
     zm_quality_t *quality;
     zm_style_t *style;
     zm_beat_t *beat;
@@ -128,7 +128,7 @@ static zm_division_t *get_division(ysw_editor_t *editor)
     zm_division_t *division = NULL;
     if (is_division_position(editor)) {
         zm_division_x division_index = editor->position / 2;
-        division = ysw_array_get(editor->pattern->divisions, division_index);
+        division = ysw_array_get(editor->section->divisions, division_index);
     }
     return division;
 }
@@ -144,11 +144,11 @@ static void recalculate(ysw_editor_t *editor)
     zm_division_t *division = NULL;
     zm_division_t *previous = NULL;
 
-    zm_time_x ticks_per_measure = zm_get_ticks_per_measure(editor->pattern->time);
-    zm_division_x division_count = ysw_array_get_count(editor->pattern->divisions);
+    zm_time_x ticks_per_measure = zm_get_ticks_per_measure(editor->section->time);
+    zm_division_x division_count = ysw_array_get_count(editor->section->divisions);
 
     for (zm_division_x i = 0; i < division_count; i++) {
-        division = ysw_array_get(editor->pattern->divisions, i);
+        division = ysw_array_get(editor->section->divisions, i);
         division->start = start;
         division->flags = 0;
         division->measure = measure;
@@ -184,8 +184,8 @@ static void recalculate(ysw_editor_t *editor)
 
 static void play_division(ysw_editor_t *editor, zm_division_t *division)
 {
-    ysw_array_t *notes = zm_render_division(editor->music, editor->pattern, division, BASE_CHANNEL);
-    zm_bpm_x bpm = zm_tempo_to_bpm(editor->pattern->tempo);
+    ysw_array_t *notes = zm_render_division(editor->music, editor->section, division, BASE_CHANNEL);
+    zm_bpm_x bpm = zm_tempo_to_bpm(editor->section->tempo);
     ysw_event_fire_play(editor->bus, notes, bpm);
 }
 
@@ -193,7 +193,7 @@ static void play_position(ysw_editor_t *editor)
 {
     if (is_division_position(editor)) {
         zm_division_x division_index = editor->position / 2;
-        zm_division_t *division = ysw_array_get(editor->pattern->divisions, division_index);
+        zm_division_t *division = ysw_array_get(editor->section->divisions, division_index);
         play_division(editor, division);
     }
 }
@@ -202,11 +202,11 @@ static void display_program(ysw_editor_t *editor)
 {
     const char *value = "";
     if (editor->mode == YSW_EDITOR_MODE_MELODY) {
-        value = editor->pattern->melody_program->name;
+        value = editor->section->melody_program->name;
     } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
-        value = editor->pattern->chord_program->name;
+        value = editor->section->chord_program->name;
     } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
-        value = editor->pattern->rhythm_program->name;
+        value = editor->section->rhythm_program->name;
     }
     ysw_header_set_program(editor->header, value);
 }
@@ -217,14 +217,14 @@ static void display_melody_mode(ysw_editor_t *editor)
     // 2. between divisions - show previous (to left) note or rest
     // 3. no divisions - show blank
     char value[32];
-    zm_division_x division_count = ysw_array_get_count(editor->pattern->divisions);
+    zm_division_x division_count = ysw_array_get_count(editor->section->divisions);
     if (editor->position > 0) {
         zm_division_x division_index = editor->position / 2;
         if (division_index >= division_count) {
             division_index = division_count - 1;
         }
-        zm_bpm_x bpm = zm_tempo_to_bpm(editor->pattern->tempo);
-        zm_division_t *division = ysw_array_get(editor->pattern->divisions, division_index);
+        zm_bpm_x bpm = zm_tempo_to_bpm(editor->section->tempo);
+        zm_division_t *division = ysw_array_get(editor->section->divisions, division_index);
         uint32_t millis = ysw_ticks_to_millis(division->melody.duration, bpm);
         zm_note_t note = division->melody.note;
         if (note) {
@@ -235,7 +235,7 @@ static void display_melody_mode(ysw_editor_t *editor)
             snprintf(value, sizeof(value), "Rest (%d ms)", millis);
         }
     } else {
-        snprintf(value, sizeof(value), "%s", editor->pattern->name);
+        snprintf(value, sizeof(value), "%s", editor->section->name);
     }
     ysw_header_set_mode(editor->header, modes[editor->mode], value);
 }
@@ -249,7 +249,7 @@ static void display_chord_mode(ysw_editor_t *editor)
     char value[32] = {};
     zm_division_t *division = NULL;
     if (is_division_position(editor)) {
-        division = ysw_array_get(editor->pattern->divisions, editor->position / 2);
+        division = ysw_array_get(editor->section->divisions, editor->position / 2);
     }
     if (division && division->chord.root) {
         snprintf(value, sizeof(value), "%s %s %s",
@@ -269,7 +269,7 @@ static void display_rhythm_mode(ysw_editor_t *editor)
     char value[32] = {};
     zm_division_t *division = NULL;
     if (is_division_position(editor)) {
-        division = ysw_array_get(editor->pattern->divisions, editor->position / 2);
+        division = ysw_array_get(editor->section->divisions, editor->position / 2);
     }
     if (division && division->rhythm.beat) {
         snprintf(value, sizeof(value), "%s", division->rhythm.beat->name);
@@ -325,17 +325,17 @@ static void fire_program_change(ysw_editor_t *editor, zm_program_t *program, zm_
 static void cycle_program(ysw_editor_t *editor)
 {
     if (editor->mode == YSW_EDITOR_MODE_MELODY) {
-        editor->pattern->melody_program = next_program(editor->music->programs,
-                editor->pattern->melody_program, ZM_PROGRAM_NOTE);
-        fire_program_change(editor, editor->pattern->melody_program, MELODY_CHANNEL);
+        editor->section->melody_program = next_program(editor->music->programs,
+                editor->section->melody_program, ZM_PROGRAM_NOTE);
+        fire_program_change(editor, editor->section->melody_program, MELODY_CHANNEL);
     } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
-        editor->pattern->chord_program = next_program(editor->music->programs,
-                editor->pattern->chord_program, ZM_PROGRAM_NOTE);
-        fire_program_change(editor, editor->pattern->chord_program, CHORD_CHANNEL);
+        editor->section->chord_program = next_program(editor->music->programs,
+                editor->section->chord_program, ZM_PROGRAM_NOTE);
+        fire_program_change(editor, editor->section->chord_program, CHORD_CHANNEL);
     } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
-        editor->pattern->rhythm_program = next_program(editor->music->programs,
-                editor->pattern->rhythm_program, ZM_PROGRAM_BEAT);
-        fire_program_change(editor, editor->pattern->rhythm_program, RHYTHM_CHANNEL);
+        editor->section->rhythm_program = next_program(editor->music->programs,
+                editor->section->rhythm_program, ZM_PROGRAM_BEAT);
+        fire_program_change(editor, editor->section->rhythm_program, RHYTHM_CHANNEL);
     }
     display_program(editor);
     play_position(editor);
@@ -343,23 +343,23 @@ static void cycle_program(ysw_editor_t *editor)
 
 static void cycle_key_signature(ysw_editor_t *editor)
 {
-    editor->pattern->key = zm_get_next_key_index(editor->pattern->key);
+    editor->section->key = zm_get_next_key_index(editor->section->key);
     recalculate(editor);
-    ysw_footer_set_key(editor->footer, editor->pattern->key);
+    ysw_footer_set_key(editor->footer, editor->section->key);
 }
 
 static void cycle_time_signature(ysw_editor_t *editor)
 {
-    editor->pattern->time = zm_get_next_time_index(editor->pattern->time);
+    editor->section->time = zm_get_next_time_index(editor->section->time);
     recalculate(editor);
-    ysw_footer_set_time(editor->footer, editor->pattern->time);
+    ysw_footer_set_time(editor->footer, editor->section->time);
 }
 
 static void cycle_tempo(ysw_editor_t *editor)
 {
-    editor->pattern->tempo = zm_get_next_tempo_index(editor->pattern->tempo);
+    editor->section->tempo = zm_get_next_tempo_index(editor->section->tempo);
     recalculate(editor);
-    ysw_footer_set_tempo(editor->footer, editor->pattern->tempo);
+    ysw_footer_set_tempo(editor->footer, editor->section->tempo);
     display_mode(editor);
 }
 
@@ -368,7 +368,7 @@ static void cycle_duration(ysw_editor_t *editor)
     zm_division_t *division = NULL;
     if (is_division_position(editor) && editor->duration != ZM_AS_PLAYED) {
         zm_division_x division_index = editor->position / 2;
-        division = ysw_array_get(editor->pattern->divisions, division_index);
+        division = ysw_array_get(editor->section->divisions, division_index);
     }
     // Cycle default duration if not on a division or if division duration is already default duration
     if (!division || division->melody.duration == editor->duration) {
@@ -386,7 +386,7 @@ static void cycle_tie(ysw_editor_t *editor)
 {
     if (is_division_position(editor)) {
         zm_division_x division_index = editor->position / 2;
-        zm_division_t *division = ysw_array_get(editor->pattern->divisions, division_index);
+        zm_division_t *division = ysw_array_get(editor->section->divisions, division_index);
         if (division->melody.note) {
             if (division->melody.tie) {
                 division->melody.tie = 0;
@@ -425,7 +425,7 @@ static void cycle_quality(ysw_editor_t *editor)
     zm_division_t *division = NULL;
     if (is_division_position(editor)) {
         zm_division_x division_index = editor->position / 2;
-        division = ysw_array_get(editor->pattern->divisions, division_index);
+        division = ysw_array_get(editor->section->divisions, division_index);
     }
     if (!division || !division->chord.root || division->chord.quality == editor->quality) {
         zm_quality_x previous = ysw_array_find(editor->music->qualities, editor->quality);
@@ -448,7 +448,7 @@ static void cycle_style(ysw_editor_t *editor)
     zm_division_t *division = NULL;
     if (is_division_position(editor)) {
         zm_division_x division_index = editor->position / 2;
-        division = ysw_array_get(editor->pattern->divisions, division_index);
+        division = ysw_array_get(editor->section->divisions, division_index);
     }
     if (!division || !division->chord.root || division->chord.style == editor->style) {
         editor->style = find_matching_style(editor, true);
@@ -465,7 +465,7 @@ static void cycle_beat(ysw_editor_t *editor)
     zm_division_t *division = NULL;
     if (is_division_position(editor)) {
         zm_division_x division_index = editor->position / 2;
-        division = ysw_array_get(editor->pattern->divisions, division_index);
+        division = ysw_array_get(editor->section->divisions, division_index);
     }
     if (!division || !division->rhythm.beat || division->rhythm.beat == editor->beat) {
         zm_beat_x previous = ysw_array_find(editor->music->beats, editor->beat);
@@ -486,7 +486,7 @@ static zm_division_t *apply_note(ysw_editor_t *editor, zm_note_t midi_note, zm_t
     zm_time_x articulation = 0;
     zm_duration_t duration = editor->duration;
     if (duration == ZM_AS_PLAYED) {
-        zm_bpm_x bpm = zm_tempo_to_bpm(editor->pattern->tempo);
+        zm_bpm_x bpm = zm_tempo_to_bpm(editor->section->tempo);
         duration = ysw_millis_to_ticks(duration_millis, bpm);
         articulation = ysw_millis_to_ticks(editor->delta, bpm);
     }
@@ -498,14 +498,14 @@ static zm_division_t *apply_note(ysw_editor_t *editor, zm_note_t midi_note, zm_t
         if (articulation && division_index) {
             zm_division_t *rest = ysw_heap_allocate(sizeof(zm_division_t));
             rest->melody.duration = min(articulation, ZM_WHOLE);
-            ysw_array_insert(editor->pattern->divisions, division_index, rest);
+            ysw_array_insert(editor->section->divisions, division_index, rest);
             division_index++;
             editor->position = division_index * 2 + 1;
         }
         division = ysw_heap_allocate(sizeof(zm_division_t));
-        ysw_array_insert(editor->pattern->divisions, division_index, division);
+        ysw_array_insert(editor->section->divisions, division_index, division);
     } else {
-        division = ysw_array_get(editor->pattern->divisions, division_index);
+        division = ysw_array_get(editor->section->divisions, division_index);
     }
 
     if (editor->mode == YSW_EDITOR_MODE_MELODY) {
@@ -529,7 +529,7 @@ static zm_division_t *apply_note(ysw_editor_t *editor, zm_note_t midi_note, zm_t
         }
     }
 
-    zm_division_x division_count = ysw_array_get_count(editor->pattern->divisions);
+    zm_division_x division_count = ysw_array_get_count(editor->section->divisions);
     editor->position = min(editor->position + editor->advance, division_count * 2);
     ysw_staff_set_position(editor->staff, editor->position);
     display_mode(editor);
@@ -552,7 +552,7 @@ static void insert_beat(ysw_editor_t *editor)
             zm_stroke_t *stroke = ysw_array_get(editor->beat->strokes, i);
             start = stroke->start;
         } else {
-            start = zm_get_ticks_per_measure(editor->pattern->time);
+            start = zm_get_ticks_per_measure(editor->section->time);
         }
         if (start != last_start) {
             editor->duration = zm_round_duration(start - last_start, NULL, NULL);
@@ -569,13 +569,13 @@ static void insert_beat(ysw_editor_t *editor)
 static void process_delete(ysw_editor_t *editor)
 {
     zm_division_x division_index = editor->position / 2;
-    zm_division_x division_count = ysw_array_get_count(editor->pattern->divisions);
+    zm_division_x division_count = ysw_array_get_count(editor->section->divisions);
     if (division_count > 0 && division_index == division_count) {
-        // On space following last division in pattern, delete previous division
+        // On space following last division in section, delete previous division
         division_index--;
     }
     if (division_index < division_count) {
-        zm_division_t *division = ysw_array_remove(editor->pattern->divisions, division_index);
+        zm_division_t *division = ysw_array_remove(editor->section->divisions, division_index);
         ysw_heap_free(division);
         division_count--;
         if (division_index == division_count) {
@@ -605,7 +605,7 @@ static void process_left(ysw_editor_t *editor, uint8_t move_amount)
 static void process_right(ysw_editor_t *editor, uint8_t move_amount)
 {
     uint32_t new_position = editor->position + move_amount;
-    if (new_position <= ysw_array_get_count(editor->pattern->divisions) * 2) {
+    if (new_position <= ysw_array_get_count(editor->section->divisions) * 2) {
         editor->position = new_position;
         play_position(editor);
         ysw_staff_set_position(editor->staff, editor->position);
@@ -617,7 +617,7 @@ static void process_up(ysw_editor_t *editor)
 {
     if (is_division_position(editor)) {
         zm_division_x division_index = editor->position / 2;
-        zm_division_t *division = ysw_array_get(editor->pattern->divisions, division_index);
+        zm_division_t *division = ysw_array_get(editor->section->divisions, division_index);
         if (editor->mode == YSW_EDITOR_MODE_MELODY) {
             if (division->melody.note && division->melody.note < 83) {
                 division->melody.note++;
@@ -638,7 +638,7 @@ static void process_down(ysw_editor_t *editor)
 {
     if (is_division_position(editor)) {
         zm_division_x division_index = editor->position / 2;
-        zm_division_t *division = ysw_array_get(editor->pattern->divisions, division_index);
+        zm_division_t *division = ysw_array_get(editor->section->divisions, division_index);
         if (editor->mode == YSW_EDITOR_MODE_MELODY) {
             if (division->melody.note && division->melody.note > 60) {
                 division->melody.note--;
@@ -745,8 +745,8 @@ static void on_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
 static void on_play(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
-    ysw_array_t *notes = zm_render_pattern(editor->music, editor->pattern, BACKGROUND_BASE);
-    zm_bpm_x bpm = zm_tempo_to_bpm(editor->pattern->tempo);
+    ysw_array_t *notes = zm_render_section(editor->music, editor->section, BACKGROUND_BASE);
+    zm_bpm_x bpm = zm_tempo_to_bpm(editor->section->tempo);
     ysw_event_fire_play(editor->bus, notes, bpm);
 }
 
@@ -843,7 +843,7 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
                 .chord.root = midi_note,
                 .chord.quality = editor->quality,
                 .chord.style = editor->style,
-                .chord.duration = zm_get_ticks_per_measure(editor->pattern->time),
+                .chord.duration = zm_get_ticks_per_measure(editor->section->time),
             };
             play_division(editor, &division);
         } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
@@ -881,7 +881,7 @@ static void on_note_status(ysw_editor_t *editor, ysw_event_t *event)
             .start = event->note_status.note.start,
         };
         ysw_array_match_t flags = YSW_ARRAY_MATCH_EXACT;
-        int32_t result = ysw_array_search(editor->pattern->divisions, &needle, compare_divisions, flags);
+        int32_t result = ysw_array_search(editor->section->divisions, &needle, compare_divisions, flags);
         if (result != -1) {
             editor->position = division_index_to_position(result);
             ysw_staff_set_position(editor->staff, editor->position);
@@ -894,9 +894,9 @@ static void on_note_status(ysw_editor_t *editor, ysw_event_t *event)
 static void on_new(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
-    zm_pattern_t *pattern = zm_music_create_pattern(editor->music);
-    ysw_array_push(editor->music->patterns, pattern);
-    ysw_event_fire_pattern_edit(editor->bus, pattern);
+    zm_section_t *section = zm_music_create_section(editor->music);
+    ysw_array_push(editor->music->sections, section);
+    ysw_event_fire_section_edit(editor->bus, section);
 }
 
 static void on_save(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -914,12 +914,12 @@ static void close_chooser(ysw_editor_t *editor)
     }
 }
 
-static void open_pattern(ysw_editor_t *editor)
+static void open_section(ysw_editor_t *editor)
 {
-    zm_pattern_t *pattern = ysw_chooser_get_pattern(editor->chooser);
+    zm_section_t *section = ysw_chooser_get_section(editor->chooser);
     close_chooser(editor);
-    if (pattern) {
-        ysw_event_fire_pattern_edit(editor->bus, pattern);
+    if (section) {
+        ysw_event_fire_section_edit(editor->bus, section);
     }
 }
 
@@ -938,7 +938,7 @@ static void on_chooser_down(ysw_menu_t *menu, ysw_event_t *event, void *value)
 static void on_chooser_open(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
-    open_pattern(editor);
+    open_section(editor);
 }
 
 static void on_chooser_back(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -959,11 +959,11 @@ static void on_chooser_event(struct _lv_obj_t *obj, lv_event_t event)
         ysw_editor_t *editor = lv_obj_get_user_data(obj);
         if (lv_table_get_pressed_cell(obj, &row, &column)) {
             if (row > 0) {
-                zm_pattern_x new_row = row - 1; // -1 for header
+                zm_section_x new_row = row - 1; // -1 for header
                 if (new_row == editor->chooser->current_row) {
 #if 0
-                    // open pattern on double tap
-                    open_pattern(editor);
+                    // open section on double tap
+                    open_section(editor);
                     ysw_menu_pop_all(editor->menu);
 #else
                     // on double tap, open menu (otherwise user will miss other options)
@@ -982,7 +982,7 @@ static void on_chooser_event(struct _lv_obj_t *obj, lv_event_t event)
 static void on_chooser(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
-    editor->chooser = ysw_chooser_create(editor->music, editor->pattern);
+    editor->chooser = ysw_chooser_create(editor->music, editor->section);
     lv_obj_set_user_data(editor->chooser->table, editor);
     lv_obj_set_event_cb(editor->chooser->table, on_chooser_event);
     lv_obj_set_click(editor->chooser->table, true);
@@ -1004,21 +1004,21 @@ static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, void *value)
     }
 }
 
-static void on_pattern_edit(ysw_editor_t *editor, ysw_event_t *event)
+static void on_section_edit(ysw_editor_t *editor, ysw_event_t *event)
 {
     editor->position = 0;
-    editor->pattern = event->pattern_edit.pattern;
-    ysw_staff_set_pattern(editor->staff, editor->pattern);
-    ysw_footer_set_key(editor->footer, editor->pattern->key);
-    ysw_footer_set_time(editor->footer, editor->pattern->time);
-    ysw_footer_set_tempo(editor->footer, editor->pattern->tempo);
-    fire_program_change(editor, editor->pattern->melody_program, MELODY_CHANNEL);
-    fire_program_change(editor, editor->pattern->chord_program, CHORD_CHANNEL);
-    fire_program_change(editor, editor->pattern->rhythm_program, RHYTHM_CHANNEL);
+    editor->section = event->section_edit.section;
+    ysw_staff_set_section(editor->staff, editor->section);
+    ysw_footer_set_key(editor->footer, editor->section->key);
+    ysw_footer_set_time(editor->footer, editor->section->time);
+    ysw_footer_set_tempo(editor->footer, editor->section->tempo);
+    fire_program_change(editor, editor->section->melody_program, MELODY_CHANNEL);
+    fire_program_change(editor, editor->section->chord_program, CHORD_CHANNEL);
+    fire_program_change(editor, editor->section->rhythm_program, RHYTHM_CHANNEL);
     display_mode(editor); // mode displays program
 }
 
-static void process_event_with_pattern(ysw_editor_t *editor, ysw_event_t *event)
+static void process_event_with_section(ysw_editor_t *editor, ysw_event_t *event)
 {
     switch (event->header.type) {
         case YSW_EVENT_KEY_DOWN:
@@ -1033,19 +1033,19 @@ static void process_event_with_pattern(ysw_editor_t *editor, ysw_event_t *event)
         case YSW_EVENT_NOTE_STATUS:
             on_note_status(editor, event);
             break;
-        case YSW_EVENT_PATTERN_EDIT:
-            on_pattern_edit(editor, event);
+        case YSW_EVENT_SECTION_EDIT:
+            on_section_edit(editor, event);
             break;
         default:
             break;
     }
 }
 
-static void process_event_without_pattern(ysw_editor_t *editor, ysw_event_t *event)
+static void process_event_without_section(ysw_editor_t *editor, ysw_event_t *event)
 {
     switch (event->header.type) {
-        case YSW_EVENT_PATTERN_EDIT:
-            on_pattern_edit(editor, event);
+        case YSW_EVENT_SECTION_EDIT:
+            on_section_edit(editor, event);
             break;
         default:
             break;
@@ -1056,10 +1056,10 @@ static void process_event(void *context, ysw_event_t *event)
 {
     ysw_editor_t *editor = context;
     if (event) {
-        if (editor->pattern) {
-            process_event_with_pattern(editor, event);
+        if (editor->section) {
+            process_event_with_section(editor, event);
         } else {
-            process_event_without_pattern(editor, event);
+            process_event_without_section(editor, event);
         }
     }
     lv_task_handler();

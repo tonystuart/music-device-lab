@@ -261,15 +261,15 @@ static void initialize_touch_screen(void)
 
 #endif
 
-static void edit_pattern(ysw_bus_t *bus, zm_music_t *music)
+static void edit_section(ysw_bus_t *bus, zm_music_t *music)
 {
-    zm_pattern_t *pattern;
-    if (ysw_array_get_count(music->patterns) > 0) {
-        pattern = ysw_array_get(music->patterns, 0);
+    zm_section_t *section;
+    if (ysw_array_get_count(music->sections) > 0) {
+        section = ysw_array_get(music->sections, 0);
     } else {
-        pattern = zm_music_create_pattern(music);
+        section = zm_music_create_section(music);
     }
-    ysw_event_fire_pattern_edit(bus, pattern);
+    ysw_event_fire_section_edit(bus, section);
 }
 
 #ifdef IDF_VER
@@ -294,7 +294,7 @@ int main(int argc, char *argv[])
 
     ysw_sequencer_create_task(bus);
     ysw_editor_create_task(bus, music, initialize_touch_screen);
-    edit_pattern(bus, music);
+    edit_section(bus, music);
 
 #ifdef IDF_VER
     ysw_led_config_t led_config = {

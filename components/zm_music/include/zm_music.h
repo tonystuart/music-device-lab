@@ -45,7 +45,7 @@ typedef uint8_t zm_velocity_x;
 typedef uint16_t zm_age_x;
 typedef uint16_t zm_measure_x;
 typedef uint16_t zm_note_x;
-typedef uint16_t zm_pattern_x;
+typedef uint16_t zm_section_x;
 typedef uint16_t zm_quality_x;
 typedef uint16_t zm_sample_x;
 typedef uint16_t zm_composition_x;
@@ -224,7 +224,7 @@ typedef struct {
     zm_program_t *melody_program;
     zm_program_t *chord_program;
     zm_program_t *rhythm_program;
-} zm_pattern_t;
+} zm_section_t;
 
 typedef enum {
     ZM_WHEN_TYPE_WITH,
@@ -255,7 +255,7 @@ typedef struct {
 } zm_composition_t;
 
 typedef struct {
-    zm_pattern_t *pattern;
+    zm_section_t *section;
     zm_percent_x percent_volume;
     zm_when_t when;
     zm_fit_t fit;
@@ -267,7 +267,7 @@ typedef struct {
     ysw_array_t *qualities;
     ysw_array_t *styles;
     ysw_array_t *beats;
-    ysw_array_t *patterns;
+    ysw_array_t *sections;
     ysw_array_t *compositions;
 } zm_music_t;
 
@@ -282,9 +282,9 @@ int zm_note_compare(const void *left, const void *right);
 
 void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_program_x program_index, zm_tie_x tie);
 void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_program_x program_index);
-ysw_array_t *zm_render_division(zm_music_t *m, zm_pattern_t *p, zm_division_t *d, zm_channel_x bc);
-zm_time_x zm_render_pattern_notes(ysw_array_t *notes, zm_music_t *music, zm_pattern_t *pattern, zm_time_x start_time, zm_channel_x base_channel);
-ysw_array_t *zm_render_pattern(zm_music_t *music, zm_pattern_t *pattern, zm_channel_x base_channel);
+ysw_array_t *zm_render_division(zm_music_t *m, zm_section_t *p, zm_division_t *d, zm_channel_x bc);
+zm_time_x zm_render_section_notes(ysw_array_t *notes, zm_music_t *music, zm_section_t *section, zm_time_x start_time, zm_channel_x base_channel);
+ysw_array_t *zm_render_section(zm_music_t *music, zm_section_t *section, zm_channel_x base_channel);
 ysw_array_t *zm_render_composition(zm_music_t *music, zm_composition_t *composition, zm_channel_x base_channel);
 
 const zm_key_signature_t *zm_get_key_signature(zm_key_signature_x key_index);
@@ -304,7 +304,7 @@ zm_duration_t zm_get_next_duration(zm_duration_t duration);
 
 zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note);
 
-zm_pattern_t *zm_music_create_pattern(zm_music_t *music);
+zm_section_t *zm_music_create_section(zm_music_t *music);
 
 // See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
 

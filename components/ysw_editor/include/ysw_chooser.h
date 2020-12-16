@@ -19,9 +19,9 @@ typedef struct {
     int current_row;
 } ysw_chooser_t;
 
-ysw_chooser_t *ysw_chooser_create(zm_music_t *music, zm_pattern_t *current_pattern);
+ysw_chooser_t *ysw_chooser_create(zm_music_t *music, zm_section_t *current_section);
 void ysw_chooser_on_up(ysw_chooser_t *chooser);
 void ysw_chooser_on_down(ysw_chooser_t *chooser);
-zm_pattern_t *ysw_chooser_get_pattern(ysw_chooser_t *chooser);
+zm_section_t *ysw_chooser_get_section(ysw_chooser_t *chooser);
 void ysw_chooser_delete(ysw_chooser_t *chooser);
-void ysw_chooser_select_row(ysw_chooser_t *chooser, zm_pattern_x new_row);
+void ysw_chooser_select_row(ysw_chooser_t *chooser, zm_section_x new_row);

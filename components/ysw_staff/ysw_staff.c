@@ -381,7 +381,7 @@ static void draw_division(ysw_staff_t *dc, zm_division_t *division)
 
 static void draw_staff(ysw_staff_ext_t *ext, ysw_staff_t *dc)
 {
-    uint32_t division_count = ysw_array_get_count(ext->pattern->divisions);
+    uint32_t division_count = ysw_array_get_count(ext->section->divisions);
     uint32_t symbol_count = division_count * 2;
 
     dc->draw_type = YSW_STAFF_LEFT;
@@ -390,7 +390,7 @@ static void draw_staff(ysw_staff_ext_t *ext, ysw_staff_t *dc)
     for (int32_t left = ext->position - 1; left >= 0 && dc->point.x > 0; left--) {
         if (left % 2 == 1) {
             uint32_t division_index = left / 2;
-            zm_division_t *division = ysw_array_get(ext->pattern->divisions, division_index);
+            zm_division_t *division = ysw_array_get(ext->section->divisions, division_index);
             if (division->flags & ZM_DIVISION_END_OF_MEASURE) {
                 draw_letter(dc, YSW_STAFF_SPACE);
                 draw_measure_label(dc, division->measure + 1);
@@ -403,7 +403,7 @@ static void draw_staff(ysw_staff_ext_t *ext, ysw_staff_t *dc)
     }
 
     if (dc->point.x > 0) {
-        draw_signature(dc, ext->pattern->time);
+        draw_signature(dc, ext->section->time);
     }
 
     dc->draw_type = YSW_STAFF_RIGHT;
@@ -412,7 +412,7 @@ static void draw_staff(ysw_staff_ext_t *ext, ysw_staff_t *dc)
     for (uint32_t right = ext->position; right <= symbol_count && dc->point.x < 320; right++) {
         if (right % 2 == 1) {
             uint32_t division_index = right / 2;
-            zm_division_t *division = ysw_array_get(ext->pattern->divisions, division_index);
+            zm_division_t *division = ysw_array_get(ext->section->divisions, division_index);
             if (right == ext->position) {
                 dc->color = LV_COLOR_RED;
                 draw_division(dc, division);
@@ -440,14 +440,14 @@ static void draw_staff(ysw_staff_ext_t *ext, ysw_staff_t *dc)
 static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
 {
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
-    if (ext->pattern) {
+    if (ext->section) {
         ysw_staff_t dc = {
             .point.y = 70,
             .color = LV_COLOR_WHITE,
             .clip_area = clip_area,
             .font = &MusiQwikT_48,
-            .key_signature = zm_get_key_signature(ext->pattern->key),
-            .patches = ext->pattern->rhythm_program->patches,
+            .key_signature = zm_get_key_signature(ext->section->key),
+            .patches = ext->section->rhythm_program->patches,
         };
         draw_staff(ext, &dc);
     }
@@ -512,12 +512,12 @@ lv_obj_t *ysw_staff_create(lv_obj_t *par)
     return staff;
 }
 
-void ysw_staff_set_pattern(lv_obj_t *staff, zm_pattern_t *pattern)
+void ysw_staff_set_section(lv_obj_t *staff, zm_section_t *section)
 {
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
     ext->position = 0;
-    ext->pattern = pattern;
+    ext->section = section;
     lv_obj_invalidate(staff);
 }
 
@@ -535,11 +535,11 @@ void ysw_staff_invalidate(lv_obj_t *staff)
     lv_obj_invalidate(staff);
 }
 
-zm_pattern_t *ysw_staff_get_pattern(lv_obj_t *staff)
+zm_section_t *ysw_staff_get_section(lv_obj_t *staff)
 {
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
-    return ext->pattern;
+    return ext->section;
 }
 
 uint32_t ysw_staff_get_position(lv_obj_t *staff)
