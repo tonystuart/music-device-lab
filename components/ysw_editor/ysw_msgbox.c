@@ -10,6 +10,7 @@
 #include "ysw_msgbox.h"
 #include "ysw_common.h"
 #include "ysw_heap.h"
+#include "ysw_style.h"
 #include "esp_log.h"
 #include "assert.h"
 
@@ -17,6 +18,14 @@
 
 #define OKAY "OK"
 #define CANCEL "Cancel"
+
+static const char *MSGBOX_OKAY[] = {
+    OKAY, "",
+};
+
+static const char *MSGBOX_OKAY_CANCEL[] = {
+    OKAY, CANCEL, "",
+};
 
 static void event_handler(lv_obj_t *obj, lv_event_t event)
 {
@@ -37,18 +46,20 @@ static void event_handler(lv_obj_t *obj, lv_event_t event)
     }
 }
 
-ysw_msgbox_t *ysw_msgbox_create(ysw_msgbox_config_t *config, void *context)
+ysw_msgbox_t *ysw_msgbox_create(ysw_msgbox_config_t *config)
 {
     ysw_msgbox_t *msgbox = ysw_heap_allocate(sizeof(ysw_msgbox_t));
-    msgbox->context = context; // TODO: consider initializing via config
+    msgbox->context = config->context;
+    msgbox->okay_key = config->okay_key;
+    msgbox->cancel_key = config->cancel_key;
 
     switch (config->type) {
         case YSW_MSGBOX_OKAY:
-            msgbox->buttons = (const char *[]) { OKAY, "" };
+            msgbox->buttons = MSGBOX_OKAY;
             msgbox->on_okay = config->on_okay;
             break;
         case YSW_MSGBOX_OKAY_CANCEL:
-            msgbox->buttons = (const char *[]) { OKAY, CANCEL, "" };
+            msgbox->buttons = MSGBOX_OKAY_CANCEL;
             msgbox->on_okay = config->on_okay;
             msgbox->on_cancel = config->on_cancel;
             break;
@@ -57,6 +68,7 @@ ysw_msgbox_t *ysw_msgbox_create(ysw_msgbox_config_t *config, void *context)
     }
 
     msgbox->popup = lv_msgbox_create(lv_scr_act(), NULL);
+
     lv_msgbox_set_text(msgbox->popup, config->message);
     lv_msgbox_add_btns(msgbox->popup, msgbox->buttons);
     lv_obj_set_width(msgbox->popup, 280);
@@ -64,18 +76,28 @@ ysw_msgbox_t *ysw_msgbox_create(ysw_msgbox_config_t *config, void *context)
     lv_obj_set_user_data(msgbox->popup, msgbox);
     lv_obj_set_event_cb(msgbox->popup, event_handler);
 
-    return msgbox;
-}
+    ysw_style_msgbox(msgbox->popup);
 
-void ysw_msgbox_free(ysw_msgbox_t *msgbox)
-{
-    // msgbox has a default event callback that closes itself when a button is clicked
-    ysw_heap_free(msgbox);
+    return msgbox;
 }
 
 void ysw_msgbox_on_key_down(ysw_msgbox_t *msgbox, ysw_event_t *event)
 {
-    ESP_LOGD(TAG, "ysw_msgbox_on_key_down, ignoring event");
+    if (event->key_down.key == msgbox->okay_key) {
+        ESP_LOGD(TAG, "okay key");
+        if (msgbox->on_okay) {
+            msgbox->on_okay(msgbox->context);
+        }
+    } else if (event->key_down.key == msgbox->cancel_key) {
+        ESP_LOGD(TAG, "cancel key");
+        if (msgbox->on_cancel) {
+            msgbox->on_cancel(msgbox->context);
+        }
+    }
 }
 
-
+void ysw_msgbox_free(ysw_msgbox_t *msgbox)
+{
+    lv_obj_del(msgbox->popup);
+    ysw_heap_free(msgbox);
+}

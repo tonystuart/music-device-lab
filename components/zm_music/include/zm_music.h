@@ -272,7 +272,7 @@ typedef struct {
     ysw_array_t *compositions;
 } zm_music_t;
 
-void zm_section_free(zm_section_t *section);
+void zm_section_free(zm_music_t *music, zm_section_t *section);
 void zm_music_free(zm_music_t *music);
 zm_music_t *zm_parse_file(FILE *file);
 zm_music_t *zm_load_music(void);

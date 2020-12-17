@@ -12,6 +12,7 @@
 #include "ysw_event.h"
 #include "ysw_heap.h"
 #include "ysw_string.h"
+#include "ysw_style.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include "assert.h"
@@ -142,12 +143,6 @@ static void show_softkeys(ysw_menu_t *menu)
     lv_obj_t *container = lv_obj_create(lv_scr_act(), NULL);
     assert(container);
 
-    lv_obj_set_style_local_bg_color(container, 0, 0, LV_COLOR_BLACK);
-    lv_obj_set_style_local_bg_opa(container, 0, 0, LV_OPA_100);
-
-    lv_obj_set_style_local_text_color(container, 0, 0, LV_COLOR_CYAN);
-    lv_obj_set_style_local_text_opa(container, 0, 0, LV_OPA_100);
-
     lv_obj_set_size(container, 320, 240);
     lv_obj_align(container, NULL, LV_ALIGN_CENTER, 0, 0);
 
@@ -157,7 +152,6 @@ static void show_softkeys(ysw_menu_t *menu)
     lv_obj_set_width(label, 320);
     lv_obj_align(label, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 2);
 
-    lv_obj_set_style_local_text_font(label, 0, 0, &lv_font_unscii_8);
     lv_label_set_align(label, LV_LABEL_ALIGN_CENTER);
 
     ysw_string_t *name = ysw_string_create(128);
@@ -168,14 +162,7 @@ static void show_softkeys(ysw_menu_t *menu)
     lv_obj_t *btnmatrix = lv_btnmatrix_create(container, NULL);
     lv_btnmatrix_set_align(btnmatrix, LV_LABEL_ALIGN_CENTER);
 
-    lv_obj_set_style_local_bg_color(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_COLOR_CYAN);
-    lv_obj_set_style_local_bg_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_OPA_30);
-
-    lv_obj_set_style_local_bg_color(btnmatrix, LV_BTNMATRIX_PART_BTN, LV_STATE_PRESSED, LV_COLOR_BLACK);
-    lv_obj_set_style_local_bg_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, LV_STATE_PRESSED, LV_OPA_50);
-
-    lv_obj_set_style_local_pad_all(btnmatrix, LV_BTNMATRIX_PART_BG, 0, 5);
-    lv_obj_set_style_local_pad_inner(btnmatrix, LV_BTNMATRIX_PART_BG, 0, 5);
+    ysw_style_softkeys(container, label, btnmatrix);
 
     lv_obj_set_size(btnmatrix, 320, 230);
     lv_obj_align(btnmatrix, NULL, LV_ALIGN_IN_BOTTOM_LEFT, 0, 0);

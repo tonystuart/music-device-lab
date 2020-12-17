@@ -621,8 +621,11 @@ static zm_music_t *create_music()
     return music;
 }
 
-void zm_section_free(zm_section_t *section)
+void zm_section_free(zm_music_t *music, zm_section_t *section)
 {
+    int32_t index = ysw_array_find(music->sections, section);
+    assert(index >= 0);
+    ysw_array_remove(music->sections, index);
     ysw_heap_free(section->name);
     ysw_array_free_all(section->divisions);
     ysw_heap_free(section);
@@ -674,9 +677,9 @@ void zm_music_free(zm_music_t *music)
     ysw_array_free(music->beats);
 
     zm_medium_t section_count = ysw_array_get_count(music->sections);
-    for (zm_medium_t i = 0; i < section_count; i++) {
+    for (zm_medium_t i = section_count - 1; i >= 0; i--) {
         zm_section_t *section = ysw_array_get(music->sections, i);
-        zm_section_free(section);
+        zm_section_free(music, section);
     }
     ysw_array_free(music->sections);
 

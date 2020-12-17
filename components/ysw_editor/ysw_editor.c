@@ -18,6 +18,7 @@
 #include "ysw_msgbox.h"
 #include "ysw_staff.h"
 #include "ysw_string.h"
+#include "ysw_style.h"
 #include "ysw_task.h"
 #include "ysw_ticks.h"
 #include "zm_music.h"
@@ -965,13 +966,8 @@ static void on_confirm_delete(void *context)
 {
     ysw_editor_t *editor = context;
     zm_section_t *section = ysw_chooser_get_section(editor->chooser);
-    if (section) {
-        zm_section_free(section);
-        if (section == editor->section) {
-            // TODO: enable selective menu input handling
-            editor->section = NULL;
-        }
-    }
+    assert(section);
+    zm_section_free(editor->music, section);
     close_chooser(editor);
     on_msgbox_close(context);
 }
@@ -981,43 +977,67 @@ static void on_chooser_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
     ysw_editor_t *editor = menu->context;
     zm_section_t *section = ysw_chooser_get_section(editor->chooser);
     if (section) {
-        ysw_msgbox_config_t config;
-        ysw_string_t *s = ysw_string_create(128);
         ysw_array_t *references = zm_get_section_references(editor->music, section);
         zm_section_x count = ysw_array_get_count(references);
-        if (count) {
-            ysw_string_printf(s, "%s has references:\n", section->name);
+        if (section == editor->section) {
+            ysw_msgbox_config_t config = {
+                .context = editor,
+                .type = YSW_MSGBOX_OKAY,
+                .message = "You cannot delete the current section",
+                .on_okay = on_msgbox_close,
+                .okay_key = 5,
+            };
+            editor->msgbox = ysw_msgbox_create(&config);
+        } else if (count) {
+            ysw_string_t *s = ysw_string_create(128);
+            ysw_string_printf(s, "The following composition(s) reference this section:\n");
             for (zm_composition_x i = 0; i < count; i++) {
                 zm_composition_t *composition = ysw_array_get(references, i);
                 ysw_string_printf(s, "  %s\n", composition->name);
             }
-            ysw_string_printf(s, "Please delete these first");
-            config = (ysw_msgbox_config_t) {
+            ysw_string_printf(s, "Please delete them first");
+            ysw_msgbox_config_t config = {
                 .type = YSW_MSGBOX_OKAY,
-                .message = ysw_string_get_chars(s),
-                .on_okay = on_msgbox_close,
+                    .context = editor,
+                    .message = ysw_string_get_chars(s),
+                    .on_okay = on_msgbox_close,
+                    .okay_key = 5,
             };
+            editor->msgbox = ysw_msgbox_create(&config);
+            ysw_string_free(s);
         } else {
+            ysw_string_t *s = ysw_string_create(128);
             ysw_string_printf(s, "Delete %s?", section->name);
-            config = (ysw_msgbox_config_t) {
+            ysw_msgbox_config_t config = {
                 .type = YSW_MSGBOX_OKAY_CANCEL,
-                .message = ysw_string_get_chars(s),
-                .on_okay = on_confirm_delete,
-                .on_cancel = on_msgbox_close,
+                    .context = editor,
+                    .message = ysw_string_get_chars(s),
+                    .on_okay = on_confirm_delete,
+                    .on_cancel = on_msgbox_close,
+                    .okay_key = 5,
+                    .cancel_key = 6,
             };
+            editor->msgbox = ysw_msgbox_create(&config);
+            ysw_string_free(s);
         }
-        editor->msgbox = ysw_msgbox_create(&config, editor);
-        ysw_string_free(s);
     }
 }
 
-static void on_chooser_event(struct _lv_obj_t *obj, lv_event_t event)
+static void on_chooser_page_event(struct _lv_obj_t *table, lv_event_t event)
+{
+    if (event == LV_EVENT_CLICKED) {
+        ysw_editor_t *editor = lv_obj_get_user_data(table);
+        ysw_menu_show(editor->menu);
+    }
+}
+
+static void on_chooser_table_event(struct _lv_obj_t *table, lv_event_t event)
 {
     if (event == LV_EVENT_CLICKED) {
         uint16_t row = 0;
         uint16_t column = 0;
-        ysw_editor_t *editor = lv_obj_get_user_data(obj);
-        if (lv_table_get_pressed_cell(obj, &row, &column)) {
+        ysw_editor_t *editor = lv_obj_get_user_data(table);
+        if (lv_table_get_pressed_cell(table, &row, &column)) {
             if (row > 0) {
                 zm_section_x new_row = row - 1; // -1 for header
                 if (new_row == editor->chooser->current_row) {
@@ -1043,8 +1063,13 @@ static void on_chooser(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
     editor->chooser = ysw_chooser_create(editor->music, editor->section);
+
+    lv_obj_set_user_data(editor->chooser->page, editor); // for tables that don't take entire page
+    lv_obj_set_event_cb(editor->chooser->page, on_chooser_page_event);
+    lv_obj_set_click(editor->chooser->page, true);
+
     lv_obj_set_user_data(editor->chooser->table, editor);
-    lv_obj_set_event_cb(editor->chooser->table, on_chooser_event);
+    lv_obj_set_event_cb(editor->chooser->table, on_chooser_table_event);
     lv_obj_set_click(editor->chooser->table, true);
     lv_obj_set_drag(editor->chooser->table, true);
     lv_obj_set_drag_dir(editor->chooser->table, LV_DRAG_DIR_VER);
@@ -1446,14 +1471,7 @@ static void initialize_editor_task(void *context)
     editor->container = lv_obj_create(lv_scr_act(), NULL);
     assert(editor->container);
 
-    // See https://docs.lvgl.io/v7/en/html/overview/style.html
-    lv_obj_set_style_local_bg_color(editor->container, 0, 0, LV_COLOR_MAROON);
-    lv_obj_set_style_local_bg_grad_color(editor->container, 0, 0, LV_COLOR_BLACK);
-    lv_obj_set_style_local_bg_grad_dir(editor->container, 0, 0, LV_GRAD_DIR_VER);
-    lv_obj_set_style_local_bg_opa(editor->container, 0, 0, LV_OPA_100);
-
-    lv_obj_set_style_local_text_color(editor->container, 0, 0, LV_COLOR_YELLOW);
-    lv_obj_set_style_local_text_opa(editor->container, 0, 0, LV_OPA_100);
+    ysw_style_editor(editor->container);
 
     lv_obj_set_size(editor->container, 320, 240);
     lv_obj_align(editor->container, NULL, LV_ALIGN_CENTER, 0, 0);

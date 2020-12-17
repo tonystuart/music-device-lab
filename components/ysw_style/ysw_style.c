@@ -12,194 +12,10 @@
 
 #define TAG "YSW_STYLE"
 
+// See https://docs.lvgl.io/v7/en/html/overview/style.html
+
 // See https://material.io/design/color/the-color-system.html
 // See https://material.io/resources/color/
-
-lv_draw_line_dsc_t line_dsc;
-lv_draw_rect_dsc_t rect_dsc;
-lv_draw_label_dsc_t label_dsc;
-
-lv_draw_line_dsc_t odd_line_dsc;
-lv_draw_line_dsc_t even_line_dsc;
-lv_draw_line_dsc_t div_line_dsc;
-lv_draw_line_dsc_t metro_line_dsc;
-
-lv_draw_rect_dsc_t odd_rect_dsc;
-lv_draw_rect_dsc_t even_rect_dsc;
-lv_draw_rect_dsc_t sn_rect_dsc;
-lv_draw_rect_dsc_t sel_sn_rect_dsc;
-lv_draw_rect_dsc_t drag_sn_rect_dsc;
-
-lv_draw_rect_dsc_t ysw_style_csp_rect_dsc;
-
-lv_draw_label_dsc_t sn_label_dsc;
-lv_draw_label_dsc_t sel_sn_label_dsc;
-lv_draw_label_dsc_t drag_sn_label_dsc;
-
-lv_draw_rect_dsc_t hp_rect_dsc;
-lv_draw_rect_dsc_t sel_hp_rect_dsc;
-lv_draw_rect_dsc_t drag_hp_rect_dsc;
-
-lv_draw_label_dsc_t hp_label_dsc;
-lv_draw_label_dsc_t sel_hp_label_dsc;
-lv_draw_label_dsc_t drag_hp_label_dsc;
-
-lv_draw_rect_dsc_t ysw_style_hpp_rect_dsc;
-
-void ysw_style_initialize()
-{
-    lv_draw_line_dsc_init(&line_dsc);
-    //line_dsc.color = LV_COLOR_CYAN;
-    //lv_obj_init_draw_line_dsc(table, 0, &line_dsc);
-
-    lv_draw_rect_dsc_init(&rect_dsc);
-    //rect_dsc.border_color = LV_COLOR_RED;
-    //lv_obj_init_draw_rect_dsc(table, 0, &rect_dsc);
-
-    lv_draw_label_dsc_init(&label_dsc);
-    //label_dsc.color = LV_COLOR_YELLOW;
-    //lv_obj_init_draw_label_dsc(table, 0, &label_dsc);
-
-    odd_line_dsc = line_dsc;
-    even_line_dsc = line_dsc;
-
-    div_line_dsc = (lv_draw_line_dsc_t ) {
-                .color = LV_COLOR_BLACK,
-                .width = 1,
-                .dash_width = 2,
-                .dash_gap = 2,
-                .opa = LV_OPA_COVER,
-            };
-
-    metro_line_dsc = (lv_draw_line_dsc_t ) {
-                .color = LV_COLOR_RED,
-                .width = 3,
-                .opa = LV_OPA_COVER,
-            };
-
-    odd_rect_dsc = (lv_draw_rect_dsc_t ) {
-                .bg_color = LV_COLOR_MAKE(0x80, 0x8d, 0x94),
-                .bg_opa = LV_OPA_COVER,
-            };
-
-    even_rect_dsc = (lv_draw_rect_dsc_t ) {
-                .bg_color = LV_COLOR_MAKE(0xe1, 0xef, 0xf7),
-                .bg_opa = LV_OPA_COVER,
-            };
-
-    // Chord Styles
-
-    sn_rect_dsc = (lv_draw_rect_dsc_t ) {
-                .radius = 4,
-                .bg_color = LV_COLOR_PURPLE,
-                .bg_opa = LV_OPA_50,
-                .border_color = LV_COLOR_PURPLE,
-                .border_opa = LV_OPA_COVER,
-                .border_width = 1,
-                .border_side = LV_BORDER_SIDE_FULL,
-            };
-
-    sel_sn_rect_dsc = (lv_draw_rect_dsc_t ) {
-                .radius = 4,
-                .bg_color = LV_COLOR_LIME,
-                .bg_opa = LV_OPA_70,
-                .border_color = LV_COLOR_GREEN,
-                .border_opa = LV_OPA_COVER,
-                .border_width = 1,
-                .border_side = LV_BORDER_SIDE_FULL,
-            };
-
-    drag_sn_rect_dsc = (lv_draw_rect_dsc_t ) {
-                .radius = 4,
-                .bg_color = LV_COLOR_LIME,
-                .bg_opa = LV_OPA_50,
-                .border_color = LV_COLOR_LIME,
-                .border_opa = LV_OPA_COVER,
-                .border_width = 1,
-                .border_side = LV_BORDER_SIDE_FULL,
-            };
-
-    sn_label_dsc = (lv_draw_label_dsc_t ) {
-                .color = LV_COLOR_WHITE,
-                .opa = LV_OPA_COVER,
-                .font = &lv_font_montserrat_14,
-                .flag = LV_TXT_FLAG_CENTER,
-
-            };
-
-    sel_sn_label_dsc = (lv_draw_label_dsc_t ) {
-                .color = LV_COLOR_BLACK,
-                .opa = LV_OPA_COVER,
-                .font = &lv_font_montserrat_14,
-                .flag = LV_TXT_FLAG_CENTER,
-
-            };
-
-    drag_sn_label_dsc = sel_sn_label_dsc;
-
-    // Chord Style Profile
-
-    lv_draw_rect_dsc_init(&ysw_style_csp_rect_dsc);
-    ysw_style_csp_rect_dsc.border_width = 0;
-    ysw_style_csp_rect_dsc.bg_color = LV_COLOR_MAKE(0xbb, 0x86, 0xfc);
-
-    // Progressions
-
-    hp_rect_dsc = (lv_draw_rect_dsc_t ) {
-                .radius = 4,
-                .bg_color = YSW_STYLE_COLOR(0xff9a02),
-                .bg_opa = LV_OPA_COVER,
-                .border_color = YSW_STYLE_COLOR(0xe65300),
-                .border_opa = LV_OPA_COVER,
-                .border_width = 1,
-                .border_side = LV_BORDER_SIDE_FULL,
-            };
-
-    sel_hp_rect_dsc = (lv_draw_rect_dsc_t ) {
-                .radius = 4,
-                .bg_color = YSW_STYLE_COLOR(0x0267ff),
-                .bg_opa = LV_OPA_COVER,
-                .border_color = YSW_STYLE_COLOR(0x2342e0),
-                .border_opa = LV_OPA_COVER,
-                .border_width = 1,
-                .border_side = LV_BORDER_SIDE_FULL,
-            };
-
-    drag_hp_rect_dsc = (lv_draw_rect_dsc_t ) {
-                .radius = 4,
-                .bg_color = YSW_STYLE_COLOR(0x88d1ff),
-                .bg_opa = LV_OPA_COVER,
-                .border_color = YSW_STYLE_COLOR(0x009eff),
-                .border_opa = LV_OPA_COVER,
-                .border_width = 1,
-                .border_side = LV_BORDER_SIDE_FULL,
-            };
-
-    hp_label_dsc = (lv_draw_label_dsc_t ) {
-                .color = LV_COLOR_BLACK,
-                .opa = LV_OPA_COVER,
-                .font = &lv_font_montserrat_14,
-                .flag = LV_TXT_FLAG_CENTER,
-
-            };
-
-    sel_hp_label_dsc = (lv_draw_label_dsc_t ) {
-                .color = LV_COLOR_WHITE,
-                .opa = LV_OPA_COVER,
-                .font = &lv_font_montserrat_14,
-                .flag = LV_TXT_FLAG_CENTER,
-
-            };
-
-    drag_hp_label_dsc = hp_label_dsc;
-
-    // Harmonic Progression Profile
-
-    lv_draw_rect_dsc_init(&ysw_style_hpp_rect_dsc);
-    ysw_style_hpp_rect_dsc.border_width = 0;
-    ysw_style_hpp_rect_dsc.bg_color = LV_COLOR_ORANGE;
-
-}
 
 void ysw_style_clear_border(lv_obj_t *obj)
 {
@@ -229,12 +45,6 @@ lv_color_t ysw_style_adjust_obj(lv_obj_t *obj)
     lv_color_t child_bg = ysw_style_lighten_background(obj);
     ysw_style_clear_border(obj);
     return child_bg;
-}
-
-void ysw_style_adjust_sdb_container(lv_obj_t *container)
-{
-    lv_obj_set_style_local_pad_left(container, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 5);
-    lv_obj_set_style_local_pad_right(container, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 10);
 }
 
 void ysw_style_adjust_field_name(lv_obj_t *label)
@@ -322,24 +132,78 @@ void ysw_style_adjust_mbox(lv_obj_t *mbox)
     lv_obj_set_style_local_border_width(mbox, LV_MSGBOX_PART_BTN, LV_STATE_DEFAULT, 0);
 }
 
-void ysw_style_adjust_csl_selection(lv_obj_t *child, bool is_selected)
+void ysw_style_editor(lv_obj_t *container)
 {
-    if (is_selected) {
-        //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 1);
-        lv_obj_set_style_local_text_color(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_YELLOW);
-    } else {
-        //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 0);
-        lv_obj_set_style_local_text_color(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-    }
+    lv_obj_set_style_local_bg_color(container, 0, 0, LV_COLOR_MAROON);
+    lv_obj_set_style_local_bg_grad_color(container, 0, 0, LV_COLOR_BLACK);
+    lv_obj_set_style_local_bg_grad_dir(container, 0, 0, LV_GRAD_DIR_VER);
+    lv_obj_set_style_local_bg_opa(container, 0, 0, LV_OPA_100);
+    lv_obj_set_style_local_text_color(container, 0, 0, LV_COLOR_YELLOW);
+    lv_obj_set_style_local_text_opa(container, 0, 0, LV_OPA_100);
 }
 
-void ysw_style_adjust_hpl_selection(lv_obj_t *child, bool is_selected)
+void ysw_style_chooser(lv_obj_t *page, lv_obj_t *table)
 {
-    if (is_selected) {
-        //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 1);
-        lv_obj_set_style_local_text_color(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_YELLOW);
-    } else {
-        //lv_obj_set_style_local_border_width(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, 0);
-        lv_obj_set_style_local_text_color(child, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_WHITE);
-    }
+    lv_obj_set_style_local_bg_color(page, 0, 0, LV_COLOR_MAROON);
+    lv_obj_set_style_local_bg_grad_color(page, 0, 0, LV_COLOR_BLACK);
+    lv_obj_set_style_local_bg_grad_dir(page, 0, 0, LV_GRAD_DIR_VER);
+    lv_obj_set_style_local_bg_opa(page, 0, 0, LV_OPA_100);
+    lv_obj_set_style_local_text_opa(page, 0, 0, LV_OPA_100);
+
+    lv_obj_set_style_local_pad_top(table, DATA_CELL, 0, 5);
+    lv_obj_set_style_local_text_color(table, DATA_CELL, 0, LV_COLOR_SILVER);
+
+    lv_obj_set_style_local_margin_bottom(table, HEADING_CELL, 0, 20);
+    lv_obj_set_style_local_pad_top(table, HEADING_CELL, 0, 5);
+    lv_obj_set_style_local_pad_bottom(table, HEADING_CELL, 0, 5);
+    lv_obj_set_style_local_text_color(table, HEADING_CELL, 0, LV_COLOR_YELLOW);
+
+    lv_obj_set_style_local_bg_color(table, SELECTED_CELL, 0, LV_COLOR_SILVER);
+    lv_obj_set_style_local_bg_opa(table, SELECTED_CELL, 0, LV_OPA_100);
+    lv_obj_set_style_local_text_color(table, SELECTED_CELL, 0, LV_COLOR_MAROON);
 }
+
+void ysw_style_softkeys(lv_obj_t *container, lv_obj_t *label, lv_obj_t *btnmatrix)
+{
+    lv_obj_set_style_local_bg_color(container, 0, 0, LV_COLOR_BLACK);
+    lv_obj_set_style_local_bg_opa(container, 0, 0, LV_OPA_100);
+
+    lv_obj_set_style_local_text_color(container, 0, 0, LV_COLOR_CYAN);
+    lv_obj_set_style_local_text_opa(container, 0, 0, LV_OPA_100);
+
+    lv_obj_set_style_local_text_font(label, 0, 0, &lv_font_unscii_8);
+
+    lv_obj_set_style_local_bg_color(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_COLOR_CYAN);
+    lv_obj_set_style_local_bg_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_OPA_30);
+
+    lv_obj_set_style_local_bg_color(btnmatrix, LV_BTNMATRIX_PART_BTN, LV_STATE_PRESSED, LV_COLOR_BLACK);
+    lv_obj_set_style_local_bg_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, LV_STATE_PRESSED, LV_OPA_50);
+
+    lv_obj_set_style_local_pad_all(btnmatrix, LV_BTNMATRIX_PART_BG, 0, 5);
+    lv_obj_set_style_local_pad_inner(btnmatrix, LV_BTNMATRIX_PART_BG, 0, 5);
+}
+
+void ysw_style_msgbox(lv_obj_t *popup)
+{
+    lv_obj_set_style_local_bg_color(popup, 0, 0, LV_COLOR_BLACK);
+    lv_obj_set_style_local_bg_opa(popup, 0, 0, LV_OPA_100);
+    lv_obj_set_style_local_text_color(popup, 0, 0, LV_COLOR_CYAN);
+    lv_obj_set_style_local_text_opa(popup, 0, 0, LV_OPA_100);
+
+    lv_obj_set_style_local_bg_color(popup, LV_MSGBOX_PART_BTN, 0, LV_COLOR_CYAN);
+    lv_obj_set_style_local_bg_opa(popup, LV_MSGBOX_PART_BTN, 0, LV_OPA_30);
+
+    lv_obj_set_style_local_bg_color(popup, LV_MSGBOX_PART_BTN, LV_STATE_PRESSED, LV_COLOR_BLACK);
+    lv_obj_set_style_local_bg_opa(popup, LV_MSGBOX_PART_BTN, LV_STATE_PRESSED, LV_OPA_50);
+
+    lv_obj_set_style_local_pad_all(popup, LV_MSGBOX_PART_BG, 0, 5);
+    lv_obj_set_style_local_pad_inner(popup, LV_MSGBOX_PART_BG, 0, 5);
+}
+
+void ysw_style_field(lv_obj_t *name_label, lv_obj_t *field)
+{
+    lv_obj_set_style_local_text_font(name_label, 0, 0, &lv_font_unscii_8);
+    lv_obj_set_style_local_pad_top(field, 0, 0, 2);
+    lv_obj_set_style_local_pad_left(field, 0, 0, 2);
+}
+

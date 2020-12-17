@@ -8,6 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_field.h"
+#include "ysw_style.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include "assert.h"
@@ -55,12 +56,10 @@ lv_obj_t *ysw_field_create(lv_obj_t *par)
     lv_obj_set_design_cb(field, ysw_field_on_design);
 
     ext->name = lv_label_create(field, NULL);
-    lv_obj_set_style_local_text_font(ext->name, 0, 0, &lv_font_unscii_8);
 
     ext->value = lv_label_create(field, NULL);
 
-    lv_obj_set_style_local_pad_top(field, 0, 0, 2);
-    lv_obj_set_style_local_pad_left(field, 0, 0, 2);
+    ysw_style_field(ext->name, field);
 
     lv_cont_set_fit(field, LV_FIT_TIGHT);
     lv_cont_set_layout(field, LV_LAYOUT_COLUMN_LEFT);

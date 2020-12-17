@@ -20,10 +20,13 @@ typedef enum {
 } ysw_msgbox_type_t;
 
 typedef struct {
+    void *context;
     ysw_msgbox_type_t type;
     const char *message;
     ysw_msgbox_cb_t on_okay;
     ysw_msgbox_cb_t on_cancel;
+    uint8_t okay_key;
+    uint8_t cancel_key;
 } ysw_msgbox_config_t;
 
 typedef struct {
@@ -32,8 +35,10 @@ typedef struct {
     const char **buttons;
     ysw_msgbox_cb_t on_okay;
     ysw_msgbox_cb_t on_cancel;
+    uint8_t okay_key;
+    uint8_t cancel_key;
 } ysw_msgbox_t;
 
-ysw_msgbox_t *ysw_msgbox_create(ysw_msgbox_config_t *config, void *context);
+ysw_msgbox_t *ysw_msgbox_create(ysw_msgbox_config_t *config);
 void ysw_msgbox_free(ysw_msgbox_t *msgbox);
 void ysw_msgbox_on_key_down(ysw_msgbox_t *msgbox, ysw_event_t *event);

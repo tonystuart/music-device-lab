@@ -12,16 +12,13 @@
 #include "ysw_common.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
+#include "ysw_style.h"
 #include "zm_music.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include "assert.h"
 
 #define TAG "YSW_CHOOSER"
-
-#define DATA_CELL LV_TABLE_PART_CELL1
-#define HEADING_CELL LV_TABLE_PART_CELL2
-#define SELECTED_CELL LV_TABLE_PART_CELL3
 
 static void ensure_current_row_visible(ysw_chooser_t *chooser)
 {
@@ -58,23 +55,7 @@ ysw_chooser_t *ysw_chooser_create(zm_music_t *music, zm_section_t *current_secti
 
     lv_obj_t *table = lv_table_create(page, NULL);
 
-    lv_obj_set_style_local_bg_color(page, 0, 0, LV_COLOR_MAROON);
-    lv_obj_set_style_local_bg_grad_color(page, 0, 0, LV_COLOR_BLACK);
-    lv_obj_set_style_local_bg_grad_dir(page, 0, 0, LV_GRAD_DIR_VER);
-    lv_obj_set_style_local_bg_opa(page, 0, 0, LV_OPA_100);
-    lv_obj_set_style_local_text_opa(page, 0, 0, LV_OPA_100);
-
-    lv_obj_set_style_local_pad_top(table, DATA_CELL, 0, 5);
-    lv_obj_set_style_local_text_color(table, DATA_CELL, 0, LV_COLOR_SILVER);
-
-    lv_obj_set_style_local_margin_bottom(table, HEADING_CELL, 0, 20);
-    lv_obj_set_style_local_pad_top(table, HEADING_CELL, 0, 5);
-    lv_obj_set_style_local_pad_bottom(table, HEADING_CELL, 0, 5);
-    lv_obj_set_style_local_text_color(table, HEADING_CELL, 0, LV_COLOR_YELLOW);
-
-    lv_obj_set_style_local_bg_color(table, SELECTED_CELL, 0, LV_COLOR_SILVER);
-    lv_obj_set_style_local_bg_opa(table, SELECTED_CELL, 0, LV_OPA_100);
-    lv_obj_set_style_local_text_color(table, SELECTED_CELL, 0, LV_COLOR_MAROON);
+    ysw_style_chooser(page, table);
 
     zm_section_x section_count = ysw_array_get_count(music->sections);
     lv_table_set_col_cnt(table, 3);
