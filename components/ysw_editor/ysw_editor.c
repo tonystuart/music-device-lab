@@ -928,15 +928,6 @@ static void close_chooser(ysw_editor_t *editor)
     }
 }
 
-static void open_section(ysw_editor_t *editor)
-{
-    zm_section_t *section = ysw_chooser_get_section(editor->chooser);
-    close_chooser(editor);
-    if (section) {
-        ysw_event_fire_section_edit(editor->bus, section);
-    }
-}
-
 static void on_chooser_up(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
@@ -949,10 +940,21 @@ static void on_chooser_down(ysw_menu_t *menu, ysw_event_t *event, void *value)
     ysw_chooser_on_down(editor->chooser);
 }
 
+static void on_chooser_sort(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    ysw_editor_t *editor = menu->context;
+    ysw_chooser_sort_t type = (uintptr_t)value;
+    ysw_chooser_sort(editor->chooser, type);
+}
+
 static void on_chooser_open(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
-    open_section(editor);
+    zm_section_t *section = ysw_chooser_get_section(editor->chooser);
+    close_chooser(editor);
+    if (section) {
+        ysw_event_fire_section_edit(editor->bus, section);
+    }
 }
 
 static void on_chooser_back(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -1051,14 +1053,8 @@ static void on_chooser_table_event(struct _lv_obj_t *table, lv_event_t event)
             if (row > 0) {
                 zm_section_x new_row = row - 1; // -1 for header
                 if (new_row == editor->chooser->current_row) {
-#if 0
-                    // open section on double tap
-                    open_section(editor);
-                    ysw_menu_pop_all(editor->menu);
-#else
                     // on double tap, open menu (otherwise user will miss other options)
                     ysw_menu_show(editor->menu);
-#endif
                 } else {
                     ysw_chooser_select_row(editor->chooser, row - 1);
                 }
@@ -1275,9 +1271,9 @@ static const ysw_menu_item_t rhythm_menu[] = {
 };
 
 static const ysw_menu_item_t chooser_menu[] = {
-    { 5, "Sort by\nName", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 6, "Sort by\nSize", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 7, "Sort by\nAge", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 5, "Sort by\nName", YSW_MF_COMMAND, on_chooser_sort, VP YSW_CHOOSER_SORT_BY_NAME },
+    { 6, "Sort by\nSize", YSW_MF_COMMAND, on_chooser_sort, VP YSW_CHOOSER_SORT_BY_SIZE },
+    { 7, "Sort by\nAge", YSW_MF_COMMAND, on_chooser_sort, VP YSW_CHOOSER_SORT_BY_AGE },
     { 8, "Up", YSW_MF_COMMAND, on_chooser_up, 0 },
 
     { 16, "Open\nSection", YSW_MF_COMMAND_POP, on_chooser_open, 0 },

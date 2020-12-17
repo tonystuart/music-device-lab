@@ -150,8 +150,8 @@ void ysw_style_chooser(lv_obj_t *page, lv_obj_t *table)
     lv_obj_set_style_local_bg_opa(page, 0, 0, LV_OPA_100);
     lv_obj_set_style_local_text_opa(page, 0, 0, LV_OPA_100);
 
-    lv_obj_set_style_local_pad_top(table, DATA_CELL, 0, 5);
-    lv_obj_set_style_local_text_color(table, DATA_CELL, 0, LV_COLOR_SILVER);
+    lv_obj_set_style_local_pad_top(table, NORMAL_CELL, 0, 5);
+    lv_obj_set_style_local_text_color(table, NORMAL_CELL, 0, LV_COLOR_SILVER);
 
     lv_obj_set_style_local_margin_bottom(table, HEADING_CELL, 0, 20);
     lv_obj_set_style_local_pad_top(table, HEADING_CELL, 0, 5);

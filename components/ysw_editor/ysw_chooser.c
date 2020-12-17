@@ -32,23 +32,104 @@ static void ensure_current_row_visible(ysw_chooser_t *chooser)
     }
 }
 
+void ysw_chooser_hide_selection(ysw_chooser_t *chooser)
+{
+    assert(chooser);
+    if (chooser->current_row != -1) {
+        for (int i = 0; i < 3; i++) {
+            lv_table_set_cell_type(chooser->table, chooser->current_row + 1, i, NORMAL_CELL);
+        }
+        chooser->current_row = -1;
+    }
+}
+
+void ysw_chooser_show_selection(ysw_chooser_t *chooser, zm_section_x new_row)
+{
+    assert(chooser);
+    assert(new_row < lv_table_get_row_cnt(chooser->table));
+    for (int i = 0; i < 3; i++) {
+        lv_table_set_cell_type(chooser->table, new_row + 1, i, SELECTED_CELL);
+    }
+    chooser->current_row = new_row;
+}
+
 void ysw_chooser_select_row(ysw_chooser_t *chooser, zm_section_x new_row)
 {
+    assert(chooser);
+    assert(new_row < lv_table_get_row_cnt(chooser->table));
     if (chooser->current_row != new_row) {
-        for (int i = 0; i < 3; i++) {
-            if (chooser->current_row != -1) {
-                lv_table_set_cell_type(chooser->table, chooser->current_row + 1, i, DATA_CELL);
-            }
-            lv_table_set_cell_type(chooser->table, new_row + 1, i, SELECTED_CELL);
-        }
-        chooser->current_row = new_row;
+        ysw_chooser_hide_selection(chooser);
+        ysw_chooser_show_selection(chooser, new_row);
         ensure_current_row_visible(chooser);
         lv_obj_invalidate(chooser->table);
     }
 }
 
+void ysw_chooser_update_sections(ysw_chooser_t *chooser)
+{
+    assert(chooser);
+    zm_section_x section_count = ysw_array_get_count(chooser->music->sections);
+    for (zm_section_x i = 0, data_row = 1; i < section_count; i++, data_row++) {
+        char buffer[32];
+        zm_section_t *section = ysw_array_get(chooser->music->sections, i);
+        zm_step_x step_count = ysw_array_get_count(section->steps);
+        zm_time_x age = chooser->music->settings.clock - section->tlm;
+        lv_table_set_cell_value(chooser->table, data_row, 0, section->name);
+        lv_table_set_cell_value(chooser->table, data_row, 1, ysw_itoa(step_count, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(chooser->table, data_row, 2, ysw_itoa(age, buffer, sizeof(buffer)));
+    }
+}
+
+static int compare_sections_by_name(const void *left, const void *right)
+{
+    const zm_section_t *left_section = *(zm_section_t * const *)left;
+    const zm_section_t *right_section = *(zm_section_t * const *)right;
+    return strcmp(left_section->name, right_section->name);
+}
+
+static int compare_sections_by_size(const void *left, const void *right)
+{
+    const zm_section_t *left_section = *(zm_section_t * const *)left;
+    const zm_section_t *right_section = *(zm_section_t * const *)right;
+    zm_section_x left_size = ysw_array_get_count(left_section->steps);
+    zm_section_x right_size = ysw_array_get_count(right_section->steps);
+    return left_size - right_size;
+}
+
+static int compare_sections_by_age(const void *left, const void *right)
+{
+    const zm_section_t *left_section = *(zm_section_t * const *)left;
+    const zm_section_t *right_section = *(zm_section_t * const *)right;
+    return right_section->tlm - left_section->tlm; // age is inverse of tlm
+}
+
+void ysw_chooser_sort(ysw_chooser_t *chooser, ysw_chooser_sort_t type)
+{
+    ysw_array_comparator comparator;
+    zm_section_t *section = ysw_chooser_get_section(chooser);
+    switch (type) {
+        default:
+        case YSW_CHOOSER_SORT_BY_NAME:
+            comparator = compare_sections_by_name;
+            break;
+        case YSW_CHOOSER_SORT_BY_SIZE:
+            comparator = compare_sections_by_size;
+            break;
+        case YSW_CHOOSER_SORT_BY_AGE:
+            comparator = compare_sections_by_age;
+            break;
+    }
+    ysw_array_sort(chooser->music->sections, comparator);
+    ysw_chooser_hide_selection(chooser);
+    ysw_chooser_update_sections(chooser);
+    zm_section_x section_x = ysw_array_find(chooser->music->sections, section);
+    ysw_chooser_show_selection(chooser, section_x);
+}
+
 ysw_chooser_t *ysw_chooser_create(zm_music_t *music, zm_section_t *current_section)
 {
+    assert(music);
+    assert(current_section);
     lv_obj_t *page = lv_page_create(lv_scr_act(), NULL);
     lv_obj_set_size(page, 320, 240);
     lv_obj_align(page, NULL, LV_ALIGN_CENTER, 0, 0);
