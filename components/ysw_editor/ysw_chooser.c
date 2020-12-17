@@ -126,6 +126,86 @@ void ysw_chooser_sort(ysw_chooser_t *chooser, ysw_chooser_sort_t type)
     ysw_chooser_show_selection(chooser, section_x);
 }
 
+typedef void (*ysw_virtual_keyboard_cb_t)(void *context, const char *text);
+
+typedef struct {
+    ysw_chooser_t *context;
+    lv_obj_t *container;
+    lv_obj_t *keyboard;
+    lv_obj_t *textarea;
+    ysw_virtual_keyboard_cb_t callback;
+} ysw_virtual_keyboard_t;
+
+static void on_keyboard_event(lv_obj_t *keyboard, lv_event_t event)
+{
+    lv_keyboard_def_event_cb(keyboard, event);
+    if (event == LV_EVENT_CANCEL) {
+        ysw_virtual_keyboard_t *virtual_keyboard = lv_obj_get_user_data(keyboard);
+        lv_keyboard_set_textarea(keyboard, NULL);
+        lv_obj_del(virtual_keyboard->container);
+        virtual_keyboard->keyboard = NULL;
+    } else if (event == LV_EVENT_APPLY) {
+        ysw_virtual_keyboard_t *virtual_keyboard = lv_obj_get_user_data(keyboard);
+        const char *text = lv_textarea_get_text(virtual_keyboard->textarea);
+        virtual_keyboard->callback(virtual_keyboard->context, text);
+        lv_keyboard_set_textarea(keyboard, NULL);
+        lv_obj_del(virtual_keyboard->container);
+        virtual_keyboard->keyboard = NULL;
+    }
+}
+
+static void create_keyboard(ysw_virtual_keyboard_t *virtual_keyboard)
+{
+    virtual_keyboard->keyboard = lv_keyboard_create(virtual_keyboard->container, NULL);
+    lv_obj_set_user_data(virtual_keyboard->keyboard, virtual_keyboard);
+    lv_keyboard_set_cursor_manage(virtual_keyboard->keyboard, true);
+    lv_obj_set_event_cb(virtual_keyboard->keyboard, on_keyboard_event);
+    lv_keyboard_set_textarea(virtual_keyboard->keyboard, virtual_keyboard->textarea);
+}
+
+static void on_textarea_event(lv_obj_t *textarea, lv_event_t event)
+{
+    ysw_virtual_keyboard_t *virtual_keyboard = lv_obj_get_user_data(textarea);
+    if (event == LV_EVENT_CLICKED && virtual_keyboard->keyboard == NULL) {
+        create_keyboard(virtual_keyboard);
+    }
+}
+
+static void on_rename_complete(void *context, const char *text)
+{
+    ysw_chooser_t *chooser = context;
+    zm_section_t *section = ysw_chooser_get_section(chooser);
+    section->name = ysw_heap_strdup(text);
+    ysw_chooser_update_sections(chooser);
+}
+
+void ysw_chooser_rename(ysw_chooser_t *chooser)
+{
+    ysw_virtual_keyboard_t *virtual_keyboard = ysw_heap_allocate(sizeof(ysw_virtual_keyboard_t));
+    virtual_keyboard->context = chooser;
+    virtual_keyboard->callback = on_rename_complete;
+    virtual_keyboard->container = lv_obj_create(lv_scr_act(), NULL);
+    lv_obj_set_size(virtual_keyboard->container, 320, 240);
+    lv_obj_align(virtual_keyboard->container, NULL, LV_ALIGN_CENTER, 0, 0);
+
+    lv_obj_set_style_local_bg_color(virtual_keyboard->container, 0, 0, LV_COLOR_MAROON);
+    lv_obj_set_style_local_bg_grad_color(virtual_keyboard->container, 0, 0, LV_COLOR_BLACK);
+    lv_obj_set_style_local_bg_grad_dir(virtual_keyboard->container, 0, 0, LV_GRAD_DIR_VER);
+    lv_obj_set_style_local_bg_opa(virtual_keyboard->container, 0, 0, LV_OPA_100);
+    lv_obj_set_style_local_text_color(virtual_keyboard->container, 0, 0, LV_COLOR_YELLOW);
+    lv_obj_set_style_local_text_opa(virtual_keyboard->container, 0, 0, LV_OPA_100);
+
+    zm_section_t *section = ysw_chooser_get_section(chooser);
+    virtual_keyboard->textarea  = lv_textarea_create(virtual_keyboard->container, NULL);
+    lv_obj_set_user_data(virtual_keyboard->textarea, virtual_keyboard);
+    lv_obj_align(virtual_keyboard->textarea, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_obj_set_event_cb(virtual_keyboard->textarea, on_textarea_event);
+    lv_textarea_set_text(virtual_keyboard->textarea, section->name);
+    lv_obj_set_size(virtual_keyboard->textarea, 320, 100);
+
+    create_keyboard(virtual_keyboard);
+}
+
 ysw_chooser_t *ysw_chooser_create(zm_music_t *music, zm_section_t *current_section)
 {
     assert(music);

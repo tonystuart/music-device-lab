@@ -14,6 +14,6 @@
 void *ysw_heap_allocate(size_t size);
 void *ysw_heap_allocate_uninitialized(size_t size);
 void *ysw_heap_reallocate(void *old_p, size_t size);
-char *ysw_heap_strdup(char *source);
+char *ysw_heap_strdup(const char *source);
 char *ysw_heap_string_reallocate(char *old_string, const char *new_string);
 void ysw_heap_free(void *p);

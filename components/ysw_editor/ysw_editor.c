@@ -957,6 +957,12 @@ static void on_chooser_open(ysw_menu_t *menu, ysw_event_t *event, void *value)
     }
 }
 
+static void on_chooser_rename(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    ysw_editor_t *editor = menu->context;
+    ysw_chooser_rename(editor->chooser);
+}
+
 static void on_chooser_back(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     if (menu->softkeys) {
@@ -1277,7 +1283,7 @@ static const ysw_menu_item_t chooser_menu[] = {
     { 8, "Up", YSW_MF_COMMAND, on_chooser_up, 0 },
 
     { 16, "Open\nSection", YSW_MF_COMMAND_POP, on_chooser_open, 0 },
-    { 17, "Rename\nSection", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 17, "Rename\nSection", YSW_MF_COMMAND, on_chooser_rename, 0 },
     { 18, "Delete\nSection", YSW_MF_COMMAND, on_chooser_delete, 0 },
     { 19, "Down", YSW_MF_COMMAND, on_chooser_down, 0 },
 

@@ -138,7 +138,7 @@ void *ysw_heap_reallocate(void *old_p, size_t size)
     return p;
 }
 
-char *ysw_heap_strdup(char *source)
+char *ysw_heap_strdup(const char *source)
 {
     int size = strlen(source) + RFT;
     char *target = ysw_heap_allocate_uninitialized(size);
