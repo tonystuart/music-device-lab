@@ -72,22 +72,22 @@ static void configure_column(uint8_t gpio)
     $(gpio_set_level(gpio, HIGH));
 }
 
-static void on_key_pressed(ysw_bus_t *bus, uint8_t key, state_t *state)
+static void on_key_pressed(ysw_bus_t *bus, uint8_t scan_code, state_t *state)
 {
-    //ESP_LOGD(TAG, "col=%d, row=%d, key=%d", column_index, row_index, key);
+    //ESP_LOGD(TAG, "col=%d, row=%d, scan_code=%d", column_index, row_index, scan_code);
     uint32_t current_millis = ysw_get_millis();
     if (!state->down_time) {
         state->repeat_count = 0;
         state->down_time = current_millis;
         ysw_event_key_down_t key_down = {
-            .key = key,
+            .scan_code = scan_code,
             .time = state->down_time,
         };
         ysw_event_fire_key_down(bus, &key_down);
     } else if (state->down_time + ((state->repeat_count + 1) * 100) < current_millis) {
         state->repeat_count++;
         ysw_event_key_pressed_t key_pressed = {
-            .key = key,
+            .scan_code = scan_code,
             .time = state->down_time,
             .duration = current_millis - state->down_time,
             .repeat_count = state->repeat_count,
@@ -96,13 +96,13 @@ static void on_key_pressed(ysw_bus_t *bus, uint8_t key, state_t *state)
     }
 }
 
-static void on_key_released(ysw_bus_t *bus, uint8_t key, state_t *state)
+static void on_key_released(ysw_bus_t *bus, uint8_t scan_code, state_t *state)
 {
     uint32_t current_millis = ysw_get_millis();
     uint32_t duration = current_millis - state->down_time;
     if (!state->repeat_count) {
         ysw_event_key_pressed_t key_pressed = {
-            .key = key,
+            .scan_code = scan_code,
             .time = state->down_time,
             .duration = duration,
             .repeat_count = state->repeat_count,
@@ -110,7 +110,7 @@ static void on_key_released(ysw_bus_t *bus, uint8_t key, state_t *state)
         ysw_event_fire_key_pressed(bus, &key_pressed);
     }
     ysw_event_key_up_t key_up = {
-        .key = key,
+        .scan_code = scan_code,
         .time = state->down_time,
         .duration = duration,
         .repeat_count = state->repeat_count,
@@ -128,13 +128,13 @@ static void scan_keyboard(ysw_keyboard_t *keyboard)
         uint8_t column_gpio = (uintptr_t)ysw_array_get(keyboard->columns, column_index);
         $(gpio_set_level(column_gpio, LOW));
         for (int row_index = 0; row_index < row_count; row_index++) {
-            uint8_t key = (row_index * column_count) + column_index;
+            uint8_t scan_code = (row_index * column_count) + column_index;
             uint8_t row_gpio = (uintptr_t)ysw_array_get(keyboard->rows, row_index);
             int key_pressed = gpio_get_level(row_gpio) == LOW;
             if (key_pressed) {
-                on_key_pressed(keyboard->bus, key, &keyboard->state[key]);
-            } else if (keyboard->state[key].down_time) {
-                on_key_released(keyboard->bus,key,  &keyboard->state[key]);
+                on_key_pressed(keyboard->bus, scan_code, &keyboard->state[scan_code]);
+            } else if (keyboard->state[scan_code].down_time) {
+                on_key_released(keyboard->bus,scan_code,  &keyboard->state[scan_code]);
             }
         }
         $(gpio_set_level(column_gpio, HIGH));

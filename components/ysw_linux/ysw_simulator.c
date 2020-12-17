@@ -15,7 +15,7 @@
 
 #define TAG "YSW_SIMULATOR"
 
-typedef void (*lv_key_handler)(SDL_Scancode scancode, uint8_t key, uint32_t time, uint8_t repeat);
+typedef void (*lv_key_handler)(SDL_Scancode sdl_code, uint8_t scan_code, uint32_t time, uint8_t repeat);
 extern lv_key_handler lv_key_down_handler;
 extern lv_key_handler lv_key_up_handler;
 static uint32_t down_time;
@@ -42,10 +42,10 @@ static ysw_bus_t *cb_bus;
 
 typedef struct {
     char input;
-    uint8_t key;
+    uint8_t scan_code;
 } keycode_map_t;
 
-static const keycode_map_t keycode_map[] = {
+static const keycode_map_t scan_code_map[] = {
     { SDL_SCANCODE_2, 0 }, // C#
     { SDL_SCANCODE_3, 1 }, // D#
     { SDL_SCANCODE_5, 2 }, // F#
@@ -115,29 +115,29 @@ static const keycode_map_t keycode_map[] = {
     { SDL_SCANCODE_DELETE, 37 }, // Delete Button
 };
 
-#define KEYCODE_MAP_SZ (sizeof(keycode_map) / sizeof(keycode_map[0]))
+#define KEYCODE_MAP_SZ (sizeof(scan_code_map) / sizeof(scan_code_map[0]))
 
-static int find_key(char input)
+static int find_scan_code(char input)
 {
     for (int i = 0; i < KEYCODE_MAP_SZ; i++) {
-        if (keycode_map[i].input == input) {
-            return keycode_map[i].key;
+        if (scan_code_map[i].input == input) {
+            return scan_code_map[i].scan_code;
         }
     }
     return -1;
 }
 
-static void on_key_down(SDL_Scancode scancode, uint8_t sym, uint32_t time, uint8_t repeat)
+static void on_key_down(SDL_Scancode sdl_code, uint8_t sym, uint32_t time, uint8_t repeat)
 {
-    //ESP_LOGD(TAG, "on_key_down code=%d, sym=%d (%c), time=%d, repeat=%d", scancode, sym, sym, time, repeat);
-    int key = find_key(scancode);
-    if (key != -1) {
+    //ESP_LOGD(TAG, "on_key_down code=%d, sym=%d (%c), time=%d, repeat=%d", sdl_code, sym, sym, time, repeat);
+    int scan_code = find_scan_code(sdl_code);
+    if (scan_code != -1) {
         if (repeat) {
             // TODO: add state to provide accurate time, duration, repeat_count -- if neccessary
             uint32_t current_millis = ysw_get_millis();
             uint32_t duration = current_millis - down_time;
             ysw_event_key_pressed_t key_pressed = {
-                .key = key,
+                .scan_code = scan_code,
                 .time = down_time,
                 .duration = duration,
                 .repeat_count = repeat,
@@ -146,7 +146,7 @@ static void on_key_down(SDL_Scancode scancode, uint8_t sym, uint32_t time, uint8
         } else {
             down_time = ysw_get_millis(); // doesn't support n-key rollover
             ysw_event_key_down_t key_down = {
-                .key = key,
+                .scan_code = scan_code,
                 .time = down_time,
             };
             ysw_event_fire_key_down(cb_bus, &key_down);
@@ -154,21 +154,21 @@ static void on_key_down(SDL_Scancode scancode, uint8_t sym, uint32_t time, uint8
     }
 }
 
-static void on_key_up(SDL_Scancode scancode, uint8_t sym, uint32_t time, uint8_t repeat)
+static void on_key_up(SDL_Scancode sdl_code, uint8_t sym, uint32_t time, uint8_t repeat)
 {
-    int key = find_key(scancode);
-    if (key != -1) {
+    int scan_code = find_scan_code(sdl_code);
+    if (scan_code != -1) {
         uint32_t current_millis = ysw_get_millis();
         uint32_t duration = current_millis - down_time;
         ysw_event_key_pressed_t key_pressed = {
-            .key = key,
+            .scan_code = scan_code,
             .time = current_millis,
             .duration = duration,
             .repeat_count = 0,
         };
         ysw_event_fire_key_pressed(cb_bus, &key_pressed);
         ysw_event_key_up_t key_up = {
-            .key = key,
+            .scan_code = scan_code,
             .time = current_millis,
             .duration = duration,
             .repeat_count = 0,

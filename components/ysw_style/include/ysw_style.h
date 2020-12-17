@@ -32,5 +32,5 @@ void ysw_style_adjust_mbox(lv_obj_t *mbox);
 void ysw_style_editor(lv_obj_t *container);
 void ysw_style_chooser(lv_obj_t *page, lv_obj_t *table);
 void ysw_style_softkeys(lv_obj_t *container, lv_obj_t *label, lv_obj_t *btnmatrix);
-void ysw_style_msgbox(lv_obj_t *popup);
+void ysw_style_popup(lv_obj_t *msgbox);
 void ysw_style_field(lv_obj_t *name_label, lv_obj_t *field);

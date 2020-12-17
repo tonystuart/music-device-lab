@@ -12,33 +12,33 @@
 #include "ysw_event.h"
 #include "lvgl.h"
 
-typedef void (*ysw_msgbox_cb_t)(void *context);
+typedef void (*ysw_popup_cb_t)(void *context);
 
 typedef enum {
     YSW_MSGBOX_OKAY,
     YSW_MSGBOX_OKAY_CANCEL,
-} ysw_msgbox_type_t;
+} ysw_popup_type_t;
 
 typedef struct {
     void *context;
-    ysw_msgbox_type_t type;
+    ysw_popup_type_t type;
     const char *message;
-    ysw_msgbox_cb_t on_okay;
-    ysw_msgbox_cb_t on_cancel;
-    uint8_t okay_key;
-    uint8_t cancel_key;
-} ysw_msgbox_config_t;
+    ysw_popup_cb_t on_okay;
+    ysw_popup_cb_t on_cancel;
+    uint8_t okay_scan_code;
+    uint8_t cancel_scan_code;
+} ysw_popup_config_t;
 
 typedef struct {
     void *context;
-    lv_obj_t *popup;
+    lv_obj_t *msgbox;
     const char **buttons;
-    ysw_msgbox_cb_t on_okay;
-    ysw_msgbox_cb_t on_cancel;
-    uint8_t okay_key;
-    uint8_t cancel_key;
-} ysw_msgbox_t;
+    ysw_popup_cb_t on_okay;
+    ysw_popup_cb_t on_cancel;
+    uint8_t okay_scan_code;
+    uint8_t cancel_scan_code;
+} ysw_popup_t;
 
-ysw_msgbox_t *ysw_msgbox_create(ysw_msgbox_config_t *config);
-void ysw_msgbox_free(ysw_msgbox_t *msgbox);
-void ysw_msgbox_on_key_down(ysw_msgbox_t *msgbox, ysw_event_t *event);
+ysw_popup_t *ysw_popup_create(ysw_popup_config_t *config);
+void ysw_popup_free(ysw_popup_t *popup);
+void ysw_popup_on_key_down(ysw_popup_t *popup, ysw_event_t *event);

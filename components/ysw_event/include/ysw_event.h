@@ -101,20 +101,20 @@ typedef struct {
 } ysw_event_sample_load_t;
 
 typedef struct {
-    uint8_t key;
+    uint8_t scan_code;
     uint32_t time;
     uint32_t duration;
 } ysw_event_key_down_t;
 
 typedef struct {
-    uint8_t key;
+    uint8_t scan_code;
     uint32_t time;
     uint32_t duration;
     uint32_t repeat_count;
 } ysw_event_key_pressed_t;
 
 typedef struct {
-    uint8_t key;
+    uint8_t scan_code;
     uint32_t time;
     uint32_t duration;
     uint32_t repeat_count;

@@ -59,7 +59,7 @@
 // millis * (tpqn / (60000 / bpm))             // distribute factor
 
 // millis * tpqn   60000
-// ------------- / -----                        // rewrite as division of fractions
+// ------------- / -----                        // rewrite as step of fractions
 // 1               bpm
 
 // millis * tpqn   bpm

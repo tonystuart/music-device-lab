@@ -69,19 +69,19 @@ static void event_handler(lv_obj_t *btnmatrix, lv_event_t button_event)
                     ysw_event_t event = {
                         .header.origin = YSW_ORIGIN_KEYBOARD,
                         .header.type = YSW_EVENT_KEY_DOWN,
-                        .key_down.key = item_index,
+                        .key_down.scan_code = item_index,
                     };
                     ysw_menu_on_key_down(menu, &event);
                     event = (ysw_event_t){
                         .header.origin = YSW_ORIGIN_KEYBOARD,
                         .header.type = YSW_EVENT_KEY_PRESSED,
-                        .key_pressed.key = item_index,
+                        .key_pressed.scan_code = item_index,
                     };
                     ysw_menu_on_key_pressed(menu, &event);
                     event = (ysw_event_t){
                         .header.origin = YSW_ORIGIN_KEYBOARD,
                         .header.type = YSW_EVENT_KEY_UP,
-                        .key_up.key = item_index,
+                        .key_up.scan_code = item_index,
                     };
                     ysw_menu_on_key_up(menu, &event);
                     // btnmatrix generates an extra key down when key is down and new btnmatrix is set
@@ -234,7 +234,7 @@ static void close_menu(ysw_menu_t *menu, ysw_event_t *event, void *value)
 
 void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event)
 {
-    const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_down.key);
+    const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_down.scan_code);
     ESP_LOGD(TAG, "on_key_down, name=%s", menu_item->name);
     if (menu_item->flags & YSW_MENU_DOWN) {
         menu_item->cb(menu, event, menu_item->value);
@@ -243,7 +243,7 @@ void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event)
 
 void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
 {
-    const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_up.key);
+    const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_up.scan_code);
     ESP_LOGD(TAG, "on_key_up, name=%s", menu_item->name);
     if (menu_item->flags & YSW_MENU_UP) {
         menu_item->cb(menu, event, menu_item->value);
@@ -266,7 +266,7 @@ void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
 
 void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event)
 {
-    const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_pressed.key);
+    const ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_pressed.scan_code);
     ESP_LOGD(TAG, "on_key_pressed, name=%s", menu_item->name);
     if (menu_item->flags & YSW_MENU_PRESS) {
         menu_item->cb(menu, event, menu_item->value);

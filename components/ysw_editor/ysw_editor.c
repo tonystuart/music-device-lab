@@ -15,7 +15,7 @@
 #include "ysw_header.h"
 #include "ysw_heap.h"
 #include "ysw_menu.h"
-#include "ysw_msgbox.h"
+#include "ysw_popup.h"
 #include "ysw_staff.h"
 #include "ysw_string.h"
 #include "ysw_style.h"
@@ -84,11 +84,11 @@ typedef struct {
 
     ysw_menu_t *menu;
     ysw_chooser_t *chooser;
-    ysw_msgbox_t *msgbox;
+    ysw_popup_t *popup;
 
 } ysw_editor_t;
 
-// Note that position is 2x the division index and encodes both the division index and the space before it.
+// Note that position is 2x the step index and encodes both the step index and the space before it.
 
 // 0 % 2 = 0
 // 1 % 2 = 1 C
@@ -99,20 +99,20 @@ typedef struct {
 // 6 % 2 = 0
 
 // A remainder of zero indicates the space and a remainder of 1 indicates
-// the division. This happens to work at the end of the array too, if the position
-// is 2x the size of the array, it refers to the space following the last division.
+// the step. This happens to work at the end of the array too, if the position
+// is 2x the size of the array, it refers to the space following the last step.
 
 // if (position / 2 >= size) {
-//   -> space after last division
+//   -> space after last step
 // } else {
 //   if (position % 2 == 0) {
-//     -> space before division
+//     -> space before step
 //   } else {
-//     -> division_index = position / 2;
+//     -> step_index = position / 2;
 //   }
 // }
 
-static inline bool is_division_position(ysw_editor_t *editor)
+static inline bool is_step_position(ysw_editor_t *editor)
 {
     return editor->position % 2 == 1;
 }
@@ -122,19 +122,19 @@ static inline bool is_space_position(ysw_editor_t *editor)
     return editor->position % 2 == 0;
 }
  
-static inline uint32_t division_index_to_position(zm_division_x division_index)
+static inline uint32_t step_index_to_position(zm_step_x step_index)
 {
-    return (division_index * 2) + 1;
+    return (step_index * 2) + 1;
 }
 
-static zm_division_t *get_division(ysw_editor_t *editor)
+static zm_step_t *get_step(ysw_editor_t *editor)
 {
-    zm_division_t *division = NULL;
-    if (is_division_position(editor)) {
-        zm_division_x division_index = editor->position / 2;
-        division = ysw_array_get(editor->section->divisions, division_index);
+    zm_step_t *step = NULL;
+    if (is_step_position(editor)) {
+        zm_step_x step_index = editor->position / 2;
+        step = ysw_array_get(editor->section->steps, step_index);
     }
-    return division;
+    return step;
 }
 
 // TODO: remove unnecessary calls to recalculate (e.g. increase/decrease pitch)
@@ -145,35 +145,35 @@ static void recalculate(ysw_editor_t *editor)
     zm_measure_x measure = 1;
     uint32_t ticks_in_measure = 0;
 
-    zm_division_t *division = NULL;
-    zm_division_t *previous = NULL;
+    zm_step_t *step = NULL;
+    zm_step_t *previous = NULL;
 
     zm_time_x ticks_per_measure = zm_get_ticks_per_measure(editor->section->time);
-    zm_division_x division_count = ysw_array_get_count(editor->section->divisions);
+    zm_step_x step_count = ysw_array_get_count(editor->section->steps);
 
-    for (zm_division_x i = 0; i < division_count; i++) {
-        division = ysw_array_get(editor->section->divisions, i);
-        division->start = start;
-        division->flags = 0;
-        division->measure = measure;
-        if (division->chord.root) {
+    for (zm_step_x i = 0; i < step_count; i++) {
+        step = ysw_array_get(editor->section->steps, i);
+        step->start = start;
+        step->flags = 0;
+        step->measure = measure;
+        if (step->chord.root) {
             if (previous) {
                 zm_time_x chord_delta_time = start - previous->start;
                 previous->chord.duration = min(chord_delta_time, ticks_per_measure);
             }
-            previous = division;
+            previous = step;
         }
-        ticks_in_measure += zm_round_duration(division->melody.duration, NULL, NULL);
+        ticks_in_measure += zm_round_duration(step->melody.duration, NULL, NULL);
         if (ticks_in_measure >= ticks_per_measure) {
-            division->flags |= ZM_DIVISION_END_OF_MEASURE;
+            step->flags |= ZM_STEP_END_OF_MEASURE;
             ticks_in_measure = 0;
             measure++;
         }
-        start += division->melody.duration;
+        start += step->melody.duration;
     }
 
     if (previous) {
-        if (previous == division) {
+        if (previous == step) {
             // piece ends on this chord, set it's duration to what's left in the measure
             previous->chord.duration = (previous->measure * ticks_per_measure) - previous->start;
         } else {
@@ -186,19 +186,19 @@ static void recalculate(ysw_editor_t *editor)
     ysw_staff_invalidate(editor->staff);
 }
 
-static void play_division(ysw_editor_t *editor, zm_division_t *division)
+static void play_step(ysw_editor_t *editor, zm_step_t *step)
 {
-    ysw_array_t *notes = zm_render_division(editor->music, editor->section, division, BASE_CHANNEL);
+    ysw_array_t *notes = zm_render_step(editor->music, editor->section, step, BASE_CHANNEL);
     zm_bpm_x bpm = zm_tempo_to_bpm(editor->section->tempo);
     ysw_event_fire_play(editor->bus, notes, bpm);
 }
 
 static void play_position(ysw_editor_t *editor)
 {
-    if (is_division_position(editor)) {
-        zm_division_x division_index = editor->position / 2;
-        zm_division_t *division = ysw_array_get(editor->section->divisions, division_index);
-        play_division(editor, division);
+    if (is_step_position(editor)) {
+        zm_step_x step_index = editor->position / 2;
+        zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
+        play_step(editor, step);
     }
 }
 
@@ -217,20 +217,20 @@ static void display_program(ysw_editor_t *editor)
 
 static void display_melody_mode(ysw_editor_t *editor)
 {
-    // 1. on a division - show note or rest
-    // 2. between divisions - show previous (to left) note or rest
-    // 3. no divisions - show blank
+    // 1. on a step - show note or rest
+    // 2. between steps - show previous (to left) note or rest
+    // 3. no steps - show blank
     char value[32];
-    zm_division_x division_count = ysw_array_get_count(editor->section->divisions);
+    zm_step_x step_count = ysw_array_get_count(editor->section->steps);
     if (editor->position > 0) {
-        zm_division_x division_index = editor->position / 2;
-        if (division_index >= division_count) {
-            division_index = division_count - 1;
+        zm_step_x step_index = editor->position / 2;
+        if (step_index >= step_count) {
+            step_index = step_count - 1;
         }
         zm_bpm_x bpm = zm_tempo_to_bpm(editor->section->tempo);
-        zm_division_t *division = ysw_array_get(editor->section->divisions, division_index);
-        uint32_t millis = ysw_ticks_to_millis(division->melody.duration, bpm);
-        zm_note_t note = division->melody.note;
+        zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
+        uint32_t millis = ysw_ticks_to_millis(step->melody.duration, bpm);
+        zm_note_t note = step->melody.note;
         if (note) {
             uint8_t octave = (note / 12) - 1;
             const char *name = zm_get_note_name(note);
@@ -246,20 +246,20 @@ static void display_melody_mode(ysw_editor_t *editor)
 
 static void display_chord_mode(ysw_editor_t *editor)
 {
-    // 1. on a division with a chord value - show chord value, quality, style
-    // 2. on a division without a chord value - show quality, style
-    // 3. between divisions - show quality, style
-    // 4. no divisions - show quality, style
+    // 1. on a step with a chord value - show chord value, quality, style
+    // 2. on a step without a chord value - show quality, style
+    // 3. between steps - show quality, style
+    // 4. no steps - show quality, style
     char value[32] = {};
-    zm_division_t *division = NULL;
-    if (is_division_position(editor)) {
-        division = ysw_array_get(editor->section->divisions, editor->position / 2);
+    zm_step_t *step = NULL;
+    if (is_step_position(editor)) {
+        step = ysw_array_get(editor->section->steps, editor->position / 2);
     }
-    if (division && division->chord.root) {
+    if (step && step->chord.root) {
         snprintf(value, sizeof(value), "%s %s %s",
-                zm_get_note_name(division->chord.root),
-                division->chord.quality->name,
-                division->chord.style->name);
+                zm_get_note_name(step->chord.root),
+                step->chord.quality->name,
+                step->chord.style->name);
     } else {
         snprintf(value, sizeof(value), "%s %s",
                 editor->quality->name,
@@ -271,12 +271,12 @@ static void display_chord_mode(ysw_editor_t *editor)
 static void display_rhythm_mode(ysw_editor_t *editor)
 {
     char value[32] = {};
-    zm_division_t *division = NULL;
-    if (is_division_position(editor)) {
-        division = ysw_array_get(editor->section->divisions, editor->position / 2);
+    zm_step_t *step = NULL;
+    if (is_step_position(editor)) {
+        step = ysw_array_get(editor->section->steps, editor->position / 2);
     }
-    if (division && division->rhythm.beat) {
-        snprintf(value, sizeof(value), "%s", division->rhythm.beat->name);
+    if (step && step->rhythm.beat) {
+        snprintf(value, sizeof(value), "%s", step->rhythm.beat->name);
     } else {
         snprintf(value, sizeof(value), "%s", editor->beat->name);
     }
@@ -369,18 +369,18 @@ static void cycle_tempo(ysw_editor_t *editor)
 
 static void cycle_duration(ysw_editor_t *editor)
 {
-    zm_division_t *division = NULL;
-    if (is_division_position(editor) && editor->duration != ZM_AS_PLAYED) {
-        zm_division_x division_index = editor->position / 2;
-        division = ysw_array_get(editor->section->divisions, division_index);
+    zm_step_t *step = NULL;
+    if (is_step_position(editor) && editor->duration != ZM_AS_PLAYED) {
+        zm_step_x step_index = editor->position / 2;
+        step = ysw_array_get(editor->section->steps, step_index);
     }
-    // Cycle default duration if not on a division or if division duration is already default duration
-    if (!division || division->melody.duration == editor->duration) {
+    // Cycle default duration if not on a step or if step duration is already default duration
+    if (!step || step->melody.duration == editor->duration) {
         editor->duration = zm_get_next_duration(editor->duration);
         ysw_footer_set_duration(editor->footer, editor->duration);
     }
-    if (division) {
-        division->melody.duration = editor->duration;
+    if (step) {
+        step->melody.duration = editor->duration;
         recalculate(editor);
         display_mode(editor);
     }
@@ -388,14 +388,14 @@ static void cycle_duration(ysw_editor_t *editor)
 
 static void cycle_tie(ysw_editor_t *editor)
 {
-    if (is_division_position(editor)) {
-        zm_division_x division_index = editor->position / 2;
-        zm_division_t *division = ysw_array_get(editor->section->divisions, division_index);
-        if (division->melody.note) {
-            if (division->melody.tie) {
-                division->melody.tie = 0;
+    if (is_step_position(editor)) {
+        zm_step_x step_index = editor->position / 2;
+        zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
+        if (step->melody.note) {
+            if (step->melody.tie) {
+                step->melody.tie = 0;
             } else {
-                division->melody.tie = 1;
+                step->melody.tie = 1;
             }
             ysw_staff_invalidate(editor->staff);
         }
@@ -426,21 +426,21 @@ static zm_style_t *find_matching_style(ysw_editor_t *editor, bool preincrement)
 
 static void cycle_quality(ysw_editor_t *editor)
 {
-    zm_division_t *division = NULL;
-    if (is_division_position(editor)) {
-        zm_division_x division_index = editor->position / 2;
-        division = ysw_array_get(editor->section->divisions, division_index);
+    zm_step_t *step = NULL;
+    if (is_step_position(editor)) {
+        zm_step_x step_index = editor->position / 2;
+        step = ysw_array_get(editor->section->steps, step_index);
     }
-    if (!division || !division->chord.root || division->chord.quality == editor->quality) {
+    if (!step || !step->chord.root || step->chord.quality == editor->quality) {
         zm_quality_x previous = ysw_array_find(editor->music->qualities, editor->quality);
         zm_quality_x quality_count = ysw_array_get_count(editor->music->qualities);
         zm_quality_x next = (previous + 1) % quality_count;
         editor->quality = ysw_array_get(editor->music->qualities, next);
         editor->style = find_matching_style(editor, false);
     }
-    if (division) {
-        division->chord.quality = editor->quality;
-        division->chord.style = editor->style;
+    if (step) {
+        step->chord.quality = editor->quality;
+        step->chord.style = editor->style;
         ysw_staff_invalidate(editor->staff);
     }
     display_mode(editor);
@@ -449,16 +449,16 @@ static void cycle_quality(ysw_editor_t *editor)
 
 static void cycle_style(ysw_editor_t *editor)
 {
-    zm_division_t *division = NULL;
-    if (is_division_position(editor)) {
-        zm_division_x division_index = editor->position / 2;
-        division = ysw_array_get(editor->section->divisions, division_index);
+    zm_step_t *step = NULL;
+    if (is_step_position(editor)) {
+        zm_step_x step_index = editor->position / 2;
+        step = ysw_array_get(editor->section->steps, step_index);
     }
-    if (!division || !division->chord.root || division->chord.style == editor->style) {
+    if (!step || !step->chord.root || step->chord.style == editor->style) {
         editor->style = find_matching_style(editor, true);
     }
-    if (division) {
-        division->chord.style = editor->style;
+    if (step) {
+        step->chord.style = editor->style;
     }
     display_mode(editor);
     play_position(editor);
@@ -466,26 +466,26 @@ static void cycle_style(ysw_editor_t *editor)
 
 static void cycle_beat(ysw_editor_t *editor)
 {
-    zm_division_t *division = NULL;
-    if (is_division_position(editor)) {
-        zm_division_x division_index = editor->position / 2;
-        division = ysw_array_get(editor->section->divisions, division_index);
+    zm_step_t *step = NULL;
+    if (is_step_position(editor)) {
+        zm_step_x step_index = editor->position / 2;
+        step = ysw_array_get(editor->section->steps, step_index);
     }
-    if (!division || !division->rhythm.beat || division->rhythm.beat == editor->beat) {
+    if (!step || !step->rhythm.beat || step->rhythm.beat == editor->beat) {
         zm_beat_x previous = ysw_array_find(editor->music->beats, editor->beat);
         zm_beat_x beat_count = ysw_array_get_count(editor->music->beats);
         zm_beat_x next = (previous + 1) % beat_count;
         editor->beat = ysw_array_get(editor->music->beats, next);
     }
-    if (division) {
-        division->rhythm.beat = editor->beat;
+    if (step) {
+        step->rhythm.beat = editor->beat;
         ysw_staff_invalidate(editor->staff);
     }
     display_mode(editor);
     play_position(editor);
 }
 
-static zm_division_t *apply_note(ysw_editor_t *editor, zm_note_t midi_note, zm_time_x duration_millis)
+static zm_step_t *apply_note(ysw_editor_t *editor, zm_note_t midi_note, zm_time_x duration_millis)
 {
     zm_time_x articulation = 0;
     zm_duration_t duration = editor->duration;
@@ -495,50 +495,50 @@ static zm_division_t *apply_note(ysw_editor_t *editor, zm_note_t midi_note, zm_t
         articulation = ysw_millis_to_ticks(editor->delta, bpm);
     }
 
-    zm_division_t *division = NULL;
-    int32_t division_index = editor->position / 2;
-    bool is_new_division = is_space_position(editor);
-    if (is_new_division) {
-        if (articulation && division_index) {
-            zm_division_t *rest = ysw_heap_allocate(sizeof(zm_division_t));
+    zm_step_t *step = NULL;
+    int32_t step_index = editor->position / 2;
+    bool is_new_step = is_space_position(editor);
+    if (is_new_step) {
+        if (articulation && step_index) {
+            zm_step_t *rest = ysw_heap_allocate(sizeof(zm_step_t));
             rest->melody.duration = min(articulation, ZM_WHOLE);
-            ysw_array_insert(editor->section->divisions, division_index, rest);
-            division_index++;
-            editor->position = division_index * 2 + 1;
+            ysw_array_insert(editor->section->steps, step_index, rest);
+            step_index++;
+            editor->position = step_index * 2 + 1;
         }
-        division = ysw_heap_allocate(sizeof(zm_division_t));
-        ysw_array_insert(editor->section->divisions, division_index, division);
+        step = ysw_heap_allocate(sizeof(zm_step_t));
+        ysw_array_insert(editor->section->steps, step_index, step);
     } else {
-        division = ysw_array_get(editor->section->divisions, division_index);
+        step = ysw_array_get(editor->section->steps, step_index);
     }
 
     if (editor->mode == YSW_EDITOR_MODE_MELODY) {
-        division->melody.note = midi_note; // rest == 0
-        division->melody.duration = duration;
+        step->melody.note = midi_note; // rest == 0
+        step->melody.duration = duration;
     } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
-        division->chord.root = midi_note; // rest == 0
-        division->chord.quality = editor->quality;
-        division->chord.style = editor->style;
-        division->chord.duration = 0; // set by recalculate
-        if (!division->melody.duration) {
-            division->melody.duration = duration;
+        step->chord.root = midi_note; // rest == 0
+        step->chord.quality = editor->quality;
+        step->chord.style = editor->style;
+        step->chord.duration = 0; // set by recalculate
+        if (!step->melody.duration) {
+            step->melody.duration = duration;
         }
     } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
-        division->rhythm.surface = midi_note; // rest == 0
+        step->rhythm.surface = midi_note; // rest == 0
         if (!midi_note) {
-            division->rhythm.beat = NULL;
+            step->rhythm.beat = NULL;
         }
-        if (!division->melody.duration) {
-            division->melody.duration = duration;
+        if (!step->melody.duration) {
+            step->melody.duration = duration;
         }
     }
 
-    zm_division_x division_count = ysw_array_get_count(editor->section->divisions);
-    editor->position = min(editor->position + editor->advance, division_count * 2);
+    zm_step_x step_count = ysw_array_get_count(editor->section->steps);
+    editor->position = min(editor->position + editor->advance, step_count * 2);
     ysw_staff_set_position(editor->staff, editor->position);
     display_mode(editor);
     recalculate(editor);
-    return division;
+    return step;
 }
 
 static void insert_beat(ysw_editor_t *editor)
@@ -560,9 +560,9 @@ static void insert_beat(ysw_editor_t *editor)
         }
         if (start != last_start) {
             editor->duration = zm_round_duration(start - last_start, NULL, NULL);
-            zm_division_t *division = apply_note(editor, 0, 0);
+            zm_step_t *step = apply_note(editor, 0, 0);
             if (!last_start) {
-                division->rhythm.beat = editor->beat;
+                step->rhythm.beat = editor->beat;
             }
             last_start = start;
         }
@@ -572,18 +572,18 @@ static void insert_beat(ysw_editor_t *editor)
 
 static void process_delete(ysw_editor_t *editor)
 {
-    zm_division_x division_index = editor->position / 2;
-    zm_division_x division_count = ysw_array_get_count(editor->section->divisions);
-    if (division_count > 0 && division_index == division_count) {
-        // On space following last division in section, delete previous division
-        division_index--;
+    zm_step_x step_index = editor->position / 2;
+    zm_step_x step_count = ysw_array_get_count(editor->section->steps);
+    if (step_count > 0 && step_index == step_count) {
+        // On space following last step in section, delete previous step
+        step_index--;
     }
-    if (division_index < division_count) {
-        zm_division_t *division = ysw_array_remove(editor->section->divisions, division_index);
-        ysw_heap_free(division);
-        division_count--;
-        if (division_index == division_count) {
-            if (division_count) {
+    if (step_index < step_count) {
+        zm_step_t *step = ysw_array_remove(editor->section->steps, step_index);
+        ysw_heap_free(step);
+        step_count--;
+        if (step_index == step_count) {
+            if (step_count) {
                 editor->position -= 2;
             } else {
                 editor->position = 0;
@@ -609,7 +609,7 @@ static void process_left(ysw_editor_t *editor, uint8_t move_amount)
 static void process_right(ysw_editor_t *editor, uint8_t move_amount)
 {
     uint32_t new_position = editor->position + move_amount;
-    if (new_position <= ysw_array_get_count(editor->section->divisions) * 2) {
+    if (new_position <= ysw_array_get_count(editor->section->steps) * 2) {
         editor->position = new_position;
         play_position(editor);
         ysw_staff_set_position(editor->staff, editor->position);
@@ -619,16 +619,16 @@ static void process_right(ysw_editor_t *editor, uint8_t move_amount)
 
 static void process_up(ysw_editor_t *editor)
 {
-    if (is_division_position(editor)) {
-        zm_division_x division_index = editor->position / 2;
-        zm_division_t *division = ysw_array_get(editor->section->divisions, division_index);
+    if (is_step_position(editor)) {
+        zm_step_x step_index = editor->position / 2;
+        zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
         if (editor->mode == YSW_EDITOR_MODE_MELODY) {
-            if (division->melody.note && division->melody.note < 83) {
-                division->melody.note++;
+            if (step->melody.note && step->melody.note < 83) {
+                step->melody.note++;
             }
         } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
-            if (division->chord.root && division->chord.root < 83) {
-                division->chord.root++;
+            if (step->chord.root && step->chord.root < 83) {
+                step->chord.root++;
             }
         } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
         }
@@ -640,16 +640,16 @@ static void process_up(ysw_editor_t *editor)
 
 static void process_down(ysw_editor_t *editor)
 {
-    if (is_division_position(editor)) {
-        zm_division_x division_index = editor->position / 2;
-        zm_division_t *division = ysw_array_get(editor->section->divisions, division_index);
+    if (is_step_position(editor)) {
+        zm_step_x step_index = editor->position / 2;
+        zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
         if (editor->mode == YSW_EDITOR_MODE_MELODY) {
-            if (division->melody.note && division->melody.note > 60) {
-                division->melody.note--;
+            if (step->melody.note && step->melody.note > 60) {
+                step->melody.note--;
             }
         } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
-            if (division->chord.root && division->chord.root > 60) {
-                division->chord.root--;
+            if (step->chord.root && step->chord.root > 60) {
+                step->chord.root--;
             }
         } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
         }
@@ -843,13 +843,13 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
                 fire_note_on(editor, midi_note, MELODY_CHANNEL);
             }
         } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
-            zm_division_t division = {
+            zm_step_t step = {
                 .chord.root = midi_note,
                 .chord.quality = editor->quality,
                 .chord.style = editor->style,
                 .chord.duration = zm_get_ticks_per_measure(editor->section->time),
             };
-            play_division(editor, &division);
+            play_step(editor, &step);
         } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
             if (midi_note) {
                 fire_note_on(editor, midi_note, RHYTHM_CHANNEL);
@@ -870,24 +870,24 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
     }
 }
 
-int compare_divisions(const void *left, const void *right)
+int compare_steps(const void *left, const void *right)
 {
-    const zm_division_t *left_division = *(zm_division_t * const *)left;
-    const zm_division_t *right_division = *(zm_division_t * const *)right;
-    int delta = left_division->start - right_division->start;
+    const zm_step_t *left_step = *(zm_step_t * const *)left;
+    const zm_step_t *right_step = *(zm_step_t * const *)right;
+    int delta = left_step->start - right_step->start;
     return delta;
 }
 
 static void on_note_status(ysw_editor_t *editor, ysw_event_t *event)
 {
     if (event->note_status.note.channel >= BACKGROUND_BASE) {
-        zm_division_t needle = {
+        zm_step_t needle = {
             .start = event->note_status.note.start,
         };
         ysw_array_match_t flags = YSW_ARRAY_MATCH_EXACT;
-        int32_t result = ysw_array_search(editor->section->divisions, &needle, compare_divisions, flags);
+        int32_t result = ysw_array_search(editor->section->steps, &needle, compare_steps, flags);
         if (result != -1) {
-            editor->position = division_index_to_position(result);
+            editor->position = step_index_to_position(result);
             ysw_staff_set_position(editor->staff, editor->position);
         } else {
             // e.g. a stroke in a beat
@@ -955,11 +955,11 @@ static void on_chooser_back(ysw_menu_t *menu, ysw_event_t *event, void *value)
     }
 }
 
-static void on_msgbox_close(void *context)
+static void on_popup_close(void *context)
 {
     ysw_editor_t *editor = context;
-    ysw_msgbox_free(editor->msgbox);
-    editor->msgbox = NULL;
+    ysw_popup_free(editor->popup);
+    editor->popup = NULL;
 }
 
 static void on_confirm_delete(void *context)
@@ -969,7 +969,7 @@ static void on_confirm_delete(void *context)
     assert(section);
     zm_section_free(editor->music, section);
     close_chooser(editor);
-    on_msgbox_close(context);
+    on_popup_close(context);
 }
 
 static void on_chooser_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -980,14 +980,14 @@ static void on_chooser_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
         ysw_array_t *references = zm_get_section_references(editor->music, section);
         zm_section_x count = ysw_array_get_count(references);
         if (section == editor->section) {
-            ysw_msgbox_config_t config = {
+            ysw_popup_config_t config = {
                 .context = editor,
                 .type = YSW_MSGBOX_OKAY,
                 .message = "You cannot delete the current section",
-                .on_okay = on_msgbox_close,
-                .okay_key = 5,
+                .on_okay = on_popup_close,
+                .okay_scan_code = 5,
             };
-            editor->msgbox = ysw_msgbox_create(&config);
+            editor->popup = ysw_popup_create(&config);
         } else if (count) {
             ysw_string_t *s = ysw_string_create(128);
             ysw_string_printf(s, "The following composition(s) reference this section:\n");
@@ -996,28 +996,28 @@ static void on_chooser_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
                 ysw_string_printf(s, "  %s\n", composition->name);
             }
             ysw_string_printf(s, "Please delete them first");
-            ysw_msgbox_config_t config = {
+            ysw_popup_config_t config = {
                 .type = YSW_MSGBOX_OKAY,
                     .context = editor,
                     .message = ysw_string_get_chars(s),
-                    .on_okay = on_msgbox_close,
-                    .okay_key = 5,
+                    .on_okay = on_popup_close,
+                    .okay_scan_code = 5,
             };
-            editor->msgbox = ysw_msgbox_create(&config);
+            editor->popup = ysw_popup_create(&config);
             ysw_string_free(s);
         } else {
             ysw_string_t *s = ysw_string_create(128);
             ysw_string_printf(s, "Delete %s?", section->name);
-            ysw_msgbox_config_t config = {
+            ysw_popup_config_t config = {
                 .type = YSW_MSGBOX_OKAY_CANCEL,
                     .context = editor,
                     .message = ysw_string_get_chars(s),
                     .on_okay = on_confirm_delete,
-                    .on_cancel = on_msgbox_close,
-                    .okay_key = 5,
-                    .cancel_key = 6,
+                    .on_cancel = on_popup_close,
+                    .okay_scan_code = 5,
+                    .cancel_scan_code = 6,
             };
-            editor->msgbox = ysw_msgbox_create(&config);
+            editor->popup = ysw_popup_create(&config);
             ysw_string_free(s);
         }
     }
@@ -1080,9 +1080,9 @@ static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, void *value)
     ysw_editor_t *editor = menu->context;
     int32_t direction = (intptr_t)value;
     ESP_LOGD(TAG, "direction=%d", direction);
-    zm_division_t *division = get_division(editor);
-    if (division) {
-        division->melody.duration = zm_get_next_dotted_duration(division->melody.duration, direction);
+    zm_step_t *step = get_step(editor);
+    if (step) {
+        step->melody.duration = zm_get_next_dotted_duration(step->melody.duration, direction);
         play_position(editor);
         recalculate(editor);
         display_mode(editor);
@@ -1103,11 +1103,11 @@ static void on_section_edit(ysw_editor_t *editor, ysw_event_t *event)
     display_mode(editor); // mode displays program
 }
 
-static void process_msgbox_event(ysw_editor_t *editor, ysw_event_t *event)
+static void process_popup_event(ysw_editor_t *editor, ysw_event_t *event)
 {
     switch (event->header.type) {
         case YSW_EVENT_KEY_DOWN:
-            ysw_msgbox_on_key_down(editor->msgbox, event);
+            ysw_popup_on_key_down(editor->popup, event);
             break;
         default:
             break;
@@ -1152,8 +1152,8 @@ static void process_event(void *context, ysw_event_t *event)
 {
     ysw_editor_t *editor = context;
     if (event) {
-        if (editor->msgbox) {
-            process_msgbox_event(editor, event);
+        if (editor->popup) {
+            process_popup_event(editor, event);
         } else if (editor->section) {
             process_section_event(editor, event);
         } else {

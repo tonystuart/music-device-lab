@@ -186,83 +186,83 @@ static const uint8_t note_time_base[] = {
     YSW_1_BASE,
 };
 
-static void draw_note(ysw_staff_t *dc, uint8_t step, zm_duration_t duration)
+static void draw_note(ysw_staff_t *dc, uint8_t staff_position, zm_duration_t duration)
 {
     uint8_t index = 0;
     bool dotted = false;
     zm_round_duration(duration, &index, &dotted);
     if (dotted && dc->draw_type == YSW_STAFF_LEFT) {
-        draw_letter(dc, YSW_DOT_BASE + step);
+        draw_letter(dc, YSW_DOT_BASE + staff_position);
     }
-    draw_letter(dc, note_time_base[index] + step);
+    draw_letter(dc, note_time_base[index] + staff_position);
     if (dotted && dc->draw_type == YSW_STAFF_RIGHT) {
-        draw_letter(dc, YSW_DOT_BASE + step);
+        draw_letter(dc, YSW_DOT_BASE + staff_position);
     }
 }
 
 static void draw_black(ysw_staff_t *dc, uint8_t note, zm_duration_t duration)
 {
     uint8_t accidental = 0;
-    uint8_t step = sharp_map[note];
+    uint8_t staff_position = sharp_map[note];
     if (dc->key_signature->sharps) {
         // if this staff position is not a sharp in this key
-        if (!dc->key_signature->sharp_index[step % 7]) {
+        if (!dc->key_signature->sharp_index[staff_position % 7]) {
             // add the sharp symbol
-            accidental = YSW_SHARP_BASE + step;
+            accidental = YSW_SHARP_BASE + staff_position;
         }
     } else if (dc->key_signature->flats) {
-        step = flat_map[note];
+        staff_position = flat_map[note];
         // if this staff position is not a flat in this key
-        if (!dc->key_signature->flat_index[step % 7]) {
+        if (!dc->key_signature->flat_index[staff_position % 7]) {
             // add the flat symbol
-            accidental = YSW_FLAT_BASE + step;
+            accidental = YSW_FLAT_BASE + staff_position;
         }
     } else {
         // otherwise we're in the key of CMaj/Amin with no sharps/flats so add sharp symbol
-        accidental = YSW_SHARP_BASE + step;
+        accidental = YSW_SHARP_BASE + staff_position;
     }
     if (dc->draw_type == YSW_STAFF_LEFT) {
-        draw_note(dc, step, duration);
+        draw_note(dc, staff_position, duration);
     }
     if (accidental) {
         draw_letter(dc, accidental);
     }
     if (dc->draw_type == YSW_STAFF_RIGHT) {
-        draw_note(dc, step, duration);
+        draw_note(dc, staff_position, duration);
     }
 }
 
 static void draw_white(ysw_staff_t *dc, uint8_t note, zm_duration_t duration)
 {
     uint8_t accidental = 0;
-    uint8_t step = sharp_map[note];
+    uint8_t staff_position = sharp_map[note];
     // if this staff position is a sharp in this key
-    if (dc->key_signature->sharp_index[step % 7]) {
+    if (dc->key_signature->sharp_index[staff_position % 7]) {
         // add the natural symbol
-        accidental = YSW_NATURAL_BASE + step;
+        accidental = YSW_NATURAL_BASE + staff_position;
     }
     // if this staff position is a flat in this key
-    else if (dc->key_signature->flat_index[step % 7]) {
-        step = flat_map[note];
+    else if (dc->key_signature->flat_index[staff_position % 7]) {
+        staff_position = flat_map[note];
         // add the natural symbol
-        accidental = YSW_NATURAL_BASE + step;
+        accidental = YSW_NATURAL_BASE + staff_position;
     }
     if (dc->draw_type == YSW_STAFF_LEFT) {
-        draw_note(dc, step, duration);
+        draw_note(dc, staff_position, duration);
     }
     if (accidental) {
         draw_letter(dc, accidental);
     }
     if (dc->draw_type == YSW_STAFF_RIGHT) {
-        draw_note(dc, step, duration);
+        draw_note(dc, staff_position, duration);
     }
 }
 
-static void draw_melody(ysw_staff_t *dc, zm_division_t *division)
+static void draw_melody(ysw_staff_t *dc, zm_step_t *step)
 {
-    zm_duration_t duration = division->melody.duration;
-    if (division->melody.note) {
-        uint8_t note = (division->melody.note - 60) % MAX_NOTES;
+    zm_duration_t duration = step->melody.duration;
+    if (step->melody.note) {
+        uint8_t note = (step->melody.note - 60) % MAX_NOTES;
         if (black[note]) {
             draw_black(dc, note, duration);
         } else {
@@ -333,10 +333,10 @@ static void draw_signature(ysw_staff_t *dc, zm_time_signature_x time)
     draw_letter(dc, YSW_LEFT_BAR);
 }
 
-static void draw_tie(ysw_staff_t *dc, zm_division_t *division)
+static void draw_tie(ysw_staff_t *dc, zm_step_t *step)
 {
     lv_coord_t x = dc->point.x;
-    if (division->melody.note >= 72) {
+    if (step->melody.note >= 72) {
         draw_letter(dc, YSW_TIE_UPPER);
     } else {
         draw_letter(dc, YSW_TIE_LOWER);
@@ -344,36 +344,36 @@ static void draw_tie(ysw_staff_t *dc, zm_division_t *division)
     dc->point.x = x;
 }
 
-static void draw_division(ysw_staff_t *dc, zm_division_t *division)
+static void draw_step(ysw_staff_t *dc, zm_step_t *step)
 {
     if (dc->draw_type == YSW_STAFF_LEFT) {
         draw_letter(dc, YSW_STAFF_SPACE);
-        if (division->chord.root || division->rhythm.beat || division->rhythm.surface) {
+        if (step->chord.root || step->rhythm.beat || step->rhythm.surface) {
             draw_letter(dc, YSW_STAFF_SPACE);
         }
-        if (division->melody.tie) {
-            draw_tie(dc, division);
+        if (step->melody.tie) {
+            draw_tie(dc, step);
         }
-        draw_melody(dc, division);
-        if (division->chord.root) {
-            draw_chord(dc, &division->chord);
+        draw_melody(dc, step);
+        if (step->chord.root) {
+            draw_chord(dc, &step->chord);
         }
-        if (division->rhythm.beat || division->rhythm.surface) {
-            draw_rhythm(dc, &division->rhythm);
+        if (step->rhythm.beat || step->rhythm.surface) {
+            draw_rhythm(dc, &step->rhythm);
         }
     } else if (dc->draw_type == YSW_STAFF_RIGHT) {
-        if (division->chord.root) {
-            draw_chord(dc, &division->chord);
+        if (step->chord.root) {
+            draw_chord(dc, &step->chord);
         }
-        if (division->rhythm.beat || division->rhythm.surface) {
-            draw_rhythm(dc, &division->rhythm);
+        if (step->rhythm.beat || step->rhythm.surface) {
+            draw_rhythm(dc, &step->rhythm);
         }
-        draw_melody(dc, division);
-        if (division->melody.tie) {
-            draw_tie(dc, division);
+        draw_melody(dc, step);
+        if (step->melody.tie) {
+            draw_tie(dc, step);
         }
         draw_letter(dc, YSW_STAFF_SPACE);
-        if (division->chord.root || division->rhythm.beat || division->rhythm.surface) {
+        if (step->chord.root || step->rhythm.beat || step->rhythm.surface) {
             draw_letter(dc, YSW_STAFF_SPACE);
         }
     }
@@ -381,22 +381,22 @@ static void draw_division(ysw_staff_t *dc, zm_division_t *division)
 
 static void draw_staff(ysw_staff_ext_t *ext, ysw_staff_t *dc)
 {
-    uint32_t division_count = ysw_array_get_count(ext->section->divisions);
-    uint32_t symbol_count = division_count * 2;
+    uint32_t step_count = ysw_array_get_count(ext->section->steps);
+    uint32_t symbol_count = step_count * 2;
 
     dc->draw_type = YSW_STAFF_LEFT;
     dc->point.x = 160;
 
     for (int32_t left = ext->position - 1; left >= 0 && dc->point.x > 0; left--) {
         if (left % 2 == 1) {
-            uint32_t division_index = left / 2;
-            zm_division_t *division = ysw_array_get(ext->section->divisions, division_index);
-            if (division->flags & ZM_DIVISION_END_OF_MEASURE) {
+            uint32_t step_index = left / 2;
+            zm_step_t *step = ysw_array_get(ext->section->steps, step_index);
+            if (step->flags & ZM_STEP_END_OF_MEASURE) {
                 draw_letter(dc, YSW_STAFF_SPACE);
-                draw_measure_label(dc, division->measure + 1);
+                draw_measure_label(dc, step->measure + 1);
                 draw_letter(dc, YSW_RIGHT_BAR);
             }
-            draw_division(dc, division);
+            draw_step(dc, step);
         } else {
             draw_letter(dc, YSW_STAFF_SPACE);
         }
@@ -411,18 +411,18 @@ static void draw_staff(ysw_staff_ext_t *ext, ysw_staff_t *dc)
 
     for (uint32_t right = ext->position; right <= symbol_count && dc->point.x < 320; right++) {
         if (right % 2 == 1) {
-            uint32_t division_index = right / 2;
-            zm_division_t *division = ysw_array_get(ext->section->divisions, division_index);
+            uint32_t step_index = right / 2;
+            zm_step_t *step = ysw_array_get(ext->section->steps, step_index);
             if (right == ext->position) {
                 dc->color = LV_COLOR_RED;
-                draw_division(dc, division);
+                draw_step(dc, step);
                 dc->color = LV_COLOR_WHITE;
             } else {
-                draw_division(dc, division);
+                draw_step(dc, step);
             }
-            if (division->flags & ZM_DIVISION_END_OF_MEASURE) {
+            if (step->flags & ZM_STEP_END_OF_MEASURE) {
                 draw_letter(dc, YSW_RIGHT_BAR);
-                draw_measure_label(dc, division->measure + 1);
+                draw_measure_label(dc, step->measure + 1);
                 draw_letter(dc, YSW_STAFF_SPACE);
             }
         } else {

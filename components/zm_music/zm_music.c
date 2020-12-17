@@ -37,6 +37,11 @@
 // For drum beat and stroke, see https://en.wikipedia.org/wiki/Drum_beat
 
 typedef enum {
+
+    // settings
+    ZM_MF_SETTINGS = 0,
+
+    // instruments
     ZM_MF_SAMPLE = 1,
     ZM_MF_PROGRAM = 2,
     ZM_MF_PATCH = 3,
@@ -52,11 +57,12 @@ typedef enum {
 
     // layers
     ZM_MF_SECTION = 9,
-    ZM_MF_DIVISION = 10,
+    ZM_MF_STEP = 10,
     ZM_MF_MELODY = 11,
     ZM_MF_CHORD = 12,
     ZM_MF_RHYTHM = 13,
 
+    // assemblies
     ZM_MF_COMPOSITION = 14,
     ZM_MF_PART = 15,
 
@@ -458,31 +464,31 @@ static void parse_section(zm_mfr_t *zm_mfr)
     section->melody_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[6]));
     section->chord_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[7]));
     section->rhythm_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[8]));
-    section->divisions = ysw_array_create(16);
+    section->steps = ysw_array_create(16);
 
     zm_yesno_t done = false;
-    zm_division_t *division = NULL;
+    zm_step_t *step = NULL;
 
     while (!done && get_tokens(zm_mfr)) {
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_DIVISION && zm_mfr->token_count == 4) {
-            division = ysw_heap_allocate(sizeof(zm_division_t));
-            division->start = atoi(zm_mfr->tokens[1]);
-            division->measure = atoi(zm_mfr->tokens[2]);
-            division->flags = atoi(zm_mfr->tokens[3]);
-            ysw_array_push(section->divisions, division);
-        } else if (division && type == ZM_MF_MELODY && zm_mfr->token_count == 4) {
-            division->melody.note = atoi(zm_mfr->tokens[1]);
-            division->melody.duration = atoi(zm_mfr->tokens[2]);
-            division->melody.tie = atoi(zm_mfr->tokens[3]);
-        } else if (division && type == ZM_MF_CHORD && zm_mfr->token_count == 5) {
-            division->chord.root = atoi(zm_mfr->tokens[1]);
-            division->chord.quality = ysw_array_get(zm_mfr->music->qualities, atoi(zm_mfr->tokens[2]));
-            division->chord.style = ysw_array_get(zm_mfr->music->styles, atoi(zm_mfr->tokens[3]));
-            division->chord.duration = atoi(zm_mfr->tokens[4]);
-        } else if (division && type == ZM_MF_RHYTHM && zm_mfr->token_count == 3) {
-            division->rhythm.beat = ysw_array_get(zm_mfr->music->beats, atoi(zm_mfr->tokens[1]));
-            division->rhythm.surface = atoi(zm_mfr->tokens[2]);
+        if (type == ZM_MF_STEP && zm_mfr->token_count == 4) {
+            step = ysw_heap_allocate(sizeof(zm_step_t));
+            step->start = atoi(zm_mfr->tokens[1]);
+            step->measure = atoi(zm_mfr->tokens[2]);
+            step->flags = atoi(zm_mfr->tokens[3]);
+            ysw_array_push(section->steps, step);
+        } else if (step && type == ZM_MF_MELODY && zm_mfr->token_count == 4) {
+            step->melody.note = atoi(zm_mfr->tokens[1]);
+            step->melody.duration = atoi(zm_mfr->tokens[2]);
+            step->melody.tie = atoi(zm_mfr->tokens[3]);
+        } else if (step && type == ZM_MF_CHORD && zm_mfr->token_count == 5) {
+            step->chord.root = atoi(zm_mfr->tokens[1]);
+            step->chord.quality = ysw_array_get(zm_mfr->music->qualities, atoi(zm_mfr->tokens[2]));
+            step->chord.style = ysw_array_get(zm_mfr->music->styles, atoi(zm_mfr->tokens[3]));
+            step->chord.duration = atoi(zm_mfr->tokens[4]);
+        } else if (step && type == ZM_MF_RHYTHM && zm_mfr->token_count == 3) {
+            step->rhythm.beat = ysw_array_get(zm_mfr->music->beats, atoi(zm_mfr->tokens[1]));
+            step->rhythm.surface = atoi(zm_mfr->tokens[2]);
         } else {
             push_back_tokens(zm_mfr);
             done = true;
@@ -511,34 +517,34 @@ static void emit_sections(zm_mfw_t *zm_mfw)
                 get_map(zm_mfw->program_map, section->chord_program),
                 get_map(zm_mfw->program_map, section->rhythm_program));
 
-        uint32_t division_count = ysw_array_get_count(section->divisions);
-        for (uint32_t j = 0; j < division_count; j++) {
-            zm_division_t *division = ysw_array_get(section->divisions, j);
+        uint32_t step_count = ysw_array_get_count(section->steps);
+        for (uint32_t j = 0; j < step_count; j++) {
+            zm_step_t *step = ysw_array_get(section->steps, j);
             fprintf(zm_mfw->file, "%d,%d,%d,%d\n",
-                    ZM_MF_DIVISION,
-                    division->start,
-                    division->measure,
-                    division->flags);
-            if (division->melody.duration) {
+                    ZM_MF_STEP,
+                    step->start,
+                    step->measure,
+                    step->flags);
+            if (step->melody.duration) {
                 fprintf(zm_mfw->file, "%d,%d,%d,%d\n",
                         ZM_MF_MELODY,
-                        division->melody.note,
-                        division->melody.duration,
-                        division->melody.tie);
+                        step->melody.note,
+                        step->melody.duration,
+                        step->melody.tie);
             }
-            if (division->chord.root) {
+            if (step->chord.root) {
                 fprintf(zm_mfw->file, "%d,%d,%d,%d,%d\n",
                         ZM_MF_CHORD,
-                        division->chord.root,
-                        get_map(zm_mfw->quality_map, division->chord.quality),
-                        get_map(zm_mfw->style_map, division->chord.style),
-                        division->chord.duration);
+                        step->chord.root,
+                        get_map(zm_mfw->quality_map, step->chord.quality),
+                        get_map(zm_mfw->style_map, step->chord.style),
+                        step->chord.duration);
             }
-            if (division->rhythm.beat) {
+            if (step->rhythm.beat) {
                 fprintf(zm_mfw->file, "%d,%d,%d\n",
                         ZM_MF_RHYTHM,
-                        get_map(zm_mfw->beat_map, division->rhythm.beat),
-                        division->rhythm.surface);
+                        get_map(zm_mfw->beat_map, step->rhythm.beat),
+                        step->rhythm.surface);
             }
         }
     }
@@ -627,7 +633,7 @@ void zm_section_free(zm_music_t *music, zm_section_t *section)
     assert(index >= 0);
     ysw_array_remove(music->sections, index);
     ysw_heap_free(section->name);
-    ysw_array_free_all(section->divisions);
+    ysw_array_free_all(section->steps);
     ysw_heap_free(section);
 }
 
@@ -964,7 +970,7 @@ void zm_render_rhythm(ysw_array_t *notes, zm_rhythm_t *rhythm, zm_time_x rhythm_
     }
 }
 
-ysw_array_t *zm_render_division(zm_music_t *m, zm_section_t *p, zm_division_t *d, zm_channel_x bc)
+ysw_array_t *zm_render_step(zm_music_t *m, zm_section_t *p, zm_step_t *d, zm_channel_x bc)
 {
     ysw_array_t *notes = ysw_array_create(16);
     if (d->melody.note) {
@@ -987,36 +993,36 @@ zm_time_x zm_render_section_notes(ysw_array_t *notes, zm_music_t *music, zm_sect
         zm_time_x start_time, zm_channel_x base_channel)
 {
     zm_tie_x tie = 0;
-    zm_division_x division_count = ysw_array_get_count(section->divisions);
+    zm_step_x step_count = ysw_array_get_count(section->steps);
     zm_program_x melody_program = ysw_array_find(music->programs, section->melody_program);
     zm_program_x chord_program = ysw_array_find(music->programs, section->chord_program);
     zm_program_x rhythm_program = ysw_array_find(music->programs, section->rhythm_program);
     // two passes: one to do melody note ties, the other for chords and rhythms
-    for (zm_division_x i = 0; i < division_count; i++) {
-        zm_division_t *division = ysw_array_get(section->divisions, i);
-        if (division->melody.note) {
-            zm_time_x division_start = start_time + division->start;
-            zm_render_melody(notes, &division->melody, division_start, base_channel, melody_program, tie);
-            if (division->melody.tie) {
-                tie = division->melody.tie;
+    for (zm_step_x i = 0; i < step_count; i++) {
+        zm_step_t *step = ysw_array_get(section->steps, i);
+        if (step->melody.note) {
+            zm_time_x step_start = start_time + step->start;
+            zm_render_melody(notes, &step->melody, step_start, base_channel, melody_program, tie);
+            if (step->melody.tie) {
+                tie = step->melody.tie;
             } else if (tie) {
                 tie--;
             }
         }
     }
-    zm_time_x division_end = 0;
-    for (zm_division_x i = 0; i < division_count; i++) {
-        zm_division_t *division = ysw_array_get(section->divisions, i);
-        zm_time_x division_start = start_time + division->start;
-        if (division->chord.root) {
-            zm_render_chord(notes, &division->chord, division_start, base_channel + 1, chord_program);
+    zm_time_x step_end = 0;
+    for (zm_step_x i = 0; i < step_count; i++) {
+        zm_step_t *step = ysw_array_get(section->steps, i);
+        zm_time_x step_start = start_time + step->start;
+        if (step->chord.root) {
+            zm_render_chord(notes, &step->chord, step_start, base_channel + 1, chord_program);
         }
-        if (division->rhythm.beat || division->rhythm.surface) {
-            zm_render_rhythm(notes, &division->rhythm, division_start, base_channel + 2, rhythm_program);
+        if (step->rhythm.beat || step->rhythm.surface) {
+            zm_render_rhythm(notes, &step->rhythm, step_start, base_channel + 2, rhythm_program);
         }
-        division_end = division_start + division->melody.duration;
+        step_end = step_start + step->melody.duration;
     }
-    return division_end;
+    return step_end;
 }
 
 ysw_array_t *zm_render_section(zm_music_t *music, zm_section_t *section, zm_channel_x base_channel)
@@ -1295,7 +1301,7 @@ zm_section_t *zm_music_create_section(zm_music_t *music)
     ysw_name_create(name, sizeof(name));
     zm_section_t *section = ysw_heap_allocate(sizeof(zm_section_t));
     section->name = ysw_heap_strdup(name);
-    section->divisions = ysw_array_create(64);
+    section->steps = ysw_array_create(64);
     section->key = ZM_KEY_C;
     section->time = ZM_TIME_4_4;
     section->tempo = ZM_TEMPO_100;

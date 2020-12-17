@@ -52,7 +52,7 @@ typedef uint16_t zm_sample_x;
 typedef uint16_t zm_composition_x;
 typedef uint16_t zm_style_x;
 
-typedef uint32_t zm_division_x;
+typedef uint32_t zm_step_x;
 typedef uint32_t zm_time_x;
 
 typedef enum {
@@ -203,17 +203,17 @@ typedef struct {
 } zm_rhythm_t;
 
 typedef enum {
-    ZM_DIVISION_END_OF_MEASURE = 0x0001,
-} zm_division_flags_t;
+    ZM_STEP_END_OF_MEASURE = 0x0001,
+} zm_step_flags_t;
 
 typedef struct {
     zm_time_x start;
     zm_measure_x measure;
-    zm_division_flags_t flags;
+    zm_step_flags_t flags;
     zm_melody_t melody;
     zm_chord_t chord;
     zm_rhythm_t rhythm;
-} zm_division_t;
+} zm_step_t;
 
 typedef struct {
     char *name;
@@ -221,7 +221,7 @@ typedef struct {
     zm_tempo_t tempo;
     zm_key_signature_x key;
     zm_time_signature_x time;
-    ysw_array_t *divisions;
+    ysw_array_t *steps;
     zm_program_t *melody_program;
     zm_program_t *chord_program;
     zm_program_t *rhythm_program;
@@ -284,7 +284,7 @@ int zm_note_compare(const void *left, const void *right);
 
 void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_program_x program_index, zm_tie_x tie);
 void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_program_x program_index);
-ysw_array_t *zm_render_division(zm_music_t *m, zm_section_t *p, zm_division_t *d, zm_channel_x bc);
+ysw_array_t *zm_render_step(zm_music_t *m, zm_section_t *p, zm_step_t *d, zm_channel_x bc);
 zm_time_x zm_render_section_notes(ysw_array_t *notes, zm_music_t *music, zm_section_t *section, zm_time_x start_time, zm_channel_x base_channel);
 ysw_array_t *zm_render_section(zm_music_t *music, zm_section_t *section, zm_channel_x base_channel);
 ysw_array_t *zm_render_composition(zm_music_t *music, zm_composition_t *composition, zm_channel_x base_channel);

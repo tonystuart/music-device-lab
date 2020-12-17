@@ -267,7 +267,7 @@
 8,896,64,16 # hi-hat
 
 #type(9=pattern),index,name,tempo,key,time,melody,chord,rhythm
-#type(10=division),start,measure,flags
+#type(10=step),start,measure,flags
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat
@@ -462,7 +462,7 @@
 11,62,128,0 # D
 
 #type(9=pattern),index,name,tempo,key,time,melody,chord,rhythm
-#type(10=division),start,measure,flags
+#type(10=step),start,measure,flags
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat
@@ -491,7 +491,7 @@
 11,74,128,0
 
 #type(9=pattern),index,name,tempo,key,time,melody,chord,rhythm
-#type(10=division),start,measure,flags
+#type(10=step),start,measure,flags
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat

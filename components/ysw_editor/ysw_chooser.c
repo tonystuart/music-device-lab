@@ -82,12 +82,12 @@ ysw_chooser_t *ysw_chooser_create(zm_music_t *music, zm_section_t *current_secti
     for (zm_section_x i = 0, data_row = 1; i < section_count; i++, data_row++) {
         char buffer[32];
         zm_section_t *section = ysw_array_get(music->sections, i);
-        zm_division_x division_count = ysw_array_get_count(section->divisions);
+        zm_step_x step_count = ysw_array_get_count(section->steps);
         lv_table_set_cell_align(table, data_row, 0, LV_LABEL_ALIGN_CENTER);
         lv_table_set_cell_align(table, data_row, 1, LV_LABEL_ALIGN_CENTER);
         lv_table_set_cell_align(table, data_row, 2, LV_LABEL_ALIGN_CENTER);
         lv_table_set_cell_value(table, data_row, 0, section->name);
-        lv_table_set_cell_value(table, data_row, 1, ysw_itoa(division_count, buffer, sizeof(buffer)));
+        lv_table_set_cell_value(table, data_row, 1, ysw_itoa(step_count, buffer, sizeof(buffer)));
         lv_table_set_cell_value(table, data_row, 2, ysw_itoa(section->age, buffer, sizeof(buffer)));
         if (section == current_section) {
             new_row = i;
