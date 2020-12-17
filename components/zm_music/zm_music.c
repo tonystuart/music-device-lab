@@ -150,6 +150,18 @@ static void push_back_tokens(zm_mfr_t *zm_mfr)
     zm_mfr->reuse_tokens = true;
 }
 
+static void parse_settings(zm_mfr_t *zm_mfr)
+{
+    zm_mfr->music->settings.clock = atoi(zm_mfr->tokens[1]);
+}
+
+static void emit_settings(zm_mfw_t *zm_mfw)
+{
+    fprintf(zm_mfw->file, "%d,%d\n",
+            ZM_MF_SETTINGS,
+            zm_mfw->music->settings.clock);
+}
+
 static void parse_sample(zm_mfr_t *zm_mfr)
 {
     zm_sample_x index = atoi(zm_mfr->tokens[1]);
@@ -461,9 +473,10 @@ static void parse_section(zm_mfr_t *zm_mfr)
     section->tempo = atoi(zm_mfr->tokens[3]);
     section->key = atoi(zm_mfr->tokens[4]);
     section->time = atoi(zm_mfr->tokens[5]);
-    section->melody_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[6]));
-    section->chord_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[7]));
-    section->rhythm_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[8]));
+    section->tlm = atoi(zm_mfr->tokens[6]);
+    section->melody_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[7]));
+    section->chord_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[8]));
+    section->rhythm_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[9]));
     section->steps = ysw_array_create(16);
 
     zm_yesno_t done = false;
@@ -707,7 +720,9 @@ zm_music_t *zm_parse_file(FILE *file)
 
     while (get_tokens(zm_mfr)) {
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_SAMPLE && zm_mfr->token_count == 7) {
+        if (type == ZM_MF_SETTINGS && zm_mfr->token_count == 2) {
+            parse_settings(zm_mfr);
+        } else if (type == ZM_MF_SAMPLE && zm_mfr->token_count == 7) {
             parse_sample(zm_mfr);
         } else if (type == ZM_MF_PROGRAM && zm_mfr->token_count == 5) {
             parse_program(zm_mfr);
@@ -717,7 +732,7 @@ zm_music_t *zm_parse_file(FILE *file)
             parse_style(zm_mfr);
         } else if (type == ZM_MF_BEAT && zm_mfr->token_count == 4) {
             parse_beat(zm_mfr);
-        } else if (type == ZM_MF_SECTION && zm_mfr->token_count == 9) {
+        } else if (type == ZM_MF_SECTION && zm_mfr->token_count == 10) {
             parse_section(zm_mfr);
         } else if (type == ZM_MF_COMPOSITION && zm_mfr->token_count == 4) {
             parse_composition(zm_mfr);
@@ -750,6 +765,7 @@ void zm_emit_file(FILE *file, zm_music_t *music)
         .composition_map = create_map(100),
     };
 
+    emit_settings(zm_mfw);
     emit_samples(zm_mfw);
     emit_programs(zm_mfw);
     emit_qualities(zm_mfw);
@@ -1301,10 +1317,11 @@ zm_section_t *zm_music_create_section(zm_music_t *music)
     ysw_name_create(name, sizeof(name));
     zm_section_t *section = ysw_heap_allocate(sizeof(zm_section_t));
     section->name = ysw_heap_strdup(name);
-    section->steps = ysw_array_create(64);
+    section->tempo = ZM_TEMPO_100;
     section->key = ZM_KEY_C;
     section->time = ZM_TIME_4_4;
-    section->tempo = ZM_TEMPO_100;
+    section->tlm = music->settings.clock++;
+    section->steps = ysw_array_create(64);
     section->melody_program = ysw_array_get(music->programs, DEFAULT_MELODY_PROGRAM);
     section->chord_program = ysw_array_get(music->programs, DEFAULT_CHORD_PROGRAM);
     section->rhythm_program = ysw_array_get(music->programs, DEFAULT_RHYTHM_PROGRAM);

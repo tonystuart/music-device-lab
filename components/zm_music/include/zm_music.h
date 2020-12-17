@@ -42,7 +42,6 @@ typedef uint8_t zm_stroke_x;
 typedef uint8_t zm_tie_x;
 typedef uint8_t zm_velocity_x;
 
-typedef uint16_t zm_age_x;
 typedef uint16_t zm_measure_x;
 typedef uint16_t zm_note_x;
 typedef uint16_t zm_part_x;
@@ -54,6 +53,10 @@ typedef uint16_t zm_style_x;
 
 typedef uint32_t zm_step_x;
 typedef uint32_t zm_time_x;
+
+typedef struct {
+    zm_time_x clock;
+} zm_settings_t;
 
 typedef enum {
     ZM_KEY_C,
@@ -217,10 +220,10 @@ typedef struct {
 
 typedef struct {
     char *name;
-    zm_age_x age;
     zm_tempo_t tempo;
     zm_key_signature_x key;
     zm_time_signature_x time;
+    zm_time_x tlm;
     ysw_array_t *steps;
     zm_program_t *melody_program;
     zm_program_t *chord_program;
@@ -263,6 +266,7 @@ typedef struct {
 } zm_part_t;
 
 typedef struct {
+    zm_settings_t settings;
     ysw_array_t *samples;
     ysw_array_t *programs;
     ysw_array_t *qualities;

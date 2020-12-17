@@ -137,7 +137,10 @@ static zm_step_t *get_step(ysw_editor_t *editor)
     return step;
 }
 
-// TODO: remove unnecessary calls to recalculate (e.g. increase/decrease pitch)
+static void update_tlm(ysw_editor_t *editor)
+{
+    editor->section->tlm = editor->music->settings.clock++;
+}
 
 static void recalculate(ysw_editor_t *editor)
 {
@@ -348,23 +351,24 @@ static void cycle_program(ysw_editor_t *editor)
 static void cycle_key_signature(ysw_editor_t *editor)
 {
     editor->section->key = zm_get_next_key_index(editor->section->key);
-    recalculate(editor);
     ysw_footer_set_key(editor->footer, editor->section->key);
+    update_tlm(editor);
 }
 
 static void cycle_time_signature(ysw_editor_t *editor)
 {
     editor->section->time = zm_get_next_time_index(editor->section->time);
-    recalculate(editor);
     ysw_footer_set_time(editor->footer, editor->section->time);
+    recalculate(editor);
+    update_tlm(editor);
 }
 
 static void cycle_tempo(ysw_editor_t *editor)
 {
     editor->section->tempo = zm_get_next_tempo_index(editor->section->tempo);
-    recalculate(editor);
     ysw_footer_set_tempo(editor->footer, editor->section->tempo);
     display_mode(editor);
+    update_tlm(editor);
 }
 
 static void cycle_duration(ysw_editor_t *editor)
@@ -381,8 +385,9 @@ static void cycle_duration(ysw_editor_t *editor)
     }
     if (step) {
         step->melody.duration = editor->duration;
-        recalculate(editor);
         display_mode(editor);
+        recalculate(editor);
+        update_tlm(editor);
     }
 }
 
@@ -398,6 +403,7 @@ static void cycle_tie(ysw_editor_t *editor)
                 step->melody.tie = 1;
             }
             ysw_staff_invalidate(editor->staff);
+            update_tlm(editor);
         }
     }
 }
@@ -442,6 +448,7 @@ static void cycle_quality(ysw_editor_t *editor)
         step->chord.quality = editor->quality;
         step->chord.style = editor->style;
         ysw_staff_invalidate(editor->staff);
+        update_tlm(editor);
     }
     display_mode(editor);
     play_position(editor);
@@ -480,6 +487,7 @@ static void cycle_beat(ysw_editor_t *editor)
     if (step) {
         step->rhythm.beat = editor->beat;
         ysw_staff_invalidate(editor->staff);
+        update_tlm(editor);
     }
     display_mode(editor);
     play_position(editor);
@@ -538,6 +546,7 @@ static zm_step_t *apply_note(ysw_editor_t *editor, zm_note_t midi_note, zm_time_
     ysw_staff_set_position(editor->staff, editor->position);
     display_mode(editor);
     recalculate(editor);
+    update_tlm(editor);
     return step;
 }
 
@@ -590,8 +599,9 @@ static void process_delete(ysw_editor_t *editor)
             }
         }
         ysw_staff_set_position(editor->staff, editor->position);
-        recalculate(editor);
         display_mode(editor);
+        recalculate(editor);
+        update_tlm(editor);
     }
 }
 
@@ -633,8 +643,8 @@ static void process_up(ysw_editor_t *editor)
         } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
         }
         play_position(editor);
-        recalculate(editor);
         display_mode(editor);
+        update_tlm(editor);
     }
 }
 
@@ -654,8 +664,8 @@ static void process_down(ysw_editor_t *editor)
         } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
         }
         play_position(editor);
-        recalculate(editor);
         display_mode(editor);
+        update_tlm(editor);
     }
 }
 
@@ -1084,8 +1094,9 @@ static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, void *value)
     if (step) {
         step->melody.duration = zm_get_next_dotted_duration(step->melody.duration, direction);
         play_position(editor);
-        recalculate(editor);
         display_mode(editor);
+        recalculate(editor);
+        update_tlm(editor);
     }
 }
 

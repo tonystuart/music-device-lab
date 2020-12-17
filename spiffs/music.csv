@@ -23,6 +23,9 @@
 # D     E     F# G     A     B     C#
 # 62 63 64 65 66 67 68 69 70 71 72 73
 
+#type(0=settings),clock
+0,4
+
 #type(1=sample),index,name,reppnt,replen,volume,pan
 #type(2=program),index,name,type,gm
 #type(3=patch),up_to,sample[,name]
@@ -266,13 +269,13 @@
 8,768,65,16 # cymbal
 8,896,64,16 # hi-hat
 
-#type(9=pattern),index,name,tempo,key,time,melody,chord,rhythm
+#type(9=section),index,name,tempo,key,time,clock,melody,chord,rhythm
 #type(10=step),start,measure,flags
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat
 
-9,0,Summer Nights Verse 1,3,2,3,1,3,7
+9,0,Summer Nights Verse,3,2,3,1,1,3,7
 
 # Line 1 - Measure 1
 10,0,1,0
@@ -461,12 +464,12 @@
 10,11136,11,1
 11,62,128,0 # D
 
-#type(9=pattern),index,name,tempo,key,time,melody,chord,rhythm
+#type(9=section),index,name,tempo,key,time,clock,melody,chord,rhythm
 #type(10=step),start,measure,flags
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat
-9,1,Summer Nights Walking Scale,3,2,3,0,3,7
+9,1,Summer Nights Walking Scale,3,2,3,2,0,3,7
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
@@ -490,12 +493,12 @@
 10,896,1,1
 11,74,128,0
 
-#type(9=pattern),index,name,tempo,key,time,melody,chord,rhythm
+#type(9=section),index,name,tempo,key,time,clock,melody,chord,rhythm
 #type(10=step),start,measure,flags
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat
-9,2,Summer Nights Intro,3,2,3,1,3,7
+9,2,Summer Nights Intro,3,2,3,3,1,3,7
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
@@ -555,7 +558,7 @@
 11,55,128,0 # G
 
 #type(14=composition),index,name,bpm
-#type(15=part),pattern,pct-volume,when-type,when-role-index,fit
+#type(15=part),section,pct-volume,when-type,when-role-index,fit
 14,0,Summer Nights,160
 15,2,100,0,0,0 # Intro
 15,0,100,1,0,0 # Verse 1
