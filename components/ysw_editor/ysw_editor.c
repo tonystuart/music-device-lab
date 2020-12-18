@@ -352,6 +352,7 @@ static void cycle_key_signature(ysw_editor_t *editor)
 {
     editor->section->key = zm_get_next_key_index(editor->section->key);
     ysw_footer_set_key(editor->footer, editor->section->key);
+    ysw_staff_invalidate(editor->staff);
     update_tlm(editor);
 }
 
@@ -908,7 +909,7 @@ static void on_note_status(ysw_editor_t *editor, ysw_event_t *event)
 static void on_new(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
-    zm_section_t *section = zm_music_create_section(editor->music);
+    zm_section_t *section = zm_create_section(editor->music);
     ysw_array_push(editor->music->sections, section);
     ysw_event_fire_section_edit(editor->bus, section);
 }
@@ -957,10 +958,21 @@ static void on_chooser_open(ysw_menu_t *menu, ysw_event_t *event, void *value)
     }
 }
 
+static void on_section_name_entered(void *context, const char *text)
+{
+    ysw_editor_t *editor = context;
+    zm_section_t *section = ysw_chooser_get_section(editor->chooser);
+    section->name = ysw_heap_strdup(text);
+    ysw_chooser_update_sections(editor->chooser, NULL);
+    editor->section->tlm = editor->music->settings.clock++;
+    display_mode(editor); // name may be displayed in header
+}
+
 static void on_chooser_rename(ysw_menu_t *menu, ysw_event_t *event, void *value)
 {
     ysw_editor_t *editor = menu->context;
-    ysw_chooser_rename(editor->chooser);
+    zm_section_t *section = ysw_chooser_get_section(editor->chooser);
+    ysw_edit_pane_create("Rename Section", section->name, on_section_name_entered, editor);
 }
 
 static void on_chooser_back(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -973,21 +985,79 @@ static void on_chooser_back(ysw_menu_t *menu, ysw_event_t *event, void *value)
     }
 }
 
-static void on_popup_close(void *context)
+static void on_popup_close(void *context, ysw_popup_t *popup)
 {
     ysw_editor_t *editor = context;
     ysw_popup_free(editor->popup);
     editor->popup = NULL;
 }
 
-static void on_confirm_delete(void *context)
+static void on_confirm_delete(void *context, ysw_popup_t *popup)
 {
     ysw_editor_t *editor = context;
     zm_section_t *section = ysw_chooser_get_section(editor->chooser);
     assert(section);
     zm_section_free(editor->music, section);
+#if 0
     close_chooser(editor);
     on_popup_close(context);
+#else
+    lv_obj_del(popup->container);
+    ysw_chooser_update_sections(editor->chooser, NULL);
+#endif
+}
+
+static void display_current_section_error(ysw_editor_t *editor, zm_section_t *section)
+{
+    ysw_string_t *s = ysw_string_create(128);
+    ysw_string_printf(s, "You cannot delete\n%s\nbecause it is currently open", section->name);
+    ysw_popup_config_t config = {
+        .context = editor,
+        .type = YSW_MSGBOX_OKAY,
+        .message = ysw_string_get_chars(s),
+        .on_okay = on_popup_close,
+        .okay_scan_code = 5,
+    };
+    editor->popup = ysw_popup_create(&config);
+    ysw_string_free(s);
+}
+
+static void display_section_references_error(ysw_editor_t *editor, zm_section_t *section,
+        ysw_array_t *references, zm_section_x count)
+{
+    ysw_string_t *s = ysw_string_create(128);
+    ysw_string_printf(s, "You cannot delete\n%s\nbecause it is referenced by the following composition(s):\n", section->name);
+    for (zm_composition_x i = 0; i < count; i++) {
+        zm_composition_t *composition = ysw_array_get(references, i);
+        ysw_string_printf(s, "  %s\n", composition->name);
+    }
+    ysw_string_printf(s, "Please delete them first");
+    ysw_popup_config_t config = {
+        .type = YSW_MSGBOX_OKAY,
+        .context = editor,
+        .message = ysw_string_get_chars(s),
+        .on_okay = on_popup_close,
+        .okay_scan_code = 5,
+    };
+    editor->popup = ysw_popup_create(&config);
+    ysw_string_free(s);
+}
+
+static void confirm_section_delete(ysw_editor_t *editor, zm_section_t *section)
+{
+    ysw_string_t *s = ysw_string_create(128);
+    ysw_string_printf(s, "Delete %s?", section->name);
+    ysw_popup_config_t config = {
+        .type = YSW_MSGBOX_OKAY_CANCEL,
+        .context = editor,
+        .message = ysw_string_get_chars(s),
+        .on_okay = on_confirm_delete,
+        .on_cancel = on_popup_close,
+        .okay_scan_code = 5,
+        .cancel_scan_code = 6,
+    };
+    editor->popup = ysw_popup_create(&config);
+    ysw_string_free(s);
 }
 
 static void on_chooser_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
@@ -998,46 +1068,24 @@ static void on_chooser_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
         ysw_array_t *references = zm_get_section_references(editor->music, section);
         zm_section_x count = ysw_array_get_count(references);
         if (section == editor->section) {
-            ysw_popup_config_t config = {
-                .context = editor,
-                .type = YSW_MSGBOX_OKAY,
-                .message = "You cannot delete the current section",
-                .on_okay = on_popup_close,
-                .okay_scan_code = 5,
-            };
-            editor->popup = ysw_popup_create(&config);
+            display_current_section_error(editor, section);
         } else if (count) {
-            ysw_string_t *s = ysw_string_create(128);
-            ysw_string_printf(s, "The following composition(s) reference this section:\n");
-            for (zm_composition_x i = 0; i < count; i++) {
-                zm_composition_t *composition = ysw_array_get(references, i);
-                ysw_string_printf(s, "  %s\n", composition->name);
-            }
-            ysw_string_printf(s, "Please delete them first");
-            ysw_popup_config_t config = {
-                .type = YSW_MSGBOX_OKAY,
-                    .context = editor,
-                    .message = ysw_string_get_chars(s),
-                    .on_okay = on_popup_close,
-                    .okay_scan_code = 5,
-            };
-            editor->popup = ysw_popup_create(&config);
-            ysw_string_free(s);
+            display_section_references_error(editor, section, references, count);
         } else {
-            ysw_string_t *s = ysw_string_create(128);
-            ysw_string_printf(s, "Delete %s?", section->name);
-            ysw_popup_config_t config = {
-                .type = YSW_MSGBOX_OKAY_CANCEL,
-                    .context = editor,
-                    .message = ysw_string_get_chars(s),
-                    .on_okay = on_confirm_delete,
-                    .on_cancel = on_popup_close,
-                    .okay_scan_code = 5,
-                    .cancel_scan_code = 6,
-            };
-            editor->popup = ysw_popup_create(&config);
-            ysw_string_free(s);
+            confirm_section_delete(editor, section);
         }
+    }
+}
+
+static void on_chooser_copy(ysw_menu_t *menu, ysw_event_t *event, void *value)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_section_t *old_section = ysw_chooser_get_section(editor->chooser);
+    if (old_section) {
+        zm_section_t *new_section = zm_copy_section(editor->music, old_section);
+        zm_section_x section_x = ysw_array_find(editor->music->sections, old_section);
+        ysw_array_insert(editor->music->sections, section_x + 1, new_section);
+        ysw_chooser_update_sections(editor->chooser, NULL);
     }
 }
 
@@ -1287,7 +1335,7 @@ static const ysw_menu_item_t chooser_menu[] = {
     { 18, "Delete\nSection", YSW_MF_COMMAND, on_chooser_delete, 0 },
     { 19, "Down", YSW_MF_COMMAND, on_chooser_down, 0 },
 
-    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 25, "Copy\nSection", YSW_MF_COMMAND, on_chooser_copy, 0 },
     { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
     { 28, " ", YSW_MF_NOP, ysw_menu_nop, 0 },

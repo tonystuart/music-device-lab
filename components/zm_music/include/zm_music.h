@@ -18,6 +18,7 @@
 #define ZM_MF_PARTITION "/spiffs"
 #define ZM_MF_CSV ZM_MF_PARTITION "/music.csv"
 #define ZM_MF_TEMP ZM_MF_PARTITION "/music.tmp"
+#define ZM_NAME_SZ 32
 
 typedef uint8_t zm_small_t;
 typedef uint16_t zm_medium_t;
@@ -310,7 +311,9 @@ zm_duration_t zm_get_next_duration(zm_duration_t duration);
 
 zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note);
 
-zm_section_t *zm_music_create_section(zm_music_t *music);
+zm_section_t *zm_create_section(zm_music_t *music);
+
+zm_section_t *zm_copy_section(zm_music_t *music, zm_section_t *old_section);
 
 ysw_array_t *zm_get_section_references(zm_music_t *music, zm_section_t *section);
 

@@ -7,8 +7,8 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "esp_log.h"
 #include "ysw_style.h"
+#include "esp_log.h"
 
 #define TAG "YSW_STYLE"
 
@@ -132,7 +132,7 @@ void ysw_style_adjust_mbox(lv_obj_t *mbox)
     lv_obj_set_style_local_border_width(mbox, LV_MSGBOX_PART_BTN, LV_STATE_DEFAULT, 0);
 }
 
-void ysw_style_editor(lv_obj_t *container)
+static void style_container(lv_obj_t *container)
 {
     lv_obj_set_style_local_bg_color(container, 0, 0, LV_COLOR_MAROON);
     lv_obj_set_style_local_bg_grad_color(container, 0, 0, LV_COLOR_BLACK);
@@ -142,39 +142,34 @@ void ysw_style_editor(lv_obj_t *container)
     lv_obj_set_style_local_text_opa(container, 0, 0, LV_OPA_100);
 }
 
+void ysw_style_editor(lv_obj_t *container)
+{
+    style_container(container);
+}
+
 void ysw_style_chooser(lv_obj_t *page, lv_obj_t *table)
 {
-    lv_obj_set_style_local_bg_color(page, 0, 0, LV_COLOR_MAROON);
-    lv_obj_set_style_local_bg_grad_color(page, 0, 0, LV_COLOR_BLACK);
-    lv_obj_set_style_local_bg_grad_dir(page, 0, 0, LV_GRAD_DIR_VER);
-    lv_obj_set_style_local_bg_opa(page, 0, 0, LV_OPA_100);
-    lv_obj_set_style_local_text_opa(page, 0, 0, LV_OPA_100);
+    style_container(page);
 
     lv_obj_set_style_local_pad_top(table, NORMAL_CELL, 0, 5);
-    lv_obj_set_style_local_text_color(table, NORMAL_CELL, 0, LV_COLOR_SILVER);
 
     lv_obj_set_style_local_margin_bottom(table, HEADING_CELL, 0, 20);
     lv_obj_set_style_local_pad_top(table, HEADING_CELL, 0, 5);
     lv_obj_set_style_local_pad_bottom(table, HEADING_CELL, 0, 5);
-    lv_obj_set_style_local_text_color(table, HEADING_CELL, 0, LV_COLOR_YELLOW);
 
-    lv_obj_set_style_local_bg_color(table, SELECTED_CELL, 0, LV_COLOR_SILVER);
-    lv_obj_set_style_local_bg_opa(table, SELECTED_CELL, 0, LV_OPA_100);
-    lv_obj_set_style_local_text_color(table, SELECTED_CELL, 0, LV_COLOR_MAROON);
+    lv_obj_set_style_local_bg_color(table, SELECTED_CELL, 0, LV_COLOR_GRAY);
+    lv_obj_set_style_local_bg_opa(table, SELECTED_CELL, 0, LV_OPA_80);
 }
 
 void ysw_style_softkeys(lv_obj_t *container, lv_obj_t *label, lv_obj_t *btnmatrix)
 {
-    lv_obj_set_style_local_bg_color(container, 0, 0, LV_COLOR_BLACK);
-    lv_obj_set_style_local_bg_opa(container, 0, 0, LV_OPA_100);
-
-    lv_obj_set_style_local_text_color(container, 0, 0, LV_COLOR_CYAN);
-    lv_obj_set_style_local_text_opa(container, 0, 0, LV_OPA_100);
+    style_container(container);
 
     lv_obj_set_style_local_text_font(label, 0, 0, &lv_font_unscii_8);
 
-    lv_obj_set_style_local_bg_color(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_COLOR_CYAN);
-    lv_obj_set_style_local_bg_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_OPA_30);
+    lv_color_t child_bg = lv_color_lighten(LV_COLOR_MAROON, LV_OPA_40);
+    lv_obj_set_style_local_bg_color(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, child_bg);
+    lv_obj_set_style_local_bg_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_OPA_50);
 
     lv_obj_set_style_local_bg_color(btnmatrix, LV_BTNMATRIX_PART_BTN, LV_STATE_PRESSED, LV_COLOR_BLACK);
     lv_obj_set_style_local_bg_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, LV_STATE_PRESSED, LV_OPA_50);
@@ -183,21 +178,32 @@ void ysw_style_softkeys(lv_obj_t *container, lv_obj_t *label, lv_obj_t *btnmatri
     lv_obj_set_style_local_pad_inner(btnmatrix, LV_BTNMATRIX_PART_BG, 0, 5);
 }
 
-void ysw_style_popup(lv_obj_t *msgbox)
+void ysw_style_popup(lv_obj_t *container, lv_obj_t *msgbox)
 {
-    lv_obj_set_style_local_bg_color(msgbox, 0, 0, LV_COLOR_BLACK);
-    lv_obj_set_style_local_bg_opa(msgbox, 0, 0, LV_OPA_100);
-    lv_obj_set_style_local_text_color(msgbox, 0, 0, LV_COLOR_CYAN);
-    lv_obj_set_style_local_text_opa(msgbox, 0, 0, LV_OPA_100);
+    style_container(container);
 
-    lv_obj_set_style_local_bg_color(msgbox, LV_MSGBOX_PART_BTN, 0, LV_COLOR_CYAN);
-    lv_obj_set_style_local_bg_opa(msgbox, LV_MSGBOX_PART_BTN, 0, LV_OPA_30);
+    lv_obj_set_style_local_pad_all(container, 0, 0, 5);
+    lv_obj_set_style_local_pad_inner(container, 0, 0, 5);
+
+    lv_obj_set_style_local_pad_all(msgbox, 0, 0, 5);
+    lv_obj_set_style_local_pad_inner(msgbox, 0, 0, 10);
+
+    lv_color_t child_bg = lv_color_lighten(LV_COLOR_MAROON, LV_OPA_40);
+    lv_obj_set_style_local_bg_color(msgbox, LV_MSGBOX_PART_BTN, 0, child_bg);
+    lv_obj_set_style_local_bg_opa(msgbox, LV_MSGBOX_PART_BTN, 0, LV_OPA_50);
+    lv_obj_set_style_local_pad_all(msgbox, LV_MSGBOX_PART_BTN, 0, 10);
+
+#if 0
+    // This doesn't leave any padding between the buttons in the message box:
+    lv_obj_set_style_local_pad_inner(msgbox, LV_MSGBOX_PART_BTN_BG, 0, 10);
+#else
+    // But this does:
+    lv_msgbox_ext_t *ext = lv_obj_get_ext_attr(msgbox);
+    lv_obj_set_style_local_pad_inner(ext->btnm, LV_BTNMATRIX_PART_BG, 0, 10);
+#endif
 
     lv_obj_set_style_local_bg_color(msgbox, LV_MSGBOX_PART_BTN, LV_STATE_PRESSED, LV_COLOR_BLACK);
     lv_obj_set_style_local_bg_opa(msgbox, LV_MSGBOX_PART_BTN, LV_STATE_PRESSED, LV_OPA_50);
-
-    lv_obj_set_style_local_pad_all(msgbox, LV_MSGBOX_PART_BG, 0, 5);
-    lv_obj_set_style_local_pad_inner(msgbox, LV_MSGBOX_PART_BG, 0, 5);
 }
 
 void ysw_style_field(lv_obj_t *name_label, lv_obj_t *field)
@@ -207,3 +213,29 @@ void ysw_style_field(lv_obj_t *name_label, lv_obj_t *field)
     lv_obj_set_style_local_pad_left(field, 0, 0, 2);
 }
 
+void ysw_style_edit_pane(lv_obj_t *container, lv_obj_t *textarea, lv_obj_t *keyboard)
+{
+    style_container(container);
+
+    lv_obj_set_style_local_pad_all(container, 0, 0, 5);
+    lv_obj_set_style_local_pad_inner(container, 0, 0, 5);
+
+    lv_color_t child_bg = lv_color_lighten(LV_COLOR_MAROON, LV_OPA_40);
+
+    lv_obj_set_style_local_text_color(textarea, 0, 0, LV_COLOR_WHITE);
+    lv_obj_set_style_local_bg_color(textarea, 0, 0, child_bg);
+    lv_obj_set_style_local_bg_opa(textarea, 0, 0, LV_OPA_50);
+    lv_obj_set_style_local_pad_all(textarea, 0, 0, 5);
+
+    lv_obj_set_style_local_border_width(textarea, LV_TEXTAREA_PART_CURSOR, 0, 1);
+    lv_obj_set_style_local_border_side(textarea, LV_TEXTAREA_PART_CURSOR, 0, LV_BORDER_SIDE_LEFT);
+    lv_obj_set_style_local_border_color(textarea, LV_TEXTAREA_PART_CURSOR, 0, LV_COLOR_WHITE);
+    lv_obj_set_style_local_border_opa(textarea, LV_TEXTAREA_PART_CURSOR, 0, LV_OPA_100);
+
+    lv_obj_set_style_local_bg_color(keyboard, LV_KEYBOARD_PART_BTN, 0, child_bg);
+    lv_obj_set_style_local_bg_opa(keyboard, LV_KEYBOARD_PART_BTN, 0, LV_OPA_50);
+    lv_obj_set_style_local_border_width(keyboard, LV_KEYBOARD_PART_BG, 0, 0);
+    lv_obj_set_style_local_border_width(keyboard, LV_KEYBOARD_PART_BTN, 0, 0);
+    lv_obj_set_style_local_pad_all(keyboard, LV_KEYBOARD_PART_BG, 0, 5);
+    lv_obj_set_style_local_pad_inner(keyboard, LV_KEYBOARD_PART_BG, 0, 5);
+}

@@ -12,7 +12,9 @@
 #include "ysw_event.h"
 #include "lvgl.h"
 
-typedef void (*ysw_popup_cb_t)(void *context);
+typedef struct ysw_popup_s ysw_popup_t;
+
+typedef void (*ysw_popup_cb_t)(void *context, ysw_popup_t *popup);
 
 typedef enum {
     YSW_MSGBOX_OKAY,
@@ -29,8 +31,9 @@ typedef struct {
     uint8_t cancel_scan_code;
 } ysw_popup_config_t;
 
-typedef struct {
+typedef struct ysw_popup_s {
     void *context;
+    lv_obj_t *container;
     lv_obj_t *msgbox;
     const char **buttons;
     ysw_popup_cb_t on_okay;

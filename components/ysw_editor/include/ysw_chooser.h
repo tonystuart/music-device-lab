@@ -33,6 +33,6 @@ void ysw_chooser_delete(ysw_chooser_t *chooser);
 void ysw_chooser_select_row(ysw_chooser_t *chooser, zm_section_x new_row);
 void ysw_chooser_hide_selection(ysw_chooser_t *chooser);
 void ysw_chooser_show_selection(ysw_chooser_t *chooser, zm_section_x new_row);
-void ysw_chooser_update_sections(ysw_chooser_t *chooser);
+zm_section_x ysw_chooser_update_sections(ysw_chooser_t *chooser, zm_section_t *target);
 void ysw_chooser_sort(ysw_chooser_t *chooser, ysw_chooser_sort_t type);
 void ysw_chooser_rename(ysw_chooser_t *chooser);

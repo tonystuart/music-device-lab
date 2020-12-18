@@ -267,7 +267,7 @@ static void edit_section(ysw_bus_t *bus, zm_music_t *music)
     if (ysw_array_get_count(music->sections) > 0) {
         section = ysw_array_get(music->sections, 0);
     } else {
-        section = zm_music_create_section(music);
+        section = zm_create_section(music);
     }
     ysw_event_fire_section_edit(bus, section);
 }

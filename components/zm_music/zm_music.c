@@ -1311,9 +1311,9 @@ zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note)
 #define DEFAULT_CHORD_PROGRAM 1
 #define DEFAULT_RHYTHM_PROGRAM 7
 
-zm_section_t *zm_music_create_section(zm_music_t *music)
+zm_section_t *zm_create_section(zm_music_t *music)
 {
-    char name[32];
+    char name[ZM_NAME_SZ];
     ysw_name_create(name, sizeof(name));
     zm_section_t *section = ysw_heap_allocate(sizeof(zm_section_t));
     section->name = ysw_heap_strdup(name);
@@ -1326,6 +1326,30 @@ zm_section_t *zm_music_create_section(zm_music_t *music)
     section->chord_program = ysw_array_get(music->programs, DEFAULT_CHORD_PROGRAM);
     section->rhythm_program = ysw_array_get(music->programs, DEFAULT_RHYTHM_PROGRAM);
     return section;
+}
+
+zm_section_t *zm_copy_section(zm_music_t *music, zm_section_t *old_section)
+{
+    char new_name[ZM_NAME_SZ];
+    ysw_name_create_new_version(old_section->name, new_name, sizeof(new_name));
+    zm_section_t *new_section = ysw_heap_allocate(sizeof(zm_section_t));
+    new_section->name = ysw_heap_strdup(new_name);
+    new_section->tempo = old_section->tempo;
+    new_section->key = old_section->key;
+    new_section->time = old_section->time;
+    new_section->tlm = music->settings.clock++;
+    new_section->steps = ysw_array_create(64);
+    new_section->melody_program = old_section->melody_program;
+    new_section->chord_program = old_section->chord_program;
+    new_section->rhythm_program = old_section->rhythm_program;
+    zm_step_x step_count = ysw_array_get_count(old_section->steps);
+    for (zm_step_x i = 0; i < step_count; i++) {
+        zm_step_t *old_step = ysw_array_get(old_section->steps, i);
+        zm_step_t *new_step = ysw_heap_allocate(sizeof(zm_step_t));
+        *new_step = *old_step;
+        ysw_array_push(new_section->steps, new_step);
+    }
+    return new_section;
 }
 
 ysw_array_t *zm_get_section_references(zm_music_t *music, zm_section_t *section)
