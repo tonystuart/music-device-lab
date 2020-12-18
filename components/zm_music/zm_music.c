@@ -519,13 +519,14 @@ static void emit_sections(zm_mfw_t *zm_mfw)
         zm_section_t *section = ysw_array_get(zm_mfw->music->sections, i);
         put_map(zm_mfw->section_map, section, i);
         ysw_csv_escape(section->name, name, sizeof(name));
-        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d\n",
+        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d,%d\n",
                 ZM_MF_SECTION,
                 i,
                 name,
                 section->tempo,
                 section->key,
                 section->time,
+                section->tlm,
                 get_map(zm_mfw->program_map, section->melody_program),
                 get_map(zm_mfw->program_map, section->chord_program),
                 get_map(zm_mfw->program_map, section->rhythm_program));
