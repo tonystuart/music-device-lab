@@ -95,3 +95,22 @@ BaseType_t xQueueReceive(QueueHandle_t xQueue, void *pvBuffer, TickType_t xTicks
     pthread_mutex_unlock(&xQueue->mutex);
     return true;
 }
+
+BaseType_t xQueueReset(QueueHandle_t xQueue)
+{
+    assert(xQueue);
+    pthread_mutex_lock(&xQueue->mutex);
+    xQueue->read_index = 0;
+    xQueue->write_index = 0;
+    pthread_mutex_unlock(&xQueue->mutex);
+    return true;
+}
+
+void vQueueDelete(QueueHandle_t xQueue)
+{
+    pthread_cond_destroy(&xQueue->data_ready);
+    pthread_mutex_destroy(&xQueue->mutex);
+    ysw_heap_free(xQueue->data);
+    ysw_heap_free(xQueue);
+}
+

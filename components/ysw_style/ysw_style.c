@@ -239,3 +239,9 @@ void ysw_style_edit_pane(lv_obj_t *container, lv_obj_t *textarea, lv_obj_t *keyb
     lv_obj_set_style_local_pad_all(keyboard, LV_KEYBOARD_PART_BG, 0, 5);
     lv_obj_set_style_local_pad_inner(keyboard, LV_KEYBOARD_PART_BG, 0, 5);
 }
+
+void ysw_style_splash(lv_obj_t *container, lv_obj_t *label, lv_obj_t *image)
+{
+    style_container(container);
+}
+

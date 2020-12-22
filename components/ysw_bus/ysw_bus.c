@@ -17,10 +17,18 @@
 
 #define TAG "YSW_BUS"
 
+// Call ysw_bus_delete_queue after calling ysw_bus_unscribe on each topic
+// to handle the orderly deletion of the queue. If the caller deleted the queue
+// directly, there could be in-flight bus events which would cause an exception
+// when delievered to the deleted queue. By enquing the delete request to the
+// bus after the unsubscribes, we ensure that any any in-flight events have
+// already been added to the queue by the time the queue is deleted.
+
 typedef enum {
     YSW_BUS_SUBSCRIBE,
     YSW_BUS_PUBLISH,
     YSW_BUS_UNSUBSCRIBE,
+    YSW_BUS_DELETE_QUEUE,
     YSW_BUS_FREE,
 } ysw_bus_msg_type_t;
 
@@ -40,11 +48,16 @@ typedef struct {
 } ysw_bus_unsubscribe_t;
 
 typedef struct {
+    QueueHandle_t queue;
+} ysw_bus_delete_queue_t;
+
+typedef struct {
     ysw_bus_msg_type_t type;
     union {
         ysw_bus_subscribe_t subscribe_info;
         ysw_bus_publish_t publish_info;
         ysw_bus_unsubscribe_t unsubscribe_info;
+        ysw_bus_delete_queue_t delete_queue_info;
     };
 } ysw_bus_msg_t;
 
@@ -81,8 +94,13 @@ static void process_publish(ysw_bus_t *bus, ysw_bus_publish_t *info)
 static void process_unsubscribe(ysw_bus_t *bus, ysw_bus_unsubscribe_t *info)
 {
     if (bus->listeners[info->origin]) {
-        ysw_pool_visit_items(bus->listeners[info->origin], unsubscribe, &info->queue);
+        ysw_pool_visit_items(bus->listeners[info->origin], unsubscribe, info->queue);
     }
+}
+
+static void process_delete_queue(ysw_bus_t *bus, ysw_bus_delete_queue_t *info)
+{
+    vQueueDelete(info->queue);
 }
 
 static void process_free(ysw_bus_t *bus)
@@ -105,6 +123,9 @@ static void process_message(ysw_bus_t *bus, ysw_bus_msg_t *message)
             break;
         case YSW_BUS_UNSUBSCRIBE:
             process_unsubscribe(bus, &message->unsubscribe_info);
+            break;
+        case YSW_BUS_DELETE_QUEUE:
+            process_delete_queue(bus, &message->delete_queue_info);
             break;
         case YSW_BUS_FREE:
             process_free(bus);
@@ -186,6 +207,19 @@ void ysw_bus_unsubscribe(ysw_bus_t *bus, ysw_origin_t origin, QueueHandle_t queu
         .type = YSW_BUS_UNSUBSCRIBE,
         .unsubscribe_info.origin = origin,
         .unsubscribe_info.queue = queue,
+    };
+
+    ysw_message_send(bus->queue, &msg);
+}
+
+void ysw_bus_delete_queue(ysw_bus_t *bus, QueueHandle_t queue)
+{
+    assert(bus);
+    assert(queue);
+
+    ysw_bus_msg_t msg = {
+        .type = YSW_BUS_DELETE_QUEUE,
+        .delete_queue_info.queue = queue,
     };
 
     ysw_message_send(bus->queue, &msg);

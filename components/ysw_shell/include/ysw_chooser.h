@@ -10,9 +10,6 @@
 #pragma once
 
 #include "ysw_bus.h"
-#include "ysw_menu.h"
 #include "zm_music.h"
 
-typedef void (*ysw_editor_lvgl_init)();
-
-void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *section);
+void ysw_chooser_create(ysw_bus_t *bus, zm_music_t *music, zm_section_x row, void *context);

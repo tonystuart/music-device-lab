@@ -48,13 +48,16 @@ void ysw_string_printf(ysw_string_t *s, const char *template, ...)
     va_list arguments;
     va_start(arguments, template);
     char *start = s->buffer + s->length;
-    uint32_t size = s->size - s->length;
-    uint32_t rc = vsnprintf(start, size, template, arguments);
-    if (rc > size) {
-        s->size = (s->size * 2) + (rc - size) + 1; // +1 because null not counted in rc
+    uint32_t available = s->size - s->length;
+    uint32_t rc = vsnprintf(start, available, template, arguments);
+    if (rc >= available) {
+        uint32_t required = (rc - available) + 1; // +1 because terminating null not counted in rc
+        s->size = s->size + s->size * ((s->size + required) / s->size);
         s->buffer = ysw_heap_reallocate(s->buffer, s->size);
-        size = s->size - s->length;
-        rc = vsnprintf(start, size, template, arguments);
+        available = s->size - s->length;
+        va_end(arguments);
+        va_start(arguments, template);
+        rc = vsnprintf(start, available, template, arguments);
     }
     s->length += rc;
     va_end(arguments);

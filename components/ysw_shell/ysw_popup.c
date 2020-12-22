@@ -43,10 +43,12 @@ static void event_handler(lv_obj_t *obj, lv_event_t event)
                 popup->on_cancel(popup->context, popup);
             }
         }
+        lv_obj_del(popup->container);
+        ysw_heap_free(popup);
     }
 }
 
-ysw_popup_t *ysw_popup_create(ysw_popup_config_t *config)
+void ysw_popup_create(ysw_popup_config_t *config)
 {
     ysw_popup_t *popup = ysw_heap_allocate(sizeof(ysw_popup_t));
     popup->context = config->context;
@@ -80,9 +82,9 @@ ysw_popup_t *ysw_popup_create(ysw_popup_config_t *config)
     lv_obj_set_event_cb(popup->msgbox, event_handler);
 
     ysw_style_popup(popup->container, popup->msgbox);
-
-    return popup;
 }
+
+// TODO: tell menu to send keystrokes to us
 
 void ysw_popup_on_key_down(ysw_popup_t *popup, ysw_event_t *event)
 {
@@ -97,10 +99,4 @@ void ysw_popup_on_key_down(ysw_popup_t *popup, ysw_event_t *event)
             popup->on_cancel(popup->context, popup);
         }
     }
-}
-
-void ysw_popup_free(ysw_popup_t *popup)
-{
-    lv_obj_del(popup->container);
-    ysw_heap_free(popup);
 }

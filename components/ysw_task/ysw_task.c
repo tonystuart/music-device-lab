@@ -11,7 +11,6 @@
 #include "ysw_event.h"
 #include "ysw_heap.h"
 #include "esp_log.h"
-#include "freertos/FreeRTOS.h"
 #include "assert.h"
 #include "stdlib.h"
 
@@ -86,17 +85,21 @@ ysw_task_t *ysw_task_create(ysw_task_config_t *config)
         }
     }
 
-    BaseType_t rc = xTaskCreate(
-            function,
-            config->name,
-            config->stack_size,
-            parameter,
-            config->priority,
-            NULL);
+    if (config->use_current_task) {
+        function(parameter);
+    } else {
+        BaseType_t rc = xTaskCreate(
+                function,
+                config->name,
+                config->stack_size,
+                parameter,
+                config->priority,
+                NULL);
 
-    if (rc != pdPASS) {
-        ESP_LOGE(config->name, "ysw_task_create xTaskCreate failed (%d)", rc);
-        abort();
+        if (rc != pdPASS) {
+            ESP_LOGE(config->name, "ysw_task_create xTaskCreate failed (%d)", rc);
+            abort();
+        }
     }
 
     return task;

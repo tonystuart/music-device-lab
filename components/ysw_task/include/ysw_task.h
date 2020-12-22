@@ -40,6 +40,7 @@ typedef struct {
 // 6. Specify context if you want to pass context to event_handler or function
 // 7. Specify task and/or queue if you want the created task or queue handle returned
 // 8. Specify non-transient (i.e. not stack) address for task or queue
+// 9. Specify use_current_task=true to run in current task (e.g. main task)
 
 typedef struct {
     const char *name;
@@ -51,6 +52,7 @@ typedef struct {
     void *context;
     uint16_t stack_size;
     int8_t priority;
+    bool use_current_task;
     QueueHandle_t *queue;
     UBaseType_t queue_size;
     UBaseType_t item_size;

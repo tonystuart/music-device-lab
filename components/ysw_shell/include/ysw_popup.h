@@ -42,6 +42,4 @@ typedef struct ysw_popup_s {
     uint8_t cancel_scan_code;
 } ysw_popup_t;
 
-ysw_popup_t *ysw_popup_create(ysw_popup_config_t *config);
-void ysw_popup_free(ysw_popup_t *popup);
-void ysw_popup_on_key_down(ysw_popup_t *popup, ysw_event_t *event);
+void ysw_popup_create(ysw_popup_config_t *config);

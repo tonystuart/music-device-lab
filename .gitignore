@@ -9,3 +9,4 @@ spiffs.bin
 *.sf2
 *.mod
 eclipse
+ysw_splash_image.c

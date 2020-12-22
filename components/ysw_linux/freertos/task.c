@@ -58,7 +58,7 @@ UBaseType_t uxTaskPriorityGet(TaskHandle_t xTask)
 BaseType_t xTaskCreate(TaskFunction_t pvTaskCode, const char *const pcName, configSTACK_DEPTH_TYPE usStackDepth, void *pvParameters, UBaseType_t uxPriority, TaskHandle_t *pxCreatedTask)
 {
     pthread_t tid;
-    int rc = pthread_create(&tid, NULL, pvTaskCode, pvParameters);
+    int rc = pthread_create(&tid, NULL, (void*)pvTaskCode, pvParameters);
     if (rc == 0) {
         pthread_detach(tid);
         rc = pdPASS;

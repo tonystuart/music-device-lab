@@ -36,3 +36,4 @@ void ysw_style_softkeys(lv_obj_t *container, lv_obj_t *label, lv_obj_t *btnmatri
 void ysw_style_popup(lv_obj_t *container, lv_obj_t *msgbox);
 void ysw_style_field(lv_obj_t *name_label, lv_obj_t *field);
 void ysw_style_edit_pane(lv_obj_t *container, lv_obj_t *textarea, lv_obj_t *keyboard);
+void ysw_style_splash(lv_obj_t *container, lv_obj_t *label, lv_obj_t *image);

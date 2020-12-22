@@ -288,7 +288,7 @@ static void draw_chord(ysw_staff_t *dc, zm_chord_t *chord)
     };
     lv_draw_label(&coords, dc->clip_area, &dsc, zm_get_note_name(chord->root), NULL);
     coords.y1 += 9;
-    lv_draw_label(&coords, dc->clip_area, &dsc, chord->quality->label, NULL);
+    lv_draw_label(&coords, dc->clip_area, &dsc, chord->type->label, NULL);
 }
 
 static void draw_rhythm(ysw_staff_t *dc, zm_rhythm_t *rhythm)

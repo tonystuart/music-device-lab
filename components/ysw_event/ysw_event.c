@@ -161,12 +161,13 @@ void ysw_event_fire_sample_load(ysw_bus_t *bus, ysw_event_sample_load_t *sample_
     ysw_event_publish(bus, &event);
 }
 
-void ysw_event_fire_section_edit(ysw_bus_t *bus, zm_section_t *section)
+void ysw_event_fire_chooser_select(ysw_bus_t *bus, zm_section_t *section, void *context)
 {
     ysw_event_t event = {
-        .header.origin = YSW_ORIGIN_FILE,
-        .header.type = YSW_EVENT_SECTION_EDIT,
-        .section_edit.section = section,
+        .header.origin = YSW_ORIGIN_CHOOSER,
+        .header.type = YSW_EVENT_CHOOSER_SELECT,
+        .chooser_select.section = section,
+        .chooser_select.context = context,
     };
     ysw_event_publish(bus, &event);
 }

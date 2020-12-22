@@ -35,7 +35,7 @@ typedef enum {
     YSW_EVENT_KEY_DOWN,
     YSW_EVENT_KEY_PRESSED,
     YSW_EVENT_KEY_UP,
-    YSW_EVENT_SECTION_EDIT,
+    YSW_EVENT_CHOOSER_SELECT,
 } ysw_event_type_t;
 
 typedef struct {
@@ -122,7 +122,8 @@ typedef struct {
 
 typedef struct {
     zm_section_t *section;
-} ysw_event_section_edit_t;
+    void *context;
+} ysw_event_chooser_select_t;
 
 typedef struct {
     ysw_event_header_t header;
@@ -139,7 +140,7 @@ typedef struct {
         ysw_event_key_down_t key_down;
         ysw_event_key_pressed_t key_pressed;
         ysw_event_key_up_t key_up;
-        ysw_event_section_edit_t section_edit;
+        ysw_event_chooser_select_t chooser_select;
     };
 } ysw_event_t;
 
@@ -160,4 +161,4 @@ void ysw_event_fire_loop(ysw_bus_t *bus, bool loop);
 void ysw_event_fire_play(ysw_bus_t *bus, ysw_array_t *notes, uint8_t bpm);
 void ysw_event_fire_stop(ysw_bus_t *bus);
 void ysw_event_fire_sample_load(ysw_bus_t *bus, ysw_event_sample_load_t *sample_load);
-void ysw_event_fire_section_edit(ysw_bus_t *bus, zm_section_t *section);
+void ysw_event_fire_chooser_select(ysw_bus_t *bus, zm_section_t *section, void *context);

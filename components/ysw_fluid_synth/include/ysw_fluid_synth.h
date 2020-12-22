@@ -11,4 +11,6 @@
 
 #include "ysw_bus.h"
 
+#define YSW_MUSIC_SOUNDFONT "/spiffs/music.sf2"
+
 void ysw_fluid_synth_create_task(ysw_bus_t *bus, const char *sf_filename);

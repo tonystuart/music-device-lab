@@ -10,9 +10,13 @@
 #pragma once
 
 #include "ysw_bus.h"
-#include "ysw_menu.h"
 #include "zm_music.h"
+#include "lvgl.h"
 
-typedef void (*ysw_editor_lvgl_init)();
+typedef struct {
+    lv_obj_t *container;
+    lv_obj_t *label;
+    lv_obj_t *image;
+} ysw_splash_t;
 
-void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *section);
+void ysw_shell_create(ysw_bus_t *bus, zm_music_t *music);

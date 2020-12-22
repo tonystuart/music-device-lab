@@ -35,6 +35,7 @@ typedef uint8_t zm_bpm_x;
 typedef uint8_t zm_channel_x;
 typedef uint8_t zm_distance_x;
 typedef uint8_t zm_gm_x;
+typedef uint8_t zm_key_signature_x;
 typedef uint8_t zm_note_t;
 typedef uint8_t zm_patch_x;
 typedef uint8_t zm_percent_x;
@@ -47,10 +48,10 @@ typedef uint16_t zm_measure_x;
 typedef uint16_t zm_note_x;
 typedef uint16_t zm_part_x;
 typedef uint16_t zm_section_x;
-typedef uint16_t zm_quality_x;
+typedef uint16_t zm_chord_type_x;
 typedef uint16_t zm_sample_x;
 typedef uint16_t zm_composition_x;
-typedef uint16_t zm_style_x;
+typedef uint16_t zm_chord_style_x;
 
 typedef uint32_t zm_step_x;
 typedef uint32_t zm_time_x;
@@ -58,22 +59,6 @@ typedef uint32_t zm_time_x;
 typedef struct {
     zm_time_x clock;
 } zm_settings_t;
-
-typedef enum {
-    ZM_KEY_C,
-    ZM_KEY_G,
-    ZM_KEY_D,
-    ZM_KEY_A,
-    ZM_KEY_E,
-    ZM_KEY_B,
-    ZM_KEY_F_SHARP,
-    ZM_KEY_F,
-    ZM_KEY_B_FLAT,
-    ZM_KEY_E_FLAT,
-    ZM_KEY_A_FLAT,
-    ZM_KEY_D_FLAT,
-    ZM_KEY_G_FLAT,
-} zm_key_signature_x;
 
 typedef struct {
     const char *name;
@@ -87,10 +72,15 @@ typedef struct {
 typedef enum {
     ZM_AS_PLAYED = 0,
     ZM_SIXTEENTH = 64,
+    ZM_DOTTED_SIXTEENTH = ZM_SIXTEENTH + (ZM_SIXTEENTH / 2),
     ZM_EIGHTH = 128,
+    ZM_DOTTED_EIGHTH = ZM_EIGHTH + (ZM_EIGHTH / 2),
     ZM_QUARTER = 256,
+    ZM_DOTTED_QUARTER = ZM_QUARTER + (ZM_QUARTER / 2),
     ZM_HALF = 512,
+    ZM_DOTTED_HALF = ZM_HALF + (ZM_HALF / 2),
     ZM_WHOLE = 1024,
+    ZM_DOTTED_WHOLE = ZM_WHOLE + (ZM_WHOLE / 2),
 } zm_duration_t;
 
 typedef enum {
@@ -160,7 +150,7 @@ typedef struct {
     char *name;
     char *label;
     ysw_array_t *distances;
-} zm_quality_t;
+} zm_chord_type_t;
 
 typedef struct {
     zm_distance_x distance_index;
@@ -173,12 +163,12 @@ typedef struct {
     char *name;
     zm_distance_x distance_count;
     ysw_array_t *sounds;   
-} zm_style_t;
+} zm_chord_style_t;
 
 typedef struct {
     zm_note_t root;
-    zm_quality_t *quality;
-    zm_style_t *style;
+    zm_chord_type_t *type;
+    zm_chord_style_t *style;
     zm_duration_t duration;
 } zm_chord_t;
 
@@ -270,8 +260,8 @@ typedef struct {
     zm_settings_t settings;
     ysw_array_t *samples;
     ysw_array_t *programs;
-    ysw_array_t *qualities;
-    ysw_array_t *styles;
+    ysw_array_t *chord_types;
+    ysw_array_t *chord_styles;
     ysw_array_t *beats;
     ysw_array_t *sections;
     ysw_array_t *compositions;

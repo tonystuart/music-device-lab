@@ -8,7 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_editor.h"
-#include "ysw_chooser.h"
+#include "ysw_app.h"
 #include "ysw_common.h"
 #include "ysw_event.h"
 #include "ysw_footer.h"
@@ -28,8 +28,8 @@
 
 #define TAG "YSW_EDITOR"
 
-#define DEFAULT_QUALITY 2 // TODO: make "major" 0 default or search by name
-#define DEFAULT_STYLE 2 // TODO: make "stacked" 0 default or search by name
+#define DEFAULT_CHORD_TYPE 2 // TODO: make "major" 0 default or search by name
+#define DEFAULT_CHORD_STYLE 2 // TODO: make "stacked" 0 default or search by name
 #define DEFAULT_BEAT 0 // TODO: search by name
 
 // channels
@@ -58,15 +58,22 @@ static const char *modes[] = {
 #define YSW_EDITOR_MODE_COUNT 3
 
 typedef struct {
+    zm_chord_type_t *type;
+    zm_chord_style_t *style;
+} ysw_chord_builder_t;
+
+typedef struct {
     ysw_bus_t *bus;
-    ysw_editor_lvgl_init lvgl_init;
+    ysw_menu_t *menu;
+    QueueHandle_t queue;
+    ysw_app_control_t control;
 
     zm_music_t *music;
     zm_section_t *section;
-    zm_quality_t *quality;
-    zm_style_t *style;
-    zm_beat_t *beat;
-    zm_duration_t duration;
+    zm_chord_type_t *chord_type; // TODO: remove
+    zm_chord_style_t *chord_style; // TODO: remove
+    zm_beat_t *beat; // TODO: remove
+    zm_duration_t duration; // TODO: consider removing
 
     zm_time_x down_at;
     zm_time_x up_at;
@@ -82,9 +89,9 @@ typedef struct {
     lv_obj_t *staff;
     lv_obj_t *footer;
 
-    ysw_menu_t *menu;
-    ysw_chooser_t *chooser;
     ysw_popup_t *popup;
+
+    ysw_chord_builder_t chord_builder;
 
 } ysw_editor_t;
 
@@ -249,10 +256,10 @@ static void display_melody_mode(ysw_editor_t *editor)
 
 static void display_chord_mode(ysw_editor_t *editor)
 {
-    // 1. on a step with a chord value - show chord value, quality, style
-    // 2. on a step without a chord value - show quality, style
-    // 3. between steps - show quality, style
-    // 4. no steps - show quality, style
+    // 1. on a step with a chord value - show chord value, chord_type, chord_style
+    // 2. on a step without a chord value - show chord_type, chord_style
+    // 3. between steps - show chord_type, chord_style
+    // 4. no steps - show chord_type, chord_style
     char value[32] = {};
     zm_step_t *step = NULL;
     if (is_step_position(editor)) {
@@ -261,12 +268,12 @@ static void display_chord_mode(ysw_editor_t *editor)
     if (step && step->chord.root) {
         snprintf(value, sizeof(value), "%s %s %s",
                 zm_get_note_name(step->chord.root),
-                step->chord.quality->name,
+                step->chord.type->name,
                 step->chord.style->name);
     } else {
         snprintf(value, sizeof(value), "%s %s",
-                editor->quality->name,
-                editor->style->name);
+                editor->chord_type->name,
+                editor->chord_style->name);
     }
     ysw_header_set_mode(editor->header, modes[editor->mode], value);
 }
@@ -348,9 +355,9 @@ static void cycle_program(ysw_editor_t *editor)
     play_position(editor);
 }
 
-static void cycle_key_signature(ysw_editor_t *editor)
+static void set_key_signature(ysw_editor_t *editor, zm_key_signature_x key)
 {
-    editor->section->key = zm_get_next_key_index(editor->section->key);
+    editor->section->key = key;
     ysw_footer_set_key(editor->footer, editor->section->key);
     ysw_staff_invalidate(editor->staff);
     update_tlm(editor);
@@ -409,19 +416,19 @@ static void cycle_tie(ysw_editor_t *editor)
     }
 }
 
-static zm_style_t *find_matching_style(ysw_editor_t *editor, bool preincrement)
+static zm_chord_style_t *find_matching_style(ysw_editor_t *editor, bool preincrement)
 {
 
-    zm_style_x current = ysw_array_find(editor->music->styles, editor->style);
-    zm_style_x style_count = ysw_array_get_count(editor->music->styles);
-    zm_distance_x distance_count = ysw_array_get_count(editor->quality->distances);
-    for (zm_style_x i = 0; i < style_count; i++) {
+    zm_chord_style_x current = ysw_array_find(editor->music->chord_styles, editor->chord_style);
+    zm_chord_style_x style_count = ysw_array_get_count(editor->music->chord_styles);
+    zm_distance_x distance_count = ysw_array_get_count(editor->chord_type->distances);
+    for (zm_chord_style_x i = 0; i < style_count; i++) {
         if (preincrement) {
             current = (current + 1) % style_count;
         }
-        zm_style_t *style = ysw_array_get(editor->music->styles, current);
+        zm_chord_style_t *style = ysw_array_get(editor->music->chord_styles, current);
         if (style->distance_count == distance_count) {
-            editor->style = style;
+            editor->chord_style = style;
             return style;
         }
         if (!preincrement) {
@@ -431,23 +438,23 @@ static zm_style_t *find_matching_style(ysw_editor_t *editor, bool preincrement)
     assert(false);
 }
 
-static void cycle_quality(ysw_editor_t *editor)
+static void cycle_chord_type(ysw_editor_t *editor)
 {
     zm_step_t *step = NULL;
     if (is_step_position(editor)) {
         zm_step_x step_index = editor->position / 2;
         step = ysw_array_get(editor->section->steps, step_index);
     }
-    if (!step || !step->chord.root || step->chord.quality == editor->quality) {
-        zm_quality_x previous = ysw_array_find(editor->music->qualities, editor->quality);
-        zm_quality_x quality_count = ysw_array_get_count(editor->music->qualities);
-        zm_quality_x next = (previous + 1) % quality_count;
-        editor->quality = ysw_array_get(editor->music->qualities, next);
-        editor->style = find_matching_style(editor, false);
+    if (!step || !step->chord.root || step->chord.type == editor->chord_type) {
+        zm_chord_type_x previous = ysw_array_find(editor->music->chord_types, editor->chord_type);
+        zm_chord_type_x chord_type_count = ysw_array_get_count(editor->music->chord_types);
+        zm_chord_type_x next = (previous + 1) % chord_type_count;
+        editor->chord_type = ysw_array_get(editor->music->chord_types, next);
+        editor->chord_style = find_matching_style(editor, false);
     }
     if (step) {
-        step->chord.quality = editor->quality;
-        step->chord.style = editor->style;
+        step->chord.type = editor->chord_type;
+        step->chord.style = editor->chord_style;
         ysw_staff_invalidate(editor->staff);
         update_tlm(editor);
     }
@@ -462,11 +469,11 @@ static void cycle_style(ysw_editor_t *editor)
         zm_step_x step_index = editor->position / 2;
         step = ysw_array_get(editor->section->steps, step_index);
     }
-    if (!step || !step->chord.root || step->chord.style == editor->style) {
-        editor->style = find_matching_style(editor, true);
+    if (!step || !step->chord.root || step->chord.style == editor->chord_style) {
+        editor->chord_style = find_matching_style(editor, true);
     }
     if (step) {
-        step->chord.style = editor->style;
+        step->chord.style = editor->chord_style;
     }
     display_mode(editor);
     play_position(editor);
@@ -526,8 +533,8 @@ static zm_step_t *apply_note(ysw_editor_t *editor, zm_note_t midi_note, zm_time_
         step->melody.duration = duration;
     } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
         step->chord.root = midi_note; // rest == 0
-        step->chord.quality = editor->quality;
-        step->chord.style = editor->style;
+        step->chord.type = editor->chord_type;
+        step->chord.style = editor->chord_style;
         step->chord.duration = 0; // set by recalculate
         if (!step->melody.duration) {
             step->melody.duration = duration;
@@ -670,94 +677,94 @@ static void process_down(ysw_editor_t *editor)
     }
 }
 
-static void on_melody(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_melody_mode(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     editor->mode = YSW_EDITOR_MODE_MELODY;
     display_mode(editor);
 }
 
-static void on_chord(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_chord_mode(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     editor->mode = YSW_EDITOR_MODE_CHORD;
     display_mode(editor);
 }
 
-static void on_rhythm(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_rhythm_mode(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     editor->mode = YSW_EDITOR_MODE_RHYTHM;
     display_mode(editor);
 }
 
-static void on_program(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_program(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     cycle_program(editor);
 }
 
-static void on_quality(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_chord_type_x(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    cycle_quality(editor);
+    cycle_chord_type(editor);
 }
 
-static void on_style(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_style(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     cycle_style(editor);
 }
 
-static void on_key_signature(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_key_signature(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    cycle_key_signature(editor);
+    set_key_signature(editor, item->value);
 }
 
-static void on_time_signature(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_time_signature(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     cycle_time_signature(editor);
 }
 
-static void on_tempo(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_tempo(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     cycle_tempo(editor);
 }
 
-static void on_duration(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_duration(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     cycle_duration(editor);
 }
 
-static void on_tie(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_tie(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     cycle_tie(editor);
 }
 
-static void on_cycle_beat(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_cycle_beat(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     cycle_beat(editor);
 }
 
-static void on_insert_beat(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_insert_beat(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     insert_beat(editor);
 }
 
-static void on_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_delete(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     process_delete(editor);
 }
 
-static void on_play(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_play(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     ysw_array_t *notes = zm_render_section(editor->music, editor->section, BACKGROUND_BASE);
@@ -765,7 +772,7 @@ static void on_play(ysw_menu_t *menu, ysw_event_t *event, void *value)
     ysw_event_fire_play(editor->bus, notes, bpm);
 }
 
-static void on_demo(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_demo(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     zm_composition_t *composition = ysw_array_get(editor->music->compositions, 0);
@@ -773,51 +780,51 @@ static void on_demo(ysw_menu_t *menu, ysw_event_t *event, void *value)
     ysw_event_fire_play(editor->bus, notes, composition->bpm);
 }
 
-static void on_stop(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_stop(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     ysw_event_fire_stop(editor->bus);
 }
 
-static void on_loop(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_loop(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     editor->loop = !editor->loop;
     ysw_event_fire_loop(editor->bus, editor->loop);
 }
 
-static void on_left(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_left(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ESP_LOGD(TAG, "on_left");
     ysw_editor_t *editor = menu->context;
     process_left(editor, 1);
 }
 
-static void on_right(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_right(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     process_right(editor, 1);
 }
 
-static void on_previous(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_previous(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     process_left(editor, 2);
 }
 
-static void on_next(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_next(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     process_right(editor, 2);
 }
 
-static void on_up(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_up(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     process_up(editor);
 }
 
-static void on_down(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_down(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     process_down(editor);
@@ -842,10 +849,10 @@ static void fire_note_off(ysw_editor_t *editor, zm_note_t midi_note, zm_channel_
     ysw_event_fire_note_off(editor->bus, YSW_ORIGIN_EDITOR, &note_off);
 }
 
-static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_note(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    zm_note_t midi_note = (uintptr_t)value;
+    zm_note_t midi_note = item->value;
     if (event->header.type == YSW_EVENT_KEY_DOWN) {
         if (editor->mode == YSW_EDITOR_MODE_MELODY) {
             editor->down_at = event->key_down.time;
@@ -856,8 +863,8 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
         } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
             zm_step_t step = {
                 .chord.root = midi_note,
-                .chord.quality = editor->quality,
-                .chord.style = editor->style,
+                .chord.type = editor->chord_type,
+                .chord.style = editor->chord_style,
                 .chord.duration = zm_get_ticks_per_measure(editor->section->time),
             };
             play_step(editor, &step);
@@ -879,6 +886,111 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, void *value)
         }
         apply_note(editor, midi_note, event->key_pressed.duration);
     }
+}
+
+static void on_chord_create(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    //ysw_editor_t *editor = menu->context;
+    // 1. Play the chord (and only the chord)
+    // 2. Add the chord to the step
+}
+
+static void on_close(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    editor->control = YSW_APP_TERMINATE;
+}
+
+#define YSW_APP_SOFTKEY_SZ 16
+
+static const uint8_t scan_code_map[] = {
+    YSW_R1_C1,
+    YSW_R1_C2,
+    YSW_R1_C3,
+    YSW_R1_C4,
+
+    YSW_R2_C1,
+    YSW_R2_C2,
+    YSW_R2_C3,
+    YSW_R2_C4,
+
+    YSW_R3_C1,
+    YSW_R3_C2,
+    YSW_R3_C3,
+    YSW_R3_C4,
+
+    YSW_R4_C1,
+    YSW_R4_C2,
+    YSW_R4_C3,
+    YSW_R4_C4,
+};
+
+static ysw_menu_item_t chord_style_menu[YSW_APP_SOFTKEY_SZ + 1];
+
+static void on_chord_style(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    editor->chord_builder.type = ysw_array_get(editor->music->chord_types, item->value);
+    zm_distance_x distance_count = ysw_array_get_count(editor->chord_builder.type->distances);
+    zm_chord_style_x style_count = ysw_array_get_count(editor->music->chord_styles);
+    // TODO: create multiple chord style menus if necessary
+    style_count = min(style_count, 12);
+    ysw_menu_item_t *p = chord_style_menu;
+    for (zm_chord_style_x i = 0; i < style_count; i++) {
+        zm_chord_style_t *style = ysw_array_get(editor->music->chord_styles, i);
+        if (style->distance_count == distance_count) {
+            p->scan_code = scan_code_map[p - chord_style_menu];
+            p->name = style->name;
+            p->flags = YSW_MF_COMMAND;
+            p->cb = on_chord_create;
+            p->value = i;
+            p->submenu = NULL;
+            p++;
+        }
+    }
+
+    p->scan_code = YSW_R4_C1;
+    p->name = "Back";
+    p->flags = YSW_MF_MINUS;
+    p->cb = ysw_menu_nop;
+    p->value = 0;
+    p->submenu = NULL;
+    p++;
+
+    p->name = "Style";
+    p->flags = YSW_MF_END;
+}
+
+static ysw_menu_item_t chord_type_menu[YSW_APP_SOFTKEY_SZ + 1];
+
+static void on_chord_type(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_chord_type_x count = ysw_array_get_count(editor->music->chord_types);
+    // TODO: use multiple chord type menus if necessary
+    count = min(count, 12);
+    ysw_menu_item_t *p = chord_type_menu;
+    for (zm_chord_type_x i = 0; i < count; i++) {
+        zm_chord_type_t *chord_type = ysw_array_get(editor->music->chord_types, i);
+        p->scan_code = scan_code_map[i];
+        p->name = chord_type->label;
+        p->flags = YSW_MF_PLUS;
+        p->cb = on_chord_style;
+        p->value = i;
+        p->submenu = chord_style_menu;
+        p++;
+    }
+
+    p->scan_code = YSW_R4_C1;
+    p->name = "Back";
+    p->flags = YSW_MF_MINUS;
+    p->cb = ysw_menu_nop;
+    p->value = 0;
+    p->submenu = NULL;
+    p++;
+
+    p->name = "Type";
+    p->flags = YSW_MF_END;
 }
 
 int compare_steps(const void *left, const void *right)
@@ -906,239 +1018,10 @@ static void on_note_status(ysw_editor_t *editor, ysw_event_t *event)
     }
 }
 
-static void on_new(ysw_menu_t *menu, ysw_event_t *event, void *value)
+static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    zm_section_t *section = zm_create_section(editor->music);
-    ysw_array_push(editor->music->sections, section);
-    ysw_event_fire_section_edit(editor->bus, section);
-}
-
-static void on_save(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    ysw_editor_t *editor = menu->context;
-    zm_save_music(editor->music);
-}
-
-static void close_chooser(ysw_editor_t *editor)
-{
-    if (editor->chooser) {
-        ysw_menu_pop_all(editor->menu);
-        ysw_chooser_delete(editor->chooser);
-        editor->chooser = NULL;
-    }
-}
-
-static void on_chooser_up(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    ysw_editor_t *editor = menu->context;
-    ysw_chooser_on_up(editor->chooser);
-}
-
-static void on_chooser_down(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    ysw_editor_t *editor = menu->context;
-    ysw_chooser_on_down(editor->chooser);
-}
-
-static void on_chooser_sort(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    ysw_editor_t *editor = menu->context;
-    ysw_chooser_sort_t type = (uintptr_t)value;
-    ysw_chooser_sort(editor->chooser, type);
-}
-
-static void on_chooser_open(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    ysw_editor_t *editor = menu->context;
-    zm_section_t *section = ysw_chooser_get_section(editor->chooser);
-    close_chooser(editor);
-    if (section) {
-        ysw_event_fire_section_edit(editor->bus, section);
-    }
-}
-
-static void on_section_name_entered(void *context, const char *text)
-{
-    ysw_editor_t *editor = context;
-    zm_section_t *section = ysw_chooser_get_section(editor->chooser);
-    section->name = ysw_heap_strdup(text);
-    ysw_chooser_update_sections(editor->chooser, NULL);
-    editor->section->tlm = editor->music->settings.clock++;
-    display_mode(editor); // name may be displayed in header
-}
-
-static void on_chooser_rename(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    ysw_editor_t *editor = menu->context;
-    zm_section_t *section = ysw_chooser_get_section(editor->chooser);
-    ysw_edit_pane_create("Rename Section", section->name, on_section_name_entered, editor);
-}
-
-static void on_chooser_back(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    if (menu->softkeys) {
-        // like close, but we pop the menu via menu flags
-        ysw_editor_t *editor = menu->context;
-        ysw_chooser_delete(editor->chooser);
-        editor->chooser = NULL;
-    }
-}
-
-static void on_popup_close(void *context, ysw_popup_t *popup)
-{
-    ysw_editor_t *editor = context;
-    ysw_popup_free(editor->popup);
-    editor->popup = NULL;
-}
-
-static void on_confirm_delete(void *context, ysw_popup_t *popup)
-{
-    ysw_editor_t *editor = context;
-    zm_section_t *section = ysw_chooser_get_section(editor->chooser);
-    assert(section);
-    zm_section_free(editor->music, section);
-#if 0
-    close_chooser(editor);
-    on_popup_close(context);
-#else
-    lv_obj_del(popup->container);
-    ysw_chooser_update_sections(editor->chooser, NULL);
-#endif
-}
-
-static void display_current_section_error(ysw_editor_t *editor, zm_section_t *section)
-{
-    ysw_string_t *s = ysw_string_create(128);
-    ysw_string_printf(s, "You cannot delete\n%s\nbecause it is currently open", section->name);
-    ysw_popup_config_t config = {
-        .context = editor,
-        .type = YSW_MSGBOX_OKAY,
-        .message = ysw_string_get_chars(s),
-        .on_okay = on_popup_close,
-        .okay_scan_code = 5,
-    };
-    editor->popup = ysw_popup_create(&config);
-    ysw_string_free(s);
-}
-
-static void display_section_references_error(ysw_editor_t *editor, zm_section_t *section,
-        ysw_array_t *references, zm_section_x count)
-{
-    ysw_string_t *s = ysw_string_create(128);
-    ysw_string_printf(s, "You cannot delete\n%s\nbecause it is referenced by the following composition(s):\n", section->name);
-    for (zm_composition_x i = 0; i < count; i++) {
-        zm_composition_t *composition = ysw_array_get(references, i);
-        ysw_string_printf(s, "  %s\n", composition->name);
-    }
-    ysw_string_printf(s, "Please delete them first");
-    ysw_popup_config_t config = {
-        .type = YSW_MSGBOX_OKAY,
-        .context = editor,
-        .message = ysw_string_get_chars(s),
-        .on_okay = on_popup_close,
-        .okay_scan_code = 5,
-    };
-    editor->popup = ysw_popup_create(&config);
-    ysw_string_free(s);
-}
-
-static void confirm_section_delete(ysw_editor_t *editor, zm_section_t *section)
-{
-    ysw_string_t *s = ysw_string_create(128);
-    ysw_string_printf(s, "Delete %s?", section->name);
-    ysw_popup_config_t config = {
-        .type = YSW_MSGBOX_OKAY_CANCEL,
-        .context = editor,
-        .message = ysw_string_get_chars(s),
-        .on_okay = on_confirm_delete,
-        .on_cancel = on_popup_close,
-        .okay_scan_code = 5,
-        .cancel_scan_code = 6,
-    };
-    editor->popup = ysw_popup_create(&config);
-    ysw_string_free(s);
-}
-
-static void on_chooser_delete(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    ysw_editor_t *editor = menu->context;
-    zm_section_t *section = ysw_chooser_get_section(editor->chooser);
-    if (section) {
-        ysw_array_t *references = zm_get_section_references(editor->music, section);
-        zm_section_x count = ysw_array_get_count(references);
-        if (section == editor->section) {
-            display_current_section_error(editor, section);
-        } else if (count) {
-            display_section_references_error(editor, section, references, count);
-        } else {
-            confirm_section_delete(editor, section);
-        }
-    }
-}
-
-static void on_chooser_copy(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    ysw_editor_t *editor = menu->context;
-    zm_section_t *old_section = ysw_chooser_get_section(editor->chooser);
-    if (old_section) {
-        zm_section_t *new_section = zm_copy_section(editor->music, old_section);
-        zm_section_x section_x = ysw_array_find(editor->music->sections, old_section);
-        ysw_array_insert(editor->music->sections, section_x + 1, new_section);
-        ysw_chooser_update_sections(editor->chooser, NULL);
-    }
-}
-
-static void on_chooser_page_event(struct _lv_obj_t *table, lv_event_t event)
-{
-    if (event == LV_EVENT_CLICKED) {
-        ysw_editor_t *editor = lv_obj_get_user_data(table);
-        ysw_menu_show(editor->menu);
-    }
-}
-
-static void on_chooser_table_event(struct _lv_obj_t *table, lv_event_t event)
-{
-    if (event == LV_EVENT_CLICKED) {
-        uint16_t row = 0;
-        uint16_t column = 0;
-        ysw_editor_t *editor = lv_obj_get_user_data(table);
-        if (lv_table_get_pressed_cell(table, &row, &column)) {
-            if (row > 0) {
-                zm_section_x new_row = row - 1; // -1 for header
-                if (new_row == editor->chooser->current_row) {
-                    // on double tap, open menu (otherwise user will miss other options)
-                    ysw_menu_show(editor->menu);
-                } else {
-                    ysw_chooser_select_row(editor->chooser, row - 1);
-                }
-            } else {
-                ysw_menu_show(editor->menu);
-            }
-        }
-    }
-}
-
-static void on_chooser(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    ysw_editor_t *editor = menu->context;
-    editor->chooser = ysw_chooser_create(editor->music, editor->section);
-
-    lv_obj_set_user_data(editor->chooser->page, editor); // for tables that don't take entire page
-    lv_obj_set_event_cb(editor->chooser->page, on_chooser_page_event);
-    lv_obj_set_click(editor->chooser->page, true);
-
-    lv_obj_set_user_data(editor->chooser->table, editor);
-    lv_obj_set_event_cb(editor->chooser->table, on_chooser_table_event);
-    lv_obj_set_click(editor->chooser->table, true);
-    lv_obj_set_drag(editor->chooser->table, true);
-    lv_obj_set_drag_dir(editor->chooser->table, LV_DRAG_DIR_VER);
-}
-
-static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, void *value)
-{
-    ysw_editor_t *editor = menu->context;
-    int32_t direction = (intptr_t)value;
+    int32_t direction = item->value;
     ESP_LOGD(TAG, "direction=%d", direction);
     zm_step_t *step = get_step(editor);
     if (step) {
@@ -1150,6 +1033,7 @@ static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, void *value)
     }
 }
 
+#if 0
 static void on_section_edit(ysw_editor_t *editor, ysw_event_t *event)
 {
     editor->position = 0;
@@ -1163,7 +1047,9 @@ static void on_section_edit(ysw_editor_t *editor, ysw_event_t *event)
     fire_program_change(editor, editor->section->rhythm_program, RHYTHM_CHANNEL);
     display_mode(editor); // mode displays program
 }
+#endif
 
+#if 0
 static void process_popup_event(ysw_editor_t *editor, ysw_event_t *event)
 {
     switch (event->header.type) {
@@ -1174,9 +1060,11 @@ static void process_popup_event(ysw_editor_t *editor, ysw_event_t *event)
             break;
     }
 }
+#endif
 
-static void process_section_event(ysw_editor_t *editor, ysw_event_t *event)
+static ysw_app_control_t process_event(void *context, ysw_event_t *event)
 {
+    ysw_editor_t *editor = context;
     switch (event->header.type) {
         case YSW_EVENT_KEY_DOWN:
             ysw_menu_on_key_down(editor->menu, event);
@@ -1190,25 +1078,13 @@ static void process_section_event(ysw_editor_t *editor, ysw_event_t *event)
         case YSW_EVENT_NOTE_STATUS:
             on_note_status(editor, event);
             break;
-        case YSW_EVENT_SECTION_EDIT:
-            on_section_edit(editor, event);
-            break;
         default:
             break;
     }
+    return editor->control;
 }
 
-static void process_initial_event(ysw_editor_t *editor, ysw_event_t *event)
-{
-    switch (event->header.type) {
-        case YSW_EVENT_SECTION_EDIT:
-            on_section_edit(editor, event);
-            break;
-        default:
-            break;
-    }
-}
-
+#if 0
 static void process_event(void *context, ysw_event_t *event)
 {
     ysw_editor_t *editor = context;
@@ -1223,6 +1099,7 @@ static void process_event(void *context, ysw_event_t *event)
     }
     lv_task_handler();
 }
+#endif
 
 // Layout of keycodes generated by keyboard:
 //
@@ -1231,304 +1108,369 @@ static void process_event(void *context, ysw_event_t *event)
 //   20, 21,     22, 23, 24,     25, 26, 27, 28,
 // 29, 30, 31, 32, 33, 34, 35,   36, 37, 38, 39,
 
-static const ysw_menu_softmap_t softmap[] = {
-    5, 6, 7, 8, YSW_MENU_ENDLINE,
-    16, 17, 18, 19, YSW_MENU_ENDLINE,
-    25, 26, 27, 28, YSW_MENU_ENDLINE,
-    36, 37, 38, 39, YSW_MENU_ENDGRID,
-};
-
 // Actions that pop a menu (e.g. COMMAND_POP) must be performed on UP, not DOWN or PRESS.
 
-#define VP (void *)(uintptr_t)
-
-#define YSW_MF_BUTTON (YSW_MENU_DOWN|YSW_MENU_UP)
-#define YSW_MF_COMMAND (YSW_MENU_PRESS|YSW_MENU_CLOSE)
-#define YSW_MF_COMMAND_POP (YSW_MENU_UP|YSW_MENU_POP_ALL)
-#define YSW_MF_BUTTON_COMMAND (YSW_MENU_DOWN|YSW_MENU_UP|YSW_MENU_CLOSE)
-#define YSW_MF_PLUS (YSW_MENU_UP|YSW_MENU_OPEN)
-#define YSW_MF_MODE (YSW_MENU_UP|YSW_MENU_OPEN|YSW_MENU_CLOSE)
-#define YSW_MF_MINUS (YSW_MENU_UP|YSW_MENU_POP)
-#define YSW_MF_HIDE (YSW_MENU_CLOSE)
-#define YSW_MF_NOP (0)
-
-static const ysw_menu_item_t menu_2[] = {
-    { 5, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 6, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 7, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-
-    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-
-    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-
-    { 36, "Hide\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0 },
-
-    { 40, NULL, 0, NULL, "Menu 2" },
-};
-
 static const ysw_menu_item_t melody_menu[] = {
-    { 5, "Tie\nNotes", YSW_MF_COMMAND, on_tie, 0 },
-    { 6, "Insert\nRest", YSW_MF_COMMAND, on_note, 0 },
-    { 7, "Melody\nSound", YSW_MF_COMMAND, on_program, 0 },
+    { 5, "Tie\nNotes", YSW_MF_COMMAND, on_tie, 0, NULL },
+    { 6, "Insert\nRest", YSW_MF_COMMAND, on_note, 0, NULL },
+    { 7, "Melody\nSound", YSW_MF_COMMAND, on_program, 0, NULL },
 
-    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
-    { 25, "Note\nLength-", YSW_MF_COMMAND, on_note_length, VP -1 },
-    { 26, "Note\nLength+", YSW_MF_COMMAND, on_note_length, VP +1 },
-    { 27, "Clear\nNote", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 25, "Note\nLength-", YSW_MF_COMMAND, on_note_length, -1, NULL },
+    { 26, "Note\nLength+", YSW_MF_COMMAND, on_note_length, +1, NULL },
+    { 27, "Clear\nNote", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
 
-    { 36, "Hide\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0 },
+    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
-    { 40, NULL, 0, NULL, "Melody" },
+    { 0, "Melody", YSW_MF_END, NULL, 0, NULL },
 };
 
 static const ysw_menu_item_t chord_menu[] = {
-    { 5, "Chord\nQuality", YSW_MF_COMMAND, on_quality, 0 },
-    { 6, "Chord\nStyle", YSW_MF_COMMAND, on_style, 0 },
-    { 7, "Chord\nSound", YSW_MF_COMMAND, on_program, 0 },
+    { 5, "Chord\nType", YSW_MF_COMMAND, on_chord_type_x, 0, NULL },
+    { 6, "Chord\nStyle", YSW_MF_COMMAND, on_style, 0, NULL },
+    { 7, "Chord\nSound", YSW_MF_COMMAND, on_program, 0, NULL },
 
-    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 17, "Apply\nQ&S", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 17, "Apply\nQ&S", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
-    { 25, " ", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 26, " ", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 27, "Clear\nChord", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 25, " ", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
+    { 26, " ", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
+    { 27, "Clear\nChord", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
 
-    { 36, "Hide\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0 },
+    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
-    { 40, NULL, 0, NULL, "Chord" },
+    { 0, "Chord", YSW_MF_END, NULL, 0, NULL },
 };
 
 static const ysw_menu_item_t rhythm_menu[] = {
-    { 5, "Cycle\nBeat", YSW_MF_COMMAND, on_cycle_beat, 0 },
-    { 6, "Insert\nBeat", YSW_MF_COMMAND, on_insert_beat, 0 },
-    { 7, "Rhythm\nSound", YSW_MF_COMMAND, on_program, 0 },
+    { 5, "Cycle\nBeat", YSW_MF_COMMAND, on_cycle_beat, 0, NULL },
+    { 6, "Insert\nBeat", YSW_MF_COMMAND, on_insert_beat, 0, NULL },
+    { 7, "Rhythm\nSound", YSW_MF_COMMAND, on_program, 0, NULL },
 
-    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 18, "Clear\nStroke", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 18, "Clear\nStroke", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
 
-    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 27, "Clear\nBeat", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 27, "Clear\nBeat", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
 
-    { 36, "Hide\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0 },
+    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
-    { 40, NULL, 0, NULL, "Rhythm" },
-};
-
-static const ysw_menu_item_t chooser_menu[] = {
-    { 5, "Sort by\nName", YSW_MF_COMMAND, on_chooser_sort, VP YSW_CHOOSER_SORT_BY_NAME },
-    { 6, "Sort by\nSize", YSW_MF_COMMAND, on_chooser_sort, VP YSW_CHOOSER_SORT_BY_SIZE },
-    { 7, "Sort by\nAge", YSW_MF_COMMAND, on_chooser_sort, VP YSW_CHOOSER_SORT_BY_AGE },
-    { 8, "Up", YSW_MF_COMMAND, on_chooser_up, 0 },
-
-    { 16, "Open\nSection", YSW_MF_COMMAND_POP, on_chooser_open, 0 },
-    { 17, "Rename\nSection", YSW_MF_COMMAND, on_chooser_rename, 0 },
-    { 18, "Delete\nSection", YSW_MF_COMMAND, on_chooser_delete, 0 },
-    { 19, "Down", YSW_MF_COMMAND, on_chooser_down, 0 },
-
-    { 25, "Copy\nSection", YSW_MF_COMMAND, on_chooser_copy, 0 },
-    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 28, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-
-    { 36, "Hide\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0 },
-    { 37, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 38, "Menu-", YSW_MF_MINUS, on_chooser_back, 0 },
-    { 39, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-
-    { 40, NULL, 0, NULL, "Chooser" },
-};
-
-static const ysw_menu_item_t file_menu[] = {
-    { 5, "New", YSW_MF_COMMAND, on_new, 0 },
-    { 6, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 7, "Save", YSW_MF_COMMAND, on_save, 0 },
-    { 8, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-
-    { 16, "Chooser", YSW_MF_MODE, on_chooser, (void*)chooser_menu },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 19, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-
-    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 28, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-
-    { 36, "Hide\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0 },
-    { 37, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 39, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-
-    { 40, NULL, 0, NULL, "File" },
+    { 0, "Rhythm", YSW_MF_END, NULL, 0, NULL },
 };
 
 static const ysw_menu_item_t edit_menu[] = {
-    { 5, "Select\nLeft", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 6, "Select\nRight", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 7, "Select\nAll", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 8, "Trans\npose+", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 5, "Select\nLeft", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
+    { 6, "Select\nRight", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
+    { 7, "Select\nAll", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
+    { 8, "Trans\npose+", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
-    { 16, "Cut", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 17, "Copy", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 18, "Paste", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 19, "Trans\npose-", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 16, "Cut", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
+    { 17, "Copy", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 18, "Paste", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 19, "Trans\npose-", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
-    { 25, "First", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 26, "Next", YSW_MF_COMMAND, on_next, 0 },
-    { 27, "Previous", YSW_MF_COMMAND, on_previous, 0 },
+    { 25, "First", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 26, "Next", YSW_MF_COMMAND, on_next, 0, NULL },
+    { 27, "Previous", YSW_MF_COMMAND, on_previous, 0, NULL },
 
-    { 36, "Hide\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0 },
-    { 37, "Delete", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { 37, "Delete", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
-    { 40, NULL, 0, NULL, "Edit" },
-};
-
-static const ysw_menu_item_t advanced_menu[] = {
-    { 5, "Edit\nSounds", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 6, "Edit\nQualities", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 7, "Edit\nStyles", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-
-    { 16, "Edit\nBeats", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-
-    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-
-    { 36, "Hide\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0 },
-
-    { 40, NULL, 0, NULL, "Geeks Only" },
+    { 0, "Edit", YSW_MF_END, NULL, 0, NULL },
 };
 
 static const ysw_menu_item_t listen_menu[] = {
-    { 5, "Play", YSW_MF_COMMAND, on_play, 0 },
-    { 6, "Pause", YSW_MF_COMMAND, ysw_menu_nop, 0 },
-    { 7, "Resume", YSW_MF_COMMAND, ysw_menu_nop, 0 },
+    { 5, "Play", YSW_MF_COMMAND, on_play, 0, NULL },
+    { 6, "Pause", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
+    { 7, "Resume", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
 
-    { 16, "Stop", YSW_MF_COMMAND, on_stop, 0 },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 16, "Stop", YSW_MF_COMMAND, on_stop, 0, NULL },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
-    { 25, "Loop", YSW_MF_COMMAND, on_loop, 0 },
-    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 27, "Cycle\nDemo", YSW_MF_COMMAND, on_demo, 0 },
+    { 25, "Loop", YSW_MF_COMMAND, on_loop, 0, NULL },
+    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 27, "Cycle\nDemo", YSW_MF_COMMAND, on_demo, 0, NULL },
 
-    { 36, "Hide\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0 },
+    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
-    { 40, NULL, 0, NULL, "Listen" },
+    { 0, "Listen", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t key_minor_flat_menu[] = {
+    { YSW_R1_C1, "d\n(1b)", YSW_MF_COMMAND, on_key_signature, 23, NULL },
+    { YSW_R1_C2, "g\n(2b)", YSW_MF_COMMAND, on_key_signature, 24, NULL },
+    { YSW_R1_C3, "c\n(3b)", YSW_MF_COMMAND, on_key_signature, 25, NULL },
+    { YSW_R1_C4, "f\n(4b)", YSW_MF_COMMAND, on_key_signature, 26, NULL },
+
+    { YSW_R2_C1, "b flat\n(5b)", YSW_MF_COMMAND, on_key_signature, 27, NULL },
+    { YSW_R2_C2, "e flat\n(6b)", YSW_MF_COMMAND, on_key_signature, 28, NULL },
+    { YSW_R2_C3, "a flat\n(6b)", YSW_MF_COMMAND, on_key_signature, 29, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "flat", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t key_minor_sharp_menu[] = {
+    { YSW_R1_C1, "e\n(1#)", YSW_MF_COMMAND, on_key_signature, 16, NULL },
+    { YSW_R1_C2, "b\n(2#)", YSW_MF_COMMAND, on_key_signature, 17, NULL },
+    { YSW_R1_C3, "f sharp\n(3#)", YSW_MF_COMMAND, on_key_signature, 18, NULL },
+    { YSW_R1_C4, "c sharp\n(4#)", YSW_MF_COMMAND, on_key_signature, 19, NULL },
+
+    { YSW_R2_C1, "g sharp\n(5#)", YSW_MF_COMMAND, on_key_signature, 20, NULL },
+    { YSW_R2_C2, "d sharp\n(6#)", YSW_MF_COMMAND, on_key_signature, 21, NULL },
+    { YSW_R2_C3, "a sharp\n(6#)", YSW_MF_COMMAND, on_key_signature, 22, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "sharp", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t key_minor_menu[] = {
+    { YSW_R1_C1, "a\nminor", YSW_MF_COMMAND, on_key_signature, 15, NULL },
+    { YSW_R1_C2, "Keys w/\nSharps", YSW_MF_PLUS, ysw_menu_nop, 0, key_minor_sharp_menu },
+    { YSW_R1_C3, "Keys w/\nFlats", YSW_MF_PLUS, ysw_menu_nop, 0, key_minor_flat_menu },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "minor", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t key_major_flat_menu[] = {
+    { YSW_R1_C1, "F\n(1b)", YSW_MF_COMMAND, on_key_signature, 8, NULL },
+    { YSW_R1_C2, "B flat\n(2b)", YSW_MF_COMMAND, on_key_signature, 9, NULL },
+    { YSW_R1_C3, "E flat\n(3b)", YSW_MF_COMMAND, on_key_signature, 10, NULL },
+    { YSW_R1_C4, "A flat\n(4b)", YSW_MF_COMMAND, on_key_signature, 11, NULL },
+
+    { YSW_R2_C1, "D flat\n(5b)", YSW_MF_COMMAND, on_key_signature, 12, NULL },
+    { YSW_R2_C2, "G flat\n(6b)", YSW_MF_COMMAND, on_key_signature, 13, NULL },
+    { YSW_R2_C3, "C flat\n(7b)", YSW_MF_COMMAND, on_key_signature, 14, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Flat", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t key_major_sharp_menu[] = {
+    { YSW_R1_C1, "G\n(1#)", YSW_MF_COMMAND, on_key_signature, 1, NULL },
+    { YSW_R1_C2, "D\n(2#)", YSW_MF_COMMAND, on_key_signature, 2, NULL },
+    { YSW_R1_C3, "A\n(3#)", YSW_MF_COMMAND, on_key_signature, 3, NULL },
+    { YSW_R1_C4, "E\n(4#)", YSW_MF_COMMAND, on_key_signature, 4, NULL },
+
+    { YSW_R2_C1, "B\n(5#)", YSW_MF_COMMAND, on_key_signature, 5, NULL },
+    { YSW_R2_C2, "F sharp\n(6#)", YSW_MF_COMMAND, on_key_signature, 6, NULL },
+    { YSW_R2_C3, "C sharp\n(7#)", YSW_MF_COMMAND, on_key_signature, 7, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Sharp", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t key_major_menu[] = {
+    { YSW_R1_C1, "C\nMajor", YSW_MF_COMMAND, on_key_signature, 0, NULL },
+    { YSW_R1_C2, "Keys w/\nSharps", YSW_MF_PLUS, ysw_menu_nop, 0, key_major_sharp_menu },
+    { YSW_R1_C3, "Keys w/\nFlats", YSW_MF_PLUS, ysw_menu_nop, 0, key_major_flat_menu },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Major", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t key_signature_menu[] = {
+    { YSW_R1_C1, "Major", YSW_MF_PLUS, ysw_menu_nop, 0, key_major_menu },
+    { YSW_R1_C2, "minor", YSW_MF_PLUS, ysw_menu_nop, 0, key_minor_menu },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Key", YSW_MF_END, NULL, 0, NULL },
 };
 
 static const ysw_menu_item_t settings_menu[] = {
-    { 5, "Key\nSig", YSW_MF_COMMAND, on_key_signature, 0 },
-    { 6, "Time\nSig", YSW_MF_COMMAND, on_time_signature, 0 },
-    { 7, "Tempo\n(BPM)", YSW_MF_COMMAND, on_tempo, 0 },
+    { 5, "Key\nSig", YSW_MF_PLUS, ysw_menu_nop, 0, key_signature_menu },
+    { 6, "Time\nSig", YSW_MF_COMMAND, on_time_signature, 0, NULL },
+    { 7, "Tempo\n(BPM)", YSW_MF_COMMAND, on_tempo, 0, NULL },
 
-    { 16, "Note\nDuration", YSW_MF_COMMAND, on_duration, 0 },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 16, "Note\nDuration", YSW_MF_COMMAND, on_duration, 0, NULL },
+    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
-    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
-    { 36, "Hide\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0 },
+    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
-    { 40, NULL, 0, NULL, "Settings" },
+    { 0, "Settings", YSW_MF_END, NULL, 0, NULL },
 };
 
 static const ysw_menu_item_t preferences_menu[] = {
-    { 5, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 6, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 7, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { YSW_R1_C1, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R1_C2, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R1_C3, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R1_C4, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
-    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { YSW_R2_C1, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C2, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C3, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C4, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
-    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
-    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0 },
+    { YSW_R3_C1, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R3_C2, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R3_C3, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R3_C4, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
-    { 36, "Hide\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0 },
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C2, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C3, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C4, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
-    { 40, NULL, 0, NULL, "My Prefs" },
+    { 0, "My Prefs", YSW_MF_END, NULL, 0, NULL },
 };
 
-static const ysw_menu_item_t main_menu[] = {
-    { 0, "C#6", YSW_MF_BUTTON, on_note, VP 73 },
-    { 1, "D#6", YSW_MF_BUTTON, on_note, VP 75 },
-    { 2, "F#6", YSW_MF_BUTTON, on_note, VP 78 },
-    { 3, "G#6", YSW_MF_BUTTON, on_note, VP 80 },
-    { 4, "A#6", YSW_MF_BUTTON, on_note, VP 82 },
+static const ysw_menu_item_t note_duration_menu[] = {
+    { YSW_R1_C1, "Quarter", YSW_MF_NOP, ysw_menu_nop, ZM_QUARTER, NULL },
+    { YSW_R1_C2, "Half", YSW_MF_NOP, ysw_menu_nop, ZM_HALF, NULL },
+    { YSW_R1_C3, "Whole", YSW_MF_NOP, ysw_menu_nop, ZM_WHOLE, NULL },
 
-    { 5, "Melody", YSW_MF_MODE, on_melody, (void*)melody_menu },
-    { 6, "Chord", YSW_MF_MODE, on_chord, (void*)chord_menu },
-    { 7, "Rhythm", YSW_MF_MODE, on_rhythm, (void*)rhythm_menu },
-    { 8, "Up", YSW_MF_COMMAND, on_up, 0 },
+    { YSW_R2_C1, "Eighth", YSW_MF_NOP, ysw_menu_nop, ZM_EIGHTH, NULL },
+    { YSW_R2_C2, "Dotted\nQuarter", YSW_MF_NOP, ysw_menu_nop, ZM_DOTTED_QUARTER, NULL },
 
-    { 9, "C6", YSW_MF_BUTTON, on_note, VP 72 },
-    { 10, "D6", YSW_MF_BUTTON, on_note, VP 74 },
-    { 11, "E6", YSW_MF_BUTTON, on_note, VP 76 },
-    { 12, "F6", YSW_MF_BUTTON, on_note, VP 77 },
-    { 13, "G6", YSW_MF_BUTTON, on_note, VP 79 },
-    { 14, "A6", YSW_MF_BUTTON, on_note, VP 81 },
-    { 15, "B6", YSW_MF_BUTTON, on_note, VP 83 },
+    { YSW_R3_C1, "Sixtnth", YSW_MF_NOP, ysw_menu_nop, ZM_SIXTEENTH, NULL },
+    { YSW_R3_C3, "Dotted\nHalf", YSW_MF_NOP, ysw_menu_nop, ZM_DOTTED_HALF, NULL },
 
-    { 16, "File", YSW_MF_PLUS, ysw_menu_nop, (void*)file_menu },
-    { 17, "Edit", YSW_MF_PLUS, ysw_menu_nop, (void*)edit_menu },
-    { 18, "Geeks\nOnly", YSW_MF_PLUS, ysw_menu_nop, (void*)advanced_menu },
-    { 19, "Down", YSW_MF_COMMAND, on_down, 0 },
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
-    { 20, "C#5", YSW_MF_BUTTON, on_note, VP 61 },
-    { 21, "D#5", YSW_MF_BUTTON, on_note, VP 63 },
-    { 22, "F#5", YSW_MF_BUTTON, on_note, VP 66 },
-    { 23, "G#5", YSW_MF_BUTTON, on_note, VP 68 },
-    { 24, "A#5", YSW_MF_BUTTON, on_note, VP 70 },
-
-    { 25, "Listen", YSW_MF_PLUS, ysw_menu_nop, (void*)listen_menu },
-    { 26, "Music\nSettings", YSW_MF_PLUS, ysw_menu_nop, (void*)settings_menu },
-    { 27, "My\nPrefs", YSW_MF_PLUS, ysw_menu_nop, (void*)preferences_menu },
-    { 28, "Left", YSW_MF_COMMAND, on_left, 0 },
-
-    { 29, "C5", YSW_MF_BUTTON, on_note, VP 60 },
-    { 30, "D5", YSW_MF_BUTTON, on_note, VP 62 },
-    { 31, "E5", YSW_MF_BUTTON, on_note, VP 64 },
-    { 32, "F5", YSW_MF_BUTTON, on_note, VP 65 },
-    { 33, "G5", YSW_MF_BUTTON, on_note, VP 67 },
-    { 34, "A5", YSW_MF_BUTTON, on_note, VP 69 },
-    { 35, "B5", YSW_MF_BUTTON, on_note, VP 71 },
-
-    { 36, "More+", YSW_MF_PLUS, ysw_menu_nop, (void*)menu_2 },
-    { 37, "Delete", YSW_MF_COMMAND, on_delete, 0 },
-    { 38, "Menu-", YSW_MF_MINUS, ysw_menu_nop, 0 },
-    { 39, "Right", YSW_MF_COMMAND, on_right, 0 },
-
-    { 0, NULL, 0, NULL, "Main" },
+    { 0, "Duration", YSW_MF_END, NULL, 0, NULL },
 };
 
-static void on_glass_event(struct _lv_obj_t *obj, lv_event_t event)
-{
-    if (event == LV_EVENT_CLICKED) {
-        ysw_menu_t *menu = lv_obj_get_user_data(obj);
-        ysw_menu_show(menu);
-    }
-}
+// See https://en.wikipedia.org/wiki/Octave#Octave_of_a_pitch
 
-static void initialize_editor_task(void *context)
-{
-    ysw_editor_t *editor = context;
+// TODO: generate based on diatonic notes of current key
+// TODO: add menu_items for keyboard keys
 
-    editor->lvgl_init();
+static const ysw_menu_item_t chord_octave4_menu[] = {
+    { YSW_R1_C1, "C", YSW_MF_PLUS, on_chord_type, 60, chord_type_menu },
+    { YSW_R1_C2, "D", YSW_MF_PLUS, on_chord_type, 62, chord_type_menu },
+    { YSW_R1_C3, "E", YSW_MF_PLUS, on_chord_type, 64, chord_type_menu },
+    { YSW_R1_C4, "F", YSW_MF_PLUS, on_chord_type, 65, chord_type_menu },
+
+    { YSW_R2_C1, "G", YSW_MF_PLUS, on_chord_type, 67, chord_type_menu },
+    { YSW_R2_C2, "A", YSW_MF_PLUS, on_chord_type, 69, chord_type_menu },
+    { YSW_R2_C3, "B", YSW_MF_PLUS, on_chord_type, 71, chord_type_menu },
+    { YSW_R2_C4, "C#", YSW_MF_PLUS, on_chord_type, 61, chord_type_menu },
+
+    { YSW_R3_C1, "D#", YSW_MF_PLUS, on_chord_type, 63, chord_type_menu },
+    { YSW_R3_C2, "F#", YSW_MF_PLUS, on_chord_type, 66, chord_type_menu },
+    { YSW_R3_C3, "G#", YSW_MF_PLUS, on_chord_type, 68, chord_type_menu },
+    { YSW_R3_C4, "A#", YSW_MF_PLUS, on_chord_type, 70, chord_type_menu },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C2, "Octave-", YSW_MF_PLUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C3, "Octave+", YSW_MF_PLUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Chord", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t insert_menu[] = {
+    { YSW_R1_C1, "Note", YSW_MF_PLUS, ysw_menu_nop, 0, note_duration_menu },
+    { YSW_R1_C2, "Rest", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R1_C3, "Tie", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+
+    { YSW_R2_C1, "Chord", YSW_MF_PLUS, ysw_menu_nop, 0, chord_octave4_menu },
+
+    { YSW_R3_C1, "Beat", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Insert", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t input_mode_menu[] = {
+    { YSW_R1_C1, "Note", YSW_MF_COMMAND, on_melody_mode, 0, NULL },
+    { YSW_R1_C2, "Chord", YSW_MF_COMMAND, on_chord_mode, 0, NULL },
+    { YSW_R1_C3, "Rhythm", YSW_MF_COMMAND, on_rhythm_mode, 0, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Input Mode", YSW_MF_END, NULL, 0, NULL },
+};
+const ysw_menu_item_t editor_menu[] = {
+    { 0, "C#6", YSW_MF_BUTTON, on_note, 73, NULL },
+    { 1, "D#6", YSW_MF_BUTTON, on_note, 75, NULL },
+    { 2, "F#6", YSW_MF_BUTTON, on_note, 78, NULL },
+    { 3, "G#6", YSW_MF_BUTTON, on_note, 80, NULL },
+    { 4, "A#6", YSW_MF_BUTTON, on_note, 82, NULL },
+
+    { 5, "Input\nMode", YSW_MF_PLUS, ysw_menu_nop, 0, input_mode_menu },
+    { 6, "Insert", YSW_MF_PLUS, ysw_menu_nop, 0, insert_menu },
+    { 8, "Up", YSW_MF_COMMAND, on_up, 0, NULL },
+
+    { 9, "C6", YSW_MF_BUTTON, on_note, 72, NULL },
+    { 10, "D6", YSW_MF_BUTTON, on_note, 74, NULL },
+    { 11, "E6", YSW_MF_BUTTON, on_note, 76, NULL },
+    { 12, "F6", YSW_MF_BUTTON, on_note, 77, NULL },
+    { 13, "G6", YSW_MF_BUTTON, on_note, 79, NULL },
+    { 14, "A6", YSW_MF_BUTTON, on_note, 81, NULL },
+    { 15, "B6", YSW_MF_BUTTON, on_note, 83, NULL },
+
+    { 16, "Listen", YSW_MF_PLUS, ysw_menu_nop, 0, listen_menu },
+    { 17, "Edit", YSW_MF_PLUS, ysw_menu_nop, 0, edit_menu },
+    { 19, "Down", YSW_MF_COMMAND, on_down, 0, NULL },
+
+    { 20, "C#5", YSW_MF_BUTTON, on_note, 61, NULL },
+    { 21, "D#5", YSW_MF_BUTTON, on_note, 63, NULL },
+    { 22, "F#5", YSW_MF_BUTTON, on_note, 66, NULL },
+    { 23, "G#5", YSW_MF_BUTTON, on_note, 68, NULL },
+    { 24, "A#5", YSW_MF_BUTTON, on_note, 70, NULL },
+
+    { 27, "Settings", YSW_MF_PLUS, ysw_menu_nop, 0, settings_menu },
+    { 28, "Left", YSW_MF_COMMAND, on_left, 0, NULL },
+
+    { 29, "C5", YSW_MF_BUTTON, on_note, 60, NULL },
+    { 30, "D5", YSW_MF_BUTTON, on_note, 62, NULL },
+    { 31, "E5", YSW_MF_BUTTON, on_note, 64, NULL },
+    { 32, "F5", YSW_MF_BUTTON, on_note, 65, NULL },
+    { 33, "G5", YSW_MF_BUTTON, on_note, 67, NULL },
+    { 34, "A5", YSW_MF_BUTTON, on_note, 69, NULL },
+    { 35, "B5", YSW_MF_BUTTON, on_note, 71, NULL },
+
+    { 36, "Close\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0, NULL },
+    { 37, "Delete", YSW_MF_COMMAND, on_delete, 0, NULL },
+    { 38, "Close\nEditor", YSW_MF_MINUS, on_close, 0, NULL },
+    { 39, "Right", YSW_MF_COMMAND, on_right, 0, NULL },
+
+    { 0, "Music", YSW_MF_END, NULL, 0, NULL },
+};
+
+void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *section)
+{
+    assert(music);
+    assert(ysw_array_get_count(music->programs));
+    assert(ysw_array_get_count(music->chord_types) > DEFAULT_CHORD_TYPE);
+    assert(ysw_array_get_count(music->chord_styles));
+
+    ysw_editor_t *editor = ysw_heap_allocate(sizeof(ysw_editor_t));
+
+    editor->bus = bus;
+    editor->music = music;
+    editor->section = section;
+
+    editor->chord_type = ysw_array_get(music->chord_types, DEFAULT_CHORD_TYPE);
+    editor->chord_style = ysw_array_get(music->chord_styles, DEFAULT_CHORD_STYLE);
+    editor->beat = ysw_array_get(music->beats, DEFAULT_BEAT);
+    editor->duration = ZM_AS_PLAYED;
+
+    editor->advance = 2;
+    editor->position = 0;
+    editor->mode = YSW_EDITOR_MODE_MELODY;
+
     editor->container = lv_obj_create(lv_scr_act(), NULL);
     assert(editor->container);
 
@@ -1551,59 +1493,30 @@ static void initialize_editor_task(void *context)
     lv_obj_align(editor->footer, NULL, LV_ALIGN_IN_BOTTOM_LEFT, 0, 0);
     ysw_footer_set_duration(editor->footer, editor->duration);
 
-    editor->menu = ysw_menu_create(main_menu, softmap, editor);
+    ysw_staff_set_section(editor->staff, editor->section);
+    ysw_footer_set_key(editor->footer, editor->section->key);
+    ysw_footer_set_time(editor->footer, editor->section->time);
+    ysw_footer_set_tempo(editor->footer, editor->section->tempo);
+    fire_program_change(editor, editor->section->melody_program, MELODY_CHANNEL);
+    fire_program_change(editor, editor->section->chord_program, CHORD_CHANNEL);
+    fire_program_change(editor, editor->section->rhythm_program, RHYTHM_CHANNEL);
+    display_mode(editor); // mode displays program
 
-    // We don't use lv_layer_top to detect click because it would block menu clicks
-    lv_obj_t *glass = lv_obj_create(lv_scr_act(), NULL);
-    lv_obj_set_size(glass, 320, 240);
-    lv_obj_align(glass, NULL, LV_ALIGN_CENTER, 0, 0);
+    editor->menu = ysw_menu_create(bus, editor_menu, ysw_app_softkey_map, editor);
+    ysw_menu_add_glass(editor->menu, editor->container);
 
-    lv_obj_set_user_data(glass, editor->menu);
-    lv_obj_set_event_cb(glass, on_glass_event);
-    lv_obj_set_click(glass, true);
-}
+    editor->queue = ysw_app_create_queue();
+    ysw_bus_subscribe(bus, YSW_ORIGIN_KEYBOARD, editor->queue);
+    ysw_bus_subscribe(bus, YSW_ORIGIN_SEQUENCER, editor->queue);
 
-void ysw_editor_create_task(ysw_bus_t *bus, zm_music_t *music, ysw_editor_lvgl_init lvgl_init)
-{
-    assert(bus);
-    assert(music);
-    assert(lvgl_init);
+    ysw_app_handle_events(editor->queue, process_event, editor);
 
-    assert(ysw_array_get_count(music->programs));
-    assert(ysw_array_get_count(music->qualities) > DEFAULT_QUALITY);
-    assert(ysw_array_get_count(music->styles));
+    ysw_bus_unsubscribe(bus, YSW_ORIGIN_KEYBOARD, editor->queue);
+    ysw_bus_unsubscribe(bus, YSW_ORIGIN_SEQUENCER, editor->queue);
+    ysw_bus_delete_queue(bus, editor->queue);
 
-    ysw_editor_t *editor = ysw_heap_allocate(sizeof(ysw_editor_t));
-
-    editor->bus = bus;
-    editor->lvgl_init = lvgl_init;
-    editor->music = music;
-
-    editor->quality = ysw_array_get(music->qualities, DEFAULT_QUALITY);
-    editor->style = ysw_array_get(music->styles, DEFAULT_STYLE);
-    editor->beat = ysw_array_get(music->beats, DEFAULT_BEAT);
-    editor->duration = ZM_AS_PLAYED;
-
-    editor->advance = 2;
-    editor->position = 0;
-    editor->mode = YSW_EDITOR_MODE_MELODY;
-
-    ysw_task_config_t config = ysw_task_default_config;
-
-    config.name = TAG;
-    config.bus = bus;
-    config.initializer = initialize_editor_task;
-    config.event_handler = process_event;
-    config.context = editor;
-    config.wait_millis = 5;
-    //config.priority = YSW_TASK_DEFAULT_PRIORITY + 1;
-    //config.priority = configMAX_PRIORITIES - 1;
-    config.priority = 24;
-
-    ysw_task_t *task = ysw_task_create(&config);
-
-    ysw_task_subscribe(task, YSW_ORIGIN_FILE);
-    ysw_task_subscribe(task, YSW_ORIGIN_KEYBOARD);
-    ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);
+    ysw_menu_free(editor->menu);
+    lv_obj_del(editor->container);
+    ysw_heap_free(editor);
 }
 

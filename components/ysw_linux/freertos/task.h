@@ -13,7 +13,7 @@
 
 #define tskIDLE_PRIORITY 0
 
-typedef void *TaskFunction_t;
+typedef void (*TaskFunction_t)( void * );
 typedef void *TaskHandle_t;
 
 extern int xTaskGetTickCount();

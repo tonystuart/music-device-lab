@@ -35,8 +35,21 @@
 
 #define $ ESP_ERROR_CHECK
 
-#define YSW_INT_PTR (void*)(uintptr_t)
-#define YSW_PTR_INT (uintptr_t)(void*)
+static inline void *ysw_common_validate_pointer(void *p, char *file, int line, char *arg)
+{
+    if (!p) {
+        extern void abort();
+        extern int printf(const char *, ...);
+        printf("%s:%d %s failed", file, line, arg);
+        abort();
+    }
+    return p;
+}
+
+#define C(x) ysw_common_validate_pointer(x, __FILE__, __LINE__, #x)
+
+#define YSW_PTR (void*)(uintptr_t)
+#define YSW_INT (uintptr_t)(void*)
 
 static inline int min(int x, int y)
 {
