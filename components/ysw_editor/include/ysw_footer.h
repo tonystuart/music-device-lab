@@ -17,7 +17,7 @@ void ysw_footer_set_key(lv_obj_t *footer, zm_key_signature_x key_index);
 
 void ysw_footer_set_time(lv_obj_t *footer, zm_time_signature_x time_index);
 
-void ysw_footer_set_tempo(lv_obj_t *footer, zm_tempo_t tempo_index);
+void ysw_footer_set_tempo(lv_obj_t *footer, zm_tempo_x tempo);
 
 void ysw_footer_set_duration(lv_obj_t *footer, zm_duration_t duration);
 

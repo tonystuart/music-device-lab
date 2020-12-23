@@ -91,20 +91,20 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,0,Block
+5,0,Block,Block
 6,0,80,0,1024
 6,1,80,0,1024
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,1,Block
+5,1,Block,Block
 6,0,80,0,1024
 6,1,80,0,1024
 6,2,80,0,1024
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,2,Block
+5,2,Block,Block
 6,0,80,0,1024
 6,1,80,0,1024
 6,2,80,0,1024
@@ -112,7 +112,7 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,3,Block
+5,3,Block,Block
 6,0,80,0,1024
 6,1,80,0,1024
 6,2,80,0,1024
@@ -121,7 +121,7 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,4,Block
+5,4,Block,Block
 6,0,80,0,1024
 6,1,80,0,1024
 6,2,80,0,1024
@@ -132,7 +132,7 @@
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
 #type(style),index,name
-5,5,Block
+5,5,Block,Block
 6,0,80,0,1024
 6,1,80,0,1024
 6,2,80,0,1024
@@ -143,13 +143,13 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,6,Strum 1
+5,6,Strum 1,Strum\\n1
 6,0,100,0,1024
 6,1,80,150,1024
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,7,Strum 1
+5,7,Strum 1,Strum\\n1
 6,0,100,0,1024
 6,1,80,150,1024
 6,2,80,300,1024
@@ -157,7 +157,7 @@
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
 #type(style),index,name
-5,8,Strum 1
+5,8,Strum 1,Strum\\n1
 6,0,100,0,1024
 6,1,80,150,1024
 6,2,80,300,1024
@@ -165,7 +165,7 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,9,Strum 1
+5,9,Strum 1,Strum\\n1
 6,0,100,0,1024
 6,1,80,150,1024
 6,2,80,300,1024
@@ -174,13 +174,13 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,10,Arpeggio 1
+5,10,Arpeggio 1,Arpeg\\n1
 6,0,100,0,128
 6,1,80,128,128
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,11,Arpeggio 1
+5,11,Arpeggio 1,Arpeg\\n1
 6,0,100,0,128
 6,1,80,128,128
 6,2,80,256,128
@@ -189,7 +189,7 @@
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
 #type(style),index,name
-5,12,Arpeggio 1
+5,12,Arpeggio 1,Arpeg\\n1
 6,0,100,0,128
 6,1,80,128,128
 6,2,80,256,128
@@ -199,7 +199,7 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,13,Arpeggio 1
+5,13,Arpeggio 1,Arpeg\\n1
 6,0,100,0,128
 6,1,80,128,128
 6,2,80,256,128
@@ -252,15 +252,15 @@
 #type(9=section),index,name,tempo,key,time,clock,melody,chord,rhythm
 #type(10=step),start,measure,flags
 #type(11=melody),note,duration,tie
-#type(12=chord),root,quality,style,duration
+#type(12=chord),root,quality,style,duration_type
 #type(13=rhythm),beat
 
-9,0,Summer Nights Verse,3,2,3,1,1,3,7
+9,0,Summer Nights Verse,100,2,3,1,1,3,7
 
 # Line 1 - Measure 1
 10,0,1,0
 11,0,256,0 # Rest
-12,62,0,1,512 # DMaj
+12,62,0,1,2 # DMaj
 13,0,0 # 8th Note Groove
 10,256,1,0
 11,66,128,0 # F#
@@ -268,7 +268,7 @@
 11,62,128,0 # D
 10,512,1,0
 11,67,128,0 # G
-12,67,0,1,512 # GMaj
+12,67,0,1,2 # GMaj
 10,640,1,0
 11,64,128,0 # E
 10,768,1,1
@@ -277,7 +277,7 @@
 # Line 1 - Measure 2
 10,1024,2,0
 11,69,128,0 # A
-12,69,0,1,512 # AMaj
+12,69,0,1,2 # AMaj
 13,0,0 # 8th Note Groove
 10,1152,2,0
 11,66,128,0 # F#
@@ -286,7 +286,7 @@
 10,1408,2,0
 11,69,128,1 # A
 10,1536,2,0
-12,67,0,1,512 # GMaj
+12,67,0,1,2 # GMaj
 11,69,128,0 # A
 10,1664,2,1
 11,67,384,0 # G
@@ -294,7 +294,7 @@
 # Line 1 - Measure 3
 10,2048,3,0
 11,0,256,0 # Rest
-12,62,0,1,512 # DMaj
+12,62,0,1,2 # DMaj
 13,0,0 # 8th Note Groove
 10,2304,3,0
 11,66,128,0 # F#
@@ -302,7 +302,7 @@
 11,62,128,0 # D
 10,2560,3,0
 11,67,128,0 # G
-12,67,0,1,512 # GMaj
+12,67,0,1,2 # GMaj
 10,2688,3,0
 11,64,128,0 # E
 10,2816,3,1
@@ -311,7 +311,7 @@
 # Line 1 - Measure 4
 10,3072,4,0
 11,69,128,0 # A
-12,69,0,1,512 # AMaj
+12,69,0,1,2 # AMaj
 13,0,0 # 8th Note Groove
 10,3200,4,0
 11,66,128,0 # F#
@@ -320,7 +320,7 @@
 10,3456,4,0
 11,69,128,1 # A
 10,3584,4,0
-12,67,0,1,512 # GMaj
+12,67,0,1,2 # GMaj
 11,69,128,0 # A
 10,3712,4,1
 11,67,384,0 # G
@@ -328,7 +328,7 @@
 # Line 2 - Measure 1
 10,4096,5,0
 11,0,256,0 # Rest
-12,62,0,1,512 # DMaj
+12,62,0,1,2 # DMaj
 13,0,0 # 8th Note Groove
 10,4352,5,0
 11,66,128,0 # F#
@@ -336,14 +336,14 @@
 11,62,128,0 # D
 10,4608,5,0
 11,67,256,0 # G
-12,67,0,1,512 # GMaj
+12,67,0,1,2 # GMaj
 10,4864,5,1
 11,00,256,0 # Rest
 
 # Line 2 - Measure 2
 10,5120,6,0
 11,69,128,0 # A
-12,69,0,1,512 # AMaj
+12,69,0,1,2 # AMaj
 13,0,0 # 8th Note Groove
 10,5248,6,0
 11,66,128,0 # F#
@@ -351,7 +351,7 @@
 11,69,128,0 # A
 10,5504,6,0
 11,71,128,1 # B
-12,71,0,1,512 # BMaj
+12,71,0,1,2 # BMaj
 10,5632,6,0
 11,71,256,0 # B
 10,5888,6,1
@@ -360,7 +360,7 @@
 # Line 2 - Measure 3
 10,6144,7,0
 11,0,256,0 # Rest
-12,64,0,1,512 # EMaj
+12,64,0,1,2 # EMaj
 13,0,0 # 8th Note Groove
 10,6400,7,0
 11,68,128,0 # G#
@@ -368,14 +368,14 @@
 11,64,128,0 # E
 10,6656,7,0
 11,69,256,0 # A
-12,69,0,1,512 # AMaj
+12,69,0,1,2 # AMaj
 10,6912,7,1
 11,00,256,0 # Rest
 
 # Line 2 - Measure 4
 10,7168,8,0
 11,68,128,0 # G#
-12,64,0,1,512 # EMaj
+12,64,0,1,2 # EMaj
 13,0,0 # 8th Note Groove
 10,7292,8,0
 11,64,128,0 # E
@@ -383,7 +383,7 @@
 11,68,128,0 # G#
 10,7552,8,0
 11,69,128,1 # A
-12,69,0,1,512 # AMaj
+12,69,0,1,2 # AMaj
 10,7680,8,0
 11,69,256,0 # A
 10,7936,8,1
@@ -392,7 +392,7 @@
 # Line 3 - Measure 1
 10,8192,9,0
 11,0,256,0 # Rest
-12,62,0,1,512 # DMaj
+12,62,0,1,2 # DMaj
 13,0,0 # 8th Note Groove
 10,8448,9,0
 11,74,128,0 # D+
@@ -400,14 +400,14 @@
 11,69,128,0 # A
 10,8704,9,0
 11,71,256,0 # B
-12,67,0,1,512 # GMaj
+12,67,0,1,2 # GMaj
 10,8960,9,1
 11,00,256,0 # Rest
 
 # Line 3 - Measure 2
 10,9216,10,0
 11,69,128,0 # A
-12,69,0,1,512 # AMaj
+12,69,0,1,2 # AMaj
 13,0,0 # 8th Note Groove
 10,9344,10,0
 11,71,128,0 # B
@@ -415,7 +415,7 @@
 11,69,128,0 # A
 10,9600,10,0
 11,66,128,1 # F#
-12,71,0,1,512 # BMaj
+12,71,0,1,2 # BMaj
 10,9728,10,0
 11,66,256,0 # F#
 10,9984,10,0
@@ -426,7 +426,7 @@
 # Line 4 - Measure 3
 10,10240,11,0
 11,67,128,0 # G
-12,64,3,3,512 # Em7
+12,64,3,3,2 # Em7
 13,0,0 # 8th Note Groove
 10,10368,11,0
 11,0,128,0 # Rest
@@ -434,7 +434,7 @@
 11,64,128,0 # E
 10,10624,11,0
 11,71,128,0 # B
-12,69,0,1,512 # AMaj
+12,69,0,1,2 # AMaj
 10,10752,11,0
 11,69,128,1 # A
 10,10880,11,0
@@ -449,7 +449,7 @@
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat
-9,1,Summer Nights Walking Scale,3,2,3,2,0,3,7
+9,1,Summer Nights Walking Scale,100,2,3,2,0,3,7
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
@@ -478,7 +478,7 @@
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat
-9,2,Summer Nights Intro,3,2,3,3,1,3,7
+9,2,Summer Nights Intro,100,2,3,3,1,3,7
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
@@ -544,10 +544,10 @@
 15,0,100,1,0,0 # Verse 1
 15,1,10,0,1,1 # Walking Scale
 
-9,3,Simple Example,3,0,3,4,0,3,7
+9,3,Simple Example,100,0,3,4,0,3,7
 10,0,1,0
 11,60,128,0
-12,60,6,10,512
+12,60,6,10,2
 13,1,64
 10,128,1,0
 11,65,128,0
@@ -557,7 +557,7 @@
 11,65,128,0
 10,512,1,0
 11,64,128,0
-12,67,6,10,512
+12,67,6,10,2
 10,640,1,0
 11,65,128,0
 10,768,1,0

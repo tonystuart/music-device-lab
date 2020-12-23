@@ -338,6 +338,7 @@ static void parse_chord_style(zm_mfr_t *zm_mfr)
 
     zm_chord_style_t *style = ysw_heap_allocate(sizeof(zm_chord_style_t));
     style->name = ysw_heap_strdup(zm_mfr->tokens[2]);
+    style->label = ysw_replace(zm_mfr->tokens[3], "\\n", "\n");
     style->sounds = ysw_array_create(8);
 
     zm_yesno_t done = false;
@@ -498,7 +499,7 @@ static void parse_section(zm_mfr_t *zm_mfr)
             step->chord.root = atoi(zm_mfr->tokens[1]);
             step->chord.type = ysw_array_get(zm_mfr->music->chord_types, atoi(zm_mfr->tokens[2]));
             step->chord.style = ysw_array_get(zm_mfr->music->chord_styles, atoi(zm_mfr->tokens[3]));
-            step->chord.duration = atoi(zm_mfr->tokens[4]);
+            step->chord.duration_type = atoi(zm_mfr->tokens[4]);
         } else if (step && type == ZM_MF_RHYTHM && zm_mfr->token_count == 3) {
             step->rhythm.beat = ysw_array_get(zm_mfr->music->beats, atoi(zm_mfr->tokens[1]));
             step->rhythm.surface = atoi(zm_mfr->tokens[2]);
@@ -552,7 +553,7 @@ static void emit_sections(zm_mfw_t *zm_mfw)
                         step->chord.root,
                         get_map(zm_mfw->chord_type_map, step->chord.type),
                         get_map(zm_mfw->style_map, step->chord.style),
-                        step->chord.duration);
+                        step->chord.duration_type);
             }
             if (step->rhythm.beat) {
                 fprintf(zm_mfw->file, "%d,%d,%d\n",
@@ -729,7 +730,7 @@ zm_music_t *zm_parse_file(FILE *file)
             parse_program(zm_mfr);
         } else if (type == ZM_MF_CHORD_TYPE && zm_mfr->token_count > 4) {
             parse_chord_type(zm_mfr);
-        } else if (type == ZM_MF_CHORD_STYLE && zm_mfr->token_count == 3) {
+        } else if (type == ZM_MF_CHORD_STYLE && zm_mfr->token_count == 4) {
             parse_chord_style(zm_mfr);
         } else if (type == ZM_MF_BEAT && zm_mfr->token_count == 4) {
             parse_beat(zm_mfr);
@@ -902,6 +903,99 @@ int zm_note_compare(const void *left, const void *right)
     return delta;
 }
 
+#if 0
+zm_time_x zm_get_step_duration(zm_step_t *step, zm_time_x ticks_per_measure)
+{
+    zm_time_x step_duration = 0;
+
+    if (step->melody.duration) {
+        step_duration = zm_round_duration(step->melody.duration, NULL, NULL);
+    } else if (step->chord.duration) {
+        step_duration = step->chord.duration;
+    } else if (step->rhythm.beat) {
+        step_duration = ticks_per_measure;
+    } else if (step->rhythm.surface) {
+        step_duration = ZM_EIGHTH;
+    }
+
+    return step_duration;
+}
+zm_time_x zm_get_step_duration(zm_step_t *step, zm_time_x ticks_per_measure)
+{
+    zm_time_x step_duration = UINT_MAX;
+
+    if (step->melody.duration) {
+        step_duration = ysw_uint32_min(step_duration, step->melody.duration);
+    }
+    if (step->chord.duration) {
+        step_duration = ysw_uint32_min(step_duration, step->chord.duration);
+    }
+    if (step->rhythm.beat) {
+        step_duration = ysw_uint32_min(step_duration, ticks_per_measure);
+    }
+    if (step->rhythm.surface) {
+        step_duration = ysw_uint32_min(step_duration, ZM_EIGHTH);
+    }
+
+    if (step_duration == UINT_MAX) {
+        step_duration = 0;
+    }
+
+    return step_duration;
+}
+#else
+zm_time_x zm_get_step_duration(zm_step_t *step, zm_time_x ticks_per_measure)
+{
+    zm_time_x step_duration = 0;
+
+    if (step->rhythm.surface) {
+        step_duration = ZM_EIGHTH;
+    } else if (step->melody.duration) {
+        step_duration = zm_round_duration(step->melody.duration, NULL, NULL);
+    } else if (step->chord.duration) {
+        step_duration = step->chord.duration;
+    } else if (step->rhythm.beat) {
+        step_duration = ticks_per_measure;
+    }
+
+    return step_duration;
+}
+#endif
+
+// TODO: pass starting step_x as a small optimization
+
+void zm_recalculate_section(zm_section_t *section)
+{
+    zm_time_x start = 0;
+    zm_measure_x measure = 1;
+    uint32_t ticks_in_measure = 0;
+
+    zm_step_t *step = NULL;
+
+    zm_time_x ticks_per_measure = zm_get_ticks_per_measure(section->time);
+    zm_step_x step_count = ysw_array_get_count(section->steps);
+
+    for (zm_step_x i = 0; i < step_count; i++) {
+        step = ysw_array_get(section->steps, i);
+        step->start = start;
+        step->flags = 0;
+        step->measure = measure;
+
+        if (step->chord.root) {
+            step->chord.duration = ticks_per_measure / step->chord.duration_type;
+        }
+
+        zm_time_x step_duration = zm_get_step_duration(step, ticks_per_measure);
+        ticks_in_measure += step_duration;
+        if (ticks_in_measure >= ticks_per_measure) {
+            step->flags |= ZM_STEP_END_OF_MEASURE;
+            ticks_in_measure = 0;
+            measure++;
+        }
+        start += step_duration;
+    }
+}
+
 void zm_render_note(ysw_array_t *notes, zm_channel_x channel, zm_note_t midi_note,
         zm_time_x start, zm_duration_t duration, zm_program_x program_index)
 {
@@ -1028,6 +1122,7 @@ zm_time_x zm_render_section_notes(ysw_array_t *notes, zm_music_t *music, zm_sect
         }
     }
     zm_time_x step_end = 0;
+    zm_time_x ticks_per_measure = zm_get_ticks_per_measure(section->time);
     for (zm_step_x i = 0; i < step_count; i++) {
         zm_step_t *step = ysw_array_get(section->steps, i);
         zm_time_x step_start = start_time + step->start;
@@ -1037,7 +1132,8 @@ zm_time_x zm_render_section_notes(ysw_array_t *notes, zm_music_t *music, zm_sect
         if (step->rhythm.beat || step->rhythm.surface) {
             zm_render_rhythm(notes, &step->rhythm, step_start, base_channel + 2, rhythm_program);
         }
-        step_end = step_start + step->melody.duration;
+        zm_time_x step_duration = zm_get_step_duration(step, ticks_per_measure);
+        step_end = step_start + step_duration;
     }
     return step_end;
 }
@@ -1173,43 +1269,9 @@ static const zm_time_signature_t zm_time_signatures[] = {
 
 #define ZM_TIME_SIGNATURES (sizeof(zm_time_signatures) / sizeof(zm_time_signatures[0]))
 
-zm_time_signature_x zm_get_next_time_index(zm_time_signature_x time_index)
-{
-    return (time_index + 1) % ZM_TIME_SIGNATURES;
-}
-
 const zm_time_signature_t *zm_get_time_signature(zm_time_signature_x time_index)
 {
     return &zm_time_signatures[time_index % ZM_TIME_SIGNATURES];
-}
-
-// See https://en.wikipedia.org/wiki/Tempo
-
-static const zm_tempo_signature_t zm_tempo_signatures[] = {
-    { "Grave", "30 BPM", 30 },
-    { "Largo", "50 BPM", 50 },
-    { "Andante", "80 BPM", 80 },
-    { "Moderato", "100 BPM", 100 },
-    { "Allegro", "120 BPM", 120 },
-    { "Vivace", "150 BPM", 150 },
-    { "Presto", "180 BPM", 180 },
-};
-
-#define ZM_TEMPO_SIGNATURES (sizeof(zm_tempo_signatures) / sizeof(zm_tempo_signatures[0]))
-
-zm_tempo_t zm_get_next_tempo_index(zm_tempo_t tempo)
-{
-    return (tempo + 1) % ZM_TEMPO_SIGNATURES;
-}
-
-const zm_tempo_signature_t *zm_get_tempo_signature(zm_tempo_t tempo)
-{
-    return &zm_tempo_signatures[tempo % ZM_TEMPO_SIGNATURES];
-}
-
-zm_bpm_x zm_tempo_to_bpm(zm_tempo_t tempo)
-{
-    return zm_tempo_signatures[tempo % ZM_TEMPO_SIGNATURES].bpm;
 }
 
 typedef struct {
@@ -1340,7 +1402,7 @@ zm_section_t *zm_create_section(zm_music_t *music)
     ysw_name_create(name, sizeof(name));
     zm_section_t *section = ysw_heap_allocate(sizeof(zm_section_t));
     section->name = ysw_heap_strdup(name);
-    section->tempo = ZM_TEMPO_100;
+    section->tempo = 100;
     section->key = 0;
     section->time = ZM_TIME_4_4;
     section->tlm = music->settings.clock++;

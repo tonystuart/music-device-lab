@@ -8,6 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_common.h"
+#include "ysw_heap.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -42,5 +43,56 @@ void ysw_copy(char *destination, const char* source, size_t size)
 {
     strncpy(destination, source, size);
     destination[size - 1] = EOS;
+}
+
+char *ysw_replace(const char *source, const char *from, const char *to)
+{
+    int match_count = 0;
+    int from_length = strlen(from);
+    int to_length = strlen(to);
+    const char *source_p = source;
+    while (*source_p) {
+        const char *match_p = source_p;
+        const char *from_p = from;
+        bool match = true;
+        while (*match_p && *from_p && match) {
+            if (*match_p++ != *from_p++) {
+                match = false;
+            }
+        }
+        if (match) {
+            match_count++;
+            source_p = match_p;
+        }
+        source_p++;
+    }
+    source_p++; // count null terminator
+    int old_length = source_p - source;
+    int delta = to_length - from_length;
+    int new_length = old_length + (match_count * delta);
+    char *target = ysw_heap_allocate(new_length);
+    char *target_p = target;
+    source_p = source;
+    while (*source_p) {
+        const char *match_p = source_p;
+        const char *from_p = from;
+        bool match = true;
+        while (*match_p && *from_p && match) {
+            if (*match_p++ != *from_p++) {
+                match = false;
+            }
+        }
+        if (match) {
+            const char *to_p = to;
+            while (*to_p) {
+                *target_p++ = *to_p++;
+            }
+            source_p = match_p;
+        } else {
+            *target_p++ = *source_p++;
+        }
+    }
+    *target_p = 0;
+    return target;
 }
 

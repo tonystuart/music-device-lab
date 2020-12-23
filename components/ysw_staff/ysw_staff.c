@@ -268,7 +268,7 @@ static void draw_melody(ysw_staff_t *dc, zm_step_t *step)
         } else {
             draw_white(dc, note, duration);
         }
-    } else {
+    } else if (duration) {
         draw_rest(dc, duration);
     }
 }

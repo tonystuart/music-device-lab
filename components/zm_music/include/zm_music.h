@@ -41,6 +41,7 @@ typedef uint8_t zm_patch_x;
 typedef uint8_t zm_percent_x;
 typedef uint8_t zm_program_x;
 typedef uint8_t zm_stroke_x;
+typedef uint8_t zm_tempo_x;
 typedef uint8_t zm_tie_x;
 typedef uint8_t zm_velocity_x;
 
@@ -70,17 +71,20 @@ typedef struct {
 } zm_key_signature_t;
 
 typedef enum {
+    ZM_FULL_MEASURE = 1,
+    ZM_HALF_MEASURE = 2,
+    ZM_QUARTER_MEASURE = 4,
+} zm_duration_type_t;
+
+typedef enum {
     ZM_AS_PLAYED = 0,
     ZM_SIXTEENTH = 64,
-    ZM_DOTTED_SIXTEENTH = ZM_SIXTEENTH + (ZM_SIXTEENTH / 2),
     ZM_EIGHTH = 128,
-    ZM_DOTTED_EIGHTH = ZM_EIGHTH + (ZM_EIGHTH / 2),
     ZM_QUARTER = 256,
     ZM_DOTTED_QUARTER = ZM_QUARTER + (ZM_QUARTER / 2),
     ZM_HALF = 512,
     ZM_DOTTED_HALF = ZM_HALF + (ZM_HALF / 2),
     ZM_WHOLE = 1024,
-    ZM_DOTTED_WHOLE = ZM_WHOLE + (ZM_WHOLE / 2),
 } zm_duration_t;
 
 typedef enum {
@@ -97,22 +101,6 @@ typedef struct {
     const zm_duration_t unit;
     const zm_time_x ticks_per_measure;
 } zm_time_signature_t;
-
-typedef enum {
-    ZM_TEMPO_30,
-    ZM_TEMPO_50,
-    ZM_TEMPO_80,
-    ZM_TEMPO_100,
-    ZM_TEMPO_120,
-    ZM_TEMPO_150,
-    ZM_TEMPO_180,
-} zm_tempo_t;
-
-typedef struct {
-    const char *name;
-    const char *label;
-    const zm_bpm_x bpm;
-} zm_tempo_signature_t;
 
 typedef enum {
     ZM_PAN_LEFT,
@@ -161,6 +149,7 @@ typedef struct {
 
 typedef struct {
     char *name;
+    char *label;
     zm_distance_x distance_count;
     ysw_array_t *sounds;   
 } zm_chord_style_t;
@@ -170,6 +159,7 @@ typedef struct {
     zm_chord_type_t *type;
     zm_chord_style_t *style;
     zm_duration_t duration;
+    zm_duration_type_t duration_type;
 } zm_chord_t;
 
 typedef struct {
@@ -211,7 +201,7 @@ typedef struct {
 
 typedef struct {
     char *name;
-    zm_tempo_t tempo;
+    zm_tempo_x tempo;
     zm_key_signature_x key;
     zm_time_signature_x time;
     zm_time_x tlm;
@@ -277,6 +267,9 @@ void *zm_load_sample(const char* name, uint16_t *word_count);
 
 int zm_note_compare(const void *left, const void *right);
 
+zm_time_x zm_get_step_duration(zm_step_t *step, zm_time_x ticks_per_measure);
+void zm_recalculate_section(zm_section_t *section);
+
 void zm_render_melody(ysw_array_t *notes, zm_melody_t *melody, zm_time_x melody_start, zm_channel_x channel, zm_program_x program_index, zm_tie_x tie);
 void zm_render_chord(ysw_array_t *notes, zm_chord_t *chord, zm_time_x chord_start, zm_channel_x channel, zm_program_x program_index);
 ysw_array_t *zm_render_step(zm_music_t *m, zm_section_t *p, zm_step_t *d, zm_channel_x bc);
@@ -287,12 +280,7 @@ ysw_array_t *zm_render_composition(zm_music_t *music, zm_composition_t *composit
 const zm_key_signature_t *zm_get_key_signature(zm_key_signature_x key_index);
 zm_key_signature_x zm_get_next_key_index(zm_key_signature_x key_index);
 
-zm_time_signature_x zm_get_next_time_index(zm_time_signature_x time_index);
 const zm_time_signature_t *zm_get_time_signature(zm_time_signature_x time_index);
-
-zm_tempo_t zm_get_next_tempo_index(zm_tempo_t tempo_index);
-const zm_tempo_signature_t *zm_get_tempo_signature(zm_tempo_t tempo_index);
-zm_bpm_x zm_tempo_to_bpm(zm_tempo_t tempo);
 
 zm_duration_t zm_round_duration(zm_duration_t duration, uint8_t *index, bool *is_dotted);
 zm_duration_t zm_get_next_dotted_duration(zm_duration_t duration, int direction);

@@ -140,7 +140,7 @@ static void show_softkeys(ysw_menu_t *menu)
 
     lv_obj_t *label = lv_label_create(container, NULL);
 
-    lv_label_set_long_mode(label, LV_LABEL_LONG_CROP);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_SROLL_CIRC);
     lv_obj_set_width(label, 320);
     lv_obj_align(label, NULL, LV_ALIGN_IN_TOP_LEFT, 0, 2);
 

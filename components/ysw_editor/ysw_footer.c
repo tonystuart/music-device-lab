@@ -65,11 +65,12 @@ void ysw_footer_set_time(lv_obj_t *footer, zm_time_signature_x time_index)
     ysw_field_set_value_text(ext->time_field, time_signature->name);
 }
 
-void ysw_footer_set_tempo(lv_obj_t *footer, zm_tempo_t tempo_index)
+void ysw_footer_set_tempo(lv_obj_t *footer, zm_tempo_x tempo)
 {
-    const zm_tempo_signature_t *tempo_signature = zm_get_tempo_signature(tempo_index);
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%d BPM", tempo);
     ysw_footer_ext_t *ext = lv_obj_get_ext_attr(footer);
-    ysw_field_set_value_text(ext->tempo_field, tempo_signature->label);
+    ysw_field_set_value_text(ext->tempo_field, buf);
 }
 
 void ysw_footer_set_duration(lv_obj_t *footer, zm_duration_t duration)

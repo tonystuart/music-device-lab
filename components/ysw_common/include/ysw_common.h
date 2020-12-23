@@ -51,17 +51,31 @@ static inline void *ysw_common_validate_pointer(void *p, char *file, int line, c
 #define YSW_PTR (void*)(uintptr_t)
 #define YSW_INT (uintptr_t)(void*)
 
-static inline int min(int x, int y)
+// TODO: rename ysw_int32_min to avoid inadvertent use with uint32_t
+
+static inline int32_t min(int32_t x, int32_t y)
 {
     return x < y ? x : y;
 }
 
-static inline int max(int x, int y)
+// TODO: rename ysw_int32_max to avoid inadvertent use with uint32_t
+
+static inline int32_t max(int32_t x, int32_t y)
 {
     return x > y ? x : y;
 }
 
-static inline int ysw_enforce_bounds(int x, int first, int last)
+static inline uint32_t ysw_uint32_min(uint32_t x, uint32_t y)
+{
+    return x < y ? x : y;
+}
+
+static inline uint32_t ysw_uint32_max(uint32_t x, uint32_t y)
+{
+    return x > y ? x : y;
+}
+
+static inline uint32_t ysw_enforce_bounds(int x, int first, int last)
 {
     return x < first ? first : x > last ? last : x;
 }
@@ -90,6 +104,7 @@ uint32_t ysw_get_millis();
 void ysw_wait_millis(int millis);
 uint32_t ysw_rtos_ticks_to_millis(uint32_t ticks);
 uint32_t ysw_millis_to_rtos_ticks(uint32_t millis);
+char *ysw_replace(const char *source, const char *from, const char *to);
 
 char *ysw_itoa(int input_value, char *buffer, int buffer_size);
 void ysw_copy(char *destination, const char* source, size_t size);
