@@ -68,6 +68,7 @@ typedef struct {
     const uint8_t sharp_index[7];
     const uint8_t flat_index[7];
     const char *label;
+    const uint8_t tonic;
 } zm_key_signature_t;
 
 typedef enum {
