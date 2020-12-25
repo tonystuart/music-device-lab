@@ -71,12 +71,6 @@ typedef struct {
 } zm_key_signature_t;
 
 typedef enum {
-    ZM_FULL_MEASURE = 1,
-    ZM_HALF_MEASURE = 2,
-    ZM_QUARTER_MEASURE = 4,
-} zm_duration_type_t;
-
-typedef enum {
     ZM_AS_PLAYED = 0,
     ZM_SIXTEENTH = 64,
     ZM_EIGHTH = 128,
@@ -86,6 +80,13 @@ typedef enum {
     ZM_DOTTED_HALF = ZM_HALF + (ZM_HALF / 2),
     ZM_WHOLE = 1024,
 } zm_duration_t;
+
+typedef enum {
+    ZM_ONE_PER_MEASURE = 1,
+    ZM_TWO_PER_MEASURE = 2,
+    ZM_THREE_PER_MEASURE = 3,
+    ZM_FOUR_PER_MEASURE = 4,
+} zm_chord_frequency_t;
 
 typedef enum {
     ZM_TIME_2_2,
@@ -159,7 +160,7 @@ typedef struct {
     zm_chord_type_t *type;
     zm_chord_style_t *style;
     zm_duration_t duration;
-    zm_duration_type_t duration_type;
+    zm_chord_frequency_t frequency;
 } zm_chord_t;
 
 typedef struct {
@@ -184,6 +185,7 @@ typedef struct {
 typedef struct {
     zm_beat_t *beat;
     zm_note_t surface;
+    zm_duration_t cadence;
 } zm_rhythm_t;
 
 typedef enum {

@@ -68,9 +68,10 @@ typedef struct {
     zm_section_t *section;
     zm_chord_type_t *chord_type;
     zm_chord_style_t *chord_style;
-    zm_duration_type_t duration_type;
+    zm_chord_frequency_t chord_frequency;
     zm_beat_t *beat;
     zm_duration_t duration;
+    zm_duration_t drum_cadence;
 
     zm_time_x down_at;
     zm_time_x up_at;
@@ -173,7 +174,7 @@ static void play_chord(ysw_editor_t *editor, zm_chord_t *chord)
         .chord.root = chord->root,
         .chord.type = chord->type,
         .chord.style = chord->style,
-        .chord.duration = zm_get_ticks_per_measure(editor->section->time) / chord->duration_type,
+        .chord.duration = zm_get_ticks_per_measure(editor->section->time) / chord->frequency,
     };
     play_step(editor, &step);
 }
@@ -345,7 +346,7 @@ static void set_tempo(ysw_editor_t *editor, zm_tempo_x tempo)
     update_tlm(editor);
 }
 
-static void set_duration(ysw_editor_t *editor, zm_duration_t duration)
+static void set_default_note_duration(ysw_editor_t *editor, zm_duration_t duration)
 {
     zm_step_t *step = NULL;
     if (is_step_position(editor) && editor->duration != ZM_AS_PLAYED) {
@@ -567,7 +568,7 @@ static void realize_chord(ysw_editor_t *editor, zm_chord_t *chord)
     step->chord.root = chord->root;
     step->chord.type = chord->type;
     step->chord.style = chord->style;
-    step->chord.duration_type = chord->duration_type;
+    step->chord.frequency = chord->frequency;
     step->chord.duration = 0; // set by recalculate
 
     finalize_step(editor, step_index);
@@ -579,6 +580,7 @@ static void realize_stroke(ysw_editor_t *editor, zm_note_t midi_note)
     zm_step_t *step = realize_step(editor, &step_index, 0);
 
     step->rhythm.surface = midi_note;
+    step->rhythm.cadence = editor->drum_cadence;
 
     finalize_step(editor, step_index);
 }
@@ -739,10 +741,22 @@ static void on_tempo(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item
     set_tempo(editor, item->value);
 }
 
-static void on_settings_duration(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_default_note_duration(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    set_duration(editor, item->value);
+    set_default_note_duration(editor, item->value);
+}
+
+static void on_default_chord_frequency(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    editor->chord_frequency = item->value;
+}
+
+static void on_default_drum_cadence(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    editor->drum_cadence = item->value;
 }
 
 static void set_tie(ysw_editor_t *editor, zm_tie_x tie)
@@ -912,7 +926,7 @@ static void release_note(ysw_editor_t *editor, zm_note_t midi_note, uint32_t up_
             .root = midi_note,
             .type = editor->chord_type,
             .style = editor->chord_style,
-            .duration_type = editor->duration_type,
+            .frequency = editor->chord_frequency,
         };
         realize_chord(editor, &chord);
     } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
@@ -936,7 +950,7 @@ static void on_note(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 static void on_chord_duration(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    editor->chord_builder.duration_type = item->value;
+    editor->chord_builder.frequency = item->value;
     play_chord(editor, &editor->chord_builder);
     realize_chord(editor, &editor->chord_builder);
 }
@@ -1353,17 +1367,48 @@ static const ysw_menu_item_t tempo_menu[] = {
     { 0, "Tempo (BPM)", YSW_MF_END, NULL, 0, NULL },
 };
 
+static const ysw_menu_item_t default_note_duration_menu[] = {
+    { YSW_R1_C1, "Quarter", YSW_MF_COMMAND, on_default_note_duration, ZM_QUARTER, NULL },
+    { YSW_R1_C2, "Half", YSW_MF_COMMAND, on_default_note_duration, ZM_HALF, NULL },
+    { YSW_R1_C3, "Whole", YSW_MF_COMMAND, on_default_note_duration, ZM_WHOLE, NULL },
+    { YSW_R1_C4, "As\nPlayed", YSW_MF_COMMAND, on_default_note_duration, 0, NULL },
+
+    { YSW_R2_C1, "Eighth", YSW_MF_COMMAND, on_default_note_duration, ZM_EIGHTH, NULL },
+    { YSW_R2_C2, "Dotted\nQuarter", YSW_MF_COMMAND, on_default_note_duration, ZM_DOTTED_QUARTER, NULL },
+
+    { YSW_R3_C1, "Sixtnth", YSW_MF_COMMAND, on_default_note_duration, ZM_SIXTEENTH, NULL },
+    { YSW_R3_C3, "Dotted\nHalf", YSW_MF_COMMAND, on_default_note_duration, ZM_DOTTED_HALF, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Note", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t default_chord_frequency_menu[] = {
+    { YSW_R1_C1, "1 per\nMeasure", YSW_MF_COMMAND, on_default_chord_frequency, ZM_ONE_PER_MEASURE, NULL },
+    { YSW_R1_C2, "2 per\nMeasure", YSW_MF_COMMAND, on_default_chord_frequency, ZM_TWO_PER_MEASURE, NULL },
+    { YSW_R1_C3, "3 per\nMeasure", YSW_MF_COMMAND, on_default_chord_frequency, ZM_THREE_PER_MEASURE, NULL },
+    { YSW_R1_C4, "4 per\nMeasure", YSW_MF_COMMAND, on_default_chord_frequency, ZM_FOUR_PER_MEASURE, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Chord", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t default_drum_cadence_menu[] = {
+    { YSW_R1_C1, "Sixtnth", YSW_MF_COMMAND, on_default_drum_cadence, ZM_SIXTEENTH, NULL },
+    { YSW_R1_C2, "Eighth", YSW_MF_COMMAND, on_default_drum_cadence, ZM_EIGHTH, NULL },
+    { YSW_R1_C3, "Quarter", YSW_MF_COMMAND, on_default_drum_cadence, ZM_QUARTER, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Drum", YSW_MF_END, NULL, 0, NULL },
+};
+
 static const ysw_menu_item_t settings_duration_menu[] = {
-    { YSW_R1_C1, "Quarter", YSW_MF_COMMAND, on_settings_duration, ZM_QUARTER, NULL },
-    { YSW_R1_C2, "Half", YSW_MF_COMMAND, on_settings_duration, ZM_HALF, NULL },
-    { YSW_R1_C3, "Whole", YSW_MF_COMMAND, on_settings_duration, ZM_WHOLE, NULL },
-    { YSW_R1_C4, "As\nPlayed", YSW_MF_COMMAND, on_settings_duration, 0, NULL },
-
-    { YSW_R2_C1, "Eighth", YSW_MF_COMMAND, on_settings_duration, ZM_EIGHTH, NULL },
-    { YSW_R2_C2, "Dotted\nQuarter", YSW_MF_COMMAND, on_settings_duration, ZM_DOTTED_QUARTER, NULL },
-
-    { YSW_R3_C1, "Sixtnth", YSW_MF_COMMAND, on_settings_duration, ZM_SIXTEENTH, NULL },
-    { YSW_R3_C3, "Dotted\nHalf", YSW_MF_COMMAND, on_settings_duration, ZM_DOTTED_HALF, NULL },
+    { YSW_R1_C1, "Note", YSW_MF_PLUS, ysw_menu_nop, 0, default_note_duration_menu },
+    { YSW_R1_C2, "Chord", YSW_MF_PLUS, ysw_menu_nop, 0, default_chord_frequency_menu },
+    { YSW_R1_C3, "Drum", YSW_MF_PLUS, ysw_menu_nop, 0, default_drum_cadence_menu },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
@@ -1371,19 +1416,12 @@ static const ysw_menu_item_t settings_duration_menu[] = {
 };
 
 static const ysw_menu_item_t settings_menu[] = {
-    { 5, "Key\nSig", YSW_MF_PLUS, ysw_menu_nop, 0, key_signature_menu },
-    { 6, "Time\nSig", YSW_MF_PLUS, ysw_menu_nop, 0, time_signature_menu },
-    { 7, "Tempo\n(BPM)", YSW_MF_PLUS, ysw_menu_nop, 0, tempo_menu },
+    { YSW_R1_C1, "Key\nSig", YSW_MF_PLUS, ysw_menu_nop, 0, key_signature_menu },
+    { YSW_R1_C2, "Time\nSig", YSW_MF_PLUS, ysw_menu_nop, 0, time_signature_menu },
+    { YSW_R1_C3, "Tempo\n(BPM)", YSW_MF_PLUS, ysw_menu_nop, 0, tempo_menu },
+    { YSW_R1_C4, "Duration", YSW_MF_PLUS, ysw_menu_nop, 0, settings_duration_menu },
 
-    { 16, "Note\nDuration", YSW_MF_PLUS, ysw_menu_nop, 0, settings_duration_menu },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-
-    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 27, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-
-    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
     { 0, "Settings", YSW_MF_END, NULL, 0, NULL },
 };
@@ -1429,9 +1467,10 @@ static const ysw_menu_item_t insert_note_duration_menu[] = {
 };
 
 static const ysw_menu_item_t chord_duration_menu[] = {
-    { YSW_R1_C1, "Full\nMeasure", YSW_MF_COMMAND, on_chord_duration, ZM_FULL_MEASURE, NULL },
-    { YSW_R1_C2, "Half\nMeasure", YSW_MF_COMMAND, on_chord_duration, ZM_HALF_MEASURE, NULL },
-    { YSW_R1_C3, "Quarter\nMeasure", YSW_MF_COMMAND, on_chord_duration, ZM_QUARTER_MEASURE, NULL },
+    { YSW_R1_C1, "1 per\nMeasure", YSW_MF_COMMAND, on_chord_duration, ZM_ONE_PER_MEASURE, NULL },
+    { YSW_R1_C2, "2 per\nMeasure", YSW_MF_COMMAND, on_chord_duration, ZM_TWO_PER_MEASURE, NULL },
+    { YSW_R1_C3, "3 per\nMeasure", YSW_MF_COMMAND, on_chord_duration, ZM_THREE_PER_MEASURE, NULL },
+    { YSW_R1_C4, "4 per\nMeasure", YSW_MF_COMMAND, on_chord_duration, ZM_FOUR_PER_MEASURE, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
@@ -1567,9 +1606,10 @@ void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *se
 
     editor->chord_type = ysw_array_get(music->chord_types, DEFAULT_CHORD_TYPE);
     editor->chord_style = ysw_array_get(music->chord_styles, DEFAULT_CHORD_STYLE);
-    editor->duration_type = ZM_FULL_MEASURE;
+    editor->chord_frequency = ZM_ONE_PER_MEASURE;
     editor->beat = ysw_array_get(music->beats, DEFAULT_BEAT);
     editor->duration = ZM_AS_PLAYED;
+    editor->drum_cadence = ZM_EIGHTH;
 
     editor->insert = true;
     editor->position = 0;

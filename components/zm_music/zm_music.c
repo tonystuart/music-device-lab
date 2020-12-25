@@ -499,7 +499,7 @@ static void parse_section(zm_mfr_t *zm_mfr)
             step->chord.root = atoi(zm_mfr->tokens[1]);
             step->chord.type = ysw_array_get(zm_mfr->music->chord_types, atoi(zm_mfr->tokens[2]));
             step->chord.style = ysw_array_get(zm_mfr->music->chord_styles, atoi(zm_mfr->tokens[3]));
-            step->chord.duration_type = atoi(zm_mfr->tokens[4]);
+            step->chord.frequency = atoi(zm_mfr->tokens[4]);
         } else if (step && type == ZM_MF_RHYTHM && zm_mfr->token_count == 3) {
             step->rhythm.beat = ysw_array_get(zm_mfr->music->beats, atoi(zm_mfr->tokens[1]));
             step->rhythm.surface = atoi(zm_mfr->tokens[2]);
@@ -553,7 +553,7 @@ static void emit_sections(zm_mfw_t *zm_mfw)
                         step->chord.root,
                         get_map(zm_mfw->chord_type_map, step->chord.type),
                         get_map(zm_mfw->style_map, step->chord.style),
-                        step->chord.duration_type);
+                        step->chord.frequency);
             }
             if (step->rhythm.beat) {
                 fprintf(zm_mfw->file, "%d,%d,%d\n",
@@ -949,7 +949,7 @@ zm_time_x zm_get_step_duration(zm_step_t *step, zm_time_x ticks_per_measure)
     zm_time_x step_duration = 0;
 
     if (step->rhythm.surface) {
-        step_duration = ZM_EIGHTH;
+        step_duration = step->rhythm.cadence;
     } else if (step->melody.duration) {
         step_duration = zm_round_duration(step->melody.duration, NULL, NULL);
     } else if (step->chord.duration) {
@@ -982,7 +982,7 @@ void zm_recalculate_section(zm_section_t *section)
         step->measure = measure;
 
         if (step->chord.root) {
-            step->chord.duration = ticks_per_measure / step->chord.duration_type;
+            step->chord.duration = ticks_per_measure / step->chord.frequency;
         }
 
         zm_time_x step_duration = zm_get_step_duration(step, ticks_per_measure);
