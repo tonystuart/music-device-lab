@@ -123,8 +123,13 @@ void ysw_main_init_device(ysw_bus_t *bus, zm_music_t *music)
 
 int main(int argc, char *argv[])
 {
+#if 0
+    void zm_generate_scales()
+    zm_generate_scales();
+#else
     extern void ysw_main_create();
     ysw_main_create();
+#endif
     return 0;
 }
 

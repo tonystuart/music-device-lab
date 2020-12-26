@@ -15,6 +15,7 @@
 #include "ysw_header.h"
 #include "ysw_heap.h"
 #include "ysw_menu.h"
+#include "ysw_midi.h"
 #include "ysw_popup.h"
 #include "ysw_staff.h"
 #include "ysw_string.h"
@@ -56,6 +57,11 @@ static const char *modes[] = {
     "Rhythm",
 };
 
+typedef struct {
+    zm_octave_t octave;
+    zm_note_t semis;
+} insert_settings;
+
 #define YSW_EDITOR_MODE_COUNT 3
 
 typedef struct {
@@ -89,6 +95,7 @@ typedef struct {
 
     ysw_popup_t *popup;
 
+    insert_settings insert_settings;
     zm_chord_t chord_builder;
 
 } ysw_editor_t;
@@ -209,7 +216,7 @@ static void display_melody_mode(ysw_editor_t *editor)
         uint32_t millis = ysw_ticks_to_millis(step->melody.duration, editor->section->tempo);
         zm_note_t note = step->melody.note;
         if (note) {
-            uint8_t octave = (note / 12) - 1;
+            zm_octave_t octave = (note / 12) - 1;
             const char *name = zm_get_note_name(note);
             snprintf(value, sizeof(value), "%s%d (%d ms)", name, octave, millis);
         } else {
@@ -1076,6 +1083,148 @@ static void on_chord_note(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t 
     generate_chord_type_menu(editor);
 }
 
+static void on_insert_note_duration(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_note_t midi_note = (editor->insert_settings.octave * 12) + editor->insert_settings.semis;
+    zm_time_x duration_millis = ysw_ticks_to_millis(item->value, editor->section->tempo);
+    realize_note(editor, midi_note, duration_millis);
+}
+
+static void on_insert_note_pitch(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    editor->insert_settings.semis = item->value;
+}
+
+static void on_octave(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_octave_t new_octave = editor->insert_settings.octave + item->value;
+    if (new_octave >= YSW_MIDI_LOWEST_OCTAVE && new_octave <= YSW_MIDI_HIGHEST_OCTAVE) {
+        editor->insert_settings.octave = new_octave;
+        // TODO: display a confirmation?
+    }
+}
+
+// TODO: add menu_items for keyboard keys
+
+static ysw_menu_item_t chromatic_menu[] = { // dynamically updated
+    { YSW_R1_C1, " ", 0, NULL, 0, NULL },
+    { YSW_R1_C2, " ", 0, NULL, 0, NULL },
+    { YSW_R1_C3, " ", 0, NULL, 0, NULL },
+    { YSW_R1_C4, " ", 0, NULL, 0, NULL },
+
+    { YSW_R2_C1, " ", 0, NULL, 0, NULL },
+    { YSW_R2_C2, " ", 0, NULL, 0, NULL },
+    { YSW_R2_C3, " ", 0, NULL, 0, NULL },
+    { YSW_R2_C4, " ", 0, NULL, 0, NULL },
+
+    { YSW_R3_C1, " ", 0, NULL, 0, NULL },
+    { YSW_R3_C2, " ", 0, NULL, 0, NULL },
+    { YSW_R3_C3, " ", 0, NULL, 0, NULL },
+    { YSW_R3_C4, " ", 0, NULL, 0, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C2, "Octave-", YSW_MF_PRESS, on_octave, -1, NULL },
+    { YSW_R4_C3, "Octave+", YSW_MF_PRESS, on_octave, +1, NULL },
+
+    { 0, "Chromatic", YSW_MF_END, NULL, 0, NULL },
+};
+
+static ysw_menu_item_t diatonic_menu[] = { // dynamically updated
+    { YSW_R1_C1, " ", 0, NULL, 0, NULL },
+    { YSW_R1_C2, " ", 0, NULL, 0, NULL },
+    { YSW_R1_C3, " ", 0, NULL, 0, NULL },
+    { YSW_R1_C4, " ", 0, NULL, 0, NULL },
+
+    { YSW_R2_C1, " ", 0, NULL, 0, NULL },
+    { YSW_R2_C2, " ", 0, NULL, 0, NULL },
+    { YSW_R2_C3, " ", 0, NULL, 0, NULL },
+    { YSW_R2_C4, " ", 0, NULL, 0, NULL },
+
+    { YSW_R3_C1, " ", 0, NULL, 0, NULL },
+    { YSW_R3_C2, " ", 0, NULL, 0, NULL },
+    { YSW_R3_C3, " ", 0, NULL, 0, NULL },
+    { YSW_R3_C4, " ", 0, NULL, 0, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C2, "Octave-", YSW_MF_PRESS, on_octave, -1, NULL },
+    { YSW_R4_C3, "Octave+", YSW_MF_PRESS, on_octave, +1, NULL },
+    { YSW_R4_C4, "Chro-\nmatic", YSW_MF_PLUS, ysw_menu_nop, +1, chromatic_menu },
+
+    { 0, " ", YSW_MF_END, NULL, 0, NULL },
+};
+
+#define DIATONIC_MENU_SZ (sizeof(diatonic_menu) / sizeof(diatonic_menu[0]))
+
+static const char *flats[] = {
+    "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"
+};
+
+static const char *sharps[] = {
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+};
+
+static void init_item(ysw_menu_item_t *item, uint32_t scan_code, const char *name, ysw_menu_cb_t cb, intptr_t value, const ysw_menu_item_t *menu)
+{
+    item->scan_code = scan_code;
+    item->name = name;
+    item->flags = menu ? YSW_MF_PLUS : YSW_MF_COMMAND;
+    item->cb = cb;
+    item->value = value;
+    item->submenu = menu;
+}
+
+static void generate_scale_notes_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, const ysw_menu_item_t *menu, const char *name)
+{
+    ysw_menu_item_t *p = diatonic_menu;
+    ysw_menu_item_t *q = chromatic_menu;
+    const zm_key_signature_t *ks = zm_get_key_signature(editor->section->key);
+    const zm_scale_t *scale = &zm_scales[editor->section->key]; // NB not ks->tonic_semis!
+    ESP_LOGD(TAG, "key=%s", ks->name);
+    for (zm_note_t i = 0; i < 12; i++) {
+        if (scale->semitone[i] > 0) { // diatonic
+            int8_t degree = scale->semitone[i] - 1; // -1 because scale semitones are 1-based
+            const char *name = NULL;
+            if (ks->flats) {
+                name = flats[degree];
+            } else {
+                name = sharps[degree];
+            }
+            init_item(p, scan_code_map[p - diatonic_menu], name, cb, degree, menu);
+            ESP_LOGD(TAG, "p name=%s, semi=%d", name, degree);
+            p++;
+        } else { // chromatic
+            int8_t degree = -scale->semitone[i] - 1; // -1 because scale semitones are 1-based
+            const char *name = NULL;
+            if (ks->flats) {
+                name = flats[degree];
+            } else {
+                name = sharps[degree];
+            }
+            init_item(q, scan_code_map[q - chromatic_menu], name, cb, degree, menu);
+            ESP_LOGD(TAG, "q name=%s, semi=%d", name, degree);
+            q++;
+        }
+    }
+    diatonic_menu[DIATONIC_MENU_SZ - 1].name = name;
+}
+
+static const ysw_menu_item_t insert_note_duration_menu[];
+
+static void on_insert_note(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    generate_scale_notes_menu(editor, on_insert_note_pitch, insert_note_duration_menu, "Note");
+}
+
+static void on_insert_chord(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    generate_scale_notes_menu(editor, on_chord_note, NULL, "Chord");
+}
+
 int compare_steps(const void *left, const void *right)
 {
     const zm_step_t *left_step = *(zm_step_t * const *)left;
@@ -1451,15 +1600,15 @@ static const ysw_menu_item_t preferences_menu[] = {
 };
 
 static const ysw_menu_item_t insert_note_duration_menu[] = {
-    { YSW_R1_C1, "Quarter", YSW_MF_NOP, ysw_menu_nop, ZM_QUARTER, NULL },
-    { YSW_R1_C2, "Half", YSW_MF_NOP, ysw_menu_nop, ZM_HALF, NULL },
-    { YSW_R1_C3, "Whole", YSW_MF_NOP, ysw_menu_nop, ZM_WHOLE, NULL },
+    { YSW_R1_C1, "Quarter", YSW_MF_COMMAND, on_insert_note_duration, ZM_QUARTER, NULL },
+    { YSW_R1_C2, "Half", YSW_MF_COMMAND, on_insert_note_duration, ZM_HALF, NULL },
+    { YSW_R1_C3, "Whole", YSW_MF_COMMAND, on_insert_note_duration, ZM_WHOLE, NULL },
 
-    { YSW_R2_C1, "Eighth", YSW_MF_NOP, ysw_menu_nop, ZM_EIGHTH, NULL },
-    { YSW_R2_C2, "Dotted\nQuarter", YSW_MF_NOP, ysw_menu_nop, ZM_DOTTED_QUARTER, NULL },
+    { YSW_R2_C1, "Eighth", YSW_MF_COMMAND, on_insert_note_duration, ZM_EIGHTH, NULL },
+    { YSW_R2_C2, "Dotted\nQuarter", YSW_MF_COMMAND, on_insert_note_duration, ZM_DOTTED_QUARTER, NULL },
 
-    { YSW_R3_C1, "Sixtnth", YSW_MF_NOP, ysw_menu_nop, ZM_SIXTEENTH, NULL },
-    { YSW_R3_C3, "Dotted\nHalf", YSW_MF_NOP, ysw_menu_nop, ZM_DOTTED_HALF, NULL },
+    { YSW_R3_C1, "Sixtnth", YSW_MF_COMMAND, on_insert_note_duration, ZM_SIXTEENTH, NULL },
+    { YSW_R3_C3, "Dotted\nHalf", YSW_MF_COMMAND, on_insert_note_duration, ZM_DOTTED_HALF, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
@@ -1477,34 +1626,6 @@ static const ysw_menu_item_t chord_duration_menu[] = {
     { 0, "Duration", YSW_MF_END, NULL, 0, NULL },
 };
 
-// See https://en.wikipedia.org/wiki/Octave#Octave_of_a_pitch
-
-// TODO: generate based on diatonic notes of current key
-// TODO: add menu_items for keyboard keys
-
-static const ysw_menu_item_t chord_octave4_menu[] = {
-    { YSW_R1_C1, "C", YSW_MF_PLUS, on_chord_note, 60, chord_type_menu },
-    { YSW_R1_C2, "D", YSW_MF_PLUS, on_chord_note, 62, chord_type_menu },
-    { YSW_R1_C3, "E", YSW_MF_PLUS, on_chord_note, 64, chord_type_menu },
-    { YSW_R1_C4, "F", YSW_MF_PLUS, on_chord_note, 65, chord_type_menu },
-
-    { YSW_R2_C1, "G", YSW_MF_PLUS, on_chord_note, 67, chord_type_menu },
-    { YSW_R2_C2, "A", YSW_MF_PLUS, on_chord_note, 69, chord_type_menu },
-    { YSW_R2_C3, "B", YSW_MF_PLUS, on_chord_note, 71, chord_type_menu },
-    { YSW_R2_C4, "C#", YSW_MF_PLUS, on_chord_note, 61, chord_type_menu },
-
-    { YSW_R3_C1, "D#", YSW_MF_PLUS, on_chord_note, 63, chord_type_menu },
-    { YSW_R3_C2, "F#", YSW_MF_PLUS, on_chord_note, 66, chord_type_menu },
-    { YSW_R3_C3, "G#", YSW_MF_PLUS, on_chord_note, 68, chord_type_menu },
-    { YSW_R3_C4, "A#", YSW_MF_PLUS, on_chord_note, 70, chord_type_menu },
-
-    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
-    { YSW_R4_C2, "Octave-", YSW_MF_PLUS, ysw_menu_nop, 0, NULL },
-    { YSW_R4_C3, "Octave+", YSW_MF_PLUS, ysw_menu_nop, 0, NULL },
-
-    { 0, "Chord", YSW_MF_END, NULL, 0, NULL },
-};
-
 static const ysw_menu_item_t rest_duration_menu[] = {
     { YSW_R1_C1, "Quarter", YSW_MF_COMMAND, on_rest_duration, ZM_QUARTER, NULL },
     { YSW_R1_C2, "Half", YSW_MF_COMMAND, on_rest_duration, ZM_HALF, NULL },
@@ -1520,8 +1641,8 @@ static const ysw_menu_item_t rest_duration_menu[] = {
 };
 
 static const ysw_menu_item_t insert_menu[] = {
-    { YSW_R1_C1, "Note", YSW_MF_PLUS, ysw_menu_nop, 0, insert_note_duration_menu },
-    { YSW_R1_C2, "Chord", YSW_MF_PLUS, ysw_menu_nop, 0, chord_octave4_menu },
+    { YSW_R1_C1, "Note", YSW_MF_PLUS, on_insert_note, 0, diatonic_menu },
+    { YSW_R1_C2, "Chord", YSW_MF_PLUS, on_insert_chord, 0, diatonic_menu },
     { YSW_R1_C3, "Beat", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
     { YSW_R2_C1, "Rest", YSW_MF_PLUS, ysw_menu_nop, 0, rest_duration_menu },
@@ -1614,6 +1735,7 @@ void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *se
     editor->insert = true;
     editor->position = 0;
     editor->mode = YSW_EDITOR_MODE_MELODY;
+    editor->insert_settings.octave = YSW_MIDI_MIDDLE_OCTAVE;
 
     zm_recalculate_section(editor->section);
 

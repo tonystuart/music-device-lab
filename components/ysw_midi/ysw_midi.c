@@ -9,13 +9,13 @@
 
 #include "ysw_midi.h"
 
-static bool diatonic_midi_notes[] = {
+static bool major_diatonics[] = {
     true, false, true, false, true, true, false, true, false, true, false, true,
 };
 
-bool ysw_midi_is_diatonic(uint8_t midi_note)
+bool ysw_midi_is_major_diatonic(uint8_t midi_note)
 {
-    return diatonic_midi_notes[midi_note % 12];
+    return major_diatonics[midi_note % 12];
 }
 
 

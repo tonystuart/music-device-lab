@@ -57,7 +57,7 @@ typedef void (*ysw_menu_cb_t)(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_ite
 
 typedef struct ysw_menu_item_s {
     uint32_t scan_code;
-    char *name;
+    const char *name;
     uint32_t flags;
     ysw_menu_cb_t cb;
     intptr_t value;

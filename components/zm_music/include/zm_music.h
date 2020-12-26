@@ -10,6 +10,7 @@
 #pragma once
 
 #include "ysw_array.h"
+#include "ysw_common.h"
 #include "ysw_heap.h"
 #include "stdbool.h"
 #include "stdint.h"
@@ -37,6 +38,7 @@ typedef uint8_t zm_distance_x;
 typedef uint8_t zm_gm_x;
 typedef uint8_t zm_key_signature_x;
 typedef uint8_t zm_note_t;
+typedef uint8_t zm_octave_t;
 typedef uint8_t zm_patch_x;
 typedef uint8_t zm_percent_x;
 typedef uint8_t zm_program_x;
@@ -61,15 +63,23 @@ typedef struct {
     zm_time_x clock;
 } zm_settings_t;
 
-typedef struct {
+typedef struct PACKED {
     const char *name;
+    const bool major;
     const uint8_t sharps;
     const uint8_t flats;
     const uint8_t sharp_index[7];
     const uint8_t flat_index[7];
     const char *label;
     const uint8_t tonic;
+    const uint8_t tonic_semis;
 } zm_key_signature_t;
+
+typedef struct PACKED {
+    int8_t semitone[12];
+} zm_scale_t;
+
+extern const zm_scale_t zm_scales[];
 
 typedef enum {
     ZM_AS_PLAYED = 0,

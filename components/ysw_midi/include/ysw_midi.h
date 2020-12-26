@@ -23,13 +23,18 @@
 #define YSW_MIDI_UNPO 7 // 7 Unique Notes per Octave
 #define YSW_MIDI_USPO 12 // 12 Unique Semitones per Octave
 
-// https://newt.phys.unsw.edu.au/jw/notes.html
+// See https://newt.phys.unsw.edu.au/jw/notes.html
+// See https://en.wikipedia.org/wiki/Octave#Octave_of_a_pitch
 
 #define YSW_MIDI_LPN 21 // Lowest Piano Note
 #define YSW_MIDI_HPN 108 // Highest Piano Note
 #define YSW_MIDI_MIDDLE_C 60
 
-bool ysw_midi_is_diatonic(uint8_t midi_note);
+#define YSW_MIDI_LOWEST_OCTAVE 2
+#define YSW_MIDI_MIDDLE_OCTAVE 5
+#define YSW_MIDI_HIGHEST_OCTAVE 8
+
+bool ysw_midi_is_major_diatonic(uint8_t midi_note);
 
 static inline uint8_t ysw_midi_get_mode(uint8_t scale_root)
 {
