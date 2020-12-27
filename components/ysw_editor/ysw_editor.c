@@ -799,7 +799,7 @@ static const uint8_t scan_code_map[] = {
     YSW_R4_C4,
 };
 
-static void init_menu_item(ysw_menu_item_t *item, uint32_t scan_code, const char *name, ysw_menu_cb_t cb, intptr_t value, const ysw_menu_item_t *submenu)
+static void initialize_item(ysw_menu_item_t *item, uint32_t scan_code, const char *name, ysw_menu_cb_t cb, intptr_t value, const ysw_menu_item_t *submenu)
 {
     item->scan_code = scan_code;
     item->name = name;
@@ -809,13 +809,8 @@ static void init_menu_item(ysw_menu_item_t *item, uint32_t scan_code, const char
     item->submenu = submenu;
 }
 
-static ysw_menu_item_t chord_style_template[YSW_APP_SOFTKEY_SZ + 1];
-
-static const ysw_menu_item_t chord_duration_menu[]; // forward declaration
-
-static void finalize_menu_item(ysw_menu_item_t *p, const char *name)
+static void finalize_menu(ysw_menu_item_t *p, const char *name)
 {
-
     p->scan_code = YSW_R4_C1;
     p->name = "Back";
     p->flags = YSW_MF_MINUS;
@@ -828,6 +823,10 @@ static void finalize_menu_item(ysw_menu_item_t *p, const char *name)
     p->flags = YSW_MF_END;
 }
 
+static ysw_menu_item_t chord_style_template[YSW_APP_SOFTKEY_SZ + 1];
+
+static const ysw_menu_item_t chord_duration_menu[]; // forward declaration
+
 static void generate_chord_style_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_menu_item_t *template, const ysw_menu_item_t *submenu, const char *name)
 {
     zm_distance_x distance_count = ysw_array_get_count(editor->chord_builder.type->distances);
@@ -837,11 +836,11 @@ static void generate_chord_style_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ys
     for (zm_chord_style_x i = 0; i < style_count && (p - template) < 12; i++) {
         zm_chord_style_t *style = ysw_array_get(editor->music->chord_styles, i);
         if (style->distance_count == distance_count) {
-            init_menu_item(p, scan_code_map[p - template], style->label, cb, i, submenu);
+            initialize_item(p, scan_code_map[p - template], style->label, cb, i, submenu);
             p++;
         }
     }
-    finalize_menu_item(p, name);
+    finalize_menu(p, name);
 }
 
 static ysw_menu_item_t chord_type_template[YSW_APP_SOFTKEY_SZ + 1];
@@ -854,10 +853,10 @@ static void generate_chord_type_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw
     ysw_menu_item_t *p = template;
     for (zm_chord_type_x i = 0; i < count; i++) {
         zm_chord_type_t *chord_type = ysw_array_get(editor->music->chord_types, i);
-        init_menu_item(p, scan_code_map[i], chord_type->label, cb, i, submenu);
+        initialize_item(p, scan_code_map[i], chord_type->label, cb, i, submenu);
         p++;
     }
-    finalize_menu_item(p, name);
+    finalize_menu(p, name);
 }
 
 static void generate_program_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_menu_item_t *template, const ysw_menu_item_t *submenu, const char *name, zm_program_type_t type)
@@ -868,11 +867,11 @@ static void generate_program_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_me
     for (zm_chord_style_x i = 0; i < count && (p - template) < 12; i++) {
         zm_program_t *program = ysw_array_get(editor->music->programs, i);
         if (program->type == type) {
-            init_menu_item(p, scan_code_map[p - template], program->name, cb, i, submenu);
+            initialize_item(p, scan_code_map[p - template], program->name, cb, i, submenu);
             p++;
         }
     }
-    finalize_menu_item(p, name);
+    finalize_menu(p, name);
 }
 
 static const char *flats[] = {
@@ -883,13 +882,15 @@ static const char *sharps[] = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
 };
 
-static ysw_menu_item_t diatonic_menu[];
-static ysw_menu_item_t chromatic_menu[];
+static ysw_menu_item_t diatonic_template[YSW_APP_SOFTKEY_SZ + 1];
+static ysw_menu_item_t chromatic_template[YSW_APP_SOFTKEY_SZ + 1];
+
+static void on_octave(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item);
 
 static void generate_scale_notes_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, const ysw_menu_item_t *template, const char *name)
 {
-    ysw_menu_item_t *p = diatonic_menu;
-    ysw_menu_item_t *q = chromatic_menu;
+    ysw_menu_item_t *p = diatonic_template;
+    ysw_menu_item_t *q = chromatic_template;
     const zm_key_signature_t *ks = zm_get_key_signature(editor->section->key);
     const zm_scale_t *scale = &zm_scales[editor->section->key]; // NB not ks->tonic_semis!
     ESP_LOGD(TAG, "key=%s", ks->name);
@@ -902,7 +903,7 @@ static void generate_scale_notes_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, co
             } else {
                 name = sharps[degree];
             }
-            init_menu_item(p, scan_code_map[p - diatonic_menu], name, cb, degree, template);
+            initialize_item(p, scan_code_map[p - diatonic_template], name, cb, degree, template);
             ESP_LOGD(TAG, "p name=%s, semi=%d", name, degree);
             p++;
         } else { // chromatic
@@ -913,12 +914,22 @@ static void generate_scale_notes_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, co
             } else {
                 name = sharps[degree];
             }
-            init_menu_item(q, scan_code_map[q - chromatic_menu], name, cb, degree, template);
+            initialize_item(q, scan_code_map[q - chromatic_template], name, cb, degree, template);
             ESP_LOGD(TAG, "q name=%s, semi=%d", name, degree);
             q++;
         }
     }
-    diatonic_menu[16].name = name;
+    *p++ = (ysw_menu_item_t) { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL };
+    *p++ = (ysw_menu_item_t) { YSW_R4_C2, "Octave-", YSW_MF_PRESS, on_octave, -1, NULL };
+    *p++ = (ysw_menu_item_t) { YSW_R4_C3, "Octave+", YSW_MF_PRESS, on_octave, +1, NULL };
+    *p++ = (ysw_menu_item_t) { YSW_R4_C4, "Chro-\nmatic", YSW_MF_PLUS, ysw_menu_nop, +1, chromatic_template };
+    *p++ = (ysw_menu_item_t) { 0, name, YSW_MF_END, NULL, 0, NULL };
+
+    *q++ = (ysw_menu_item_t) { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL };
+    *q++ = (ysw_menu_item_t) { YSW_R4_C2, "Octave-", YSW_MF_PRESS, on_octave, -1, NULL };
+    *q++ = (ysw_menu_item_t) { YSW_R4_C3, "Octave+", YSW_MF_PRESS, on_octave, +1, NULL };
+    *q++ = (ysw_menu_item_t) { 0, "Chromatic", YSW_MF_END, NULL, 0, NULL };
+
 }
 
 // Handlers
@@ -1289,55 +1300,6 @@ static ysw_app_control_t process_event(void *context, ysw_event_t *event)
     return editor->control;
 }
 
-// TODO: add menu_items for keyboard keys
-
-static ysw_menu_item_t chromatic_menu[] = { // dynamically updated
-    { YSW_R1_C1, " ", 0, NULL, 0, NULL },
-    { YSW_R1_C2, " ", 0, NULL, 0, NULL },
-    { YSW_R1_C3, " ", 0, NULL, 0, NULL },
-    { YSW_R1_C4, " ", 0, NULL, 0, NULL },
-
-    { YSW_R2_C1, " ", 0, NULL, 0, NULL },
-    { YSW_R2_C2, " ", 0, NULL, 0, NULL },
-    { YSW_R2_C3, " ", 0, NULL, 0, NULL },
-    { YSW_R2_C4, " ", 0, NULL, 0, NULL },
-
-    { YSW_R3_C1, " ", 0, NULL, 0, NULL },
-    { YSW_R3_C2, " ", 0, NULL, 0, NULL },
-    { YSW_R3_C3, " ", 0, NULL, 0, NULL },
-    { YSW_R3_C4, " ", 0, NULL, 0, NULL },
-
-    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
-    { YSW_R4_C2, "Octave-", YSW_MF_PRESS, on_octave, -1, NULL },
-    { YSW_R4_C3, "Octave+", YSW_MF_PRESS, on_octave, +1, NULL },
-
-    { 0, "Chromatic", YSW_MF_END, NULL, 0, NULL },
-};
-
-static ysw_menu_item_t diatonic_menu[] = { // dynamically updated
-    { YSW_R1_C1, " ", 0, NULL, 0, NULL },
-    { YSW_R1_C2, " ", 0, NULL, 0, NULL },
-    { YSW_R1_C3, " ", 0, NULL, 0, NULL },
-    { YSW_R1_C4, " ", 0, NULL, 0, NULL },
-
-    { YSW_R2_C1, " ", 0, NULL, 0, NULL },
-    { YSW_R2_C2, " ", 0, NULL, 0, NULL },
-    { YSW_R2_C3, " ", 0, NULL, 0, NULL },
-    { YSW_R2_C4, " ", 0, NULL, 0, NULL },
-
-    { YSW_R3_C1, " ", 0, NULL, 0, NULL },
-    { YSW_R3_C2, " ", 0, NULL, 0, NULL },
-    { YSW_R3_C3, " ", 0, NULL, 0, NULL },
-    { YSW_R3_C4, " ", 0, NULL, 0, NULL },
-
-    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
-    { YSW_R4_C2, "Octave-", YSW_MF_PRESS, on_octave, -1, NULL },
-    { YSW_R4_C3, "Octave+", YSW_MF_PRESS, on_octave, +1, NULL },
-    { YSW_R4_C4, "Chro-\nmatic", YSW_MF_PLUS, ysw_menu_nop, +1, chromatic_menu },
-
-    { 0, " ", YSW_MF_END, NULL, 0, NULL },
-};
-
 // Layout of keycodes generated by keyboard:
 //
 //    0,  1,      2,  3,  4,      5,  6,  7,  8,
@@ -1694,8 +1656,8 @@ static const ysw_menu_item_t rest_duration_menu[] = {
 };
 
 static const ysw_menu_item_t insert_menu[] = {
-    { YSW_R1_C1, "Note", YSW_MF_PLUS, on_insert_note, 0, diatonic_menu },
-    { YSW_R1_C2, "Chord", YSW_MF_PLUS, on_insert_chord, 0, diatonic_menu },
+    { YSW_R1_C1, "Note", YSW_MF_PLUS, on_insert_note, 0, diatonic_template },
+    { YSW_R1_C2, "Chord", YSW_MF_PLUS, on_insert_chord, 0, diatonic_template },
     { YSW_R1_C3, "Beat", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
     { YSW_R2_C1, "Rest", YSW_MF_PLUS, ysw_menu_nop, 0, rest_duration_menu },
