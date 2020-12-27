@@ -177,7 +177,6 @@ typedef struct {
 typedef struct {
     zm_note_t note; // Use 0 for rest
     zm_duration_t duration;
-    zm_time_x articulation;
     zm_tie_x tie; // tie/portamento
 } zm_melody_t;
 

@@ -175,6 +175,15 @@ static void play_position(ysw_editor_t *editor)
     }
 }
 
+static void play_note(ysw_editor_t *editor, zm_note_t midi_note, zm_time_x ticks)
+{
+    zm_step_t step = {
+        .melody.note = midi_note,
+        .melody.duration = ticks
+    };
+    play_step(editor, &step);
+}
+
 static void play_chord(ysw_editor_t *editor, zm_chord_t *chord)
 {
     zm_step_t step = {
@@ -1076,10 +1085,10 @@ static void generate_chord_type_menu(ysw_editor_t *editor)
     p->flags = YSW_MF_END;
 }
 
-static void on_chord_note(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_insert_chord_pitch(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    editor->chord_builder.root = item->value;
+    editor->chord_builder.root = (editor->insert_settings.octave * 12) + item->value;
     generate_chord_type_menu(editor);
 }
 
@@ -1087,7 +1096,9 @@ static void on_insert_note_duration(ysw_menu_t *menu, ysw_event_t *event, ysw_me
 {
     ysw_editor_t *editor = menu->context;
     zm_note_t midi_note = (editor->insert_settings.octave * 12) + editor->insert_settings.semis;
-    zm_time_x duration_millis = ysw_ticks_to_millis(item->value, editor->section->tempo);
+    zm_time_x duration_ticks = item->value;
+    play_note(editor, midi_note, duration_ticks);
+    zm_time_x duration_millis = ysw_ticks_to_millis(duration_ticks, editor->section->tempo);
     realize_note(editor, midi_note, duration_millis);
 }
 
@@ -1222,7 +1233,7 @@ static void on_insert_note(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t
 static void on_insert_chord(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    generate_scale_notes_menu(editor, on_chord_note, NULL, "Chord");
+    generate_scale_notes_menu(editor, on_insert_chord_pitch, chord_type_menu, "Chord");
 }
 
 int compare_steps(const void *left, const void *right)
