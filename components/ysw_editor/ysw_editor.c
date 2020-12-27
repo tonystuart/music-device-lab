@@ -611,6 +611,17 @@ static void realize_beat(ysw_editor_t *editor)
     finalize_step(editor, step_index);
 }
 
+static void realize_rest(ysw_editor_t *editor, zm_time_x duration_ticks)
+{
+    zm_step_x step_index;
+    zm_step_t *step = realize_step(editor, &step_index, 0);
+
+    step->melody.note = 0;
+    step->melody.duration = duration_ticks;
+
+    finalize_step(editor, step_index);
+}
+
 static void process_delete(ysw_editor_t *editor)
 {
     zm_step_x step_index = editor->position / 2;
@@ -803,6 +814,7 @@ static void on_delete_tie(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t 
 static void on_rest_duration(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
+    realize_rest(editor, item->value);
 }
 
 static void on_cycle_beat(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
