@@ -192,6 +192,15 @@ static void play_chord(ysw_editor_t *editor, zm_chord_t *chord)
     play_step(editor, &step);
 }
 
+static void play_stroke(ysw_editor_t *editor, zm_note_t surface)
+{
+    zm_step_t step = {
+        .rhythm.surface = surface,
+        .rhythm.cadence = editor->drum_cadence,
+    };
+    play_step(editor, &step);
+}
+
 static void display_program(ysw_editor_t *editor)
 {
     const char *value = "";
@@ -605,12 +614,12 @@ static void realize_chord(ysw_editor_t *editor, zm_chord_t *chord)
     finalize_step(editor, step_index);
 }
 
-static void realize_stroke(ysw_editor_t *editor, zm_note_t midi_note)
+static void realize_stroke(ysw_editor_t *editor, zm_note_t surface)
 {
     zm_step_x step_index;
     zm_step_t *step = realize_step(editor, &step_index, 0);
 
-    step->rhythm.surface = midi_note;
+    step->rhythm.surface = surface;
     step->rhythm.cadence = editor->drum_cadence;
 
     finalize_step(editor, step_index);
@@ -886,6 +895,21 @@ static void generate_beat_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_menu_
     }
     finalize_menu(p, name);
 }
+
+static void generate_surface_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_menu_item_t *template, const ysw_menu_item_t *submenu, const char *name)
+{
+    zm_patch_x count = ysw_array_get_count(editor->section->rhythm_program->patches);
+    // TODO: use multiple surface menus if necessary
+    ysw_menu_item_t *p = template;
+    for (zm_chord_style_x i = 0; i < count && (p - template) < 12; i++) {
+        zm_patch_t *patch = ysw_array_get(editor->section->rhythm_program->patches, i);
+        // TODO: consider adding a label representation of the name
+        initialize_item(p, scan_code_map[p - template], patch->name, cb, i, submenu);
+        p++;
+    }
+    finalize_menu(p, name);
+}
+
 static const char *flats[] = {
     "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"
 };
@@ -1242,6 +1266,22 @@ static void on_insert_chord(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_
 {
     ysw_editor_t *editor = menu->context;
     generate_scale_notes_menu(editor, on_insert_chord_pitch, chord_type_template, "Chord");
+}
+
+static ysw_menu_item_t stroke_template[YSW_APP_SOFTKEY_SZ + 1];
+
+static void on_insert_stroke_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_patch_t *patch = ysw_array_get(editor->section->rhythm_program->patches, item->value);
+    play_stroke(editor, patch->up_to);
+    realize_stroke(editor, patch->up_to);
+}
+
+static void on_insert_stroke_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    generate_surface_menu(editor, on_insert_stroke_2, stroke_template, NULL, "Stroke");
 }
 
 static ysw_menu_item_t beat_template[YSW_APP_SOFTKEY_SZ + 1];
@@ -1681,7 +1721,8 @@ static const ysw_menu_item_t rest_duration_menu[] = {
 static const ysw_menu_item_t insert_menu[] = {
     { YSW_R1_C1, "Note", YSW_MF_PLUS, on_insert_note, 0, diatonic_template },
     { YSW_R1_C2, "Chord", YSW_MF_PLUS, on_insert_chord, 0, diatonic_template },
-    { YSW_R1_C3, "Beat", YSW_MF_PLUS, on_insert_beat_1, 0, beat_template },
+    { YSW_R1_C3, "Stroke", YSW_MF_PLUS, on_insert_stroke_1, 0, stroke_template },
+    { YSW_R1_C4, "Beat", YSW_MF_PLUS, on_insert_beat_1, 0, beat_template },
 
     { YSW_R2_C1, "Rest", YSW_MF_PLUS, ysw_menu_nop, 0, rest_duration_menu },
 
