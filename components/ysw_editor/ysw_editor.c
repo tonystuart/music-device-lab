@@ -136,6 +136,7 @@ static inline uint32_t step_index_to_position(zm_step_x step_index)
     return (step_index * 2) + 1;
 }
 
+// TODO: replace other occurrences of this pattern with this function
 static zm_step_t *get_step(ysw_editor_t *editor)
 {
     zm_step_t *step = NULL;
@@ -1104,12 +1105,6 @@ static void on_insert_tie(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t 
     set_tie(editor, 1);
 }
 
-static void on_delete_tie(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
-{
-    ysw_editor_t *editor = menu->context;
-    set_tie(editor, 0);
-}
-
 static void on_rest_duration(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
@@ -1306,6 +1301,76 @@ static void on_insert_beat_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item
 {
     ysw_editor_t *editor = menu->context;
     generate_beat_menu(editor, on_insert_beat_2, beat_template, NULL, "Beat");
+}
+
+static void on_remove_beat(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_step_t *step = get_step(editor);
+    if (step) {
+        step->rhythm.beat = NULL;
+        recalculate(editor);
+        update_tlm(editor);
+    }
+}
+
+static void on_remove_chord(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_step_t *step = get_step(editor);
+    if (step) {
+        step->chord.root = 0;
+        step->chord.type = NULL;
+        step->chord.style = NULL;
+        step->chord.duration = 0;
+        step->chord.frequency = 0;
+        recalculate(editor);
+        update_tlm(editor);
+    }
+}
+
+static void on_remove_note(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_step_t *step = get_step(editor);
+    if (step) {
+        step->melody.note = 0;
+        step->melody.duration = 0;
+        step->melody.tie = 0;
+        recalculate(editor);
+        update_tlm(editor);
+    }
+}
+
+static void on_remove_rest(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_step_t *step = get_step(editor);
+    if (step) {
+        step->melody.note = 0;
+        step->melody.duration = 0;
+        step->melody.tie = 0;
+        recalculate(editor);
+        update_tlm(editor);
+    }
+}
+
+static void on_remove_stroke(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_step_t *step = get_step(editor);
+    if (step) {
+        step->rhythm.surface = 0;
+        recalculate(editor);
+        update_tlm(editor);
+    }
+}
+
+// TODO: consider whether it makes sense to use the set_tie approach for the above
+static void on_remove_tie(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    set_tie(editor, 0);
 }
 
 int compare_steps(const void *left, const void *right)
@@ -1742,6 +1807,21 @@ static const ysw_menu_item_t insert_menu[] = {
     { 0, "Insert", YSW_MF_END, NULL, 0, NULL },
 };
 
+static const ysw_menu_item_t remove_menu[] = {
+    { YSW_R1_C1, "Note", YSW_MF_COMMAND, on_remove_note, 0, NULL },
+    { YSW_R1_C2, "Chord", YSW_MF_COMMAND, on_remove_chord, 0, NULL },
+    { YSW_R1_C3, "Stroke", YSW_MF_COMMAND, on_remove_stroke, 0, NULL },
+    { YSW_R1_C4, "Beat", YSW_MF_COMMAND, on_remove_beat, 0, NULL },
+
+    { YSW_R2_C1, "Rest", YSW_MF_COMMAND, on_remove_rest, 0, NULL },
+
+    { YSW_R3_C1, "Tie", YSW_MF_COMMAND, on_remove_tie, 0, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Remove", YSW_MF_END, NULL, 0, NULL },
+};
+
 static const ysw_menu_item_t input_mode_menu[] = {
     { YSW_R1_C1, "Note", YSW_MF_COMMAND, on_mode_melody, 0, NULL },
     { YSW_R1_C2, "Chord", YSW_MF_COMMAND, on_mode_chord, 0, NULL },
@@ -1760,6 +1840,7 @@ const ysw_menu_item_t editor_menu[] = {
 
     { 5, "Input\nMode", YSW_MF_PLUS, ysw_menu_nop, 0, input_mode_menu },
     { 6, "Insert", YSW_MF_PLUS, ysw_menu_nop, 0, insert_menu },
+    { 7, "Remove", YSW_MF_PLUS, ysw_menu_nop, 0, remove_menu },
     { 8, "Up", YSW_MF_COMMAND, on_up, 0, NULL },
 
     { 9, "C6", YSW_MF_BUTTON, on_note, 72, NULL },
