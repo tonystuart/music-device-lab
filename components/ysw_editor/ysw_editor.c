@@ -192,6 +192,14 @@ static void play_chord(ysw_editor_t *editor, zm_chord_t *chord)
     play_step(editor, &step);
 }
 
+static void play_beat(ysw_editor_t *editor, zm_beat_t *beat)
+{
+    zm_step_t step = {
+        .rhythm.beat = beat,
+    };
+    play_step(editor, &step);
+}
+
 static void play_stroke(ysw_editor_t *editor, zm_note_t surface)
 {
     zm_step_t step = {
@@ -1290,6 +1298,7 @@ static void on_insert_beat_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item
 {
     ysw_editor_t *editor = menu->context;
     zm_beat_t *beat = ysw_array_get(editor->music->beats, item->value);
+    play_beat(editor, beat);
     realize_beat(editor, beat);
 }
 
