@@ -38,7 +38,7 @@
 UNUSED
 static void initialize_fs_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
-    ESP_LOGD(TAG, "initialize_synthesizer: configuring FluidSynth synth");
+    ESP_LOGD(TAG, "configuring FluidSynth synth");
     ysw_fluid_synth_create_task(bus, YSW_MUSIC_SOUNDFONT);
 }
 
@@ -66,7 +66,7 @@ static void* alsa_thread(void *p)
 
 static void initialize_mod_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
-    ESP_LOGD(TAG, "initialize_synthesizer: configuring MOD synth with ALSA");
+    ESP_LOGD(TAG, "configuring MOD synth with ALSA");
 
     ysw_mod_host_t *mod_host = ysw_mod_music_create_host(music);
     ysw_mod_synth = ysw_mod_synth_create_task(bus, mod_host);
@@ -114,11 +114,15 @@ static void initialize_touch_screen(void)
     SDL_CreateThread(tick_thread, "tick", NULL);
 }
 
-void ysw_main_init_device(ysw_bus_t *bus, zm_music_t *music)
+void ysw_main_init_device(ysw_bus_t *bus)
 {
-    initialize_mod_synthesizer(bus, music);
     initialize_touch_screen();
     ysw_simulator_initialize(bus);
+}
+
+void ysw_main_init_synthesizer(ysw_bus_t *bus, zm_music_t *music)
+{
+    initialize_mod_synthesizer(bus, music);
 }
 
 //#define YSW_TEST 1

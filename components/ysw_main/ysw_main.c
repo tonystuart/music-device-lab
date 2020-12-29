@@ -16,13 +16,15 @@
 
 #define TAG "YSW_MAIN"
 
-extern void ysw_main_init_device(ysw_bus_t *bus, zm_music_t *music);
+extern void ysw_main_init_device(ysw_bus_t *bus);
+extern void ysw_main_init_synthesizer(ysw_bus_t *bus, zm_music_t *music);
 
 void ysw_main_create()
 {
     ysw_bus_t *bus = ysw_event_create_bus();
+    ysw_main_init_device(bus);
     zm_music_t *music = zm_load_music();
-    ysw_main_init_device(bus, music);
+    ysw_main_init_synthesizer(bus, music);
     ysw_sequencer_create_task(bus);
     ysw_shell_create(bus, music);
 }

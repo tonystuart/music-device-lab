@@ -67,6 +67,7 @@ ysw_task_t *ysw_task_create(ysw_task_config_t *config)
         task->event_handler = config->event_handler;
         task->context = config->context;
     } else {
+        assert(!config->initializer);
         assert(config->function);
         function = config->function;
         parameter = config->context;

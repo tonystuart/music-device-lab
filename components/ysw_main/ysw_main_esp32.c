@@ -39,14 +39,14 @@
 UNUSED
 static void initialize_bt_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
-    ESP_LOGD(TAG, "initialize_synthesizer: configuring BlueTooth synth");
+    ESP_LOGD(TAG, "configuring BlueTooth synth");
     ysw_bt_synth_create_task(bus);
 }
 
 UNUSED
 static void initialize_vs_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
-    ESP_LOGD(TAG, "initialize_synthesizer: configuring VS1053 synth");
+    ESP_LOGD(TAG, "configuring VS1053 synth");
     ysw_vs1053_config_t config = {
         .dreq_gpio = -1,
         .xrst_gpio = 0,
@@ -63,7 +63,7 @@ static void initialize_vs_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 UNUSED
 static void initialize_fs_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
-    ESP_LOGD(TAG, "initialize_synthesizer: configuring FluidSynth synth");
+    ESP_LOGD(TAG, "configuring FluidSynth synth");
     ysw_fluid_synth_create_task(bus, YSW_MUSIC_SOUNDFONT);
 }
 
@@ -85,7 +85,7 @@ static int32_t generate_audio(uint8_t *buffer, int32_t bytes_requested)
 
 static void initialize_mod_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
-    ESP_LOGD(TAG, "initialize_synthesizer: configuring MOD synth with I2S");
+    ESP_LOGD(TAG, "configuring MOD synth with I2S");
 
     ysw_mod_host_t *mod_host = ysw_mod_music_create_host(music);
     ysw_mod_synth = ysw_mod_synth_create_task(bus, mod_host);
@@ -98,7 +98,7 @@ static void initialize_mod_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 UNUSED
 static void initialize_mmv01_touch_screen(void)
 {
-    ESP_LOGD(TAG, "main: configuring Music Machine v01");
+    ESP_LOGD(TAG, "configuring Music Machine v01 touch screen");
     eli_ili9341_xpt2046_config_t new_config = {
         .mosi = 21,
         .clk = 19,
@@ -122,7 +122,7 @@ static void initialize_mmv01_touch_screen(void)
 
 static void initialize_mmv02_touch_screen(void)
 {
-    ESP_LOGD(TAG, "main: configuring Music Machine v02");
+    ESP_LOGD(TAG, "configuring Music Machine v02 touch screen");
     eli_ili9341_xpt2046_config_t new_config = {
         .mosi = 5,
         .clk = 18,
@@ -184,13 +184,13 @@ void ysw_main_display_tasks()
 #endif
 }
 
-void ysw_main_init_device(ysw_bus_t *bus, zm_music_t *music)
+void ysw_main_init_device(ysw_bus_t *bus)
 {
     esp_log_level_set("efuse", ESP_LOG_INFO);
     esp_log_level_set("TRACE_HEAP", ESP_LOG_INFO);
+    esp_log_level_set("I2S", ESP_LOG_INFO); // esp-idf i2s
     ysw_spiffs_initialize(ZM_MF_PARTITION);
 
-    initialize_mod_synthesizer(bus, music);
     initialize_mmv02_touch_screen();
 
     ysw_led_config_t led_config = {
@@ -203,6 +203,11 @@ void ysw_main_init_device(ysw_bus_t *bus, zm_music_t *music)
         .columns = ysw_array_load(7, 15, 13, 12, 14, 27, 26, 23),
     };
     ysw_keyboard_create_task(bus, &keyboard_config);
+}
+
+void ysw_main_init_synthesizer(ysw_bus_t *bus, zm_music_t *music)
+{
+    initialize_mod_synthesizer(bus, music);
 }
 
 void app_main()

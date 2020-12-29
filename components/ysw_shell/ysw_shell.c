@@ -149,7 +149,9 @@ static void on_open_section(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_
 {
     ysw_shell_t *shell = menu->context;
     shell->state = S_OPEN_SECTION;
+    stop_listening(shell);
     ysw_chooser_create(menu->bus, shell->music, shell->section_index, shell);
+    start_listening(shell);
 }
 
 static void on_copy_section(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -278,6 +280,7 @@ static const ysw_menu_item_t start_menu[] = {
     { YSW_R3_C3, "Settings", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C3, " ", YSW_MF_MINUS, ysw_menu_nop, 0, NULL }, // Keyboard (#) Menu Activation
 
     { 0, "Shell", YSW_MF_END, NULL, 0, NULL },
 };

@@ -42,44 +42,47 @@ typedef struct {
     ysw_i2s_generate_audio_t generate_audio;
 } ysw_i2s_t;
 
+#define MUSIC_MACHINE_V02 1
+
+static void initialize(void)
+{
+    $(i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL));
+
+#ifdef MUSIC_MACHINE_V02
+    // Enable I2S DAC on GPIO 25 only because GPIO 26 is used for keyboard
+    ESP_LOGD(TAG, "calling i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN)");
+    $(i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN));
+#else
+    // Enable I2S Dac on both GPIO 25 and GPIO 26
+    ESP_LOGD(TAG, "calling i2s_set_pin(I2S_NUM_0, NULL) to enable both DAC channels");
+    $(i2s_set_pin(I2S_NUM_0, NULL));
+#endif
+}
+
 static void run_synth(void* context)
 {
-    ysw_i2s_t *ysw_i2s = context;
+    ysw_i2s_t *i2s = context;
+
+    initialize();
 
     for (;;) {
         uint8_t buf[BUFFER_SIZE];
-        uint32_t bytes_generated = ysw_i2s->generate_audio(buf, sizeof(buf));
+        uint32_t bytes_generated = i2s->generate_audio(buf, sizeof(buf));
         size_t write_count = 0;
-        i2s_write(I2S_NUM_0, buf, bytes_generated, &write_count, portMAX_DELAY);
-    }
-}
-
-void initialize(void *context)
-{
-    esp_err_t esp_rc = i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
-    if (esp_rc != ESP_OK) {
-        ESP_LOGE(TAG, "i2s_driver_install failed");
-        abort();
-    }
-
-    esp_rc = i2s_set_pin(I2S_NUM_0, NULL);
-    if (esp_rc != ESP_OK) {
-        ESP_LOGE(TAG, "i2s_set_pin failed");
-        abort();
+        $(i2s_write(I2S_NUM_0, buf, bytes_generated, &write_count, portMAX_DELAY));
     }
 }
 
 void ysw_i2s_create_task(ysw_i2s_generate_audio_t generate_audio)
 {
-    ysw_i2s_t *ysw_i2s = ysw_heap_allocate(sizeof(ysw_i2s_t));
-    ysw_i2s->generate_audio = generate_audio;
+    ysw_i2s_t *i2s = ysw_heap_allocate(sizeof(ysw_i2s_t));
+    i2s->generate_audio = generate_audio;
 
     ysw_task_config_t config = ysw_task_default_config;
 
     config.name = TAG;
-    config.initializer = initialize;
     config.function = run_synth;
-    config.context = ysw_i2s;
+    config.context = i2s;
 
     ysw_task_create(&config);
 }
