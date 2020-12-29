@@ -476,28 +476,6 @@ static void set_chord_style(ysw_editor_t *editor, zm_chord_style_x chord_style_x
     play_position(editor);
 }
 
-static void cycle_beat(ysw_editor_t *editor)
-{
-    zm_step_t *step = NULL;
-    if (is_step_position(editor)) {
-        zm_step_x step_index = editor->position / 2;
-        step = ysw_array_get(editor->section->steps, step_index);
-    }
-    if (!step || !step->rhythm.beat || step->rhythm.beat == editor->beat) {
-        zm_beat_x previous = ysw_array_find(editor->music->beats, editor->beat);
-        zm_beat_x beat_count = ysw_array_get_count(editor->music->beats);
-        zm_beat_x next = (previous + 1) % beat_count;
-        editor->beat = ysw_array_get(editor->music->beats, next);
-    }
-    if (step) {
-        step->rhythm.beat = editor->beat;
-        ysw_staff_invalidate(editor->staff);
-        update_tlm(editor);
-    }
-    display_mode(editor);
-    play_position(editor);
-}
-
 // Steps
 
 static inline bool are_within(uint32_t left, uint32_t right, uint32_t range)
@@ -1111,12 +1089,6 @@ static void on_rest_duration(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item
     realize_rest(editor, item->value);
 }
 
-static void on_cycle_beat(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
-{
-    ysw_editor_t *editor = menu->context;
-    cycle_beat(editor);
-}
-
 static void on_delete(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
@@ -1444,55 +1416,6 @@ static ysw_app_control_t process_event(void *context, ysw_event_t *event)
 
 // Actions that pop a menu (e.g. COMMAND_POP) must be performed on UP, not DOWN or PRESS.
 
-static const ysw_menu_item_t melody_menu[] = {
-    { 5, "Tie\nNotes", YSW_MF_COMMAND, on_insert_tie, 0, NULL },
-    { 6, "Insert\nRest", YSW_MF_COMMAND, on_note, 0, NULL },
-
-    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-
-    { 25, "Note\nLength-", YSW_MF_COMMAND, on_note_length, -1, NULL },
-    { 26, "Note\nLength+", YSW_MF_COMMAND, on_note_length, +1, NULL },
-    { 27, "Clear\nNote", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
-
-    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
-
-    { 0, "Melody", YSW_MF_END, NULL, 0, NULL },
-};
-
-static const ysw_menu_item_t chord_menu[] = {
-
-    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 17, "Apply\nQ&S", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-
-    { 25, " ", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
-    { 26, " ", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
-    { 27, "Clear\nChord", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
-
-    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
-
-    { 0, "Chord", YSW_MF_END, NULL, 0, NULL },
-};
-
-static const ysw_menu_item_t rhythm_menu[] = {
-    { 5, "Cycle\nBeat", YSW_MF_COMMAND, on_cycle_beat, 0, NULL },
-    { 6, "Insert\nBeat", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
-
-    { 16, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 18, "Clear\nStroke", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
-
-    { 25, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 27, "Clear\nBeat", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
-
-    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
-
-    { 0, "Rhythm", YSW_MF_END, NULL, 0, NULL },
-};
-
 static const ysw_menu_item_t edit_menu[] = {
     { 5, "Select\nLeft", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
     { 6, "Select\nRight", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
@@ -1507,9 +1430,11 @@ static const ysw_menu_item_t edit_menu[] = {
     { 25, "First", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
     { 26, "Next", YSW_MF_COMMAND, on_next, 0, NULL },
     { 27, "Previous", YSW_MF_COMMAND, on_previous, 0, NULL },
+    { 28, "Note\nLength-", YSW_MF_COMMAND, on_note_length, -1, NULL },
 
     { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
     { 37, "Delete", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { 39, "Note\nLength+", YSW_MF_COMMAND, on_note_length, +1, NULL },
 
     { 0, "Edit", YSW_MF_END, NULL, 0, NULL },
 };
