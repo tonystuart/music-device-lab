@@ -121,15 +121,17 @@ void ysw_main_init_device(ysw_bus_t *bus, zm_music_t *music)
     ysw_simulator_initialize(bus);
 }
 
+//#define YSW_TEST 1
+
 int main(int argc, char *argv[])
 {
-#if 0
-    void zm_generate_scales()
-    zm_generate_scales();
-#else
+#if YSW_TEST
+    extern void ysw_test_all();
+    ysw_test_all();
+#endif
     extern void ysw_main_create();
     ysw_main_create();
-#endif
+
     return 0;
 }
 

@@ -91,20 +91,20 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,0,Block,Block
+5,0,Block
 6,0,80,0,1024
 6,1,80,0,1024
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,1,Block,Block
+5,1,Block
 6,0,80,0,1024
 6,1,80,0,1024
 6,2,80,0,1024
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,2,Block,Block
+5,2,Block
 6,0,80,0,1024
 6,1,80,0,1024
 6,2,80,0,1024
@@ -112,7 +112,7 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,3,Block,Block
+5,3,Block
 6,0,80,0,1024
 6,1,80,0,1024
 6,2,80,0,1024
@@ -121,7 +121,7 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,4,Block,Block
+5,4,Block
 6,0,80,0,1024
 6,1,80,0,1024
 6,2,80,0,1024
@@ -132,7 +132,7 @@
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
 #type(style),index,name
-5,5,Block,Block
+5,5,Block
 6,0,80,0,1024
 6,1,80,0,1024
 6,2,80,0,1024
@@ -143,13 +143,13 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,6,Strum 1,Strum\\n1
+5,6,Strum 1
 6,0,100,0,1024
 6,1,80,150,1024
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,7,Strum 1,Strum\\n1
+5,7,Strum 1
 6,0,100,0,1024
 6,1,80,150,1024
 6,2,80,300,1024
@@ -157,7 +157,7 @@
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
 #type(style),index,name
-5,8,Strum 1,Strum\\n1
+5,8,Strum 1
 6,0,100,0,1024
 6,1,80,150,1024
 6,2,80,300,1024
@@ -165,7 +165,7 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,9,Strum 1,Strum\\n1
+5,9,Strum 1
 6,0,100,0,1024
 6,1,80,150,1024
 6,2,80,300,1024
@@ -174,13 +174,13 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,10,Arpeggio 1,Arpeg\\n1
+5,10,Arpeggio 1
 6,0,100,0,128
 6,1,80,128,128
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,11,Arpeggio 1,Arpeg\\n1
+5,11,Arpeggio 1
 6,0,100,0,128
 6,1,80,128,128
 6,2,80,256,128
@@ -189,7 +189,7 @@
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
 #type(style),index,name
-5,12,Arpeggio 1,Arpeg\\n1
+5,12,Arpeggio 1
 6,0,100,0,128
 6,1,80,128,128
 6,2,80,256,128
@@ -199,7 +199,7 @@
 
 #type(5=style),index,name
 #type(6=sound),distance_index,velocity,start,duration
-5,13,Arpeggio 1,Arpeg\\n1
+5,13,Arpeggio 1
 6,0,100,0,128
 6,1,80,128,128
 6,2,80,256,128
@@ -209,9 +209,9 @@
 6,2,80,768,128
 6,1,80,896,128
 
-#type(7=beat),index,name,label
+#type(7=beat),index,name
 #type(8=stroke),time,surface,velocity
-7,0,Basic Rock,BR
+7,0,Basic Rock
 8,0,60,16 # bass
 8,0,64,16 # hi-hat
 8,128,64,16 # hi-hat
@@ -225,9 +225,9 @@
 8,768,64,16 # hi-hat
 8,896,64,16 # hi-hat
 
-#type(7=beat),index,name,label
+#type(7=beat),index,name
 #type(8=stroke),time,surface,velocity
-7,1,8th Note Groove,8NG
+7,1,8th Note Groove
 8,0,60,16 # bass
 8,0,62,16 # snare
 8,0,64,16 # hi-hat

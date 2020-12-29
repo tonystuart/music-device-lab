@@ -8,8 +8,9 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_common.h"
+#include "ysw_array.h"
 #include "ysw_heap.h"
-
+#include "ysw_string.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "stdio.h"
@@ -96,3 +97,37 @@ char *ysw_replace(const char *source, const char *from, const char *to)
     return target;
 }
 
+// Formats name into a 7 char x 2 row label
+// and returns a ysw_heap_strdup pointer to it.
+// Caller is responsible for calling ysw_heap_free
+// on return value when it is no longer needed.
+
+#define LINE_LENGTH 7
+#define ROW_COUNT 2
+
+char *ysw_make_label(const char *name)
+{
+    char *label = NULL;
+    if (strlen(name) <= LINE_LENGTH) {
+        label = ysw_heap_strdup(name);
+    } else {
+        ysw_string_t *s = ysw_string_init(name);
+        uint32_t length = ysw_string_get_length(s);
+        uint32_t middle = length / 2;
+        ysw_string_t *top = ysw_string_substring(s, 0, middle);
+        ysw_string_t *bottom = ysw_string_substring(s, middle, length);
+        ysw_string_shorten(top, LINE_LENGTH);
+        ysw_string_shorten(bottom, LINE_LENGTH);
+        ysw_string_append_char(top, '\n');
+        ysw_string_append(top, bottom);
+        // Use a stack-based temporary buffer until strings are freed to avoid heap fragmentation
+        uint32_t result_length = ysw_string_get_length(top) + RFT;
+        char temp[result_length];
+        memcpy(temp, ysw_string_get_chars(top), result_length);
+        ysw_string_free(bottom);
+        ysw_string_free(top);
+        ysw_string_free(s);
+        label = ysw_heap_strdup(temp);
+    }
+    return label;
+}

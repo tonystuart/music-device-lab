@@ -295,7 +295,7 @@ static void draw_rhythm(ysw_staff_t *dc, zm_rhythm_t *rhythm)
 {
     lv_area_t coords = {
         .x1 = dc->point.x,
-        .x2 = dc->point.x + 40,
+        .x2 = dc->point.x + 60,
         .y1 = 170,
         .y2 = 200,
     };
@@ -304,15 +304,16 @@ static void draw_rhythm(ysw_staff_t *dc, zm_rhythm_t *rhythm)
         .font = &lv_font_unscii_8,
         .opa = LV_OPA_COVER,
     };
-    if (rhythm->beat) {
-        lv_draw_label(&coords, dc->clip_area, &dsc, rhythm->beat->label,  NULL);
-        coords.y1 += 9;
-    }
+    // currently display surface first because patch can be multiple lines
     if (rhythm->surface) {
         zm_patch_t *patch = zm_get_patch(dc->patches, rhythm->surface);
         if (patch && patch->name) {
             lv_draw_label(&coords, dc->clip_area, &dsc, patch->name,  NULL);
+            coords.y1 += 9;
         }
+    }
+    if (rhythm->beat) {
+        lv_draw_label(&coords, dc->clip_area, &dsc, rhythm->beat->label,  NULL);
     }
 }
 

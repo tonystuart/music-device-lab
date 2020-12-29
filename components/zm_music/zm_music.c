@@ -213,6 +213,7 @@ static void parse_program(zm_mfr_t *zm_mfr)
 
     zm_program_t *program = ysw_heap_allocate(sizeof(zm_program_t));
     program->name = ysw_heap_strdup(zm_mfr->tokens[2]);
+    program->label = ysw_make_label(program->name);
     program->type = atoi(zm_mfr->tokens[3]);
     program->gm = atoi(zm_mfr->tokens[4]);
     program->patches = ysw_array_create(1);
@@ -338,7 +339,7 @@ static void parse_chord_style(zm_mfr_t *zm_mfr)
 
     zm_chord_style_t *style = ysw_heap_allocate(sizeof(zm_chord_style_t));
     style->name = ysw_heap_strdup(zm_mfr->tokens[2]);
-    style->label = ysw_replace(zm_mfr->tokens[3], "\\n", "\n");
+    style->label = ysw_make_label(style->name);
     style->sounds = ysw_array_create(8);
 
     zm_yesno_t done = false;
@@ -409,7 +410,7 @@ static void parse_beat(zm_mfr_t *zm_mfr)
 
     zm_beat_t *beat = ysw_heap_allocate(sizeof(zm_beat_t));
     beat->name = ysw_heap_strdup(zm_mfr->tokens[2]);
-    beat->label = ysw_heap_strdup(zm_mfr->tokens[3]);
+    beat->label = ysw_make_label(beat->name);
     beat->strokes = ysw_array_create(32);
 
     zm_yesno_t done = false;
@@ -436,16 +437,13 @@ static void emit_beats(zm_mfw_t *zm_mfw)
     uint32_t beat_count = ysw_array_get_count(zm_mfw->music->beats);
     for (uint32_t i = 0; i < beat_count; i++) {
         char name[NAME_SIZE];
-        char label[NAME_SIZE];
         zm_beat_t *beat = ysw_array_get(zm_mfw->music->beats, i);
         put_map(zm_mfw->beat_map, beat, i);
         ysw_csv_escape(beat->name, name, sizeof(name));
-        ysw_csv_escape(beat->label, label, sizeof(label));
-        fprintf(zm_mfw->file, "%d,%d,%s,%s\n",
+        fprintf(zm_mfw->file, "%d,%d,%s\n",
                 ZM_MF_BEAT,
                 i,
-                name,
-                label);
+                name);
 
         uint32_t stroke_count = ysw_array_get_count(beat->strokes);
         for (uint32_t j = 0; j < stroke_count; j++) {
@@ -669,6 +667,7 @@ void zm_music_free(zm_music_t *music)
     for (zm_medium_t i = 0; i < program_count; i++) {
         zm_program_t *program = ysw_array_get(music->programs, i);
         ysw_heap_free(program->name);
+        ysw_heap_free(program->label);
         ysw_array_free_all(program->patches);
     }
     ysw_array_free(music->programs);
@@ -685,6 +684,7 @@ void zm_music_free(zm_music_t *music)
     for (zm_medium_t i = 0; i < style_count; i++) {
         zm_chord_style_t *style = ysw_array_get(music->chord_styles, i);
         ysw_heap_free(style->name);
+        ysw_heap_free(style->label);
         ysw_array_free_all(style->sounds);
     }
     ysw_array_free(music->chord_styles);
@@ -693,6 +693,7 @@ void zm_music_free(zm_music_t *music)
     for (zm_medium_t i = 0; i < beat_count; i++) {
         zm_beat_t *beat = ysw_array_get(music->chord_types, i);
         ysw_heap_free(beat->name);
+        ysw_heap_free(beat->label);
         ysw_array_free_all(beat->strokes);
     }
     ysw_array_free(music->beats);
@@ -730,9 +731,9 @@ zm_music_t *zm_parse_file(FILE *file)
             parse_program(zm_mfr);
         } else if (type == ZM_MF_CHORD_TYPE && zm_mfr->token_count > 4) {
             parse_chord_type(zm_mfr);
-        } else if (type == ZM_MF_CHORD_STYLE && zm_mfr->token_count == 4) {
+        } else if (type == ZM_MF_CHORD_STYLE && zm_mfr->token_count == 3) {
             parse_chord_style(zm_mfr);
-        } else if (type == ZM_MF_BEAT && zm_mfr->token_count == 4) {
+        } else if (type == ZM_MF_BEAT && zm_mfr->token_count == 3) {
             parse_beat(zm_mfr);
         } else if (type == ZM_MF_SECTION && zm_mfr->token_count == 10) {
             parse_section(zm_mfr);
@@ -1264,7 +1265,6 @@ static const zm_key_signature_t zm_key_signatures[] = {
 
 // TODO: start with the intervals for the modes and generate everything else using circle-of-fifths
 
-#if 0
 static bool major_diatonics[] = {
     true, false, true, false, true, true, false, true, false, true, false, true,
 };
@@ -1289,8 +1289,6 @@ void zm_generate_scales()
         printf("} },\n");
     }
 }
-
-#endif
 
 const zm_scale_t zm_scales[] = {
     /* C  */ { {   1,  -2,   3,  -4,   5,   6,  -7,   8,  -9,  10, -11,  12, } },

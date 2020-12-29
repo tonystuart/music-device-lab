@@ -135,6 +135,7 @@ typedef enum {
 
 typedef struct {
     char *name;
+    char *label;
     zm_program_type_t type;
     zm_gm_x gm;
     ysw_array_t *patches;
@@ -322,3 +323,4 @@ static inline zm_time_x zm_get_ticks_per_measure(zm_time_signature_x t)
     return zm_get_time_signature(t)->ticks_per_measure;
 }
 
+void zm_generate_scales();

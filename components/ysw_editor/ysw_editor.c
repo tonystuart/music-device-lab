@@ -246,12 +246,12 @@ static void display_chord_mode(ysw_editor_t *editor)
         step = ysw_array_get(editor->section->steps, editor->position / 2);
     }
     if (step && step->chord.root) {
-        snprintf(value, sizeof(value), "%s %s %s",
+        snprintf(value, sizeof(value), "%s %s/%s",
                 zm_get_note_name(step->chord.root),
                 step->chord.type->name,
                 step->chord.style->name);
     } else {
-        snprintf(value, sizeof(value), "%s %s",
+        snprintf(value, sizeof(value), "%s/%s",
                 editor->chord_type->name,
                 editor->chord_style->name);
     }
@@ -867,7 +867,7 @@ static void generate_program_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_me
     for (zm_chord_style_x i = 0; i < count && (p - template) < 12; i++) {
         zm_program_t *program = ysw_array_get(editor->music->programs, i);
         if (program->type == type) {
-            initialize_item(p, scan_code_map[p - template], program->name, cb, i, submenu);
+            initialize_item(p, scan_code_map[p - template], program->label, cb, i, submenu);
             p++;
         }
     }

@@ -257,17 +257,6 @@ void ysw_array_visit(ysw_array_t *array, ysw_array_visit_cb_t visit_cb)
     }
 }
 
-void ysw_array_clear(ysw_array_t *array, ysw_array_clear_cb_t clear_cb)
-{
-    assert(array);
-    if (clear_cb) {
-        for (uint32_t i = 0; i < array->count; i++) {
-            clear_cb(array->data[i]);
-        }
-    }
-    array->count = 0;
-}
-
 void ysw_array_free(ysw_array_t *array)
 {
     assert(array);
@@ -282,10 +271,21 @@ void ysw_array_free_node(void *p)
     }
 }
 
+void ysw_array_set_free_all_callback(ysw_array_t *array, ysw_array_free_all_cb_t free_all_cb)
+{
+    array->free_all_cb = free_all_cb;
+}
+
 void ysw_array_free_all(ysw_array_t *array)
 {
     assert(array);
-    ysw_array_clear(array, ysw_array_free_node);
+    ysw_array_free_all_cb_t free_all_cb = NULL;
+    if (array->free_all_cb) {
+        free_all_cb = array->free_all_cb;
+    } else {
+        free_all_cb = ysw_array_free_node;
+    }
+    ysw_array_visit(array, free_all_cb);
     ysw_array_free(array);
 }
 
