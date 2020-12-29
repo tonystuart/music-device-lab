@@ -154,6 +154,15 @@ static void set_terminate_flag(ysw_chooser_t *chooser)
     chooser->control = YSW_APP_TERMINATE;
 }
 
+static void select_item(ysw_chooser_t *chooser)
+{
+    zm_section_t *section = get_section(chooser);
+    set_terminate_flag(chooser);
+    if (section) {
+        ysw_event_fire_chooser_select(chooser->bus, section, chooser->context);
+    }
+}
+
 static void on_close(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_chooser_t *chooser = menu->context;
@@ -175,6 +184,12 @@ static void on_chooser_down(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_
     if (chooser->current_row + 1 < section_count) {
         select_row(chooser, chooser->current_row + 1);
     }
+}
+
+static void on_chooser_menu_select(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_chooser_t *chooser = menu->context;
+    select_item(chooser);
 }
 
 static void on_chooser_sort(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -199,15 +214,6 @@ static void on_chooser_sort(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_
     hide_selection(chooser);
     zm_section_x section_x = update_sections(chooser, section);
     show_selection(chooser, section_x);
-}
-
-static void on_chooser_select(ysw_chooser_t *chooser)
-{
-    zm_section_t *section = get_section(chooser);
-    set_terminate_flag(chooser);
-    if (section) {
-        ysw_event_fire_chooser_select(chooser->bus, section, chooser->context);
-    }
 }
 
 static ysw_app_control_t process_event(void *context, ysw_event_t *event)
@@ -247,7 +253,7 @@ static void on_chooser_table_event(struct _lv_obj_t *table, lv_event_t event)
             if (row > 0) {
                 zm_section_x new_row = row - 1; // -1 for header
                 if (new_row == chooser->current_row) {
-                    on_chooser_select(chooser);
+                    select_item(chooser);
                 } else {
                     select_row(chooser, row - 1);
                 }
@@ -259,16 +265,18 @@ static void on_chooser_table_event(struct _lv_obj_t *table, lv_event_t event)
 }
 
 static const ysw_menu_item_t chooser_menu[] = {
-    { YSW_R1_C1, "Sort by\nName", YSW_MF_COMMAND, on_chooser_sort, SORT_BY_NAME, NULL },
-    { YSW_R1_C2, "Sort by\nSize", YSW_MF_COMMAND, on_chooser_sort, SORT_BY_SIZE, NULL },
-    { YSW_R1_C3, "Sort by\nAge", YSW_MF_COMMAND, on_chooser_sort, SORT_BY_AGE, NULL },
+    { YSW_R1_C1, "Select", YSW_MF_COMMAND, on_chooser_menu_select, SORT_BY_NAME, NULL },
     { YSW_R1_C4, "Up", YSW_MF_COMMAND, on_chooser_up, 0, NULL },
 
+    { YSW_R2_C1, "Sort by\nName", YSW_MF_COMMAND, on_chooser_sort, SORT_BY_NAME, NULL },
+    { YSW_R2_C2, "Sort by\nSize", YSW_MF_COMMAND, on_chooser_sort, SORT_BY_SIZE, NULL },
+    { YSW_R2_C3, "Sort by\nAge", YSW_MF_COMMAND, on_chooser_sort, SORT_BY_AGE, NULL },
     { YSW_R2_C4, "Down", YSW_MF_COMMAND, on_chooser_down, 0, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, on_close, 0, NULL },
+    { YSW_R4_C3, " ", YSW_MF_MINUS, ysw_menu_nop, 0, NULL }, // Keyboard (#) Menu Activation
 
-    { 0, "Choose", YSW_MF_END, NULL, 0, NULL },
+    { 0, "Chooser", YSW_MF_END, NULL, 0, NULL },
 };
 
 void ysw_chooser_create(ysw_bus_t *bus, zm_music_t *music, zm_section_x row, void *context)
