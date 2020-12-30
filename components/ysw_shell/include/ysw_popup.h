@@ -19,6 +19,7 @@ typedef void (*ysw_popup_cb_t)(void *context, ysw_popup_t *popup);
 typedef enum {
     YSW_MSGBOX_OKAY,
     YSW_MSGBOX_OKAY_CANCEL,
+    YSW_MSGBOX_YES_NO_CANCEL,
 } ysw_popup_type_t;
 
 typedef struct {
@@ -26,8 +27,12 @@ typedef struct {
     ysw_popup_type_t type;
     const char *message;
     ysw_popup_cb_t on_okay;
+    ysw_popup_cb_t on_yes;
+    ysw_popup_cb_t on_no;
     ysw_popup_cb_t on_cancel;
     uint8_t okay_scan_code;
+    uint8_t yes_scan_code;
+    uint8_t no_scan_code;
     uint8_t cancel_scan_code;
 } ysw_popup_config_t;
 
@@ -37,8 +42,12 @@ typedef struct ysw_popup_s {
     lv_obj_t *msgbox;
     const char **buttons;
     ysw_popup_cb_t on_okay;
+    ysw_popup_cb_t on_yes;
+    ysw_popup_cb_t on_no;
     ysw_popup_cb_t on_cancel;
     uint8_t okay_scan_code;
+    uint8_t yes_scan_code;
+    uint8_t no_scan_code;
     uint8_t cancel_scan_code;
 } ysw_popup_t;
 

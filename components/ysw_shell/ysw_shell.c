@@ -78,7 +78,7 @@ static void open_section(ysw_shell_t *shell, zm_section_t *section)
 
 static void copy_section(ysw_shell_t *shell, zm_section_t *section)
 {
-    zm_section_t *new_section = zm_copy_section(shell->music, section);
+    zm_section_t *new_section = zm_copy_section(section);
     zm_section_x section_x = ysw_array_find(shell->music->sections, section);
     ysw_array_insert(shell->music->sections, section_x + 1, new_section);
 }
@@ -86,7 +86,7 @@ static void copy_section(ysw_shell_t *shell, zm_section_t *section)
 static void on_confirm_delete(void *context, ysw_popup_t *popup)
 {
     ysw_shell_t *shell = context;
-    zm_section_free(shell->music, shell->section);
+    zm_section_delete(shell->music, shell->section);
 }
 
 static void delete_section(ysw_shell_t *shell, zm_section_t *section)

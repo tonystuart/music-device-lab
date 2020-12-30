@@ -17,6 +17,8 @@
 #define TAG "YSW_MSGBOX"
 
 #define OKAY "OK"
+#define YES "Yes"
+#define NO "No"
 #define CANCEL "Cancel"
 
 static const char *MSGBOX_OKAY[] = {
@@ -25,6 +27,10 @@ static const char *MSGBOX_OKAY[] = {
 
 static const char *MSGBOX_OKAY_CANCEL[] = {
     OKAY, CANCEL, "",
+};
+
+static const char *MSGBOX_YES_NO_CANCEL[] = {
+    YES, NO, CANCEL, "",
 };
 
 static void event_handler(lv_obj_t *obj, lv_event_t event)
@@ -37,6 +43,14 @@ static void event_handler(lv_obj_t *obj, lv_event_t event)
         if (strcmp(btn_text, OKAY) == 0) {
             if (popup->on_okay) {
                 popup->on_okay(popup->context, popup);
+            }
+        } else if (strcmp(btn_text, YES) == 0) {
+            if (popup->on_yes) {
+                popup->on_yes(popup->context, popup);
+            }
+        } else if (strcmp(btn_text, NO) == 0) {
+            if (popup->on_no) {
+                popup->on_no(popup->context, popup);
             }
         } else if (strcmp(btn_text, CANCEL) == 0) {
             if (popup->on_cancel) {
@@ -63,6 +77,12 @@ void ysw_popup_create(ysw_popup_config_t *config)
         case YSW_MSGBOX_OKAY_CANCEL:
             popup->buttons = MSGBOX_OKAY_CANCEL;
             popup->on_okay = config->on_okay;
+            popup->on_cancel = config->on_cancel;
+            break;
+        case YSW_MSGBOX_YES_NO_CANCEL:
+            popup->buttons = MSGBOX_YES_NO_CANCEL;
+            popup->on_yes = config->on_yes;
+            popup->on_no = config->on_no;
             popup->on_cancel = config->on_cancel;
             break;
         default:

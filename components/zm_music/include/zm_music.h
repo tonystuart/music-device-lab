@@ -270,7 +270,8 @@ typedef struct {
     ysw_array_t *compositions;
 } zm_music_t;
 
-void zm_section_free(zm_music_t *music, zm_section_t *section);
+void zm_section_free(zm_section_t *section);
+void zm_section_delete(zm_music_t *music, zm_section_t *section);
 void zm_music_free(zm_music_t *music);
 zm_music_t *zm_parse_file(FILE *file);
 zm_music_t *zm_load_music(void);
@@ -304,7 +305,9 @@ zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note);
 
 zm_section_t *zm_create_section(zm_music_t *music);
 
-zm_section_t *zm_copy_section(zm_music_t *music, zm_section_t *old_section);
+zm_section_t *zm_copy_section(zm_section_t *old_section);
+
+bool zm_sections_equal(zm_section_t *left, zm_section_t *right);
 
 ysw_array_t *zm_get_section_references(zm_music_t *music, zm_section_t *section);
 

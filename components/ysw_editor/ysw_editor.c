@@ -69,6 +69,7 @@ typedef struct {
 
     zm_music_t *music;
     zm_section_t *section;
+    zm_section_t *original_section;
     zm_chord_type_t *chord_type;
     zm_chord_style_t *chord_style;
     zm_chord_frequency_t chord_frequency;
@@ -147,9 +148,9 @@ static zm_step_t *get_step(ysw_editor_t *editor)
     return step;
 }
 
-static void update_tlm(ysw_editor_t *editor)
+static void save_undo_action(ysw_editor_t *editor)
 {
-    editor->section->tlm = editor->music->settings.clock++;
+    // TODO: add undo/redo support
 }
 
 static void recalculate(ysw_editor_t *editor)
@@ -364,7 +365,7 @@ static void set_key_signature(ysw_editor_t *editor, zm_key_signature_x key)
     editor->section->key = key;
     ysw_footer_set_key(editor->footer, editor->section->key);
     ysw_staff_invalidate(editor->staff);
-    update_tlm(editor);
+    save_undo_action(editor);
 }
 
 static void set_tie(ysw_editor_t *editor, zm_tie_x tie)
@@ -375,7 +376,7 @@ static void set_tie(ysw_editor_t *editor, zm_tie_x tie)
         if (step->melody.note) {
             step->melody.tie = tie;
             ysw_staff_invalidate(editor->staff);
-            update_tlm(editor);
+            save_undo_action(editor);
         }
     }
 }
@@ -385,7 +386,7 @@ static void set_time_signature(ysw_editor_t *editor, zm_time_signature_x time)
     editor->section->time = time;
     ysw_footer_set_time(editor->footer, editor->section->time);
     recalculate(editor);
-    update_tlm(editor);
+    save_undo_action(editor);
 }
 
 static void set_tempo(ysw_editor_t *editor, zm_tempo_x tempo)
@@ -393,7 +394,7 @@ static void set_tempo(ysw_editor_t *editor, zm_tempo_x tempo)
     editor->section->tempo = tempo;
     ysw_footer_set_tempo(editor->footer, editor->section->tempo);
     display_mode(editor);
-    update_tlm(editor);
+    save_undo_action(editor);
 }
 
 static void set_default_note_duration(ysw_editor_t *editor, zm_duration_t duration)
@@ -412,7 +413,7 @@ static void set_default_note_duration(ysw_editor_t *editor, zm_duration_t durati
         step->melody.duration = editor->duration;
         display_mode(editor);
         recalculate(editor);
-        update_tlm(editor);
+        save_undo_action(editor);
     }
 }
 
@@ -453,7 +454,7 @@ static void set_chord_type(ysw_editor_t *editor, zm_chord_type_x chord_type_x)
         step->chord.type = editor->chord_type;
         step->chord.style = editor->chord_style;
         ysw_staff_invalidate(editor->staff);
-        update_tlm(editor);
+        save_undo_action(editor);
     }
     display_mode(editor);
     play_position(editor);
@@ -541,7 +542,7 @@ static void finalize_step(ysw_editor_t *editor, zm_step_x step_index)
     ysw_staff_set_position(editor->staff, editor->position);
     display_mode(editor);
     recalculate(editor);
-    update_tlm(editor);
+    save_undo_action(editor);
 }
 
 static zm_step_t *find_previous_melody_step(ysw_editor_t *editor, int32_t step_index)
@@ -702,7 +703,7 @@ static void delete_step(ysw_editor_t *editor)
         ysw_staff_set_position(editor->staff, editor->position);
         display_mode(editor);
         recalculate(editor);
-        update_tlm(editor);
+        save_undo_action(editor);
     }
 }
 
@@ -744,7 +745,7 @@ static void increase_pitch(ysw_editor_t *editor)
         }
         play_position(editor);
         display_mode(editor);
-        update_tlm(editor);
+        save_undo_action(editor);
     }
 }
 
@@ -765,7 +766,7 @@ static void decrease_pitch(ysw_editor_t *editor)
         }
         play_position(editor);
         display_mode(editor);
-        update_tlm(editor);
+        save_undo_action(editor);
     }
 }
 
@@ -1183,10 +1184,44 @@ static void on_chord_style(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t
     editor->chord_builder.style = ysw_array_get(editor->music->chord_styles, item->value);
 }
 
+static void on_confirm_save(void *context, ysw_popup_t *popup)
+{
+    ysw_editor_t *editor = context;
+    editor->section->tlm = editor->music->settings.clock++;
+    zm_section_x original_index = ysw_array_find(editor->music->sections, editor->original_section);
+    ysw_array_set(editor->music->sections, original_index, editor->section);
+    zm_section_free(editor->original_section);
+    zm_save_music(editor->music);
+    editor->control = YSW_APP_TERMINATE;
+}
+
+static void on_confirm_discard(void *context, ysw_popup_t *popup)
+{
+    ysw_editor_t *editor = context;
+    editor->control = YSW_APP_TERMINATE;
+}
+
 static void on_close(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    editor->control = YSW_APP_TERMINATE;
+    if (zm_sections_equal(editor->section, editor->original_section)) {
+        editor->control = YSW_APP_TERMINATE;
+    } else {
+        ysw_string_t *s = ysw_string_create(128);
+        ysw_string_printf(s, "File modified:\n%s\nSave changes?", editor->original_section->name);
+        ysw_popup_config_t config = {
+            .type = YSW_MSGBOX_YES_NO_CANCEL,
+            .context = editor,
+            .message = ysw_string_get_chars(s),
+            .on_yes = on_confirm_save,
+            .on_no = on_confirm_discard,
+            .okay_scan_code = 5,
+            .no_scan_code = 6,
+            .cancel_scan_code = 7,
+        };
+        ysw_popup_create(&config);
+        ysw_string_free(s);
+    }
 }
 
 static void on_insert_chord_type(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -1282,7 +1317,7 @@ static void on_remove_beat(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t
     if (step) {
         step->rhythm.beat = NULL;
         recalculate(editor);
-        update_tlm(editor);
+        save_undo_action(editor);
     }
 }
 
@@ -1297,7 +1332,7 @@ static void on_remove_chord(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_
         step->chord.duration = 0;
         step->chord.frequency = 0;
         recalculate(editor);
-        update_tlm(editor);
+        save_undo_action(editor);
     }
 }
 
@@ -1310,7 +1345,7 @@ static void on_remove_note(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t
         step->melody.duration = 0;
         step->melody.tie = 0;
         recalculate(editor);
-        update_tlm(editor);
+        save_undo_action(editor);
     }
 }
 
@@ -1323,7 +1358,7 @@ static void on_remove_rest(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t
         step->melody.duration = 0;
         step->melody.tie = 0;
         recalculate(editor);
-        update_tlm(editor);
+        save_undo_action(editor);
     }
 }
 
@@ -1334,7 +1369,7 @@ static void on_remove_stroke(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item
     if (step) {
         step->rhythm.surface = 0;
         recalculate(editor);
-        update_tlm(editor);
+        save_undo_action(editor);
     }
 }
 
@@ -1381,7 +1416,7 @@ static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t
         play_position(editor);
         display_mode(editor);
         recalculate(editor);
-        update_tlm(editor);
+        save_undo_action(editor);
     }
 }
 
@@ -1797,7 +1832,6 @@ const ysw_menu_item_t editor_menu[] = {
     { 34, "A5", YSW_MF_BUTTON, on_note, 69, NULL },
     { 35, "B5", YSW_MF_BUTTON, on_note, 71, NULL },
 
-    // TODO: Consider "save changes? yes/no/cancel" prompt to keep user from closing editor accidentally
     { 36, "Close", YSW_MF_MINUS, on_close, 0, NULL },
     { 37, "Delete", YSW_MF_COMMAND, on_delete, 0, NULL },
     { 38, "Toggle\nMenu", YSW_MF_TOGGLE, ysw_menu_nop, 0, NULL },
@@ -1817,7 +1851,8 @@ void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *se
 
     editor->bus = bus;
     editor->music = music;
-    editor->section = section;
+    editor->original_section = section;
+    editor->section = zm_copy_section(section);
 
     editor->chord_type = ysw_array_get(music->chord_types, DEFAULT_CHORD_TYPE);
     editor->chord_style = ysw_array_get(music->chord_styles, DEFAULT_CHORD_STYLE);

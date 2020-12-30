@@ -640,14 +640,19 @@ static zm_music_t *create_music()
     return music;
 }
 
-void zm_section_free(zm_music_t *music, zm_section_t *section)
+void zm_section_free(zm_section_t *section)
+{
+    ysw_heap_free(section->name);
+    ysw_array_free_all(section->steps);
+    ysw_heap_free(section);
+}
+
+void zm_section_delete(zm_music_t *music, zm_section_t *section)
 {
     int32_t index = ysw_array_find(music->sections, section);
     assert(index >= 0);
     ysw_array_remove(music->sections, index);
-    ysw_heap_free(section->name);
-    ysw_array_free_all(section->steps);
-    ysw_heap_free(section);
+    zm_section_free(section);
 }
 
 // TODO: factor type-specific delete functions out for reuse and invoke them
@@ -701,7 +706,7 @@ void zm_music_free(zm_music_t *music)
     zm_medium_t section_count = ysw_array_get_count(music->sections);
     for (int32_t i = section_count - 1; i >= 0; i--) {
         zm_section_t *section = ysw_array_get(music->sections, i);
-        zm_section_free(music, section);
+        zm_section_free(section);
     }
     ysw_array_free(music->sections);
 
@@ -1481,7 +1486,7 @@ zm_section_t *zm_create_section(zm_music_t *music)
     section->tempo = 100;
     section->key = 0;
     section->time = ZM_TIME_4_4;
-    section->tlm = music->settings.clock++;
+    section->tlm = 0;
     section->steps = ysw_array_create(64);
     section->melody_program = ysw_array_get(music->programs, DEFAULT_MELODY_PROGRAM);
     section->chord_program = ysw_array_get(music->programs, DEFAULT_CHORD_PROGRAM);
@@ -1489,7 +1494,7 @@ zm_section_t *zm_create_section(zm_music_t *music)
     return section;
 }
 
-zm_section_t *zm_copy_section(zm_music_t *music, zm_section_t *old_section)
+zm_section_t *zm_copy_section(zm_section_t *old_section)
 {
     char new_name[ZM_NAME_SZ];
     ysw_name_create_new_version(old_section->name, new_name, sizeof(new_name));
@@ -1498,7 +1503,7 @@ zm_section_t *zm_copy_section(zm_music_t *music, zm_section_t *old_section)
     new_section->tempo = old_section->tempo;
     new_section->key = old_section->key;
     new_section->time = old_section->time;
-    new_section->tlm = music->settings.clock++;
+    new_section->tlm = old_section->tlm;
     new_section->steps = ysw_array_create(64);
     new_section->melody_program = old_section->melody_program;
     new_section->chord_program = old_section->chord_program;
@@ -1511,6 +1516,42 @@ zm_section_t *zm_copy_section(zm_music_t *music, zm_section_t *old_section)
         ysw_array_push(new_section->steps, new_step);
     }
     return new_section;
+}
+
+bool zm_steps_equal(zm_step_t *left, zm_step_t *right)
+{
+    // Warning: assumes padding is zero'd at allocation and that no fields
+    // have different representations for the same value (e.g. bool/float).
+    return memcmp(left, right, sizeof(zm_step_t)) == 0;
+}
+
+bool zm_step_arrays_equal(ysw_array_t *left, ysw_array_t *right)
+{
+    zm_step_x left_count = ysw_array_get_count(left);
+    zm_step_x right_count = ysw_array_get_count(right);
+    if (left_count != right_count) {
+        return false;
+    }
+    for (zm_step_x i = 0; i < left_count; i++) {
+        zm_step_t *left_step = ysw_array_get(left, i);
+        zm_step_t *right_step = ysw_array_get(right, i);
+        if (!zm_steps_equal(left_step, right_step)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool zm_sections_equal(zm_section_t *left, zm_section_t *right)
+{
+    return ((strcmp(left->name, right->name) == 0) &&
+            (left->tempo == right->tempo) &&
+            (left->key == right->key) &&
+            (left->time == right->time) &&
+            (left->melody_program == right->melody_program) &&
+            (left->chord_program == right->chord_program) &&
+            (left->rhythm_program == right->rhythm_program) &&
+            zm_step_arrays_equal(left->steps, right->steps));
 }
 
 ysw_array_t *zm_get_section_references(zm_music_t *music, zm_section_t *section)
