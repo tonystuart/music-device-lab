@@ -189,7 +189,7 @@ static void on_save(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 // 29, 30, 31, 32, 33, 34, 35,   36, 37, 38, 39,
 
 static const ysw_menu_item_t new_menu[] = {
-    { YSW_R1_C1, "Music", YSW_MF_PRESS, on_new_section, 0, NULL },
+    { YSW_R1_C1, "Music", YSW_MF_COMMAND, on_new_section, 0, NULL },
     { YSW_R1_C2, "Beat", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
     { YSW_R1_C3, "Sample", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
     { YSW_R1_C4, "Program", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
@@ -205,7 +205,7 @@ static const ysw_menu_item_t new_menu[] = {
 };
 
 static const ysw_menu_item_t open_menu[] = {
-    { YSW_R1_C1, "Music", YSW_MF_PRESS, on_open_section, 0, NULL },
+    { YSW_R1_C1, "Music", YSW_MF_COMMAND, on_open_section, 0, NULL },
     { YSW_R1_C2, "Beat", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
     { YSW_R1_C3, "Sample", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
     { YSW_R1_C4, "Program", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
@@ -280,7 +280,7 @@ static const ysw_menu_item_t start_menu[] = {
     { YSW_R3_C3, "Settings", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
-    { YSW_R4_C3, " ", YSW_MF_MINUS, ysw_menu_nop, 0, NULL }, // Keyboard (#) Menu Activation
+    { YSW_R4_C3, "Toggle\nMenu", YSW_MF_TOGGLE, ysw_menu_nop, 0, NULL },
 
     { 0, "Shell", YSW_MF_END, NULL, 0, NULL },
 };

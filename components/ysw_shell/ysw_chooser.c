@@ -274,7 +274,7 @@ static const ysw_menu_item_t chooser_menu[] = {
     { YSW_R2_C4, "Down", YSW_MF_COMMAND, on_chooser_down, 0, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, on_close, 0, NULL },
-    { YSW_R4_C3, " ", YSW_MF_MINUS, ysw_menu_nop, 0, NULL }, // Keyboard (#) Menu Activation
+    { YSW_R4_C3, "Toggle\nMenu", YSW_MF_TOGGLE, ysw_menu_nop, 0, NULL },
 
     { 0, "Chooser", YSW_MF_END, NULL, 0, NULL },
 };

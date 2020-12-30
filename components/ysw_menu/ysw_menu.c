@@ -24,8 +24,6 @@ static inline ysw_menu_item_t *get_items(ysw_menu_t *menu)
     return ysw_array_get_top(menu->stack);
 }
 
-// TODO: consider using binary search
-
 static ysw_menu_item_t *find_item_by_scan_code(ysw_menu_t *menu, uint32_t scan_code)
 {
     ysw_menu_item_t *menu_item = ysw_array_get_top(menu->stack);
@@ -178,30 +176,7 @@ static void hide_softkeys(ysw_menu_t *menu)
     menu->softkeys = NULL;
 }
 
-void ysw_menu_pop_all(ysw_menu_t *menu)
-{
-    if (menu->softkeys) {
-        hide_softkeys(menu);
-    }
-    while (ysw_array_get_count(menu->stack) > 1) {
-        ysw_array_pop(menu->stack);
-    }
-}
-
-void ysw_menu_pop(ysw_menu_t *menu)
-{
-    if (menu->softkeys) {
-        hide_softkeys(menu);
-        if (ysw_array_get_count(menu->stack) > 1) {
-            ysw_array_pop(menu->stack);
-            show_softkeys(menu);
-        }
-    } else {
-        show_softkeys(menu);
-    }
-}
-
-static void open_menu(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void plus_menu(ysw_menu_t *menu, ysw_menu_item_t *item)
 {
     if (menu->softkeys) {
         if (item->submenu) {
@@ -210,17 +185,55 @@ static void open_menu(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *ite
             show_softkeys(menu);
         }
     } else {
-        while (ysw_array_get_count(menu->stack) > 1) {
-            ysw_array_pop(menu->stack);
-        }
         show_softkeys(menu);
     }
 }
 
-static void close_menu(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void minus_menu(ysw_menu_t *menu)
 {
     if (menu->softkeys) {
         hide_softkeys(menu);
+        if (ysw_array_get_count(menu->stack) > 1) {
+            ysw_array_pop(menu->stack);
+            if (ysw_array_get_count(menu->stack) > 1 || menu->show_base_menu_on_minus) {
+                show_softkeys(menu);
+            }
+        }
+    } else {
+        show_softkeys(menu);
+    }
+}
+
+static void show_menu(ysw_menu_t *menu)
+{
+    if (!menu->softkeys) {
+        show_softkeys(menu);
+    }
+}
+
+static void hide_menu(ysw_menu_t *menu)
+{
+    if (menu->softkeys) {
+        hide_softkeys(menu);
+    }
+}
+
+static void toggle_menu(ysw_menu_t *menu)
+{
+    if (menu->softkeys) {
+        hide_softkeys(menu);
+    } else {
+        show_softkeys(menu);
+    }
+}
+
+static void reset_menu(ysw_menu_t *menu)
+{
+    if (menu->softkeys) {
+        hide_softkeys(menu);
+    }
+    while (ysw_array_get_count(menu->stack) > 1) {
+        ysw_array_pop(menu->stack);
     }
 }
 
@@ -237,27 +250,28 @@ void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
     ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_up.scan_code);
     if (menu_item) {
         if (menu_item->flags & YSW_MENU_UP) {
-            if (menu_item->flags & YSW_MENU_POP) {
-                // Work around bug that prevents editor's Menu- (Back) from functioning
-                // as menu open because it always invokes editor's set_terminate_flag
-                if (menu->softkeys) {
-                    menu_item->cb(menu, event, menu_item);
-                }
-            } else {
-                menu_item->cb(menu, event, menu_item);
-            }
+            menu_item->cb(menu, event, menu_item);
         }
-        if (menu_item->flags & YSW_MENU_OPEN) {
-            open_menu(menu, event, menu_item);
-        }
-        if (menu_item->flags & YSW_MENU_CLOSE) {
-            close_menu(menu, event, menu_item);
-        }
-        if (menu_item->flags & YSW_MENU_POP) {
-            ysw_menu_pop(menu);
-        }
-        if (menu_item->flags & YSW_MENU_POP_ALL) {
-            ysw_menu_pop_all(menu);
+        ysw_menu_action_t action = menu_item->flags & YSW_MENU_ACTION_MASK;
+        switch (action) {
+            case YSW_MENU_PLUS:
+                plus_menu(menu, menu_item);
+                break;
+            case YSW_MENU_MINUS:
+                minus_menu(menu);
+                break;
+            case YSW_MENU_SHOW:
+                show_menu(menu);
+                break;
+            case YSW_MENU_HIDE:
+                hide_menu(menu);
+                break;
+            case YSW_MENU_TOGGLE:
+                toggle_menu(menu);
+                break;
+            case YSW_MENU_RESET:
+                reset_menu(menu);
+                break;
         }
     }
 }
@@ -297,9 +311,7 @@ void ysw_menu_free(ysw_menu_t *menu)
 
 void ysw_menu_show(ysw_menu_t *menu)
 {
-    if (!menu->softkeys) {
-        show_softkeys(menu);
-    }
+    show_menu(menu);
 }
 
 static void on_glass_event(struct _lv_obj_t *obj, lv_event_t event)
@@ -331,3 +343,9 @@ void ysw_menu_remove_sub_menu(ysw_menu_t *menu, const ysw_menu_item_t *sub_menu)
 {
     ysw_array_pop(menu->stack);
 }
+
+void ysw_set_show_base_menu_on_minus(ysw_menu_t *menu, bool show_base_menu_on_minus)
+{
+    menu->show_base_menu_on_minus = show_base_menu_on_minus;
+}
+

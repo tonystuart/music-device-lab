@@ -1798,9 +1798,9 @@ const ysw_menu_item_t editor_menu[] = {
     { 35, "B5", YSW_MF_BUTTON, on_note, 71, NULL },
 
     // TODO: Consider "save changes? yes/no/cancel" prompt to keep user from closing editor accidentally
-    { 36, "Close\nMenu", YSW_MF_HIDE, ysw_menu_nop, 0, NULL },
+    { 36, "Close", YSW_MF_MINUS, on_close, 0, NULL },
     { 37, "Delete", YSW_MF_COMMAND, on_delete, 0, NULL },
-    { 38, "Close\nEditor", YSW_MF_MINUS, on_close, 0, NULL },
+    { 38, "Toggle\nMenu", YSW_MF_TOGGLE, ysw_menu_nop, 0, NULL },
     { 39, "Right", YSW_MF_COMMAND, on_right, 0, NULL },
 
     { 0, "Music", YSW_MF_END, NULL, 0, NULL },
