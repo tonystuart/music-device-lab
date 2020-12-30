@@ -14,6 +14,11 @@
 #include "lvgl.h"
 
 typedef enum {
+    YSW_MENU_ROOT_HIDE,
+    YSW_MENU_ROOT_SHOW,
+} ysw_menu_root_handling_t;
+
+typedef enum {
     YSW_MENU_PLUS = 0x01,
     YSW_MENU_MINUS = 0x02,
     YSW_MENU_SHOW = 0x03,
@@ -75,7 +80,7 @@ typedef struct ysw_menu_item_s {
 typedef struct ysw_menu_s {
     ysw_bus_t *bus;
     bool seamless_transition;
-    bool show_base_menu_on_minus; // allows seamless transition (e.g. to shell)
+    ysw_menu_root_handling_t root_handling; // whether or not to show root menu on menu-
     uint32_t softkey_map_size; // number of scan codes in softmap
     const ysw_menu_softkey_t *softkey_map; // scan codes comprising soft keys
     ysw_array_t *stack; // each element is the base of an array of menu items
@@ -103,4 +108,4 @@ ysw_menu_t *ysw_menu_create(ysw_bus_t *bus, const ysw_menu_item_t *menu_items, c
 
 void ysw_menu_free(ysw_menu_t *menu);
 
-void ysw_set_show_base_menu_on_minus(ysw_menu_t *menu, bool show_base_menu_on_minus);
+void ysw_menu_set_root_handling(ysw_menu_t *menu, ysw_menu_root_handling_t root_handling);

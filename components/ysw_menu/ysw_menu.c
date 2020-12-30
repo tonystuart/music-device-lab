@@ -195,7 +195,7 @@ static void minus_menu(ysw_menu_t *menu)
         hide_softkeys(menu);
         if (ysw_array_get_count(menu->stack) > 1) {
             ysw_array_pop(menu->stack);
-            if (ysw_array_get_count(menu->stack) > 1 || menu->show_base_menu_on_minus) {
+            if (ysw_array_get_count(menu->stack) > 1 || menu->root_handling == YSW_MENU_ROOT_SHOW) {
                 show_softkeys(menu);
             }
         }
@@ -344,8 +344,8 @@ void ysw_menu_remove_sub_menu(ysw_menu_t *menu, const ysw_menu_item_t *sub_menu)
     ysw_array_pop(menu->stack);
 }
 
-void ysw_set_show_base_menu_on_minus(ysw_menu_t *menu, bool show_base_menu_on_minus)
+void ysw_menu_set_root_handling(ysw_menu_t *menu, ysw_menu_root_handling_t root_handling)
 {
-    menu->show_base_menu_on_minus = show_base_menu_on_minus;
+    menu->root_handling = root_handling;
 }
 

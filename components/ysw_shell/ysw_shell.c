@@ -62,9 +62,8 @@ static void stop_listening(ysw_shell_t *shell)
 
 static void create_section(ysw_shell_t *shell)
 {
-    zm_section_t *section = zm_create_section(shell->music);
-    ysw_array_push(shell->music->sections, section);
     stop_listening(shell);
+    zm_section_t *section = zm_create_section(shell->music);
     ysw_editor_edit_section(shell->bus, shell->music, section);
     start_listening(shell);
 }
@@ -78,7 +77,7 @@ static void open_section(ysw_shell_t *shell, zm_section_t *section)
 
 static void copy_section(ysw_shell_t *shell, zm_section_t *section)
 {
-    zm_section_t *new_section = zm_copy_section(section);
+    zm_section_t *new_section = zm_copy_section(section, ZM_COPY_NEW_NAME);
     zm_section_x section_x = ysw_array_find(shell->music->sections, section);
     ysw_array_insert(shell->music->sections, section_x + 1, new_section);
 }
@@ -221,7 +220,7 @@ static const ysw_menu_item_t open_menu[] = {
 };
 
 static const ysw_menu_item_t copy_menu[] = {
-    { YSW_R1_C1, "Music", YSW_MF_PRESS, on_copy_section, 0, NULL },
+    { YSW_R1_C1, "Music", YSW_MF_COMMAND, on_copy_section, 0, NULL },
     { YSW_R1_C2, "Beat", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
     { YSW_R1_C3, "Sample", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
     { YSW_R1_C4, "Program", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
@@ -237,7 +236,7 @@ static const ysw_menu_item_t copy_menu[] = {
 };
 
 static const ysw_menu_item_t rename_menu[] = {
-    { YSW_R1_C1, "Music", YSW_MF_PRESS, on_rename_section, 0, NULL },
+    { YSW_R1_C1, "Music", YSW_MF_COMMAND, on_rename_section, 0, NULL },
     { YSW_R1_C2, "Beat", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
     { YSW_R1_C3, "Sample", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
     { YSW_R1_C4, "Program", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
@@ -307,7 +306,7 @@ static void on_chooser_select(ysw_shell_t *shell, ysw_event_chooser_select_t *ev
     }
 }
 
-static ysw_app_control_t process_event(void *context, ysw_event_t *event)
+static void process_event(void *context, ysw_event_t *event)
 {
     ysw_shell_t *shell = context;
     switch (event->header.type) {
@@ -326,7 +325,6 @@ static ysw_app_control_t process_event(void *context, ysw_event_t *event)
         default:
             break;
     }
-    return YSW_APP_CONTINUE;
 }
 
 static void create_splash_screen(ysw_shell_t *shell)
@@ -360,6 +358,8 @@ void ysw_shell_create(ysw_bus_t *bus, zm_music_t *music)
     shell->music = music;
     shell->menu = ysw_menu_create(bus, start_menu, ysw_app_softkey_map, shell);
     shell->queue = ysw_app_create_queue();
+
+    ysw_menu_set_root_handling(shell->menu, YSW_MENU_ROOT_SHOW);
 
     create_splash_screen(shell);
     start_listening_all(shell);

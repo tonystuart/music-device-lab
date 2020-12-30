@@ -113,6 +113,16 @@ void ysw_popup_on_key_down(ysw_popup_t *popup, ysw_event_t *event)
         if (popup->on_okay) {
             popup->on_okay(popup->context, popup);
         }
+    } else if (event->key_down.scan_code == popup->yes_scan_code) {
+        ESP_LOGD(TAG, "yes key");
+        if (popup->on_yes) {
+            popup->on_yes(popup->context, popup);
+        }
+    } else if (event->key_down.scan_code == popup->no_scan_code) {
+        ESP_LOGD(TAG, "no key");
+        if (popup->on_no) {
+            popup->on_no(popup->context, popup);
+        }
     } else if (event->key_down.scan_code == popup->cancel_scan_code) {
         ESP_LOGD(TAG, "cancel key");
         if (popup->on_cancel) {

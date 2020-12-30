@@ -39,7 +39,6 @@ typedef struct {
     lv_obj_t *table;
     int current_row;
     QueueHandle_t queue;
-    ysw_app_control_t control;
 } ysw_chooser_t;
 
 static void ensure_current_row_visible(ysw_chooser_t *chooser)
@@ -149,24 +148,18 @@ zm_section_t *get_section(ysw_chooser_t *chooser)
     return section;
 }
 
-static void set_terminate_flag(ysw_chooser_t *chooser)
-{
-    chooser->control = YSW_APP_TERMINATE;
-}
-
 static void select_item(ysw_chooser_t *chooser)
 {
     zm_section_t *section = get_section(chooser);
-    set_terminate_flag(chooser);
     if (section) {
         ysw_event_fire_chooser_select(chooser->bus, section, chooser->context);
     }
+    ysw_app_terminate();
 }
 
 static void on_close(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
-    ysw_chooser_t *chooser = menu->context;
-    set_terminate_flag(chooser);
+    ysw_app_terminate();
 }
 
 static void on_chooser_up(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -216,7 +209,7 @@ static void on_chooser_sort(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_
     show_selection(chooser, section_x);
 }
 
-static ysw_app_control_t process_event(void *context, ysw_event_t *event)
+static void process_event(void *context, ysw_event_t *event)
 {
     ysw_chooser_t *chooser = context;
     switch (event->header.type) {
@@ -232,7 +225,6 @@ static ysw_app_control_t process_event(void *context, ysw_event_t *event)
         default:
             break;
     }
-    return chooser->control;
 }
 
 static void on_chooser_page_event(struct _lv_obj_t *table, lv_event_t event)
@@ -333,12 +325,10 @@ void ysw_chooser_create(ysw_bus_t *bus, zm_music_t *music, zm_section_x row, voi
 
     chooser->queue = ysw_app_create_queue();
     ysw_bus_subscribe(bus, YSW_ORIGIN_KEYBOARD, chooser->queue);
-    ysw_bus_subscribe(bus, YSW_ORIGIN_CHOOSER, chooser->queue); // hack to terminate ysw_app_handle_events
 
     ysw_app_handle_events(chooser->queue, process_event, chooser);
 
     ysw_bus_unsubscribe(bus, YSW_ORIGIN_KEYBOARD, chooser->queue);
-    ysw_bus_unsubscribe(bus, YSW_ORIGIN_CHOOSER, chooser->queue);
     ysw_bus_delete_queue(bus, chooser->queue);
 
     ysw_menu_free(chooser->menu);

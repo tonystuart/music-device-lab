@@ -36,13 +36,10 @@
 
 extern const ysw_menu_softkey_t ysw_app_softkey_map[];
 
-typedef enum {
-    YSW_APP_CONTINUE,
-    YSW_APP_TERMINATE,
-} ysw_app_control_t;
-
-typedef ysw_app_control_t (*ysw_app_event_handler_t)(void *context, ysw_event_t *event);
+typedef void (*ysw_app_event_handler_t)(void *context, ysw_event_t *event);
 
 QueueHandle_t ysw_app_create_queue();
 
 void ysw_app_handle_events(QueueHandle_t queue, ysw_app_event_handler_t process_event, void *context);
+
+void ysw_app_terminate();

@@ -1494,12 +1494,17 @@ zm_section_t *zm_create_section(zm_music_t *music)
     return section;
 }
 
-zm_section_t *zm_copy_section(zm_section_t *old_section)
+zm_section_t *zm_copy_section(zm_section_t *old_section, zm_copy_name_origin_t name_origin)
 {
-    char new_name[ZM_NAME_SZ];
-    ysw_name_create_new_version(old_section->name, new_name, sizeof(new_name));
     zm_section_t *new_section = ysw_heap_allocate(sizeof(zm_section_t));
-    new_section->name = ysw_heap_strdup(new_name);
+    if (name_origin == ZM_COPY_NEW_NAME) {
+        char new_name[ZM_NAME_SZ];
+        ysw_name_create_new_version(old_section->name, new_name, sizeof(new_name));
+        new_section->name = ysw_heap_strdup(new_name);
+    } else {
+        new_section->name = ysw_heap_strdup(old_section->name);
+    }
+
     new_section->tempo = old_section->tempo;
     new_section->key = old_section->key;
     new_section->time = old_section->time;
@@ -1508,6 +1513,7 @@ zm_section_t *zm_copy_section(zm_section_t *old_section)
     new_section->melody_program = old_section->melody_program;
     new_section->chord_program = old_section->chord_program;
     new_section->rhythm_program = old_section->rhythm_program;
+
     zm_step_x step_count = ysw_array_get_count(old_section->steps);
     for (zm_step_x i = 0; i < step_count; i++) {
         zm_step_t *old_step = ysw_array_get(old_section->steps, i);
@@ -1515,6 +1521,7 @@ zm_section_t *zm_copy_section(zm_section_t *old_section)
         *new_step = *old_step;
         ysw_array_push(new_section->steps, new_step);
     }
+
     return new_section;
 }
 
