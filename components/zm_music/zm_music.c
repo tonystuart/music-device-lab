@@ -1494,35 +1494,84 @@ zm_section_t *zm_create_section(zm_music_t *music)
     return section;
 }
 
-zm_section_t *zm_copy_section(zm_section_t *old_section, zm_copy_name_origin_t name_origin)
+zm_section_t *zm_create_duplicate_section(zm_section_t *old_section)
 {
+    zm_step_x step_count = ysw_array_get_count(old_section->steps);
     zm_section_t *new_section = ysw_heap_allocate(sizeof(zm_section_t));
-    if (name_origin == ZM_COPY_NEW_NAME) {
-        char new_name[ZM_NAME_SZ];
-        ysw_name_create_new_version(old_section->name, new_name, sizeof(new_name));
-        new_section->name = ysw_heap_strdup(new_name);
-    } else {
-        new_section->name = ysw_heap_strdup(old_section->name);
-    }
+    new_section->name = ysw_heap_strdup(old_section->name);
 
     new_section->tempo = old_section->tempo;
     new_section->key = old_section->key;
     new_section->time = old_section->time;
     new_section->tlm = old_section->tlm;
-    new_section->steps = ysw_array_create(64);
+    new_section->steps = ysw_array_create(step_count);
     new_section->melody_program = old_section->melody_program;
     new_section->chord_program = old_section->chord_program;
     new_section->rhythm_program = old_section->rhythm_program;
 
-    zm_step_x step_count = ysw_array_get_count(old_section->steps);
     for (zm_step_x i = 0; i < step_count; i++) {
         zm_step_t *old_step = ysw_array_get(old_section->steps, i);
         zm_step_t *new_step = ysw_heap_allocate(sizeof(zm_step_t));
-        *new_step = *old_step;
         ysw_array_push(new_section->steps, new_step);
+        *new_step = *old_step;
     }
 
     return new_section;
+}
+
+void zm_copy_section(zm_section_t *to_section, zm_section_t *from_section)
+{
+    if (strlen(to_section->name) == strlen(from_section->name)) {
+        strcpy(to_section->name, from_section->name);
+    } else {
+        ysw_heap_free(to_section->name);
+        to_section->name = ysw_heap_strdup(from_section->name);
+    }
+
+    to_section->tempo = from_section->tempo;
+    to_section->key = from_section->key;
+    to_section->time = from_section->time;
+    to_section->tlm = from_section->tlm;
+    // reuse to_section->steps instead of reallocating
+    to_section->melody_program = from_section->melody_program;
+    to_section->chord_program = from_section->chord_program;
+    to_section->rhythm_program = from_section->rhythm_program;
+
+    zm_step_x to_count = ysw_array_get_count(to_section->steps);
+    zm_step_x from_count = ysw_array_get_count(from_section->steps);
+
+    for (zm_step_x i = 0; i < from_count; i++) {
+        zm_step_t *from_step = ysw_array_get(from_section->steps, i);
+        zm_step_t *to_step = NULL;
+        if (i < to_count) {
+            to_step = ysw_array_get(to_section->steps, i);
+        } else {
+            to_step = ysw_heap_allocate(sizeof(zm_step_t));
+            ysw_array_push(to_section->steps, to_step);
+        }
+        *to_step = *from_step;
+    }
+
+    if (to_count > from_count) {
+        // free any to-steps that we didn't reuse
+        for (zm_step_x i = from_count; i < to_count; i++) {
+            zm_step_t *excess_step = ysw_array_get(to_section->steps, i);
+            ysw_heap_free(excess_step);
+        }
+        ysw_array_set_count(to_section->steps, from_count);
+    }
+}
+
+void zm_rename_section(zm_section_t *section, const char *name)
+{
+    ysw_heap_free(section->name);
+    if (name) {
+        section->name = ysw_heap_strdup(name);
+    } else {
+        char new_name[ZM_NAME_SZ];
+        ysw_name_create_new_version(section->name, new_name, sizeof(new_name));
+        section->name = ysw_heap_strdup(new_name);
+    }
 }
 
 bool zm_steps_equal(zm_step_t *left, zm_step_t *right)

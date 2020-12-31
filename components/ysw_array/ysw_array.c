@@ -17,6 +17,14 @@
 
 #define TAG "YSW_ARRAY"
 
+static void ensure_capacity(ysw_array_t *array, uint32_t required_size)
+{
+    if (required_size > array->size) {
+        array->size = array->size ? array->size * 2 : 4;
+        array->data = ysw_heap_reallocate(array->data, sizeof(void*) * array->size);
+    }
+}
+
 ysw_array_t *ysw_array_create(uint32_t initial_size)
 {
     ysw_array_t *array = ysw_heap_allocate(sizeof(ysw_array_t));
@@ -34,10 +42,7 @@ uint32_t ysw_array_push(ysw_array_t *array, void *value)
 {
     assert(array);
     uint32_t index = array->count++;
-    if (array->count > array->size) {
-        array->size = array->size ? array->size * 2 : 4;
-        array->data = ysw_heap_reallocate(array->data, sizeof(void*) * array->size);
-    }
+    ensure_capacity(array, array->count);
     array->data[index] = value;
     return index;
 }
@@ -64,14 +69,14 @@ void *ysw_array_load(uint32_t count, ...)
     return array;
 }
 
-void ysw_array_truncate(ysw_array_t *array, uint32_t new_count)
+void ysw_array_set_count(ysw_array_t *array, uint32_t new_count)
 {
     assert(array);
-    assert(new_count <= array->count);
+    ensure_capacity(array, new_count);
     array->count = new_count;
 }
 
-void ysw_array_resize(ysw_array_t *array, uint32_t new_size)
+void ysw_array_set_size(ysw_array_t *array, uint32_t new_size)
 {
     assert(array);
     array->size = new_size;

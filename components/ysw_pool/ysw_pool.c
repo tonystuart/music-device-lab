@@ -49,7 +49,7 @@ void* ysw_pool_visit_items(ysw_pool_t *pool, ysw_pool_visitor_t visitor, void *c
                 ysw_array_set(pool->array, index, last_item);
             }
             count--;
-            ysw_array_truncate(pool->array, count);
+            ysw_array_set_count(pool->array, count);
         }
         if (action & YSW_POOL_ACTION_STOP) {
             done = true;

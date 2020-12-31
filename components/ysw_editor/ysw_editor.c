@@ -1201,10 +1201,12 @@ static void on_confirm_save(void *context, ysw_popup_t *popup)
     uint32_t original_index = ysw_array_find(editor->music->sections, editor->original_section);
     if (original_index == -1) {
         ysw_array_push(editor->music->sections, editor->section);
+        zm_section_free(editor->original_section);
     } else {
-        ysw_array_set(editor->music->sections, original_index, editor->section);
+        zm_copy_section(editor->original_section, editor->section); // preserve section address
+        ysw_staff_set_section(editor->staff, NULL);
+        zm_section_free(editor->section);
     }
-    zm_section_free(editor->original_section);
     zm_save_music(editor->music);
     close_editor(editor);
 }
@@ -1870,7 +1872,7 @@ void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *se
     editor->bus = bus;
     editor->music = music;
     editor->original_section = section;
-    editor->section = zm_copy_section(section, ZM_COPY_EXISTING_NAME);
+    editor->section = zm_create_duplicate_section(section);
 
     editor->chord_type = ysw_array_get(music->chord_types, DEFAULT_CHORD_TYPE);
     editor->chord_style = ysw_array_get(music->chord_styles, DEFAULT_CHORD_STYLE);

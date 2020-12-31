@@ -59,11 +59,6 @@ typedef uint16_t zm_chord_style_x;
 typedef uint32_t zm_step_x;
 typedef uint32_t zm_time_x;
 
-typedef enum {
-    ZM_COPY_NEW_NAME,
-    ZM_COPY_EXISTING_NAME,
-} zm_copy_name_origin_t;
-
 typedef struct {
     zm_time_x clock;
 } zm_settings_t;
@@ -310,7 +305,11 @@ zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note);
 
 zm_section_t *zm_create_section(zm_music_t *music);
 
-zm_section_t *zm_copy_section(zm_section_t *old_section, zm_copy_name_origin_t name_origin);
+zm_section_t *zm_create_duplicate_section(zm_section_t *section);
+
+void zm_copy_section(zm_section_t *to_section, zm_section_t *from_section);
+
+void zm_rename_section(zm_section_t *section, const char *name);
 
 bool zm_sections_equal(zm_section_t *left, zm_section_t *right);
 

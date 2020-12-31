@@ -77,7 +77,9 @@ static void open_section(ysw_shell_t *shell, zm_section_t *section)
 
 static void copy_section(ysw_shell_t *shell, zm_section_t *section)
 {
-    zm_section_t *new_section = zm_copy_section(section, ZM_COPY_NEW_NAME);
+    zm_section_t *new_section = zm_create_section(shell->music);
+    zm_copy_section(new_section, section);
+    zm_rename_section(new_section, NULL);
     zm_section_x section_x = ysw_array_find(shell->music->sections, section);
     ysw_array_insert(shell->music->sections, section_x + 1, new_section);
 }
@@ -130,7 +132,8 @@ static void on_new_section_name(void *context, const char *text)
 {
     ysw_shell_t *shell = context;
     shell->section->name = ysw_heap_strdup(text);
-    shell->section->tlm = shell->music->settings.clock++;
+    //shell->section->tlm = shell->music->settings.clock++;
+    zm_save_music(shell->music);
 }
 
 static void rename_section(ysw_shell_t *shell, zm_section_t *section)
