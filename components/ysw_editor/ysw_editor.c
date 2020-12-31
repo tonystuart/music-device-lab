@@ -68,7 +68,6 @@ typedef struct {
 
     zm_music_t *music;
     zm_section_t *section;
-    zm_section_t *original_section;
     zm_chord_type_t *chord_type;
     zm_chord_style_t *chord_style;
     zm_chord_frequency_t chord_frequency;
@@ -76,12 +75,15 @@ typedef struct {
     zm_duration_t duration;
     zm_duration_t drum_cadence;
 
+    zm_section_t *original_section;
+
     zm_time_x down_at;
     zm_time_x up_at;
     zm_time_x delta;
 
     bool loop;
     bool insert;
+    bool modified;
     uint32_t position;
     ysw_editor_mode_t mode;
 
@@ -149,6 +151,7 @@ static zm_step_t *get_step(ysw_editor_t *editor)
 
 static void save_undo_action(ysw_editor_t *editor)
 {
+    editor->modified = true;
     // TODO: add undo/redo support
 }
 
@@ -744,6 +747,7 @@ static void increase_pitch(ysw_editor_t *editor)
         }
         play_position(editor);
         display_mode(editor);
+        ysw_staff_invalidate(editor->staff);
         save_undo_action(editor);
     }
 }
@@ -765,6 +769,7 @@ static void decrease_pitch(ysw_editor_t *editor)
         }
         play_position(editor);
         display_mode(editor);
+        ysw_staff_invalidate(editor->staff);
         save_undo_action(editor);
     }
 }
@@ -1210,26 +1215,31 @@ static void on_confirm_discard(void *context, ysw_popup_t *popup)
     close_editor(editor);
 }
 
+static void prompt_to_save_changes(ysw_editor_t *editor)
+{
+    ysw_string_t *s = ysw_string_create(128);
+    ysw_string_printf(s, "File modified:\n%s\nSave changes?", editor->original_section->name);
+    ysw_popup_config_t config = {
+        .type = YSW_MSGBOX_YES_NO_CANCEL,
+        .context = editor,
+        .message = ysw_string_get_chars(s),
+        .on_yes = on_confirm_save,
+        .on_no = on_confirm_discard,
+        .okay_scan_code = 5,
+        .no_scan_code = 6,
+        .cancel_scan_code = 7,
+    };
+    ysw_popup_create(&config);
+    ysw_string_free(s);
+}
+
 static void on_close(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    if (zm_sections_equal(editor->section, editor->original_section)) {
-        close_editor(editor);
+    if (editor->modified) {
+        prompt_to_save_changes(editor);
     } else {
-        ysw_string_t *s = ysw_string_create(128);
-        ysw_string_printf(s, "File modified:\n%s\nSave changes?", editor->original_section->name);
-        ysw_popup_config_t config = {
-            .type = YSW_MSGBOX_YES_NO_CANCEL,
-            .context = editor,
-            .message = ysw_string_get_chars(s),
-            .on_yes = on_confirm_save,
-            .on_no = on_confirm_discard,
-            .okay_scan_code = 5,
-            .no_scan_code = 6,
-            .cancel_scan_code = 7,
-        };
-        ysw_popup_create(&config);
-        ysw_string_free(s);
+        close_editor(editor);
     }
 }
 
@@ -1870,6 +1880,7 @@ void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *se
     editor->drum_cadence = ZM_EIGHTH;
 
     editor->insert = true;
+    editor->modified = section->tlm ? false : true; // set modified for new file
     editor->position = 0;
     editor->mode = YSW_EDITOR_MODE_MELODY;
     editor->insert_settings.octave = YSW_MIDI_MIDDLE_OCTAVE;
