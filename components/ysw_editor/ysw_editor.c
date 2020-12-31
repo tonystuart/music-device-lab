@@ -1183,6 +1183,12 @@ static void on_chord_style(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t
     editor->chord_builder.style = ysw_array_get(editor->music->chord_styles, item->value);
 }
 
+static void close_editor(ysw_editor_t *editor)
+{
+    ysw_event_fire_stop(editor->bus);
+    ysw_app_terminate();
+}
+
 static void on_confirm_save(void *context, ysw_popup_t *popup)
 {
     ysw_editor_t *editor = context;
@@ -1195,19 +1201,20 @@ static void on_confirm_save(void *context, ysw_popup_t *popup)
     }
     zm_section_free(editor->original_section);
     zm_save_music(editor->music);
-    ysw_app_terminate();
+    close_editor(editor);
 }
 
 static void on_confirm_discard(void *context, ysw_popup_t *popup)
 {
-    ysw_app_terminate();
+    ysw_editor_t *editor = context;
+    close_editor(editor);
 }
 
 static void on_close(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     if (zm_sections_equal(editor->section, editor->original_section)) {
-        ysw_app_terminate();
+        close_editor(editor);
     } else {
         ysw_string_t *s = ysw_string_create(128);
         ysw_string_printf(s, "File modified:\n%s\nSave changes?", editor->original_section->name);
