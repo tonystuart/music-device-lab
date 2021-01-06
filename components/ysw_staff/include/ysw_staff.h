@@ -17,11 +17,14 @@ extern "C" {
 #include "zm_music.h"
 #include "lvgl.h"
 
-//#include "../lv_conf_internal.h"
-//#include "../lv_core/lv_obj.h"
+typedef enum {
+    YSW_STAFF_DIRECT,
+    YSW_STAFF_SCROLL,
+} ysw_staff_position_type_t;
 
 typedef struct {
     uint32_t position;
+    lv_coord_t start_x;
     zm_section_t *section;
 } ysw_staff_ext_t;
 
@@ -33,7 +36,7 @@ typedef uint8_t ysw_staff_role_t;
 
 lv_obj_t *ysw_staff_create(lv_obj_t *par);
 void ysw_staff_set_section(lv_obj_t *staff, zm_section_t *section);
-void ysw_staff_set_position(lv_obj_t *staff, uint32_t position);
+void ysw_staff_set_position(lv_obj_t *staff, zm_step_x new_position, ysw_staff_position_type_t type);
 void ysw_staff_invalidate(lv_obj_t *staff);
 zm_section_t *ysw_staff_get_section(lv_obj_t *staff);
 uint32_t ysw_staff_get_position(lv_obj_t *staff);

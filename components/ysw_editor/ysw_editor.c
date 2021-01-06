@@ -84,7 +84,7 @@ typedef struct {
     bool loop;
     bool insert;
     bool modified;
-    uint32_t position;
+    zm_step_x position;
     ysw_editor_mode_t mode;
 
     lv_obj_t *container;
@@ -239,7 +239,6 @@ static void display_melody_mode(ysw_editor_t *editor)
             step_index = step_count - 1;
         }
         zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
-        ESP_LOGD(TAG, "step_index=%d, start=%d", step_index, step->start);
         uint32_t millis = ysw_ticks_to_millis(step->melody.duration, editor->section->tempo);
         zm_note_t note = step->melody.note;
         if (note) {
@@ -541,7 +540,7 @@ static void finalize_step(ysw_editor_t *editor, zm_step_x step_index)
     // insert when starting on space, overtype when starting on step
     editor->position = min(editor->position + 2, step_count * 2);
 #endif
-    ysw_staff_set_position(editor->staff, editor->position);
+    ysw_staff_set_position(editor->staff, editor->position, YSW_STAFF_SCROLL);
     display_mode(editor);
     recalculate(editor);
     save_undo_action(editor);
@@ -702,7 +701,7 @@ static void delete_step(ysw_editor_t *editor)
                 editor->position = 0;
             }
         }
-        ysw_staff_set_position(editor->staff, editor->position);
+        ysw_staff_set_position(editor->staff, editor->position, YSW_STAFF_SCROLL);
         display_mode(editor);
         recalculate(editor);
         save_undo_action(editor);
@@ -714,7 +713,7 @@ static void move_left(ysw_editor_t *editor, uint8_t move_amount)
     if (editor->position >= move_amount) {
         editor->position -= move_amount;
         play_position(editor);
-        ysw_staff_set_position(editor->staff, editor->position);
+        ysw_staff_set_position(editor->staff, editor->position, YSW_STAFF_SCROLL);
         display_mode(editor);
     }
 }
@@ -725,7 +724,7 @@ static void move_right(ysw_editor_t *editor, uint8_t move_amount)
     if (new_position <= ysw_array_get_count(editor->section->steps) * 2) {
         editor->position = new_position;
         play_position(editor);
-        ysw_staff_set_position(editor->staff, editor->position);
+        ysw_staff_set_position(editor->staff, editor->position, YSW_STAFF_SCROLL);
         display_mode(editor);
     }
 }
@@ -1419,7 +1418,7 @@ static void on_note_status(ysw_editor_t *editor, ysw_event_t *event)
         int32_t result = ysw_array_search(editor->section->steps, &needle, compare_steps, flags);
         if (result != -1) {
             editor->position = step_index_to_position(result);
-            ysw_staff_set_position(editor->staff, editor->position);
+            ysw_staff_set_position(editor->staff, editor->position, YSW_STAFF_DIRECT);
         } else {
             // e.g. a stroke in a beat
         }

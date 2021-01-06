@@ -113,20 +113,49 @@ static const uint8_t flat_map[] = {
 
 // See: https://en.wikipedia.org/wiki/Accidental_(music)
 
+// TODO: change occurrences of 320 and 160 to manifest constants
+// TODO: change draw_type_t to draw_dir_t
+// TODO: change YSW_STAFF_LEFT/RIGHT to VISIT_LEFT/RIGHT
+// TODO: change draw_ functions to visit_
+// TODO: consider changing ysw_staff_t to dc_t
+// TODO: include key sig and measure bars in widths
+
+#define STAFF_HEAD 80
+
 typedef enum {
     YSW_STAFF_LEFT,
     YSW_STAFF_RIGHT,
 } draw_type_t;
 
+typedef enum {
+    VISIT_DRAW,
+    VISIT_MEASURE,
+} visit_type_t;
+
 typedef struct {
     lv_point_t point;
     lv_color_t color;
     ysw_array_t *patches;
+    visit_type_t visit_type;
     draw_type_t draw_type;
     const lv_font_t *font;
     const lv_area_t *clip_area;
     const zm_key_signature_t *key_signature;
 } ysw_staff_t;
+
+// TODO: find the right way to share these with ysw_editor
+
+typedef uint32_t position_x;
+
+static inline bool is_step_position(position_x position)
+{
+    return position % 2 == 1;
+}
+
+static inline bool is_space_position(position_x position)
+{
+    return position % 2 == 0;
+}
 
 void ysw_draw_letter(const lv_point_t * pos_p, const lv_area_t * clip_area, const lv_font_t * font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode);
 
@@ -137,10 +166,20 @@ static void draw_letter(ysw_staff_t *dc, uint32_t letter)
         if (dc->draw_type == YSW_STAFF_LEFT) {
             dc->point.x -= g.adv_w;
         }
-        ysw_draw_letter(&dc->point, dc->clip_area, dc->font, letter, dc->color, OPA, BLEND);
+        if (dc->visit_type == VISIT_DRAW) {
+            ysw_draw_letter(&dc->point, dc->clip_area, dc->font, letter, dc->color, OPA, BLEND);
+        }
         if (dc->draw_type == YSW_STAFF_RIGHT) {
             dc->point.x += g.adv_w;
         }
+    }
+}
+
+static void draw_label(ysw_staff_t *dc, const lv_area_t *coords, const lv_draw_label_dsc_t *dsc, const char *txt, lv_draw_label_hint_t *hint)
+{
+    // TODO: use draw_letter to measure x, advance y on word wrap (+ it's simpler w/fewer cycles)
+    if (dc->visit_type == VISIT_DRAW) {
+        lv_draw_label(coords, dc->clip_area, dsc, txt, hint);
     }
 }
 
@@ -160,7 +199,7 @@ static void draw_measure_label(ysw_staff_t *dc, uint32_t measure)
         .opa = LV_OPA_COVER,
         .flag = LV_TXT_FLAG_CENTER,
     };
-    lv_draw_label(&coords, dc->clip_area, &dsc, buf, NULL);
+    draw_label(dc, &coords, &dsc, buf, NULL);
 }
 
 static const uint8_t rest_time_base[] = {
@@ -286,9 +325,9 @@ static void draw_chord(ysw_staff_t *dc, zm_chord_t *chord)
         .font = &lv_font_unscii_8,
         .opa = LV_OPA_COVER,
     };
-    lv_draw_label(&coords, dc->clip_area, &dsc, zm_get_note_name(chord->root), NULL);
+    draw_label(dc, &coords, &dsc, zm_get_note_name(chord->root), NULL);
     coords.y1 += 9;
-    lv_draw_label(&coords, dc->clip_area, &dsc, chord->type->label, NULL);
+    draw_label(dc, &coords, &dsc, chord->type->label, NULL);
 }
 
 static void draw_rhythm(ysw_staff_t *dc, zm_rhythm_t *rhythm)
@@ -308,12 +347,12 @@ static void draw_rhythm(ysw_staff_t *dc, zm_rhythm_t *rhythm)
     if (rhythm->surface) {
         zm_patch_t *patch = zm_get_patch(dc->patches, rhythm->surface);
         if (patch && patch->name) {
-            lv_draw_label(&coords, dc->clip_area, &dsc, patch->name,  NULL);
+            draw_label(dc, &coords, &dsc, patch->name,  NULL);
             coords.y1 += 9;
         }
     }
     if (rhythm->beat) {
-        lv_draw_label(&coords, dc->clip_area, &dsc, rhythm->beat->label,  NULL);
+        draw_label(dc, &coords, &dsc, rhythm->beat->label,  NULL);
     }
 }
 
@@ -386,10 +425,10 @@ static void draw_staff(ysw_staff_ext_t *ext, ysw_staff_t *dc)
     uint32_t symbol_count = step_count * 2;
 
     dc->draw_type = YSW_STAFF_LEFT;
-    dc->point.x = 160;
+    dc->point.x = ext->start_x;
 
     for (int32_t left = ext->position - 1; left >= 0 && dc->point.x > 0; left--) {
-        if (left % 2 == 1) {
+        if (is_step_position(left)) {
             uint32_t step_index = left / 2;
             zm_step_t *step = ysw_array_get(ext->section->steps, step_index);
             if (step->flags & ZM_STEP_END_OF_MEASURE) {
@@ -408,10 +447,10 @@ static void draw_staff(ysw_staff_ext_t *ext, ysw_staff_t *dc)
     }
 
     dc->draw_type = YSW_STAFF_RIGHT;
-    dc->point.x = 160;
+    dc->point.x = ext->start_x;
 
     for (uint32_t right = ext->position; right <= symbol_count && dc->point.x < 320; right++) {
-        if (right % 2 == 1) {
+        if (is_step_position(right % 2)) {
             uint32_t step_index = right / 2;
             zm_step_t *step = ysw_array_get(ext->section->steps, step_index);
             if (right == ext->position) {
@@ -443,6 +482,7 @@ static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
     if (ext->section) {
         ysw_staff_t dc = {
+            .visit_type = VISIT_DRAW,
             .point.y = 70,
             .color = LV_COLOR_WHITE,
             .clip_area = clip_area,
@@ -452,6 +492,33 @@ static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
         };
         draw_staff(ext, &dc);
     }
+}
+
+static lv_coord_t measure_position(ysw_staff_ext_t *ext, position_x position)
+{
+    lv_area_t clip_area = {
+        .x2 = LV_HOR_RES_MAX,
+        .y2 = LV_VER_RES_MAX,
+    };
+    ysw_staff_t dc = {
+        .visit_type = VISIT_MEASURE,
+        .draw_type = YSW_STAFF_RIGHT,
+        .point.x = 0,
+        .point.y = 70,
+        .color = LV_COLOR_WHITE,
+        .clip_area = &clip_area,
+        .font = &MusiQwikT_48,
+        .key_signature = zm_get_key_signature(ext->section->key),
+        .patches = ext->section->rhythm_program->patches,
+    };
+    if (is_space_position(position)) {
+        draw_letter(&dc, YSW_STAFF_SPACE);
+    } else {
+        // TODO: consider factoring out get_step
+        zm_step_t *step = ysw_array_get(ext->section->steps, position / 2);
+        draw_step(&dc, step);
+    }
+    return dc.point.x;
 }
 
 static lv_design_res_t on_design(lv_obj_t *staff, const lv_area_t *clip_area, lv_design_mode_t mode)
@@ -518,15 +585,79 @@ void ysw_staff_set_section(lv_obj_t *staff, zm_section_t *section)
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
     ext->position = 0;
+    ext->start_x = STAFF_HEAD;
     ext->section = section;
     lv_obj_invalidate(staff);
 }
 
-void ysw_staff_set_position(lv_obj_t *staff, uint32_t position)
+lv_coord_t get_scroll_position(ysw_staff_ext_t *ext, zm_step_x new_position)
+{
+    lv_coord_t start_x = ext->start_x;
+    zm_step_x rightmost_position = ysw_array_get_count(ext->section->steps) * 2;
+    if (new_position > ext->position) {
+        // moving right -- see how much is to the right of new position
+        lv_coord_t to_right = 0;
+        for (zm_step_x i = new_position; i <= rightmost_position && to_right < 160; i++) {
+            to_right += measure_position(ext, i);
+        }
+        // if we're already in the center or there's plenty to the right
+        if (start_x >= 160 && to_right > 160) {
+            // stay in the center to show context on either side
+            start_x = 160;
+        } else {
+            // otherwise move right
+            lv_coord_t last_width = 0;
+            for (zm_step_x i = ext->position; i < new_position; i++) {
+                last_width = measure_position(ext, i);
+                start_x += last_width;
+            }
+            // if we're amongst the last notes on the right
+            if (start_x > 320) {
+                // limit to the last space on the right
+                start_x = 320 - last_width;
+            }
+        }
+    } else if (new_position < ext->position) {
+        // moving left -- see how much is to the left of new position
+        lv_coord_t to_left = STAFF_HEAD;
+        for (zm_step_x i = 0; i <= new_position && to_left < 160; i++) {
+            to_left += measure_position(ext, i);
+        }
+        // if we're already in the center or there's plenty to the left
+        if (start_x <= 160 && to_left > 160) {
+            // stay in the center to show context on either side
+            start_x = 160;
+        } else {
+            // otherwise move left
+            lv_coord_t last_width = 0;
+            // make sure ext->position is valid (it may have just been deleted)
+            zm_step_x limit = min(rightmost_position, ext->position);
+            for (zm_step_x i = new_position; i < limit; i++) {
+                last_width = measure_position(ext, i);
+                start_x -= last_width;
+            }
+            // if we're amongst the first notes on the left
+            if (start_x < STAFF_HEAD) {
+                // limit to the last space on the left, including staff head
+                start_x = STAFF_HEAD;
+            }
+        }
+    }
+    return start_x;
+}
+
+void ysw_staff_set_position(lv_obj_t *staff, zm_step_x new_position, ysw_staff_position_type_t type)
 {
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
-    ext->position = position;
+
+    if (type == YSW_STAFF_DIRECT) {
+        ext->start_x = STAFF_HEAD;
+    } else {
+        ext->start_x = get_scroll_position(ext, new_position);
+    }
+
+    ext->position = new_position;
     lv_obj_invalidate(staff);
 }
 
