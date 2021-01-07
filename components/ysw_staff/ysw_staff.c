@@ -113,19 +113,17 @@ static const uint8_t flat_map[] = {
 
 // See: https://en.wikipedia.org/wiki/Accidental_(music)
 
-// TODO: change occurrences of 320 and 160 to manifest constants
-// TODO: change draw_type_t to draw_dir_t
-// TODO: change YSW_STAFF_LEFT/RIGHT to VISIT_LEFT/RIGHT
-// TODO: change draw_ functions to visit_
-// TODO: consider changing ysw_staff_t to dc_t
 // TODO: include key sig and measure bars in widths
 
-#define STAFF_HEAD 80
+#define STAFF_HEAD 80 // TODO: calculate this, it varies based on key signature
+
+#define WIDTH 320
+#define MIDPOINT 160
 
 typedef enum {
-    YSW_STAFF_LEFT,
-    YSW_STAFF_RIGHT,
-} draw_type_t;
+    DIRECTION_LEFT,
+    DIRECTION_RIGHT,
+} direction_t;
 
 typedef enum {
     VISIT_DRAW,
@@ -137,11 +135,11 @@ typedef struct {
     lv_color_t color;
     ysw_array_t *patches;
     visit_type_t visit_type;
-    draw_type_t draw_type;
+    direction_t direction;
     const lv_font_t *font;
     const lv_area_t *clip_area;
     const zm_key_signature_t *key_signature;
-} ysw_staff_t;
+} dc_t;
 
 // TODO: find the right way to share these with ysw_editor
 
@@ -159,31 +157,31 @@ static inline bool is_space_position(position_x position)
 
 void ysw_draw_letter(const lv_point_t * pos_p, const lv_area_t * clip_area, const lv_font_t * font_p, uint32_t letter, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode);
 
-static void draw_letter(ysw_staff_t *dc, uint32_t letter)
+static void visit_letter(dc_t *dc, uint32_t letter)
 {
     lv_font_glyph_dsc_t g;
     if (lv_font_get_glyph_dsc(dc->font, &g, letter, '\0')) {
-        if (dc->draw_type == YSW_STAFF_LEFT) {
+        if (dc->direction == DIRECTION_LEFT) {
             dc->point.x -= g.adv_w;
         }
         if (dc->visit_type == VISIT_DRAW) {
             ysw_draw_letter(&dc->point, dc->clip_area, dc->font, letter, dc->color, OPA, BLEND);
         }
-        if (dc->draw_type == YSW_STAFF_RIGHT) {
+        if (dc->direction == DIRECTION_RIGHT) {
             dc->point.x += g.adv_w;
         }
     }
 }
 
-static void draw_label(ysw_staff_t *dc, const lv_area_t *coords, const lv_draw_label_dsc_t *dsc, const char *txt, lv_draw_label_hint_t *hint)
+static void visit_label(dc_t *dc, const lv_area_t *coords, const lv_draw_label_dsc_t *dsc, const char *txt, lv_draw_label_hint_t *hint)
 {
-    // TODO: use draw_letter to measure x, advance y on word wrap (+ it's simpler w/fewer cycles)
+    // TODO: use visit_letter to measure x, advance y on word wrap (+ it's simpler w/fewer cycles)
     if (dc->visit_type == VISIT_DRAW) {
         lv_draw_label(coords, dc->clip_area, dsc, txt, hint);
     }
 }
 
-static void draw_measure_label(ysw_staff_t *dc, uint32_t measure)
+static void visit_measure_label(dc_t *dc, uint32_t measure)
 {
     char buf[32];
     ysw_itoa(measure, buf, sizeof(buf));
@@ -199,7 +197,7 @@ static void draw_measure_label(ysw_staff_t *dc, uint32_t measure)
         .opa = LV_OPA_COVER,
         .flag = LV_TXT_FLAG_CENTER,
     };
-    draw_label(dc, &coords, &dsc, buf, NULL);
+    visit_label(dc, &coords, &dsc, buf, NULL);
 }
 
 static const uint8_t rest_time_base[] = {
@@ -210,11 +208,11 @@ static const uint8_t rest_time_base[] = {
     YSW_1_REST,
 };
 
-static void draw_rest(ysw_staff_t *dc, zm_duration_t duration)
+static void visit_rest(dc_t *dc, zm_duration_t duration)
 {
     uint8_t index = 0;
     zm_round_duration(duration, &index, NULL);
-    draw_letter(dc, rest_time_base[index]);
+    visit_letter(dc, rest_time_base[index]);
 }
 
 static const uint8_t note_time_base[] = {
@@ -225,21 +223,21 @@ static const uint8_t note_time_base[] = {
     YSW_1_BASE,
 };
 
-static void draw_note(ysw_staff_t *dc, uint8_t staff_position, zm_duration_t duration)
+static void visit_note(dc_t *dc, uint8_t staff_position, zm_duration_t duration)
 {
     uint8_t index = 0;
     bool dotted = false;
     zm_round_duration(duration, &index, &dotted);
-    if (dotted && dc->draw_type == YSW_STAFF_LEFT) {
-        draw_letter(dc, YSW_DOT_BASE + staff_position);
+    if (dotted && dc->direction == DIRECTION_LEFT) {
+        visit_letter(dc, YSW_DOT_BASE + staff_position);
     }
-    draw_letter(dc, note_time_base[index] + staff_position);
-    if (dotted && dc->draw_type == YSW_STAFF_RIGHT) {
-        draw_letter(dc, YSW_DOT_BASE + staff_position);
+    visit_letter(dc, note_time_base[index] + staff_position);
+    if (dotted && dc->direction == DIRECTION_RIGHT) {
+        visit_letter(dc, YSW_DOT_BASE + staff_position);
     }
 }
 
-static void draw_black(ysw_staff_t *dc, uint8_t note, zm_duration_t duration)
+static void visit_black(dc_t *dc, uint8_t note, zm_duration_t duration)
 {
     uint8_t accidental = 0;
     uint8_t staff_position = sharp_map[note];
@@ -260,18 +258,18 @@ static void draw_black(ysw_staff_t *dc, uint8_t note, zm_duration_t duration)
         // otherwise we're in the key of CMaj/Amin with no sharps/flats so add sharp symbol
         accidental = YSW_SHARP_BASE + staff_position;
     }
-    if (dc->draw_type == YSW_STAFF_LEFT) {
-        draw_note(dc, staff_position, duration);
+    if (dc->direction == DIRECTION_LEFT) {
+        visit_note(dc, staff_position, duration);
     }
     if (accidental) {
-        draw_letter(dc, accidental);
+        visit_letter(dc, accidental);
     }
-    if (dc->draw_type == YSW_STAFF_RIGHT) {
-        draw_note(dc, staff_position, duration);
+    if (dc->direction == DIRECTION_RIGHT) {
+        visit_note(dc, staff_position, duration);
     }
 }
 
-static void draw_white(ysw_staff_t *dc, uint8_t note, zm_duration_t duration)
+static void visit_white(dc_t *dc, uint8_t note, zm_duration_t duration)
 {
     uint8_t accidental = 0;
     uint8_t staff_position = sharp_map[note];
@@ -286,33 +284,33 @@ static void draw_white(ysw_staff_t *dc, uint8_t note, zm_duration_t duration)
         // add the natural symbol
         accidental = YSW_NATURAL_BASE + staff_position;
     }
-    if (dc->draw_type == YSW_STAFF_LEFT) {
-        draw_note(dc, staff_position, duration);
+    if (dc->direction == DIRECTION_LEFT) {
+        visit_note(dc, staff_position, duration);
     }
     if (accidental) {
-        draw_letter(dc, accidental);
+        visit_letter(dc, accidental);
     }
-    if (dc->draw_type == YSW_STAFF_RIGHT) {
-        draw_note(dc, staff_position, duration);
+    if (dc->direction == DIRECTION_RIGHT) {
+        visit_note(dc, staff_position, duration);
     }
 }
 
-static void draw_melody(ysw_staff_t *dc, zm_step_t *step)
+static void visit_melody(dc_t *dc, zm_step_t *step)
 {
     zm_duration_t duration = step->melody.duration;
     if (step->melody.note) {
         uint8_t note = (step->melody.note - 60) % MAX_NOTES;
         if (black[note]) {
-            draw_black(dc, note, duration);
+            visit_black(dc, note, duration);
         } else {
-            draw_white(dc, note, duration);
+            visit_white(dc, note, duration);
         }
     } else if (duration) {
-        draw_rest(dc, duration);
+        visit_rest(dc, duration);
     }
 }
 
-static void draw_chord(ysw_staff_t *dc, zm_chord_t *chord)
+static void visit_chord(dc_t *dc, zm_chord_t *chord)
 {
     lv_area_t coords = {
         .x1 = dc->point.x,
@@ -325,12 +323,12 @@ static void draw_chord(ysw_staff_t *dc, zm_chord_t *chord)
         .font = &lv_font_unscii_8,
         .opa = LV_OPA_COVER,
     };
-    draw_label(dc, &coords, &dsc, zm_get_note_name(chord->root), NULL);
+    visit_label(dc, &coords, &dsc, zm_get_note_name(chord->root), NULL);
     coords.y1 += 9;
-    draw_label(dc, &coords, &dsc, chord->type->label, NULL);
+    visit_label(dc, &coords, &dsc, chord->type->label, NULL);
 }
 
-static void draw_rhythm(ysw_staff_t *dc, zm_rhythm_t *rhythm)
+static void visit_rhythm(dc_t *dc, zm_rhythm_t *rhythm)
 {
     lv_area_t coords = {
         .x1 = dc->point.x,
@@ -347,84 +345,84 @@ static void draw_rhythm(ysw_staff_t *dc, zm_rhythm_t *rhythm)
     if (rhythm->surface) {
         zm_patch_t *patch = zm_get_patch(dc->patches, rhythm->surface);
         if (patch && patch->name) {
-            draw_label(dc, &coords, &dsc, patch->name,  NULL);
+            visit_label(dc, &coords, &dsc, patch->name,  NULL);
             coords.y1 += 9;
         }
     }
     if (rhythm->beat) {
-        draw_label(dc, &coords, &dsc, rhythm->beat->label,  NULL);
+        visit_label(dc, &coords, &dsc, rhythm->beat->label,  NULL);
     }
 }
 
-static void draw_signature(ysw_staff_t *dc, zm_time_signature_x time)
+static void visit_signature(dc_t *dc, zm_time_signature_x time)
 {
-    draw_letter(dc, YSW_TIME_BASE + time);
+    visit_letter(dc, YSW_TIME_BASE + time);
 
     if (dc->key_signature->sharps) {
-        draw_letter(dc, YSW_KEY_SHARP_BASE + dc->key_signature->sharps - 1);
+        visit_letter(dc, YSW_KEY_SHARP_BASE + dc->key_signature->sharps - 1);
     } else if (dc->key_signature->flats) {
-        draw_letter(dc, YSW_KEY_FLAT_BASE + dc->key_signature->flats - 1);
-        draw_letter(dc, YSW_STAFF_SPACE);
+        visit_letter(dc, YSW_KEY_FLAT_BASE + dc->key_signature->flats - 1);
+        visit_letter(dc, YSW_STAFF_SPACE);
     } else {
-        draw_letter(dc, YSW_STAFF_SPACE);
+        visit_letter(dc, YSW_STAFF_SPACE);
     }
 
-    draw_letter(dc, YSW_TREBLE_CLEF);
-    draw_letter(dc, YSW_LEFT_BAR);
+    visit_letter(dc, YSW_TREBLE_CLEF);
+    visit_letter(dc, YSW_LEFT_BAR);
 }
 
-static void draw_tie(ysw_staff_t *dc, zm_step_t *step)
+static void visit_tie(dc_t *dc, zm_step_t *step)
 {
     lv_coord_t x = dc->point.x;
     if (step->melody.note >= 72) {
-        draw_letter(dc, YSW_TIE_UPPER);
+        visit_letter(dc, YSW_TIE_UPPER);
     } else {
-        draw_letter(dc, YSW_TIE_LOWER);
+        visit_letter(dc, YSW_TIE_LOWER);
     }
     dc->point.x = x;
 }
 
-static void draw_step(ysw_staff_t *dc, zm_step_t *step)
+static void visit_step(dc_t *dc, zm_step_t *step)
 {
-    if (dc->draw_type == YSW_STAFF_LEFT) {
-        draw_letter(dc, YSW_STAFF_SPACE);
+    if (dc->direction == DIRECTION_LEFT) {
+        visit_letter(dc, YSW_STAFF_SPACE);
         if (step->chord.root || step->rhythm.beat || step->rhythm.surface) {
-            draw_letter(dc, YSW_STAFF_SPACE);
+            visit_letter(dc, YSW_STAFF_SPACE);
         }
         if (step->melody.tie) {
-            draw_tie(dc, step);
+            visit_tie(dc, step);
         }
-        draw_melody(dc, step);
+        visit_melody(dc, step);
         if (step->chord.root) {
-            draw_chord(dc, &step->chord);
+            visit_chord(dc, &step->chord);
         }
         if (step->rhythm.beat || step->rhythm.surface) {
-            draw_rhythm(dc, &step->rhythm);
+            visit_rhythm(dc, &step->rhythm);
         }
-    } else if (dc->draw_type == YSW_STAFF_RIGHT) {
+    } else if (dc->direction == DIRECTION_RIGHT) {
         if (step->chord.root) {
-            draw_chord(dc, &step->chord);
+            visit_chord(dc, &step->chord);
         }
         if (step->rhythm.beat || step->rhythm.surface) {
-            draw_rhythm(dc, &step->rhythm);
+            visit_rhythm(dc, &step->rhythm);
         }
-        draw_melody(dc, step);
+        visit_melody(dc, step);
         if (step->melody.tie) {
-            draw_tie(dc, step);
+            visit_tie(dc, step);
         }
-        draw_letter(dc, YSW_STAFF_SPACE);
+        visit_letter(dc, YSW_STAFF_SPACE);
         if (step->chord.root || step->rhythm.beat || step->rhythm.surface) {
-            draw_letter(dc, YSW_STAFF_SPACE);
+            visit_letter(dc, YSW_STAFF_SPACE);
         }
     }
 }
 
-static void draw_staff(ysw_staff_ext_t *ext, ysw_staff_t *dc)
+static void visit_staff(ysw_staff_ext_t *ext, dc_t *dc)
 {
     uint32_t step_count = ysw_array_get_count(ext->section->steps);
     uint32_t symbol_count = step_count * 2;
 
-    dc->draw_type = YSW_STAFF_LEFT;
+    dc->direction = DIRECTION_LEFT;
     dc->point.x = ext->start_x;
 
     for (int32_t left = ext->position - 1; left >= 0 && dc->point.x > 0; left--) {
@@ -432,56 +430,56 @@ static void draw_staff(ysw_staff_ext_t *ext, ysw_staff_t *dc)
             uint32_t step_index = left / 2;
             zm_step_t *step = ysw_array_get(ext->section->steps, step_index);
             if (step->flags & ZM_STEP_END_OF_MEASURE) {
-                draw_letter(dc, YSW_STAFF_SPACE);
-                draw_measure_label(dc, step->measure + 1);
-                draw_letter(dc, YSW_RIGHT_BAR);
+                visit_letter(dc, YSW_STAFF_SPACE);
+                visit_measure_label(dc, step->measure + 1);
+                visit_letter(dc, YSW_RIGHT_BAR);
             }
-            draw_step(dc, step);
+            visit_step(dc, step);
         } else {
-            draw_letter(dc, YSW_STAFF_SPACE);
+            visit_letter(dc, YSW_STAFF_SPACE);
         }
     }
 
     if (dc->point.x > 0) {
-        draw_signature(dc, ext->section->time);
+        visit_signature(dc, ext->section->time);
     }
 
-    dc->draw_type = YSW_STAFF_RIGHT;
+    dc->direction = DIRECTION_RIGHT;
     dc->point.x = ext->start_x;
 
-    for (uint32_t right = ext->position; right <= symbol_count && dc->point.x < 320; right++) {
+    for (uint32_t right = ext->position; right <= symbol_count && dc->point.x < WIDTH; right++) {
         if (is_step_position(right % 2)) {
             uint32_t step_index = right / 2;
             zm_step_t *step = ysw_array_get(ext->section->steps, step_index);
             if (right == ext->position) {
                 dc->color = LV_COLOR_RED;
-                draw_step(dc, step);
+                visit_step(dc, step);
                 dc->color = LV_COLOR_WHITE;
             } else {
-                draw_step(dc, step);
+                visit_step(dc, step);
             }
             if (step->flags & ZM_STEP_END_OF_MEASURE) {
-                draw_letter(dc, YSW_RIGHT_BAR);
-                draw_measure_label(dc, step->measure + 1);
-                draw_letter(dc, YSW_STAFF_SPACE);
+                visit_letter(dc, YSW_RIGHT_BAR);
+                visit_measure_label(dc, step->measure + 1);
+                visit_letter(dc, YSW_STAFF_SPACE);
             }
         } else {
             if (right == ext->position) {
                 dc->color = LV_COLOR_RED;
-                draw_letter(dc, YSW_STAFF_SPACE);
+                visit_letter(dc, YSW_STAFF_SPACE);
                 dc->color = LV_COLOR_WHITE;
             } else {
-                draw_letter(dc, YSW_STAFF_SPACE);
+                visit_letter(dc, YSW_STAFF_SPACE);
             }
         }
     }
 }
 
-static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
+static void visit_main(lv_obj_t *staff, const lv_area_t *clip_area)
 {
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
     if (ext->section) {
-        ysw_staff_t dc = {
+        dc_t dc = {
             .visit_type = VISIT_DRAW,
             .point.y = 70,
             .color = LV_COLOR_WHITE,
@@ -490,7 +488,7 @@ static void draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
             .key_signature = zm_get_key_signature(ext->section->key),
             .patches = ext->section->rhythm_program->patches,
         };
-        draw_staff(ext, &dc);
+        visit_staff(ext, &dc);
     }
 }
 
@@ -500,9 +498,9 @@ static lv_coord_t measure_position(ysw_staff_ext_t *ext, position_x position)
         .x2 = LV_HOR_RES_MAX,
         .y2 = LV_VER_RES_MAX,
     };
-    ysw_staff_t dc = {
+    dc_t dc = {
         .visit_type = VISIT_MEASURE,
-        .draw_type = YSW_STAFF_RIGHT,
+        .direction = DIRECTION_RIGHT,
         .point.x = 0,
         .point.y = 70,
         .color = LV_COLOR_WHITE,
@@ -512,11 +510,11 @@ static lv_coord_t measure_position(ysw_staff_ext_t *ext, position_x position)
         .patches = ext->section->rhythm_program->patches,
     };
     if (is_space_position(position)) {
-        draw_letter(&dc, YSW_STAFF_SPACE);
+        visit_letter(&dc, YSW_STAFF_SPACE);
     } else {
         // TODO: consider factoring out get_step
         zm_step_t *step = ysw_array_get(ext->section->steps, position / 2);
-        draw_step(&dc, step);
+        visit_step(&dc, step);
     }
     return dc.point.x;
 }
@@ -526,7 +524,7 @@ static lv_design_res_t on_design(lv_obj_t *staff, const lv_area_t *clip_area, lv
     if (mode == LV_DESIGN_COVER_CHK) {
         return ancestor_design(staff, clip_area, mode);
     } else if (mode == LV_DESIGN_DRAW_MAIN) {
-        draw_main(staff, clip_area);
+        visit_main(staff, clip_area);
     }
     return LV_DESIGN_RES_OK;
 }
@@ -576,7 +574,7 @@ lv_obj_t *ysw_staff_create(lv_obj_t *par)
     lv_obj_set_signal_cb(staff, on_signal);
     lv_obj_set_design_cb(staff, on_design);
 
-    lv_obj_set_size(staff, 320, 120);
+    lv_obj_set_size(staff, WIDTH, 120);
     return staff;
 }
 
@@ -597,13 +595,13 @@ lv_coord_t get_scroll_position(ysw_staff_ext_t *ext, zm_step_x new_position)
     if (new_position > ext->position) {
         // moving right -- see how much is to the right of new position
         lv_coord_t to_right = 0;
-        for (zm_step_x i = new_position; i <= rightmost_position && to_right < 160; i++) {
+        for (zm_step_x i = new_position; i <= rightmost_position && to_right < MIDPOINT; i++) {
             to_right += measure_position(ext, i);
         }
         // if we're already in the center or there's plenty to the right
-        if (start_x >= 160 && to_right > 160) {
+        if (start_x >= MIDPOINT && to_right > MIDPOINT) {
             // stay in the center to show context on either side
-            start_x = 160;
+            start_x = MIDPOINT;
         } else {
             // otherwise move right
             lv_coord_t last_width = 0;
@@ -612,21 +610,21 @@ lv_coord_t get_scroll_position(ysw_staff_ext_t *ext, zm_step_x new_position)
                 start_x += last_width;
             }
             // if we're amongst the last notes on the right
-            if (start_x > 320) {
+            if (start_x > WIDTH) {
                 // limit to the last space on the right
-                start_x = 320 - last_width;
+                start_x = WIDTH - last_width;
             }
         }
     } else if (new_position < ext->position) {
         // moving left -- see how much is to the left of new position
         lv_coord_t to_left = STAFF_HEAD;
-        for (zm_step_x i = 0; i <= new_position && to_left < 160; i++) {
+        for (zm_step_x i = 0; i <= new_position && to_left < MIDPOINT; i++) {
             to_left += measure_position(ext, i);
         }
         // if we're already in the center or there's plenty to the left
-        if (start_x <= 160 && to_left > 160) {
+        if (start_x <= MIDPOINT && to_left > MIDPOINT) {
             // stay in the center to show context on either side
-            start_x = 160;
+            start_x = MIDPOINT;
         } else {
             // otherwise move left
             lv_coord_t last_width = 0;
@@ -652,7 +650,7 @@ void ysw_staff_set_position(lv_obj_t *staff, zm_step_x new_position, ysw_staff_p
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
 
     if (type == YSW_STAFF_DIRECT) {
-        ext->start_x = STAFF_HEAD;
+        ext->start_x = MIDPOINT;
     } else {
         ext->start_x = get_scroll_position(ext, new_position);
     }
