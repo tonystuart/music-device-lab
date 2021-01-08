@@ -173,12 +173,44 @@ static void visit_letter(dc_t *dc, uint32_t letter)
     }
 }
 
-static void visit_label(dc_t *dc, const lv_area_t *coords, const lv_draw_label_dsc_t *dsc, const char *txt, lv_draw_label_hint_t *hint)
+static void visit_text(const lv_area_t *coords, const lv_area_t *clip_area, const lv_draw_label_dsc_t *dsc, const char *txt, visit_type_t visit_type, lv_area_t *extent)
 {
-    // TODO: use visit_letter to measure x, advance y on word wrap (+ it's simpler w/fewer cycles)
-    if (dc->visit_type == VISIT_DRAW) {
-        lv_draw_label(coords, dc->clip_area, dsc, txt, hint);
+#if 0
+    if (visit_type == VISIT_DRAW) {
+        lv_draw_label(coords, clip_area, dsc, txt, NULL);
     }
+#else
+    lv_point_t point;
+    lv_area_t clipped_area;
+    *extent = (lv_area_t) { };
+    if (_lv_area_intersect(&clipped_area, coords, clip_area)) {
+        if (dsc->flag & LV_TXT_FLAG_CENTER && visit_type == VISIT_DRAW) {
+            visit_text(coords, clip_area, dsc, txt, VISIT_MEASURE, extent);
+            point.x = coords->x1 + ((lv_area_get_width(coords) - lv_area_get_width(extent)) / 2);
+            point.y = coords->y1;
+        } else {
+            point.x = coords->x1;
+            point.y = coords->y1;
+        }
+        for (const char *p = txt; *p; p++) {
+            if (*p == '\n' || point.x >= coords->x2) {
+                point.x = coords->x1;
+                point.y += dsc->font->line_height;
+                extent->y2 += dsc->font->line_height;
+            } else if (!extent->y2) {
+                extent->y2 = dsc->font->line_height;
+            }
+            lv_font_glyph_dsc_t g;
+            if (lv_font_get_glyph_dsc(dsc->font, &g, *p, '\0')) {
+                if (visit_type == VISIT_DRAW) {
+                    ysw_draw_letter(&point, clip_area, dsc->font, *p, dsc->color, dsc->opa, BLEND);
+                }
+                point.x += g.adv_w;
+                extent->x2 += g.adv_w;
+            }
+        }
+    }
+#endif
 }
 
 static void visit_measure_label(dc_t *dc, uint32_t measure)
@@ -197,7 +229,8 @@ static void visit_measure_label(dc_t *dc, uint32_t measure)
         .opa = LV_OPA_COVER,
         .flag = LV_TXT_FLAG_CENTER,
     };
-    visit_label(dc, &coords, &dsc, buf, NULL);
+    lv_area_t extent = { };
+    visit_text(&coords, dc->clip_area, &dsc, buf, dc->visit_type, &extent);
 }
 
 static const uint8_t rest_time_base[] = {
@@ -323,9 +356,10 @@ static void visit_chord(dc_t *dc, zm_chord_t *chord)
         .font = &lv_font_unscii_8,
         .opa = LV_OPA_COVER,
     };
-    visit_label(dc, &coords, &dsc, zm_get_note_name(chord->root), NULL);
-    coords.y1 += 9;
-    visit_label(dc, &coords, &dsc, chord->type->label, NULL);
+    lv_area_t extent = { };
+    visit_text(&coords, dc->clip_area, &dsc, zm_get_note_name(chord->root), dc->visit_type, &extent);
+    coords.y1 += lv_area_get_height(&extent);
+    visit_text(&coords, dc->clip_area, &dsc, chord->type->label, dc->visit_type, &extent);
 }
 
 static void visit_rhythm(dc_t *dc, zm_rhythm_t *rhythm)
@@ -345,12 +379,14 @@ static void visit_rhythm(dc_t *dc, zm_rhythm_t *rhythm)
     if (rhythm->surface) {
         zm_patch_t *patch = zm_get_patch(dc->patches, rhythm->surface);
         if (patch && patch->name) {
-            visit_label(dc, &coords, &dsc, patch->name,  NULL);
+            lv_area_t extent = { };
+            visit_text(&coords, dc->clip_area, &dsc, patch->name, dc->visit_type, &extent);
             coords.y1 += 9;
         }
     }
     if (rhythm->beat) {
-        visit_label(dc, &coords, &dsc, rhythm->beat->label,  NULL);
+        lv_area_t extent = { };
+        visit_text(&coords, dc->clip_area, &dsc, rhythm->beat->label, dc->visit_type, &extent);
     }
 }
 
