@@ -8,10 +8,10 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_name.h"
-
+#include "ysw_common.h"
 #include "esp_log.h"
 #include "esp_system.h"
-
+#include "assert.h"
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
@@ -730,20 +730,47 @@ const char *nouns[] = {
 
 #define NOUNS_SZ (sizeof(nouns) / sizeof(const char *))
 
+#define SUFFIX_LENGTH 6 // includes leading plus (+) sign
+
 int ysw_name_create(char *name, uint32_t size)
 {
     uint32_t adjective_index = esp_random() % ADJECTIVES_SZ;
     uint32_t noun_index = esp_random() % NOUNS_SZ;
-    ESP_LOGD(TAG, "adjective_index=%d, noun_index=%d", adjective_index, noun_index);
     int rc = snprintf(name, size, "%s %s", adjectives[adjective_index], nouns[noun_index]);
     return rc;
 }
 
-int ysw_name_create_new_version(const char *old_name, char *new_name, uint32_t size)
+int ysw_name_create_new_version(const char *old_name, char *new_name, uint32_t size, uint32_t number_of_tries, void *context, ysw_name_check_duplicate_cb check_duplicate)
 {
+    assert(size > SUFFIX_LENGTH);
+
+    // find previous version point or end of string
     int version_point = ysw_name_find_version_point(old_name);
-    int version = atoi(old_name + version_point) + 1; // works for any version_point
-    return ysw_name_format_version(new_name, size, version_point, old_name, version);
+
+    // make sure we have enough room to append a unique version number
+    if (version_point + SUFFIX_LENGTH >= size) {
+        version_point = size - SUFFIX_LENGTH - RFT;
+    }
+
+    // increment the version point if found, or set it to one at end of string
+    uint16_t version = atoi(old_name + version_point) + 1;
+
+    // try to find a unique name
+    for (int i = 0; i < number_of_tries; i++) {
+
+        // format a new name with the current version number
+        int length = ysw_name_format_version(new_name, size, version_point, old_name, version);
+
+        // if it's not a duplicate, we're done
+        if (!check_duplicate(context, new_name)) {
+            return length;
+        }
+
+        // otherwise increment and try again, with wrap back to zero on overflow
+        version++;
+    }
+
+    return -1;
 }
 
 int ysw_name_find_version_point(const char *name)

@@ -1853,7 +1853,7 @@ const ysw_menu_item_t editor_menu[] = {
 
     { 36, "Close", YSW_MF_MINUS, on_close, 0, NULL },
     { 37, "Delete", YSW_MF_COMMAND, on_delete, 0, NULL },
-    { 38, "Toggle\nMenu", YSW_MF_TOGGLE, ysw_menu_nop, 0, NULL },
+    { 38, "Hide\nMenu", YSW_MF_TOGGLE, ysw_menu_nop, 0, NULL },
     { 39, "Right", YSW_MF_COMMAND, on_right, 0, NULL },
 
     { 0, "Music", YSW_MF_END, NULL, 0, NULL },

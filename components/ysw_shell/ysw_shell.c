@@ -15,6 +15,7 @@
 #include "ysw_editor.h"
 #include "ysw_heap.h"
 #include "ysw_menu.h"
+#include "ysw_name.h"
 #include "ysw_popup.h"
 #include "ysw_string.h"
 #include "ysw_style.h"
@@ -75,19 +76,48 @@ static void open_section(ysw_shell_t *shell, zm_section_t *section)
     start_listening(shell);
 }
 
+bool check_duplicate_section_name(void *context, const char *name)
+{
+    zm_music_t *music = context;
+    // TODO: use a map
+    zm_section_x section_count = ysw_array_get_count(music->sections);
+    for (zm_section_x i = 0; i < section_count; i++) {
+        zm_section_t *section = ysw_array_get(music->sections, i);
+        if (strcmp(section->name, name) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void copy_section(ysw_shell_t *shell, zm_section_t *section)
 {
-    zm_section_t *new_section = zm_create_section(shell->music);
-    zm_copy_section(new_section, section);
-    zm_rename_section(new_section, NULL);
+    char new_name[ZM_NAME_SZ];
+    ysw_name_create_new_version(section->name, new_name, sizeof(new_name),
+            100, shell->music, check_duplicate_section_name);
+
+    zm_section_t *new_section = zm_create_duplicate_section(section);
+    zm_rename_section(new_section, new_name);
     zm_section_x section_x = ysw_array_find(shell->music->sections, section);
     ysw_array_insert(shell->music->sections, section_x + 1, new_section);
+    zm_save_music(shell->music);
+
+    ysw_string_t *s = ysw_string_create(128);
+    ysw_string_printf(s, "Created\n%s", new_name);
+    ysw_popup_config_t config = {
+        .type = YSW_MSGBOX_OKAY,
+        .message = ysw_string_get_chars(s),
+        .okay_scan_code = 5,
+    };
+    ysw_popup_create(&config);
+    ysw_string_free(s);
 }
 
 static void on_confirm_delete(void *context, ysw_popup_t *popup)
 {
     ysw_shell_t *shell = context;
     zm_section_delete(shell->music, shell->section);
+    zm_save_music(shell->music);
 }
 
 static void delete_section(ysw_shell_t *shell, zm_section_t *section)
@@ -132,7 +162,6 @@ static void on_new_section_name(void *context, const char *text)
 {
     ysw_shell_t *shell = context;
     shell->section->name = ysw_heap_strdup(text);
-    //shell->section->tlm = shell->music->settings.clock++;
     zm_save_music(shell->music);
 }
 
@@ -255,7 +284,7 @@ static const ysw_menu_item_t rename_menu[] = {
 };
 
 static const ysw_menu_item_t delete_menu[] = {
-    { YSW_R1_C1, "Music", YSW_MF_PRESS, on_delete_section, 0, NULL },
+    { YSW_R1_C1, "Music", YSW_MF_COMMAND, on_delete_section, 0, NULL },
     { YSW_R1_C2, "Beat", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
     { YSW_R1_C3, "Sample", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
     { YSW_R1_C4, "Program", YSW_MF_NOP, ysw_menu_nop, 0, NULL },

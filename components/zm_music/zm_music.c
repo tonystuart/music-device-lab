@@ -1565,13 +1565,7 @@ void zm_copy_section(zm_section_t *to_section, zm_section_t *from_section)
 void zm_rename_section(zm_section_t *section, const char *name)
 {
     ysw_heap_free(section->name);
-    if (name) {
-        section->name = ysw_heap_strdup(name);
-    } else {
-        char new_name[ZM_NAME_SZ];
-        ysw_name_create_new_version(section->name, new_name, sizeof(new_name));
-        section->name = ysw_heap_strdup(new_name);
-    }
+    section->name = ysw_heap_strdup(name);
 }
 
 bool zm_steps_equal(zm_step_t *left, zm_step_t *right)
