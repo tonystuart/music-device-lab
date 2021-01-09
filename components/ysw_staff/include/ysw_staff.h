@@ -24,8 +24,10 @@ typedef enum {
 
 typedef struct {
     uint32_t position;
-    lv_coord_t start_x;
     zm_section_t *section;
+    zm_key_signature_x key;
+    lv_coord_t staff_head;
+    lv_coord_t start_x;
 } ysw_staff_ext_t;
 
 enum {

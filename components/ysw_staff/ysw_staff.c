@@ -113,10 +113,6 @@ static const uint8_t flat_map[] = {
 
 // See: https://en.wikipedia.org/wiki/Accidental_(music)
 
-// TODO: include key sig and measure bars in widths
-
-#define STAFF_HEAD 80 // TODO: calculate this, it varies based on key signature
-
 #define WIDTH 320
 #define MIDPOINT 160
 
@@ -390,7 +386,7 @@ static void visit_rhythm(dc_t *dc, zm_rhythm_t *rhythm)
     }
 }
 
-static void visit_signature(dc_t *dc, zm_time_signature_x time)
+static void visit_staff_head(dc_t *dc, zm_time_signature_x time)
 {
     visit_letter(dc, YSW_TIME_BASE + time);
 
@@ -418,9 +414,14 @@ static void visit_tie(dc_t *dc, zm_step_t *step)
     dc->point.x = x;
 }
 
-static void visit_step(dc_t *dc, zm_step_t *step)
+static void visit_step(dc_t *dc, zm_step_t *step, bool highlight)
 {
     if (dc->direction == DIRECTION_LEFT) {
+        if (step->flags & ZM_STEP_END_OF_MEASURE) {
+            visit_letter(dc, YSW_STAFF_SPACE);
+            visit_measure_label(dc, step->measure + 1);
+            visit_letter(dc, YSW_RIGHT_BAR);
+        }
         visit_letter(dc, YSW_STAFF_SPACE);
         if (step->chord.root || step->rhythm.beat || step->rhythm.surface) {
             visit_letter(dc, YSW_STAFF_SPACE);
@@ -436,6 +437,9 @@ static void visit_step(dc_t *dc, zm_step_t *step)
             visit_rhythm(dc, &step->rhythm);
         }
     } else if (dc->direction == DIRECTION_RIGHT) {
+        if (highlight) {
+            dc->color = LV_COLOR_RED;
+        }
         if (step->chord.root) {
             visit_chord(dc, &step->chord);
         }
@@ -448,6 +452,14 @@ static void visit_step(dc_t *dc, zm_step_t *step)
         }
         visit_letter(dc, YSW_STAFF_SPACE);
         if (step->chord.root || step->rhythm.beat || step->rhythm.surface) {
+            visit_letter(dc, YSW_STAFF_SPACE);
+        }
+        if (highlight) {
+            dc->color = LV_COLOR_WHITE;
+        }
+        if (step->flags & ZM_STEP_END_OF_MEASURE) {
+            visit_letter(dc, YSW_RIGHT_BAR);
+            visit_measure_label(dc, step->measure + 1);
             visit_letter(dc, YSW_STAFF_SPACE);
         }
     }
@@ -465,40 +477,25 @@ static void visit_staff(ysw_staff_ext_t *ext, dc_t *dc)
         if (is_step_position(left)) {
             uint32_t step_index = left / 2;
             zm_step_t *step = ysw_array_get(ext->section->steps, step_index);
-            if (step->flags & ZM_STEP_END_OF_MEASURE) {
-                visit_letter(dc, YSW_STAFF_SPACE);
-                visit_measure_label(dc, step->measure + 1);
-                visit_letter(dc, YSW_RIGHT_BAR);
-            }
-            visit_step(dc, step);
+            visit_step(dc, step, false);
         } else {
             visit_letter(dc, YSW_STAFF_SPACE);
         }
     }
 
     if (dc->point.x > 0) {
-        visit_signature(dc, ext->section->time);
+        visit_staff_head(dc, ext->section->time);
     }
 
     dc->direction = DIRECTION_RIGHT;
     dc->point.x = ext->start_x;
 
     for (uint32_t right = ext->position; right <= symbol_count && dc->point.x < WIDTH; right++) {
+        bool highlight = right == ext->position;
         if (is_step_position(right % 2)) {
             uint32_t step_index = right / 2;
             zm_step_t *step = ysw_array_get(ext->section->steps, step_index);
-            if (right == ext->position) {
-                dc->color = LV_COLOR_RED;
-                visit_step(dc, step);
-                dc->color = LV_COLOR_WHITE;
-            } else {
-                visit_step(dc, step);
-            }
-            if (step->flags & ZM_STEP_END_OF_MEASURE) {
-                visit_letter(dc, YSW_RIGHT_BAR);
-                visit_measure_label(dc, step->measure + 1);
-                visit_letter(dc, YSW_STAFF_SPACE);
-            }
+            visit_step(dc, step, highlight);
         } else {
             if (right == ext->position) {
                 dc->color = LV_COLOR_RED;
@@ -508,23 +505,6 @@ static void visit_staff(ysw_staff_ext_t *ext, dc_t *dc)
                 visit_letter(dc, YSW_STAFF_SPACE);
             }
         }
-    }
-}
-
-static void visit_main(lv_obj_t *staff, const lv_area_t *clip_area)
-{
-    ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
-    if (ext->section) {
-        dc_t dc = {
-            .visit_type = VISIT_DRAW,
-            .point.y = 70,
-            .color = LV_COLOR_WHITE,
-            .clip_area = clip_area,
-            .font = &MusiQwikT_48,
-            .key_signature = zm_get_key_signature(ext->section->key),
-            .patches = ext->section->rhythm_program->patches,
-        };
-        visit_staff(ext, &dc);
     }
 }
 
@@ -548,11 +528,114 @@ static lv_coord_t measure_position(ysw_staff_ext_t *ext, position_x position)
     if (is_space_position(position)) {
         visit_letter(&dc, YSW_STAFF_SPACE);
     } else {
-        // TODO: consider factoring out get_step
         zm_step_t *step = ysw_array_get(ext->section->steps, position / 2);
-        visit_step(&dc, step);
+        visit_step(&dc, step, false);
     }
     return dc.point.x;
+}
+
+#define STAFF_LEFT_PADDING 15
+
+static lv_coord_t measure_staff_head(zm_section_t *section)
+{
+    lv_area_t clip_area = {
+        .x2 = LV_HOR_RES_MAX,
+        .y2 = LV_VER_RES_MAX,
+    };
+    dc_t dc = {
+        .visit_type = VISIT_MEASURE,
+        .direction = DIRECTION_LEFT,
+        .point.x = LV_HOR_RES_MAX,
+        .point.y = 70,
+        .color = LV_COLOR_WHITE,
+        .clip_area = &clip_area,
+        .font = &MusiQwikT_48,
+        .key_signature = zm_get_key_signature(section->key),
+        .patches = section->rhythm_program->patches,
+    };
+    visit_staff_head(&dc, section->time);
+    return STAFF_LEFT_PADDING + (LV_HOR_RES_MAX - dc.point.x);
+}
+
+lv_coord_t get_scroll_position(ysw_staff_ext_t *ext, zm_step_x new_position)
+{
+    if (ext->section->key != ext->key) {
+        ext->staff_head = measure_staff_head(ext->section);
+        ext->key = ext->section->key;
+    }
+    lv_coord_t start_x = ext->start_x;
+    zm_step_x rightmost_position = ysw_array_get_count(ext->section->steps) * 2;
+    if (new_position > ext->position) {
+        // moving right -- see how much is to the right of new position
+        lv_coord_t to_right = 0;
+        for (zm_step_x i = new_position; i <= rightmost_position && to_right < MIDPOINT; i++) {
+            to_right += measure_position(ext, i);
+        }
+        // if we're already in the center or there's plenty to the right
+        if (start_x >= MIDPOINT && to_right > MIDPOINT) {
+            // stay in the center to show context on either side
+            start_x = MIDPOINT;
+        } else {
+            // otherwise move right
+            lv_coord_t last_width = 0;
+            for (zm_step_x i = ext->position; i < new_position; i++) {
+                last_width = measure_position(ext, i);
+                start_x += last_width;
+            }
+            // if we're amongst the last notes on the right
+            if (start_x > WIDTH) {
+                // limit to the last space on the right
+                start_x = WIDTH - last_width;
+            }
+        }
+    } else {
+        // moving left (or same position) -- see how much is to the left of new position
+        lv_coord_t to_left = ext->staff_head;
+        for (zm_step_x i = 0; i <= new_position && to_left < MIDPOINT; i++) {
+            to_left += measure_position(ext, i);
+        }
+        // if we're already in the center or there's plenty to the left
+        if (start_x <= MIDPOINT && to_left > MIDPOINT) {
+            // stay in the center to show context on either side
+            start_x = MIDPOINT;
+        } else {
+            // otherwise move left
+            lv_coord_t last_width = 0;
+            // make sure ext->position is valid (it may have just been deleted)
+            zm_step_x limit = min(rightmost_position, ext->position);
+            for (zm_step_x i = new_position; i < limit; i++) {
+                last_width = measure_position(ext, i);
+                start_x -= last_width;
+            }
+            // if we're amongst the first notes on the left
+            if (start_x < ext->staff_head) {
+                // limit to the last space on the left, including staff head
+                start_x = ext->staff_head;
+            }
+        }
+    }
+    return start_x;
+}
+
+static void on_draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
+{
+    ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
+    if (ext->section) {
+        if (ext->section->key != ext->key) {
+            // update starting point if necessary when key signature changes
+            ext->start_x = get_scroll_position(ext, ext->position);
+        }
+        dc_t dc = {
+            .visit_type = VISIT_DRAW,
+            .point.y = 70,
+            .color = LV_COLOR_WHITE,
+            .clip_area = clip_area,
+            .font = &MusiQwikT_48,
+            .key_signature = zm_get_key_signature(ext->section->key),
+            .patches = ext->section->rhythm_program->patches,
+        };
+        visit_staff(ext, &dc);
+    }
 }
 
 static lv_design_res_t on_design(lv_obj_t *staff, const lv_area_t *clip_area, lv_design_mode_t mode)
@@ -560,7 +643,7 @@ static lv_design_res_t on_design(lv_obj_t *staff, const lv_area_t *clip_area, lv
     if (mode == LV_DESIGN_COVER_CHK) {
         return ancestor_design(staff, clip_area, mode);
     } else if (mode == LV_DESIGN_DRAW_MAIN) {
-        visit_main(staff, clip_area);
+        on_draw_main(staff, clip_area);
     }
     return LV_DESIGN_RES_OK;
 }
@@ -619,65 +702,11 @@ void ysw_staff_set_section(lv_obj_t *staff, zm_section_t *section)
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
     ext->position = 0;
-    ext->start_x = STAFF_HEAD;
     ext->section = section;
+    ext->key = section->key;
+    ext->staff_head = measure_staff_head(section);
+    ext->start_x = ext->staff_head;
     lv_obj_invalidate(staff);
-}
-
-lv_coord_t get_scroll_position(ysw_staff_ext_t *ext, zm_step_x new_position)
-{
-    lv_coord_t start_x = ext->start_x;
-    zm_step_x rightmost_position = ysw_array_get_count(ext->section->steps) * 2;
-    if (new_position > ext->position) {
-        // moving right -- see how much is to the right of new position
-        lv_coord_t to_right = 0;
-        for (zm_step_x i = new_position; i <= rightmost_position && to_right < MIDPOINT; i++) {
-            to_right += measure_position(ext, i);
-        }
-        // if we're already in the center or there's plenty to the right
-        if (start_x >= MIDPOINT && to_right > MIDPOINT) {
-            // stay in the center to show context on either side
-            start_x = MIDPOINT;
-        } else {
-            // otherwise move right
-            lv_coord_t last_width = 0;
-            for (zm_step_x i = ext->position; i < new_position; i++) {
-                last_width = measure_position(ext, i);
-                start_x += last_width;
-            }
-            // if we're amongst the last notes on the right
-            if (start_x > WIDTH) {
-                // limit to the last space on the right
-                start_x = WIDTH - last_width;
-            }
-        }
-    } else if (new_position < ext->position) {
-        // moving left -- see how much is to the left of new position
-        lv_coord_t to_left = STAFF_HEAD;
-        for (zm_step_x i = 0; i <= new_position && to_left < MIDPOINT; i++) {
-            to_left += measure_position(ext, i);
-        }
-        // if we're already in the center or there's plenty to the left
-        if (start_x <= MIDPOINT && to_left > MIDPOINT) {
-            // stay in the center to show context on either side
-            start_x = MIDPOINT;
-        } else {
-            // otherwise move left
-            lv_coord_t last_width = 0;
-            // make sure ext->position is valid (it may have just been deleted)
-            zm_step_x limit = min(rightmost_position, ext->position);
-            for (zm_step_x i = new_position; i < limit; i++) {
-                last_width = measure_position(ext, i);
-                start_x -= last_width;
-            }
-            // if we're amongst the first notes on the left
-            if (start_x < STAFF_HEAD) {
-                // limit to the last space on the left, including staff head
-                start_x = STAFF_HEAD;
-            }
-        }
-    }
-    return start_x;
 }
 
 void ysw_staff_set_position(lv_obj_t *staff, zm_step_x new_position, ysw_staff_position_type_t type)
