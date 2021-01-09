@@ -324,15 +324,42 @@ static void visit_white(dc_t *dc, uint8_t note, zm_duration_t duration)
     }
 }
 
+static void visit_out_of_range_note(dc_t *dc, zm_note_t note, lv_coord_t y)
+{
+    lv_area_t coords = {
+        .x1 = dc->point.x,
+        .x2 = dc->point.x + 40,
+        .y1 = y,
+        .y2 = y + 11,
+    };
+    lv_draw_label_dsc_t dsc = {
+        .color = dc->color,
+        .font = &lv_font_unscii_8,
+        .opa = LV_OPA_COVER,
+    };
+    char value[32];
+    zm_octave_t octave = (note / 12) - 1;
+    const char *name = zm_get_note_name(note);
+    snprintf(value, sizeof(value), "%s%d", name, octave);
+    lv_area_t extent = { };
+    visit_text(&coords, dc->clip_area, &dsc, value, dc->visit_type, &extent);
+}
+
 static void visit_melody(dc_t *dc, zm_step_t *step)
 {
     zm_duration_t duration = step->melody.duration;
     if (step->melody.note) {
-        uint8_t note = (step->melody.note - 60) % MAX_NOTES;
-        if (black[note]) {
-            visit_black(dc, note, duration);
+        if (step->melody.note < 60) {
+            visit_out_of_range_note(dc, step->melody.note, 150);
+        } else if (step->melody.note >= 84) {
+            visit_out_of_range_note(dc, step->melody.note, 65);
         } else {
-            visit_white(dc, note, duration);
+            uint8_t note = step->melody.note - 60;
+            if (black[note]) {
+                visit_black(dc, note, duration);
+            } else {
+                visit_white(dc, note, duration);
+            }
         }
     } else if (duration) {
         visit_rest(dc, duration);

@@ -735,11 +735,11 @@ static void increase_pitch(ysw_editor_t *editor)
         zm_step_x step_index = editor->position / 2;
         zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
         if (editor->mode == YSW_EDITOR_MODE_MELODY) {
-            if (step->melody.note && step->melody.note < 83) {
+            if (step->melody.note && step->melody.note < YSW_MIDI_HPN) {
                 step->melody.note++;
             }
         } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
-            if (step->chord.root && step->chord.root < 83) {
+            if (step->chord.root && step->chord.root < YSW_MIDI_HPN) {
                 step->chord.root++;
             }
         } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
@@ -757,11 +757,11 @@ static void decrease_pitch(ysw_editor_t *editor)
         zm_step_x step_index = editor->position / 2;
         zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
         if (editor->mode == YSW_EDITOR_MODE_MELODY) {
-            if (step->melody.note && step->melody.note > 60) {
+            if (step->melody.note && step->melody.note > YSW_MIDI_LPN) {
                 step->melody.note--;
             }
         } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
-            if (step->chord.root && step->chord.root > 60) {
+            if (step->chord.root && step->chord.root > YSW_MIDI_LPN) {
                 step->chord.root--;
             }
         } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
