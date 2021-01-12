@@ -30,11 +30,18 @@
 #include "zm_music.h"
 #include "eli_ili9341_xpt2046.h"
 #include "lvgl/lvgl.h"
+#include "driver/gpio.h"
+#include "driver/dac.h"
+#include "driver/i2s.h"
 #include "driver/spi_master.h"
 #include "esp_log.h"
 #include "stdlib.h"
 
 #define TAG "YSW_MAIN_ESP32"
+
+#define MM_V02 2
+#define MM_V04 4
+#define MM_VERSION MM_V04
 
 UNUSED
 static void initialize_bt_synthesizer(ysw_bus_t *bus, zm_music_t *music)
@@ -67,11 +74,106 @@ static void initialize_fs_synthesizer(ysw_bus_t *bus, zm_music_t *music)
     ysw_fluid_synth_create_task(bus, YSW_MUSIC_SOUNDFONT);
 }
 
+UNUSED
+static void initialize_i2s_internal_dac(void)
+{
+    // Enable I2S internal DAC on both GPIO 25 and GPIO 26
+    ESP_LOGD(TAG, "Enabling I2S internal DAC on both GPIO 25 and GPIO 26");
+
+    static const i2s_config_t i2s_config = {
+        .mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN,
+        .sample_rate = YSW_I2S_SAMPLE_RATE,
+        .bits_per_sample = 16,
+        .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+        .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+        .intr_alloc_flags = 0,
+        .dma_buf_count = YSW_I2S_BUFFER_COUNT,
+        .dma_buf_len = YSW_I2S_SAMPLE_COUNT,
+        .use_apll = false
+    };
+
+    $(i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL));
+
+    $(i2s_set_pin(I2S_NUM_0, NULL));
+}
+
+UNUSED
+static void initialize_i2s_mmv02(void)
+{
+    // Enable I2S internal DAC on GPIO 25 with GPIO 26 in use for keyboard
+    ESP_LOGD(TAG, "Enabling I2S internal DAC on GPIO 25 with GPIO 26 in use for keyboard");
+
+    static const i2s_config_t i2s_config = {
+        .mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN,
+        .sample_rate = YSW_I2S_SAMPLE_RATE,
+        .bits_per_sample = 16,
+        .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+        .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+        .intr_alloc_flags = 0,
+        .dma_buf_count = YSW_I2S_BUFFER_COUNT,
+        .dma_buf_len = YSW_I2S_SAMPLE_COUNT,
+        .use_apll = false
+    };
+
+    $(i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL));
+
+    ESP_LOGD(TAG, "calling i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN)");
+    $(i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN));
+}
+
+static void initialize_i2s_mmv04(void)
+{
+    // Enable I2S external Cirrus Logic CS4344 DAC using GPIO 0 for MCLK
+    ESP_LOGD(TAG, "Enabling I2S external Cirrus Logic CS4344 DAC using GPIO 0 for MCLK");
+
+// Search for CLK_OUT1 and see page 73 of ESP32 Technical Reference Manual
+// See https://www.espressif.com/sites/default/files/documentation/esp32_technical_reference_manual_en.pdf
+// See https://www.reddit.com/r/esp32/comments/g48lzs/esp_32_i2s_and_cs4344_dac/
+// See https://www.esp32.com/viewtopic.php?f=5&t=1585&start=10
+
+#define YSW_I2S_MCLK PERIPHS_IO_MUX_GPIO0_U // must be a clock peripheral
+#define YSW_I2S_BCK_PIN 2
+#define YSW_I2S_LRCK_PIN 5
+#define YSW_I2S_DATA_PIN 4
+
+    i2s_config_t i2s_config = {
+        .mode = I2S_MODE_MASTER | I2S_MODE_TX,
+        .sample_rate = YSW_I2S_SAMPLE_RATE,
+        .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+        .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+        .communication_format = I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB,
+        .intr_alloc_flags = 0,
+        .dma_buf_count = YSW_I2S_BUFFER_COUNT,
+        .dma_buf_len = YSW_I2S_SAMPLE_COUNT,
+        .use_apll = true,
+    };
+
+    $(i2s_driver_install(0, &i2s_config, 0, NULL));
+
+    i2s_pin_config_t pin_config = {
+        .bck_io_num = YSW_I2S_BCK_PIN,
+        .ws_io_num = YSW_I2S_LRCK_PIN,
+        .data_out_num = YSW_I2S_DATA_PIN,
+        .data_in_num = -1,
+    };
+
+    $(i2s_set_pin(0, &pin_config));
+
+    REG_WRITE(PIN_CTRL, 0b111111110000);
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0_CLK_OUT1);
+}
+
 // TODO: pass ysw_mod_synth to I2S task event handlers
 
 ysw_mod_synth_t *ysw_mod_synth;
 
+#if MM_VERSION == MM_V02
 static ysw_mod_sample_type_t sample_type = YSW_MOD_16BIT_UNSIGNED;
+#elif MM_VERSION == MM_V04
+static ysw_mod_sample_type_t sample_type = YSW_MOD_16BIT_SIGNED;
+#else
+#error define MM_VERSION
+#endif
 
 static int32_t generate_audio(uint8_t *buffer, int32_t bytes_requested)
 {
@@ -90,7 +192,13 @@ static void initialize_mod_synthesizer(ysw_bus_t *bus, zm_music_t *music)
     ysw_mod_host_t *mod_host = ysw_mod_music_create_host(music);
     ysw_mod_synth = ysw_mod_synth_create_task(bus, mod_host);
     // ysw_a2dp_source_initialize(generate_audio); // for bluetooth speaker
-    ysw_i2s_create_task(generate_audio); // for i2s builtin dac mode
+#if MM_VERSION == MM_V02
+    ysw_i2s_create_task(initialize_i2s_mmv02, generate_audio);
+#elif MM_VERSION == MM_V04
+    ysw_i2s_create_task(initialize_i2s_mmv04, generate_audio);
+#else
+#error define MM_VERSION
+#endif
 }
 
 // Music Machine v01 - Confirmed with Schematic
@@ -120,6 +228,7 @@ static void initialize_mmv01_touch_screen(void)
 
 // Music Machine v02
 
+UNUSED
 static void initialize_mmv02_touch_screen(void)
 {
     ESP_LOGD(TAG, "configuring Music Machine v02 touch screen");
@@ -138,6 +247,31 @@ static void initialize_mmv02_touch_screen(void)
         .x_max = 3829,
         .y_max = 3655,
         .is_invert_y = true,
+        .spi_host = VSPI_HOST,
+    };
+    eli_ili9341_xpt2046_initialize(&new_config);
+}
+
+// Music Machine v04 (wire-wrapped prototype)
+
+static void initialize_mmv04_touch_screen(void)
+{
+    ESP_LOGD(TAG, "configuring Music Machine v04 touch screen");
+    eli_ili9341_xpt2046_config_t new_config = {
+        .mosi = 25,
+        .clk = 27,
+        .ili9341_cs = 13,
+        .xpt2046_cs = 26,
+        .dc = 12,
+        .rst = -1,
+        .bckl = 14,
+        .miso = 33,
+        .irq = 32,
+        .x_min = 353,
+        .y_min = 313,
+        .x_max = 3829,
+        .y_max = 3853,
+        .is_invert_y = false,
         .spi_host = VSPI_HOST,
     };
     eli_ili9341_xpt2046_initialize(&new_config);
@@ -191,6 +325,7 @@ void ysw_main_init_device(ysw_bus_t *bus)
     esp_log_level_set("I2S", ESP_LOG_INFO); // esp-idf i2s
     ysw_spiffs_initialize(ZM_MF_PARTITION);
 
+#if MM_VERSION == MM_V02
     initialize_mmv02_touch_screen();
 
     ysw_led_config_t led_config = {
@@ -203,6 +338,11 @@ void ysw_main_init_device(ysw_bus_t *bus)
         .columns = ysw_array_load(7, 15, 13, 12, 14, 27, 26, 23),
     };
     ysw_keyboard_create_task(bus, &keyboard_config);
+#elif MM_VERSION == MM_V04
+    initialize_mmv04_touch_screen();
+#else
+#error define MM_VERSION
+#endif
 }
 
 void ysw_main_init_synthesizer(ysw_bus_t *bus, zm_music_t *music)

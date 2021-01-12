@@ -76,12 +76,13 @@ static eli_ili9341_xpt2046_config_t config;
 static void configure_gpio(uint8_t pin, gpio_mode_t mode)
 {
     gpio_config_t io_conf = {
-        .pin_bit_mask = 1UL << pin,
+        .pin_bit_mask = (uint64_t)1 << pin,
         .mode = mode,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .intr_type = GPIO_PIN_INTR_DISABLE,
     };
+    ESP_LOGD(TAG, "configure_gpio pin=%d, pin_bit_mask=%#llx, mode=%d", pin, io_conf.pin_bit_mask, io_conf.mode);
     $(gpio_config(&io_conf));
 }
 
@@ -246,6 +247,8 @@ static void xpt2046_init(void)
 
 static void xpt2046_corr(int16_t *x, int16_t *y)
 {
+    //ESP_LOGD(TAG, "x=%d, y=%d", *x, *y);
+
     if (*x > config.x_min) {
         *x -= config.x_min;
     }

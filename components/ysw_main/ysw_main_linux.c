@@ -26,7 +26,6 @@
 #include "lvgl.h"
 #include "lv_drivers/display/monitor.h"
 #include "lv_drivers/indev/mouse.h"
-#include "lv_examples/lv_examples.h"
 #include "esp_log.h"
 #include "pthread.h"
 #include "SDL2/SDL.h"
