@@ -17,6 +17,8 @@ extern "C" {
 #include "zm_music.h"
 #include "lvgl.h"
 
+#define YSW_STAFF_NO_ANCHOR (-1)
+
 typedef enum {
     YSW_STAFF_DIRECT,
     YSW_STAFF_SCROLL,
@@ -24,8 +26,7 @@ typedef enum {
 
 typedef struct {
     uint32_t position;
-    int32_t selection_left;
-    int32_t selection_right;
+    int32_t anchor;
     zm_section_t *section;
     zm_key_signature_x key;
     lv_coord_t staff_head;
@@ -41,11 +42,8 @@ typedef uint8_t ysw_staff_role_t;
 lv_obj_t *ysw_staff_create(lv_obj_t *par);
 void ysw_staff_set_section(lv_obj_t *staff, zm_section_t *section);
 void ysw_staff_set_position(lv_obj_t *staff, zm_step_x new_position, ysw_staff_position_type_t type);
-void ysw_staff_set_selection_left(lv_obj_t *staff, int32_t selection_left);
-void ysw_staff_set_selection_right(lv_obj_t *staff, int32_t selection_right);
-void ysw_staff_clear_selection(lv_obj_t *staff);
-int32_t ysw_staff_get_selection_left(lv_obj_t *staff);
-int32_t ysw_staff_get_selection_right(lv_obj_t *staff);
+void ysw_staff_set_anchor(lv_obj_t *staff, int32_t anchor);
+int32_t ysw_staff_get_anchor(lv_obj_t *staff);
 void ysw_staff_invalidate(lv_obj_t *staff);
 zm_section_t *ysw_staff_get_section(lv_obj_t *staff);
 uint32_t ysw_staff_get_position(lv_obj_t *staff);

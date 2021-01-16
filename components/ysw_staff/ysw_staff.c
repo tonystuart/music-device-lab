@@ -498,11 +498,11 @@ static void visit_step(dc_t *dc, zm_step_t *step, bool highlight)
     }
 }
 
-static inline bool is_selected(ysw_staff_ext_t *ext, int32_t position)
+static inline bool is_selected(ysw_staff_ext_t *ext, int32_t index)
 {
-    return ext->selection_left >= 0 &&
-        ext->selection_left <= position &&
-        position <= ext->selection_right;
+    return ext->anchor != YSW_STAFF_NO_ANCHOR &&
+        ((ext->anchor <= index && index <= ext->position) ||
+         (ext->position <= index && index <= ext->anchor));
 }
 
 static void visit_staff(ysw_staff_ext_t *ext, dc_t *dc)
@@ -731,8 +731,7 @@ lv_obj_t *ysw_staff_create(lv_obj_t *par)
 
     memset(ext, 0, sizeof(ysw_staff_ext_t));
 
-    ext->selection_left = -1;
-    ext->selection_right = -1;
+    ext->anchor = YSW_STAFF_NO_ANCHOR;
 
     lv_obj_set_signal_cb(staff, on_signal);
     lv_obj_set_design_cb(staff, on_design);
@@ -788,47 +787,18 @@ uint32_t ysw_staff_get_position(lv_obj_t *staff)
     return ext->position;
 }
 
-void ysw_staff_set_selection_left(lv_obj_t *staff, int32_t selection_left)
+void ysw_staff_set_anchor(lv_obj_t *staff, int32_t anchor)
 {
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
-    ext->selection_left = selection_left;
-    if (ext->selection_right < ext->selection_left) {
-        ext->selection_right = ext->selection_left;
-    }
+    ext->anchor = anchor;
     ysw_staff_invalidate(staff);
 }
 
-void ysw_staff_set_selection_right(lv_obj_t *staff, int32_t selection_right)
+int32_t ysw_staff_get_anchor(lv_obj_t *staff)
 {
     assert(staff);
     ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
-    ext->selection_right = selection_right;
-    if (ext->selection_left == -1 || ext->selection_left > ext->selection_right) {
-        ext->selection_left = ext->selection_right;
-    }
-    ysw_staff_invalidate(staff);
+    return ext->anchor;
 }
 
-void ysw_staff_clear_selection(lv_obj_t *staff)
-{
-    assert(staff);
-    ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
-    ext->selection_left = -1;
-    ext->selection_right = -1;
-    ysw_staff_invalidate(staff);
-}
-
-int32_t ysw_staff_get_selection_left(lv_obj_t *staff)
-{
-    assert(staff);
-    ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
-    return ext->selection_left;
-}
-
-int32_t ysw_staff_get_selection_right(lv_obj_t *staff)
-{
-    assert(staff);
-    ysw_staff_ext_t *ext = lv_obj_get_ext_attr(staff);
-    return ext->selection_right;
-}
