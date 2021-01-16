@@ -1163,8 +1163,38 @@ static void on_transpose_section(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_
     }
 }
 
-static void on_extend_selection(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_select_previous(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
+    ysw_editor_t *editor = menu->context;
+    int32_t selection_left = ysw_staff_get_selection_left(editor->staff);
+    if (selection_left == -1) {
+        ysw_staff_set_selection_right(editor->staff, editor->position);
+    } else if (selection_left < editor->position) {
+        editor->position = selection_left;
+        ysw_staff_set_position(editor->staff, editor->position, YSW_STAFF_SCROLL);
+    }
+    on_previous(menu, event, item);
+    ysw_staff_set_selection_left(editor->staff, editor->position);
+}
+
+static void on_select_next(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    int32_t selection_right = ysw_staff_get_selection_right(editor->staff);
+    if (selection_right == -1) {
+        ysw_staff_set_selection_left(editor->staff, editor->position);
+    } else if (selection_right > editor->position) {
+        editor->position = selection_right;
+        ysw_staff_set_position(editor->staff, editor->position, YSW_STAFF_SCROLL);
+    }
+    on_next(menu, event, item);
+    ysw_staff_set_selection_right(editor->staff, editor->position);
+}
+
+static void on_deselect_all(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    ysw_staff_clear_selection(editor->staff);
 }
 
 static void on_note(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -1489,8 +1519,8 @@ static const ysw_menu_item_t edit_menu_2[] = {
 };
 
 static const ysw_menu_item_t edit_menu[] = {
-    { YSW_R1_C1, "Select\nLeft", YSW_MF_PRESS, on_extend_selection, -1, NULL },
-    { YSW_R1_C2, "Select\nRight", YSW_MF_PRESS, on_extend_selection, +1, NULL },
+    { YSW_R1_C1, "Select\nLeft", YSW_MF_PRESS, on_select_previous, 0, NULL },
+    { YSW_R1_C2, "Select\nRight", YSW_MF_PRESS, on_select_next, 0, NULL },
     { YSW_R1_C3, "Select\nAll", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
     { YSW_R1_C4, "Previous", YSW_MF_PRESS, on_previous, 0, NULL },
 
@@ -1501,6 +1531,7 @@ static const ysw_menu_item_t edit_menu[] = {
 
     { YSW_R3_C1, "First", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
     { YSW_R3_C2, "Last", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
+    { YSW_R3_C3, "Desel\nAll", YSW_MF_PRESS, on_deselect_all, 0, NULL },
     { YSW_R3_C4, "Left", YSW_MF_PRESS, on_left, 0, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
