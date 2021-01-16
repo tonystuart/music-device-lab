@@ -178,6 +178,13 @@ void ysw_style_softkeys(lv_obj_t *container, lv_obj_t *label, lv_obj_t *btnmatri
     lv_obj_set_style_local_pad_inner(btnmatrix, LV_BTNMATRIX_PART_BG, 0, 5);
 }
 
+void ysw_style_softkeys_lucid(lv_obj_t *container, lv_obj_t *label, lv_obj_t *btnmatrix)
+{
+    ysw_style_softkeys(container, label, btnmatrix);
+
+    lv_obj_set_style_local_bg_opa(container, 0, 0, LV_OPA_30);
+}
+
 void ysw_style_popup(lv_obj_t *container, lv_obj_t *msgbox)
 {
     style_container(container);

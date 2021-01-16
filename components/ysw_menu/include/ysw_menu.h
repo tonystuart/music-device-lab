@@ -38,11 +38,12 @@ typedef enum {
 #define YSW_MENU_CB_ACTIVATION_MASK 0xf0
 
 #define YSW_MENU_NOP 0x00
+#define YSW_MENU_LUCID 0x4000
 #define YSW_MENU_END 0x8000
 
 // Common combinations of above flags
 
-#define YSW_MF_END (YSW_MENU_END)
+#define YSW_MF_NOP (0)
 #define YSW_MF_PRESS (YSW_MENU_PRESS)
 #define YSW_MF_BUTTON (YSW_MENU_DOWN|YSW_MENU_UP)
 #define YSW_MF_COMMAND (YSW_MENU_PRESS|YSW_MENU_RESET)
@@ -51,7 +52,8 @@ typedef enum {
 #define YSW_MF_HIDE (YSW_MENU_HIDE)
 #define YSW_MF_SHOW (YSW_MENU_SHOW)
 #define YSW_MF_TOGGLE (YSW_MENU_TOGGLE)
-#define YSW_MF_NOP (0)
+#define YSW_MF_END (YSW_MENU_END)
+#define YSW_MF_LUCID_END (YSW_MENU_LUCID|YSW_MENU_END)
 
 typedef enum {
     YSW_MENU_ENDLINE = -1,

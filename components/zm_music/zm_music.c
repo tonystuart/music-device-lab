@@ -1622,3 +1622,36 @@ ysw_array_t *zm_get_section_references(zm_music_t *music, zm_section_t *section)
     }
     return references;
 }
+
+bool zm_transpose_section(zm_section_t *section, uint8_t delta)
+{
+    // first pass, make sure transposition is valid
+    zm_step_x step_count = ysw_array_get_count(section->steps);
+    for (zm_step_x i = 0; i < step_count; i++) {
+        zm_step_t *step = ysw_array_get(section->steps, i);
+        if (step->melody.note) {
+            zm_note_t new_note = step->melody.note + delta;
+            if (new_note < YSW_MIDI_LPN || new_note > YSW_MIDI_HPN) {
+                return false;
+            }
+        }
+        if (step->chord.root) {
+            zm_note_t new_root = step->chord.root + delta;
+            if (new_root < YSW_MIDI_LPN || new_root > YSW_MIDI_HPN) {
+                return false;
+            }
+        }
+    }
+    // second pass, adjust all notes and chord roots
+    for (zm_step_x i = 0; i < step_count; i++) {
+        zm_step_t *step = ysw_array_get(section->steps, i);
+        if (step->melody.note) {
+            step->melody.note += delta;
+        }
+        if (step->chord.root) {
+            step->chord.root += delta;
+        }
+    }
+    return true;
+}
+

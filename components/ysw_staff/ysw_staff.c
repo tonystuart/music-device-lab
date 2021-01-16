@@ -599,7 +599,7 @@ lv_coord_t get_scroll_position(ysw_staff_ext_t *ext, zm_step_x new_position)
             to_right += measure_position(ext, i);
         }
         // if we're already in the center or there's plenty to the right
-        if (start_x >= MIDPOINT && to_right > MIDPOINT) {
+        if (start_x >= MIDPOINT && to_right >= MIDPOINT) {
             // stay in the center to show context on either side
             start_x = MIDPOINT;
         } else {
@@ -622,7 +622,7 @@ lv_coord_t get_scroll_position(ysw_staff_ext_t *ext, zm_step_x new_position)
             to_left += measure_position(ext, i);
         }
         // if we're already in the center or there's plenty to the left
-        if (start_x <= MIDPOINT && to_left > MIDPOINT) {
+        if (start_x <= MIDPOINT && to_left >= MIDPOINT) {
             // stay in the center to show context on either side
             start_x = MIDPOINT;
         } else {

@@ -78,6 +78,20 @@ static void event_handler(lv_obj_t *btnmatrix, lv_event_t button_event)
     }
 }
 
+static uint32_t get_menu_flags(ysw_menu_t *menu)
+{
+    uint32_t flags = 0;
+    ysw_menu_item_t *menu_item = ysw_array_get_top(menu->stack);
+    if (menu_item) {
+        while (!(menu_item->flags & YSW_MENU_END)) {
+            // find last item
+            menu_item++;
+        }
+        flags = menu_item->flags;
+    }
+    return flags;
+}
+
 static void get_menu_name(ysw_menu_t *menu, ysw_string_t *s)
 {
     uint32_t stack_size = ysw_array_get_count(menu->stack);
@@ -152,7 +166,12 @@ static void show_softkeys(ysw_menu_t *menu)
     lv_obj_t *btnmatrix = lv_btnmatrix_create(container, NULL);
     lv_btnmatrix_set_align(btnmatrix, LV_LABEL_ALIGN_CENTER);
 
-    ysw_style_softkeys(container, label, btnmatrix);
+    uint32_t flags = get_menu_flags(menu);
+    if (flags & YSW_MENU_LUCID) {
+        ysw_style_softkeys_lucid(container, label, btnmatrix);
+    } else {
+        ysw_style_softkeys(container, label, btnmatrix);
+    }
 
     lv_obj_set_size(btnmatrix, 320, 230);
     lv_obj_align(btnmatrix, NULL, LV_ALIGN_IN_BOTTOM_LEFT, 0, 0);

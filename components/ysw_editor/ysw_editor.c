@@ -729,48 +729,30 @@ static void move_right(ysw_editor_t *editor, uint8_t move_amount)
     }
 }
 
-static void increase_pitch(ysw_editor_t *editor)
+static bool transpose_step(ysw_editor_t *editor, uint8_t delta)
 {
     if (is_step_position(editor)) {
         zm_step_x step_index = editor->position / 2;
         zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
         if (editor->mode == YSW_EDITOR_MODE_MELODY) {
-            if (step->melody.note && step->melody.note < YSW_MIDI_HPN) {
-                step->melody.note++;
+            if (step->melody.note) {
+                zm_note_t new_note = step->melody.note + delta;
+                if (YSW_MIDI_LPN <= new_note && new_note <= YSW_MIDI_HPN) {
+                    step->melody.note = new_note;
+                    return true;
+                }
             }
         } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
-            if (step->chord.root && step->chord.root < YSW_MIDI_HPN) {
-                step->chord.root++;
+            if (step->chord.root) {
+                zm_note_t new_root = step->chord.root + delta;
+                if (YSW_MIDI_LPN <= new_root && new_root <= YSW_MIDI_HPN) {
+                    step->chord.root = new_root;
+                    return true;
+                }
             }
-        } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
         }
-        play_position(editor);
-        display_mode(editor);
-        ysw_staff_invalidate(editor->staff);
-        save_undo_action(editor);
     }
-}
-
-static void decrease_pitch(ysw_editor_t *editor)
-{
-    if (is_step_position(editor)) {
-        zm_step_x step_index = editor->position / 2;
-        zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
-        if (editor->mode == YSW_EDITOR_MODE_MELODY) {
-            if (step->melody.note && step->melody.note > YSW_MIDI_LPN) {
-                step->melody.note--;
-            }
-        } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
-            if (step->chord.root && step->chord.root > YSW_MIDI_LPN) {
-                step->chord.root--;
-            }
-        } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
-        }
-        play_position(editor);
-        display_mode(editor);
-        ysw_staff_invalidate(editor->staff);
-        save_undo_action(editor);
-    }
+    return false;
 }
 
 // Generators
@@ -1142,25 +1124,47 @@ static void on_right(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item
 static void on_previous(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    move_left(editor, 2);
+    if (is_space_position(editor)) {
+        move_left(editor, 1);
+    } else {
+        move_left(editor, 2);
+    }
 }
 
 static void on_next(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    move_right(editor, 2);
+    if (is_space_position(editor)) {
+        move_right(editor, 1);
+    } else {
+        move_right(editor, 2);
+    }
 }
 
-static void on_up(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_transpose_step(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    increase_pitch(editor);
+    if (transpose_step(editor, item->value)) {
+        play_position(editor);
+        display_mode(editor);
+        ysw_staff_invalidate(editor->staff);
+        save_undo_action(editor);
+    }
 }
 
-static void on_down(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_transpose_section(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    decrease_pitch(editor);
+    if (zm_transpose_section(editor->section, item->value)) {
+        play_position(editor);
+        display_mode(editor);
+        ysw_staff_invalidate(editor->staff);
+        save_undo_action(editor);
+    }
+}
+
+static void on_extend_selection(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
 }
 
 static void on_note(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -1470,27 +1474,41 @@ static void process_event(void *context, ysw_event_t *event)
 
 // Actions that pop a menu (e.g. COMMAND_POP) must be performed on UP, not DOWN or PRESS.
 
+static const ysw_menu_item_t edit_menu_2[] = {
+    { YSW_R1_C1, "Note\nPitch-", YSW_MF_PRESS, on_transpose_step, -1, NULL },
+    { YSW_R1_C2, "Note\nPitch+", YSW_MF_PRESS, on_transpose_step, +1, NULL },
+    { YSW_R1_C3, "Section\nPitch-", YSW_MF_PRESS, on_transpose_section, -1, NULL },
+    { YSW_R1_C4, "Section\nPitch+", YSW_MF_PRESS, on_transpose_section, +1, NULL },
+
+    { YSW_R3_C1, "Note\nLength-", YSW_MF_PRESS, on_note_length, -1, NULL },
+    { YSW_R3_C2, "Note\nLength+", YSW_MF_PRESS, on_note_length, +1, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "More", YSW_MF_LUCID_END, NULL, 0, NULL },
+};
+
 static const ysw_menu_item_t edit_menu[] = {
-    { 5, "Select\nLeft", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
-    { 6, "Select\nRight", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
-    { 7, "Select\nAll", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
-    { 8, "Trans\npose+", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R1_C1, "Select\nLeft", YSW_MF_PRESS, on_extend_selection, -1, NULL },
+    { YSW_R1_C2, "Select\nRight", YSW_MF_PRESS, on_extend_selection, +1, NULL },
+    { YSW_R1_C3, "Select\nAll", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
+    { YSW_R1_C4, "Previous", YSW_MF_PRESS, on_previous, 0, NULL },
 
-    { 16, "Cut", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
-    { 17, "Copy", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 18, "Paste", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 19, "Trans\npose-", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C1, "Cut", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C2, "Copy", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C3, "Paste", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C4, "Next", YSW_MF_PRESS, on_next, 0, NULL },
 
-    { 25, "First", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 26, "Next", YSW_MF_COMMAND, on_next, 0, NULL },
-    { 27, "Previous", YSW_MF_COMMAND, on_previous, 0, NULL },
-    { 28, "Note\nLength-", YSW_MF_COMMAND, on_note_length, -1, NULL },
+    { YSW_R3_C1, "First", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
+    { YSW_R3_C2, "Last", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
+    { YSW_R3_C4, "Left", YSW_MF_PRESS, on_left, 0, NULL },
 
-    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
-    { 37, "Delete", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 39, "Note\nLength+", YSW_MF_COMMAND, on_note_length, +1, NULL },
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C2, "Delete", YSW_MF_PRESS, on_delete, 0, NULL },
+    { YSW_R4_C3, "More", YSW_MF_PLUS, ysw_menu_nop, 0, edit_menu_2 },
+    { YSW_R4_C4, "Right", YSW_MF_PRESS, on_right, 0, NULL },
 
-    { 0, "Edit", YSW_MF_END, NULL, 0, NULL },
+    { 0, "Edit", YSW_MF_LUCID_END, NULL, 0, NULL },
 };
 
 static const ysw_menu_item_t listen_menu[] = {
@@ -1810,6 +1828,7 @@ static const ysw_menu_item_t input_mode_menu[] = {
 
     { 0, "Input Mode", YSW_MF_END, NULL, 0, NULL },
 };
+
 const ysw_menu_item_t editor_menu[] = {
     { 0, "C#6", YSW_MF_BUTTON, on_note, 73, NULL },
     { 1, "D#6", YSW_MF_BUTTON, on_note, 75, NULL },
@@ -1820,7 +1839,7 @@ const ysw_menu_item_t editor_menu[] = {
     { 5, "Input\nMode", YSW_MF_PLUS, ysw_menu_nop, 0, input_mode_menu },
     { 6, "Insert", YSW_MF_PLUS, ysw_menu_nop, 0, insert_menu },
     { 7, "Remove", YSW_MF_PLUS, ysw_menu_nop, 0, remove_menu },
-    { 8, "Up", YSW_MF_COMMAND, on_up, 0, NULL },
+    { 8, "Up", YSW_MF_COMMAND, on_transpose_step, +1, NULL },
 
     { 9, "C6", YSW_MF_BUTTON, on_note, 72, NULL },
     { 10, "D6", YSW_MF_BUTTON, on_note, 74, NULL },
@@ -1832,7 +1851,7 @@ const ysw_menu_item_t editor_menu[] = {
 
     { 16, "Listen", YSW_MF_PLUS, ysw_menu_nop, 0, listen_menu },
     { 17, "Edit", YSW_MF_PLUS, ysw_menu_nop, 0, edit_menu },
-    { 19, "Down", YSW_MF_COMMAND, on_down, 0, NULL },
+    { 19, "Down", YSW_MF_COMMAND, on_transpose_step, -1, NULL },
 
     { 20, "C#5", YSW_MF_BUTTON, on_note, 61, NULL },
     { 21, "D#5", YSW_MF_BUTTON, on_note, 63, NULL },

@@ -315,6 +315,8 @@ bool zm_sections_equal(zm_section_t *left, zm_section_t *right);
 
 ysw_array_t *zm_get_section_references(zm_music_t *music, zm_section_t *section);
 
+bool zm_transpose_section(zm_section_t *section, uint8_t delta);
+
 // See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
 
 static inline const char *zm_get_note_name(zm_note_t note)
