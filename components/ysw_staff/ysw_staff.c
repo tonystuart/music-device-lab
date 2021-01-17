@@ -441,12 +441,9 @@ static void visit_tie(dc_t *dc, zm_step_t *step)
     dc->point.x = x;
 }
 
-static void visit_step(dc_t *dc, zm_step_t *step, bool highlight)
+static void visit_step(dc_t *dc, zm_step_t *step)
 {
     if (dc->direction == DIRECTION_LEFT) {
-        if (highlight) {
-            dc->color = LV_COLOR_RED;
-        }
         if (step->flags & ZM_STEP_END_OF_MEASURE) {
             visit_letter(dc, YSW_STAFF_SPACE);
             visit_measure_label(dc, step->measure + 1);
@@ -466,13 +463,7 @@ static void visit_step(dc_t *dc, zm_step_t *step, bool highlight)
         if (step->rhythm.beat || step->rhythm.surface) {
             visit_rhythm(dc, &step->rhythm);
         }
-        if (highlight) {
-            dc->color = LV_COLOR_WHITE;
-        }
     } else if (dc->direction == DIRECTION_RIGHT) {
-        if (highlight) {
-            dc->color = LV_COLOR_RED;
-        }
         if (step->chord.root) {
             visit_chord(dc, &step->chord);
         }
@@ -486,9 +477,6 @@ static void visit_step(dc_t *dc, zm_step_t *step, bool highlight)
         visit_letter(dc, YSW_STAFF_SPACE);
         if (step->chord.root || step->rhythm.beat || step->rhythm.surface) {
             visit_letter(dc, YSW_STAFF_SPACE);
-        }
-        if (highlight) {
-            dc->color = LV_COLOR_WHITE;
         }
         if (step->flags & ZM_STEP_END_OF_MEASURE) {
             visit_letter(dc, YSW_RIGHT_BAR);
@@ -505,6 +493,24 @@ static inline bool is_selected(ysw_staff_ext_t *ext, int32_t index)
          (ext->position <= index && index <= ext->anchor));
 }
 
+static void visit_position(ysw_staff_ext_t *ext, dc_t *dc, int32_t index)
+{
+    bool highlight = is_selected(ext, index) || index == ext->position;
+    if (highlight) {
+        dc->color = LV_COLOR_RED;
+    }
+    if (is_step_position(index)) {
+        uint32_t step_index = index / 2;
+        zm_step_t *step = ysw_array_get(ext->section->steps, step_index);
+        visit_step(dc, step);
+    } else {
+        visit_letter(dc, YSW_STAFF_SPACE);
+    }
+    if (highlight) {
+        dc->color = LV_COLOR_WHITE;
+    }
+}
+
 static void visit_staff(ysw_staff_ext_t *ext, dc_t *dc)
 {
     uint32_t step_count = ysw_array_get_count(ext->section->steps);
@@ -514,14 +520,7 @@ static void visit_staff(ysw_staff_ext_t *ext, dc_t *dc)
     dc->point.x = ext->start_x;
 
     for (int32_t left = ext->position - 1; left >= 0 && dc->point.x > 0; left--) {
-        bool highlight = is_selected(ext, left);
-        if (is_step_position(left)) {
-            uint32_t step_index = left / 2;
-            zm_step_t *step = ysw_array_get(ext->section->steps, step_index);
-            visit_step(dc, step, highlight);
-        } else {
-            visit_letter(dc, YSW_STAFF_SPACE);
-        }
+        visit_position(ext, dc, left);
     }
 
     if (dc->point.x > 0) {
@@ -532,20 +531,7 @@ static void visit_staff(ysw_staff_ext_t *ext, dc_t *dc)
     dc->point.x = ext->start_x;
 
     for (uint32_t right = ext->position; right <= symbol_count && dc->point.x < WIDTH; right++) {
-        bool highlight = is_selected(ext, right) || right == ext->position;
-        if (is_step_position(right % 2)) {
-            uint32_t step_index = right / 2;
-            zm_step_t *step = ysw_array_get(ext->section->steps, step_index);
-            visit_step(dc, step, highlight);
-        } else {
-            if (right == ext->position) {
-                dc->color = LV_COLOR_RED;
-                visit_letter(dc, YSW_STAFF_SPACE);
-                dc->color = LV_COLOR_WHITE;
-            } else {
-                visit_letter(dc, YSW_STAFF_SPACE);
-            }
-        }
+        visit_position(ext, dc, right);
     }
 }
 
@@ -570,7 +556,7 @@ static lv_coord_t measure_position(ysw_staff_ext_t *ext, position_x position)
         visit_letter(&dc, YSW_STAFF_SPACE);
     } else {
         zm_step_t *step = ysw_array_get(ext->section->steps, position / 2);
-        visit_step(&dc, step, false);
+        visit_step(&dc, step);
     }
     return dc.point.x;
 }
