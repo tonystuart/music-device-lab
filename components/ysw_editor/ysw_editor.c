@@ -76,6 +76,7 @@ typedef struct {
     zm_duration_t drum_cadence;
 
     zm_section_t *original_section;
+    ysw_array_t *clipboard;
 
     zm_time_x down_at;
     zm_time_x up_at;
@@ -123,14 +124,24 @@ typedef struct {
 //   }
 // }
 
-static inline bool is_step_position(ysw_editor_t *editor)
+static inline bool is_step(uint32_t index)
 {
-    return editor->position % 2 == 1;
+    return index % 2 == 1;
 }
 
+static inline bool is_step_position(ysw_editor_t *editor)
+{
+    return is_step(editor->position);
+}
+
+static inline bool is_space(uint32_t index)
+{
+    return index % 2 == 0;
+}
+ 
 static inline bool is_space_position(ysw_editor_t *editor)
 {
-    return editor->position % 2 == 0;
+    return is_space(editor->position);
 }
  
 static inline uint32_t step_index_to_position(zm_step_x step_index)
@@ -138,12 +149,25 @@ static inline uint32_t step_index_to_position(zm_step_x step_index)
     return (step_index * 2) + 1;
 }
 
-// TODO: replace other occurrences of this pattern with this function
 static zm_step_t *get_step(ysw_editor_t *editor)
 {
     zm_step_t *step = NULL;
     if (is_step_position(editor)) {
         zm_step_x step_index = editor->position / 2;
+        step = ysw_array_get(editor->section->steps, step_index);
+    }
+    return step;
+}
+
+static zm_step_t *get_closest_step(ysw_editor_t *editor)
+{
+    zm_step_t *step = NULL;
+    zm_step_x step_count = ysw_array_get_count(editor->section->steps);
+    if (step_count) {
+        zm_step_x step_index = editor->position / 2;
+        if (step_index >= step_count) {
+            step_index = step_count - 1;
+        }
         step = ysw_array_get(editor->section->steps, step_index);
     }
     return step;
@@ -169,9 +193,8 @@ static void play_step(ysw_editor_t *editor, zm_step_t *step)
 
 static void play_position(ysw_editor_t *editor)
 {
-    if (is_step_position(editor)) {
-        zm_step_x step_index = editor->position / 2;
-        zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
+    zm_step_t *step = get_step(editor);
+    if (step) {
         play_step(editor, step);
     }
 }
@@ -232,13 +255,8 @@ static void display_melody_mode(ysw_editor_t *editor)
     // 2. between steps - show previous (to left) note or rest
     // 3. no steps - show blank
     char value[32];
-    zm_step_x step_count = ysw_array_get_count(editor->section->steps);
     if (editor->position > 0) {
-        zm_step_x step_index = editor->position / 2;
-        if (step_index >= step_count) {
-            step_index = step_count - 1;
-        }
-        zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
+        zm_step_t *step = get_closest_step(editor);
         uint32_t millis = ysw_ticks_to_millis(step->melody.duration, editor->section->tempo);
         zm_note_t note = step->melody.note;
         if (note) {
@@ -261,10 +279,7 @@ static void display_chord_mode(ysw_editor_t *editor)
     // 3. between steps - show chord_type, chord_style
     // 4. no steps - show chord_type, chord_style
     char value[32] = {};
-    zm_step_t *step = NULL;
-    if (is_step_position(editor)) {
-        step = ysw_array_get(editor->section->steps, editor->position / 2);
-    }
+    zm_step_t *step = get_step(editor);
     if (step && step->chord.root) {
         snprintf(value, sizeof(value), "%s %s/%s",
                 zm_get_note_name(step->chord.root),
@@ -281,10 +296,7 @@ static void display_chord_mode(ysw_editor_t *editor)
 static void display_rhythm_mode(ysw_editor_t *editor)
 {
     char value[32] = {};
-    zm_step_t *step = NULL;
-    if (is_step_position(editor)) {
-        step = ysw_array_get(editor->section->steps, editor->position / 2);
-    }
+    zm_step_t *step = get_step(editor);
     if (step && step->rhythm.beat) {
         snprintf(value, sizeof(value), "%s", step->rhythm.beat->name);
     } else {
@@ -308,6 +320,27 @@ static void display_mode(ysw_editor_t *editor)
             display_rhythm_mode(editor);
             break;
     }
+}
+
+static void set_position(ysw_editor_t *editor, int32_t position)
+{
+    if (position < 0) {
+        position = 0;
+    } else if (position) {
+        uint32_t rightmost_position = 0;
+        zm_step_x step_count = ysw_array_get_count(editor->section->steps);
+        if (step_count) {
+            rightmost_position = step_index_to_position(step_count - 1); // -1 for index
+            rightmost_position++; // space following step
+        }
+        if (position > rightmost_position) {
+            position = rightmost_position;
+        }
+    }
+    editor->position = position;
+    play_position(editor);
+    ysw_staff_set_position(editor->staff, position, YSW_STAFF_SCROLL);
+    display_mode(editor);
 }
 
 static void fire_program_change(ysw_editor_t *editor, zm_program_t *program, zm_channel_x channel)
@@ -401,9 +434,8 @@ static void set_tempo(ysw_editor_t *editor, zm_tempo_x tempo)
 static void set_default_note_duration(ysw_editor_t *editor, zm_duration_t duration)
 {
     zm_step_t *step = NULL;
-    if (is_step_position(editor) && editor->duration != ZM_AS_PLAYED) {
-        zm_step_x step_index = editor->position / 2;
-        step = ysw_array_get(editor->section->steps, step_index);
+    if (editor->duration != ZM_AS_PLAYED) {
+        step = get_step(editor); // null if on a space
     }
     // Set default duration if not on a step or if step duration is already default duration
     if (!step || step->melody.duration == editor->duration) {
@@ -420,7 +452,6 @@ static void set_default_note_duration(ysw_editor_t *editor, zm_duration_t durati
 
 static zm_chord_style_t *find_matching_style(ysw_editor_t *editor, bool preincrement)
 {
-
     zm_chord_style_x current = ysw_array_find(editor->music->chord_styles, editor->chord_style);
     zm_chord_style_x style_count = ysw_array_get_count(editor->music->chord_styles);
     zm_distance_x distance_count = ysw_array_get_count(editor->chord_type->distances);
@@ -442,11 +473,7 @@ static zm_chord_style_t *find_matching_style(ysw_editor_t *editor, bool preincre
 
 static void set_chord_type(ysw_editor_t *editor, zm_chord_type_x chord_type_x)
 {
-    zm_step_t *step = NULL;
-    if (is_step_position(editor)) {
-        zm_step_x step_index = editor->position / 2;
-        step = ysw_array_get(editor->section->steps, step_index);
-    }
+    zm_step_t *step = get_step(editor); // null if on a space
     if (!step || !step->chord.root || step->chord.type == editor->chord_type) {
         editor->chord_type = ysw_array_get(editor->music->chord_types, chord_type_x);
         editor->chord_style = find_matching_style(editor, false);
@@ -463,11 +490,7 @@ static void set_chord_type(ysw_editor_t *editor, zm_chord_type_x chord_type_x)
 
 static void set_chord_style(ysw_editor_t *editor, zm_chord_style_x chord_style_x)
 {
-    zm_step_t *step = NULL;
-    if (is_step_position(editor)) {
-        zm_step_x step_index = editor->position / 2;
-        step = ysw_array_get(editor->section->steps, step_index);
-    }
+    zm_step_t *step = get_step(editor); // null if on a space
     if (!step || !step->chord.root || step->chord.style == editor->chord_style) {
         editor->chord_style = ysw_array_get(editor->music->chord_styles, chord_style_x);
     }
@@ -535,13 +558,12 @@ static void finalize_step(ysw_editor_t *editor, zm_step_x step_index)
     zm_step_x step_count = ysw_array_get_count(editor->section->steps);
 #if 0
     // insert always
-    editor->position = min((step_index * 2) + 2, step_count * 2);
+    uint32_t position = min((step_index * 2) + 2, step_count * 2);
 #else
     // insert when starting on space, overtype when starting on step
-    editor->position = min(editor->position + 2, step_count * 2);
+    uint32_t position = min(editor->position + 2, step_count * 2);
 #endif
-    ysw_staff_set_position(editor->staff, editor->position, YSW_STAFF_SCROLL);
-    display_mode(editor);
+    set_position(editor, position);
     recalculate(editor);
     save_undo_action(editor);
 }
@@ -684,56 +706,24 @@ static void release_note(ysw_editor_t *editor, zm_note_t midi_note, uint32_t up_
 
 static void delete_step(ysw_editor_t *editor)
 {
-    zm_step_x step_index = editor->position / 2;
     zm_step_x step_count = ysw_array_get_count(editor->section->steps);
-    if (step_count > 0 && step_index == step_count) {
-        // On space following last step in section, delete previous step
-        step_index--;
-    }
-    if (step_index < step_count) {
+    if (step_count) {
+        zm_step_x step_index = editor->position / 2;
+        if (step_index == step_count) {
+            step_index = step_count - 1; // on rightmost space, so delete previous
+        }
         zm_step_t *step = ysw_array_remove(editor->section->steps, step_index);
         ysw_heap_free(step);
-        step_count--;
-        if (step_index == step_count) {
-            if (step_count) {
-                editor->position -= 2;
-            } else {
-                editor->position = 0;
-            }
-        }
-        ysw_staff_set_position(editor->staff, editor->position, YSW_STAFF_SCROLL);
-        display_mode(editor);
+        set_position(editor, editor->position); // will adjust if necessary
         recalculate(editor);
         save_undo_action(editor);
     }
 }
 
-static void move_left(ysw_editor_t *editor, uint8_t move_amount)
-{
-    if (editor->position >= move_amount) {
-        editor->position -= move_amount;
-        play_position(editor);
-        ysw_staff_set_position(editor->staff, editor->position, YSW_STAFF_SCROLL);
-        display_mode(editor);
-    }
-}
-
-static void move_right(ysw_editor_t *editor, uint8_t move_amount)
-{
-    uint32_t new_position = editor->position + move_amount;
-    if (new_position <= ysw_array_get_count(editor->section->steps) * 2) {
-        editor->position = new_position;
-        play_position(editor);
-        ysw_staff_set_position(editor->staff, editor->position, YSW_STAFF_SCROLL);
-        display_mode(editor);
-    }
-}
-
 static bool transpose_step(ysw_editor_t *editor, uint8_t delta)
 {
-    if (is_step_position(editor)) {
-        zm_step_x step_index = editor->position / 2;
-        zm_step_t *step = ysw_array_get(editor->section->steps, step_index);
+    zm_step_t *step = get_step(editor);
+    if (step) {
         if (editor->mode == YSW_EDITOR_MODE_MELODY) {
             if (step->melody.note) {
                 zm_note_t new_note = step->melody.note + delta;
@@ -1112,36 +1102,36 @@ static void on_loop(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 static void on_left(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    move_left(editor, 1);
+    set_position(editor, editor->position - 1);
 }
 
 static void on_right(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    move_right(editor, 1);
+    set_position(editor, editor->position + 1);
 }
 
-static void on_previous(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_edit_previous(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     if (is_space_position(editor)) {
-        move_left(editor, 1);
+        set_position(editor, editor->position - 1);
     } else {
-        move_left(editor, 2);
+        set_position(editor, editor->position - 2);
     }
 }
 
-static void on_next(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_edit_next(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     if (is_space_position(editor)) {
-        move_right(editor, 1);
+        set_position(editor, editor->position + 1);
     } else {
-        move_right(editor, 2);
+        set_position(editor, editor->position + 2);
     }
 }
 
-static void on_transpose_step(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_edit_step_pitch(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     if (transpose_step(editor, item->value)) {
@@ -1152,7 +1142,7 @@ static void on_transpose_step(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_ite
     }
 }
 
-static void on_transpose_section(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_edit_section_pitch(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     if (zm_transpose_section(editor->section, item->value)) {
@@ -1163,16 +1153,102 @@ static void on_transpose_section(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_
     }
 }
 
-static void on_drop_anchor(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_edit_drop_anchor(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     ysw_staff_set_anchor(editor->staff, editor->position);
 }
 
-static void on_clear_anchor(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_edit_clear_anchor(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     ysw_staff_set_anchor(editor->staff, YSW_STAFF_NO_ANCHOR);
+}
+
+typedef enum {
+    EDIT_CUT,
+    EDIT_COPY,
+} clipboard_action_t;
+
+static void on_edit_to_clipboard(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_step_x step_count = ysw_array_get_count(editor->section->steps);
+    if (!step_count) {
+        return;
+    }
+
+    int32_t left = 0;
+    int32_t right = 0;
+    int32_t anchor = ysw_staff_get_anchor(editor->staff);
+    if (anchor == YSW_STAFF_NO_ANCHOR) {
+        left = editor->position;
+        right = editor->position;
+    } else if (anchor < editor->position) {
+        left = anchor;
+        right = editor->position;
+    } else {
+        left = editor->position;
+        right = anchor;
+    }
+
+    int32_t left_step_index = left / 2;
+    int32_t right_step_index = right / 2;
+    left_step_index = min(left_step_index, step_count - 1);
+    right_step_index = min(right_step_index, step_count - 1);
+    int32_t count = right_step_index - left_step_index + 1; // +1 because it's inclusive
+
+    ysw_array_free_elements(editor->clipboard);
+
+    for (int32_t i = 0; i < count; i++) {
+        if (item->value == EDIT_COPY) {
+            zm_step_t *step = ysw_array_get(editor->section->steps, left_step_index + i);
+            zm_step_t *new_step = ysw_heap_allocate(sizeof(zm_step_t));
+            *new_step = *step;
+            ysw_array_push(editor->clipboard, new_step);
+        } else if (item->value == EDIT_CUT) {
+            zm_step_t *step = ysw_array_remove(editor->section->steps, left_step_index);
+            ysw_array_push(editor->clipboard, step);
+        }
+    }
+
+    ysw_staff_set_anchor(editor->staff, YSW_STAFF_NO_ANCHOR);
+    if (item->value == EDIT_CUT) {
+        set_position(editor, left); // will be adjusted as necessary
+        recalculate(editor);
+        save_undo_action(editor);
+    }
+}
+
+static void on_edit_paste(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    uint32_t new_position = editor->position;
+    uint32_t clipboard_count = ysw_array_get_count(editor->clipboard);
+    for (uint32_t i = 0; i < clipboard_count; i++) {
+        zm_step_t *step = ysw_array_get(editor->clipboard, i);
+        zm_step_t *new_step = ysw_heap_allocate(sizeof(zm_step_t));
+        *new_step = *step;
+        ysw_array_insert(editor->section->steps, new_position / 2, new_step);
+        new_position += 2;
+    }
+    
+    set_position(editor, new_position);
+    recalculate(editor);
+    save_undo_action(editor);
+}
+
+static void on_edit_first(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    set_position(editor, 0);
+}
+
+static void on_edit_last(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    zm_step_x step_count = ysw_array_get_count(editor->section->steps);
+    set_position(editor, step_count * 2);
 }
 
 static void on_note(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -1484,13 +1560,13 @@ static void process_event(void *context, ysw_event_t *event)
 
 static const ysw_menu_item_t edit_menu_2[] = {
 
-    { YSW_R1_C1, "Section\nPitch-", YSW_MF_PREVIEW, on_transpose_section, -1, NULL },
-    { YSW_R1_C2, "Section\nPitch+", YSW_MF_PREVIEW, on_transpose_section, +1, NULL },
-    { YSW_R1_C3, "Note\nPitch-", YSW_MF_PREVIEW, on_transpose_step, -1, NULL },
-    { YSW_R1_C4, "Note\nPitch+", YSW_MF_PREVIEW, on_transpose_step, +1, NULL },
+    { YSW_R1_C1, "Section\nPitch-", YSW_MF_STICKY, on_edit_section_pitch, -1, NULL },
+    { YSW_R1_C2, "Section\nPitch+", YSW_MF_STICKY, on_edit_section_pitch, +1, NULL },
+    { YSW_R1_C3, "Note\nPitch-", YSW_MF_STICKY, on_edit_step_pitch, -1, NULL },
+    { YSW_R1_C4, "Note\nPitch+", YSW_MF_STICKY, on_edit_step_pitch, +1, NULL },
 
-    { YSW_R2_C1, "Note\nLength-", YSW_MF_PREVIEW, on_note_length, -1, NULL },
-    { YSW_R3_C1, "Note\nLength+", YSW_MF_PREVIEW, on_note_length, +1, NULL },
+    { YSW_R2_C1, "Note\nLength-", YSW_MF_STICKY, on_note_length, -1, NULL },
+    { YSW_R3_C1, "Note\nLength+", YSW_MF_STICKY, on_note_length, +1, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
@@ -1498,23 +1574,23 @@ static const ysw_menu_item_t edit_menu_2[] = {
 };
 
 static const ysw_menu_item_t edit_menu[] = {
-    { YSW_R1_C1, "Drop\nAnchor", YSW_MF_PREVIEW, on_drop_anchor, 0, NULL },
-    { YSW_R1_C2, "Clear\nAnchor", YSW_MF_PREVIEW, on_clear_anchor, 0, NULL },
-    { YSW_R1_C4, "Previous", YSW_MF_PREVIEW, on_previous, 0, NULL },
+    { YSW_R1_C1, "Drop\nAnchor", YSW_MF_STICKY, on_edit_drop_anchor, 0, NULL },
+    { YSW_R1_C2, "Clear\nAnchor", YSW_MF_STICKY, on_edit_clear_anchor, 0, NULL },
+    { YSW_R1_C4, "Previous", YSW_MF_STICKY, on_edit_previous, 0, NULL },
 
-    { YSW_R2_C1, "Cut", YSW_MF_PREVIEW, ysw_menu_nop, 0, NULL },
-    { YSW_R2_C2, "Copy", YSW_MF_PREVIEW, ysw_menu_nop, 0, NULL },
-    { YSW_R2_C3, "Paste", YSW_MF_PREVIEW, ysw_menu_nop, 0, NULL },
-    { YSW_R2_C4, "Next", YSW_MF_PREVIEW, on_next, 0, NULL },
+    { YSW_R2_C1, "Cut", YSW_MF_STICKY, on_edit_to_clipboard, EDIT_CUT, NULL },
+    { YSW_R2_C2, "Copy", YSW_MF_STICKY, on_edit_to_clipboard, EDIT_COPY, NULL },
+    { YSW_R2_C3, "Paste", YSW_MF_STICKY, on_edit_paste, 0, NULL },
+    { YSW_R2_C4, "Next", YSW_MF_STICKY, on_edit_next, 0, NULL },
 
-    { YSW_R3_C1, "First", YSW_MF_PREVIEW, ysw_menu_nop, 0, NULL },
-    { YSW_R3_C2, "Last", YSW_MF_PREVIEW, ysw_menu_nop, 0, NULL },
-    { YSW_R3_C4, "Left", YSW_MF_PREVIEW, on_left, 0, NULL },
+    { YSW_R3_C1, "First", YSW_MF_STICKY, on_edit_first, 0, NULL },
+    { YSW_R3_C2, "Last", YSW_MF_STICKY, on_edit_last, 0, NULL },
+    { YSW_R3_C4, "Left", YSW_MF_STICKY, on_left, 0, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
-    { YSW_R4_C2, "Delete", YSW_MF_PREVIEW, on_delete, 0, NULL },
+    { YSW_R4_C2, "Delete", YSW_MF_STICKY, on_delete, 0, NULL },
     { YSW_R4_C3, "More", YSW_MF_PLUS, ysw_menu_nop, 0, edit_menu_2 },
-    { YSW_R4_C4, "Right", YSW_MF_PREVIEW, on_right, 0, NULL },
+    { YSW_R4_C4, "Right", YSW_MF_STICKY, on_right, 0, NULL },
 
     { 0, "Edit", YSW_MF_END, NULL, 0, NULL },
 };
@@ -1847,7 +1923,7 @@ const ysw_menu_item_t editor_menu[] = {
     { 5, "Input\nMode", YSW_MF_PLUS, ysw_menu_nop, 0, input_mode_menu },
     { 6, "Insert", YSW_MF_PLUS, ysw_menu_nop, 0, insert_menu },
     { 7, "Remove", YSW_MF_PLUS, ysw_menu_nop, 0, remove_menu },
-    { 8, "Up", YSW_MF_COMMAND, on_transpose_step, +1, NULL },
+    { 8, "Up", YSW_MF_COMMAND, on_edit_step_pitch, +1, NULL },
 
     { 9, "C6", YSW_MF_BUTTON, on_note, 72, NULL },
     { 10, "D6", YSW_MF_BUTTON, on_note, 74, NULL },
@@ -1859,7 +1935,7 @@ const ysw_menu_item_t editor_menu[] = {
 
     { 16, "Listen", YSW_MF_PLUS, ysw_menu_nop, 0, listen_menu },
     { 17, "Edit", YSW_MF_PLUS, ysw_menu_nop, 0, edit_menu },
-    { 19, "Down", YSW_MF_COMMAND, on_transpose_step, -1, NULL },
+    { 19, "Down", YSW_MF_COMMAND, on_edit_step_pitch, -1, NULL },
 
     { 20, "C#5", YSW_MF_BUTTON, on_note, 61, NULL },
     { 21, "D#5", YSW_MF_BUTTON, on_note, 63, NULL },
@@ -1899,6 +1975,7 @@ void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *se
     editor->music = music;
     editor->original_section = section;
     editor->section = zm_create_duplicate_section(section);
+    editor->clipboard = ysw_array_create(8);
 
     editor->chord_type = ysw_array_get(music->chord_types, DEFAULT_CHORD_TYPE);
     editor->chord_style = ysw_array_get(music->chord_styles, DEFAULT_CHORD_STYLE);
@@ -1961,6 +2038,7 @@ void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *se
 
     ysw_menu_free(editor->menu);
     lv_obj_del(editor->container);
+    ysw_array_free_all(editor->clipboard);
     ysw_heap_free(editor);
 }
 

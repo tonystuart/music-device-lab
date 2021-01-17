@@ -276,21 +276,26 @@ void ysw_array_free_node(void *p)
     }
 }
 
-void ysw_array_set_free_all_callback(ysw_array_t *array, ysw_array_free_all_cb_t free_all_cb)
+void ysw_array_set_free_cb(ysw_array_t *array, ysw_array_free_cb_t free_cb)
 {
-    array->free_all_cb = free_all_cb;
+    array->free_cb = free_cb;
+}
+
+void ysw_array_free_elements(ysw_array_t *array)
+{
+    ysw_array_free_cb_t free_cb = NULL;
+    if (array->free_cb) {
+        free_cb = array->free_cb;
+    } else {
+        free_cb = ysw_array_free_node;
+    }
+    ysw_array_visit(array, free_cb);
+    array->count = 0;
 }
 
 void ysw_array_free_all(ysw_array_t *array)
 {
     assert(array);
-    ysw_array_free_all_cb_t free_all_cb = NULL;
-    if (array->free_all_cb) {
-        free_all_cb = array->free_all_cb;
-    } else {
-        free_all_cb = ysw_array_free_node;
-    }
-    ysw_array_visit(array, free_all_cb);
+    ysw_array_free_elements(array);
     ysw_array_free(array);
 }
-

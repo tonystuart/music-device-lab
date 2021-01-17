@@ -165,7 +165,7 @@ ysw_array_t *ysw_string_parse(const char *source, const char *delimiters)
     const char *p = source;
     ysw_string_t *token = NULL;
     ysw_array_t *tokens = ysw_array_create(8);
-    ysw_array_set_free_all_callback(tokens, (ysw_array_free_all_cb_t)ysw_string_free);
+    ysw_array_set_free_cb(tokens, (ysw_array_free_cb_t)ysw_string_free);
     while (*p) {
         if (is_in(*p, delimiters)) {
             token = NULL;

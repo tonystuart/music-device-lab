@@ -21,14 +21,14 @@ typedef enum {
 } ysw_array_match_t;
 
 typedef void (*ysw_array_visit_cb_t)(void *p);
-typedef void (*ysw_array_free_all_cb_t)(void *p);
+typedef void (*ysw_array_free_cb_t)(void *p);
 typedef int (*ysw_array_comparator)(const void *, const void *);
 
 typedef struct {
     void **data;
     uint32_t count;
     uint32_t size;
-    ysw_array_free_all_cb_t free_all_cb;
+    ysw_array_free_cb_t free_cb;
 } ysw_array_t;
 
 ysw_array_t *ysw_array_create(uint32_t initial_size);
@@ -54,7 +54,8 @@ int32_t ysw_array_search(ysw_array_t *array, void *needle, ysw_array_comparator 
 void ysw_array_visit(ysw_array_t *array, ysw_array_visit_cb_t visit_cb);
 void ysw_array_free(ysw_array_t *array);
 void ysw_array_free_node(void *p);
-void ysw_array_set_free_all_callback(ysw_array_t *array, ysw_array_free_all_cb_t free_all_cb);
+void ysw_array_set_free_cb(ysw_array_t *array, ysw_array_free_cb_t free_cb);
+void ysw_array_free_elements(ysw_array_t *array);
 void ysw_array_free_all(ysw_array_t *array);
 
 static inline void *ysw_array_get_fast(ysw_array_t *a, uint32_t i) {return a->data[i];}
