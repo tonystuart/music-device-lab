@@ -1483,39 +1483,42 @@ static void process_event(void *context, ysw_event_t *event)
 // Actions that pop a menu (e.g. COMMAND_POP) must be performed on UP, not DOWN or PRESS.
 
 static const ysw_menu_item_t edit_menu_2[] = {
-    { YSW_R1_C1, "Note\nPitch-", YSW_MF_PRESS, on_transpose_step, -1, NULL },
-    { YSW_R1_C2, "Note\nPitch+", YSW_MF_PRESS, on_transpose_step, +1, NULL },
-    { YSW_R1_C3, "Section\nPitch-", YSW_MF_PRESS, on_transpose_section, -1, NULL },
-    { YSW_R1_C4, "Section\nPitch+", YSW_MF_PRESS, on_transpose_section, +1, NULL },
+    { YSW_R1_C1, "Show", YSW_MF_WATCH, ysw_menu_nop, 0, NULL },
 
-    { YSW_R3_C1, "Note\nLength-", YSW_MF_PRESS, on_note_length, -1, NULL },
-    { YSW_R3_C2, "Note\nLength+", YSW_MF_PRESS, on_note_length, +1, NULL },
+    { YSW_R2_C1, "Note\nPitch-", YSW_MF_WATCH, on_transpose_step, -1, NULL },
+    { YSW_R2_C2, "Note\nPitch+", YSW_MF_WATCH, on_transpose_step, +1, NULL },
+    { YSW_R2_C3, "Section\nPitch-", YSW_MF_WATCH, on_transpose_section, -1, NULL },
+    { YSW_R2_C4, "Section\nPitch+", YSW_MF_WATCH, on_transpose_section, +1, NULL },
+
+    { YSW_R3_C1, "Note\nLength-", YSW_MF_WATCH, on_note_length, -1, NULL },
+    { YSW_R3_C2, "Note\nLength+", YSW_MF_WATCH, on_note_length, +1, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
-    { 0, "More", YSW_MF_LUCID_END, NULL, 0, NULL },
+    { 0, "More", YSW_MF_END, NULL, 0, NULL },
 };
 
 static const ysw_menu_item_t edit_menu[] = {
-    { YSW_R1_C1, "Drop\nAnchor", YSW_MF_PRESS, on_drop_anchor, 0, NULL },
-    { YSW_R1_C2, "Clear\nAnchor", YSW_MF_PRESS, on_clear_anchor, 0, NULL },
-    { YSW_R1_C4, "Previous", YSW_MF_PRESS, on_previous, 0, NULL },
+    { YSW_R1_C1, "Show", YSW_MF_WATCH, ysw_menu_nop, 0, NULL },
+    { YSW_R1_C2, "Drop\nAnchor", YSW_MF_WATCH, on_drop_anchor, 0, NULL },
+    { YSW_R1_C3, "Clear\nAnchor", YSW_MF_WATCH, on_clear_anchor, 0, NULL },
+    { YSW_R1_C4, "Previous", YSW_MF_WATCH, on_previous, 0, NULL },
 
-    { YSW_R2_C1, "Cut", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
-    { YSW_R2_C2, "Copy", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
-    { YSW_R2_C3, "Paste", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
-    { YSW_R2_C4, "Next", YSW_MF_PRESS, on_next, 0, NULL },
+    { YSW_R2_C1, "Cut", YSW_MF_WATCH, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C2, "Copy", YSW_MF_WATCH, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C3, "Paste", YSW_MF_WATCH, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C4, "Next", YSW_MF_WATCH, on_next, 0, NULL },
 
-    { YSW_R3_C1, "First", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
-    { YSW_R3_C2, "Last", YSW_MF_PRESS, ysw_menu_nop, 0, NULL },
-    { YSW_R3_C4, "Left", YSW_MF_PRESS, on_left, 0, NULL },
+    { YSW_R3_C1, "First", YSW_MF_WATCH, ysw_menu_nop, 0, NULL },
+    { YSW_R3_C2, "Last", YSW_MF_WATCH, ysw_menu_nop, 0, NULL },
+    { YSW_R3_C4, "Left", YSW_MF_WATCH, on_left, 0, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
-    { YSW_R4_C2, "Delete", YSW_MF_PRESS, on_delete, 0, NULL },
+    { YSW_R4_C2, "Delete", YSW_MF_WATCH, on_delete, 0, NULL },
     { YSW_R4_C3, "More", YSW_MF_PLUS, ysw_menu_nop, 0, edit_menu_2 },
-    { YSW_R4_C4, "Right", YSW_MF_PRESS, on_right, 0, NULL },
+    { YSW_R4_C4, "Right", YSW_MF_WATCH, on_right, 0, NULL },
 
-    { 0, "Edit", YSW_MF_LUCID_END, NULL, 0, NULL },
+    { 0, "Edit", YSW_MF_END, NULL, 0, NULL },
 };
 
 static const ysw_menu_item_t listen_menu[] = {

@@ -19,6 +19,9 @@
 
 #define TAG "YSW_MENU"
 
+static void show_menu(ysw_menu_t *menu);
+static void hide_menu(ysw_menu_t *menu);
+
 static inline ysw_menu_item_t *get_items(ysw_menu_t *menu)
 {
     return ysw_array_get_top(menu->stack);
@@ -51,27 +54,53 @@ static int32_t find_scan_code_by_button_index(ysw_menu_t *menu, int32_t button_i
     return -1;
 }
 
+static void fire_events(ysw_menu_t *menu, uint32_t scan_code)
+{
+    ysw_event_key_down_t key_down = {
+        .scan_code = scan_code,
+    };
+    ysw_event_fire_key_down(menu->bus, &key_down);
+
+    ysw_event_key_pressed_t key_pressed = {
+        .scan_code = scan_code,
+    };
+    ysw_event_fire_key_pressed(menu->bus, &key_pressed);
+
+    ysw_event_key_up_t key_up = {
+        .scan_code = scan_code,
+    };
+    ysw_event_fire_key_up(menu->bus, &key_up);
+}
+
 static void event_handler(lv_obj_t *btnmatrix, lv_event_t button_event)
 {
     ysw_menu_t *menu = lv_obj_get_user_data(btnmatrix);
     if (menu) {
         uint16_t button_index = lv_btnmatrix_get_active_btn(btnmatrix);
         if (button_index != LV_BTNMATRIX_BTN_NONE) {
-            int32_t item_index = find_scan_code_by_button_index(menu, button_index);
-            if (item_index != -1) {
-                if (button_event == LV_EVENT_RELEASED) {
-                    ysw_event_key_down_t key_down = {
-                        .scan_code = item_index,
-                    };
-                    ysw_event_fire_key_down(menu->bus, &key_down);
-                    ysw_event_key_pressed_t key_pressed = {
-                        .scan_code = item_index,
-                    };
-                    ysw_event_fire_key_pressed(menu->bus, &key_pressed);
-                    ysw_event_key_up_t key_up = {
-                        .scan_code = item_index,
-                    };
-                    ysw_event_fire_key_up(menu->bus, &key_up);
+            int32_t scan_code = find_scan_code_by_button_index(menu, button_index);
+            if (scan_code != -1) {
+                ysw_menu_item_t *item = find_item_by_scan_code(menu, scan_code);
+                if (item) { // may have a scan_code but no menu_item
+                    if (item->flags & YSW_MENU_WATCH) {
+                        if (button_event == LV_EVENT_PRESSED) {
+                            // lv_obj_set_hidden cancels btnmatrix event processing
+                            ysw_style_softkeys_hidden(menu->softkeys->container,
+                                    menu->softkeys->label,
+                                    menu->softkeys->btnmatrix);
+                            fire_events(menu, scan_code);
+                        } else if (button_event == LV_EVENT_LONG_PRESSED_REPEAT) {
+                            // Called every LV_INDEV_LONG_PRESS_REP_TIME ms
+                            // after LV_INDEV_LONG_PRESS_TIME
+                            fire_events(menu, scan_code);
+                        } else if (button_event == LV_EVENT_RELEASED) {
+                            ysw_style_softkeys(menu->softkeys->container,
+                                    menu->softkeys->label,
+                                    menu->softkeys->btnmatrix);
+                        }
+                    } else if (button_event == LV_EVENT_RELEASED) {
+                        fire_events(menu, scan_code);
+                    }
                 }
             }
         }
@@ -142,6 +171,8 @@ static const char** create_button_map(ysw_menu_t *menu)
     return map;
 }
 
+// TODO: factor out ysw_softkeys.c
+
 static void show_softkeys(ysw_menu_t *menu)
 {
     lv_obj_t *container = lv_obj_create(lv_scr_act(), NULL);
@@ -183,6 +214,8 @@ static void show_softkeys(ysw_menu_t *menu)
 
     menu->softkeys = ysw_heap_allocate(sizeof(ysw_softkeys_t));
     menu->softkeys->container = container;
+    menu->softkeys->label = label;
+    menu->softkeys->btnmatrix = btnmatrix;
     menu->softkeys->button_map = button_map;
 }
 

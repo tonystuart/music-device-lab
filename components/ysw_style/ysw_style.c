@@ -185,6 +185,14 @@ void ysw_style_softkeys_lucid(lv_obj_t *container, lv_obj_t *label, lv_obj_t *bt
     lv_obj_set_style_local_bg_opa(container, 0, 0, LV_OPA_30);
 }
 
+void ysw_style_softkeys_hidden(lv_obj_t *container, lv_obj_t *label, lv_obj_t *btnmatrix)
+{
+    lv_obj_set_style_local_bg_opa(container, 0, 0, LV_OPA_0);
+    lv_obj_set_style_local_text_opa(container, 0, 0, LV_OPA_0);
+    lv_obj_set_style_local_bg_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, 0, LV_OPA_0);
+    lv_obj_set_style_local_bg_opa(btnmatrix, LV_BTNMATRIX_PART_BTN, LV_STATE_PRESSED, LV_OPA_0);
+}
+
 void ysw_style_popup(lv_obj_t *container, lv_obj_t *msgbox)
 {
     style_container(container);

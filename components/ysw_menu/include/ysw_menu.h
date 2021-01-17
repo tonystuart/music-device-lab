@@ -33,6 +33,7 @@ typedef enum {
     YSW_MENU_DOWN = 0x10,
     YSW_MENU_UP = 0x20,
     YSW_MENU_PRESS = 0x40,
+    YSW_MENU_WATCH = 0x80,
 } ysw_menu_cb_activation_t;
 
 #define YSW_MENU_CB_ACTIVATION_MASK 0xf0
@@ -47,6 +48,7 @@ typedef enum {
 #define YSW_MF_PRESS (YSW_MENU_PRESS)
 #define YSW_MF_BUTTON (YSW_MENU_DOWN|YSW_MENU_UP)
 #define YSW_MF_COMMAND (YSW_MENU_PRESS|YSW_MENU_RESET)
+#define YSW_MF_WATCH (YSW_MENU_WATCH|YSW_MENU_PRESS)
 #define YSW_MF_PLUS (YSW_MENU_UP|YSW_MENU_PLUS)
 #define YSW_MF_MINUS (YSW_MENU_UP|YSW_MENU_MINUS)
 #define YSW_MF_HIDE (YSW_MENU_HIDE)
@@ -62,6 +64,8 @@ typedef enum {
 
 typedef struct {
     lv_obj_t *container;
+    lv_obj_t *label;
+    lv_obj_t *btnmatrix;
     const char **button_map;
 } ysw_softkeys_t;
 
@@ -81,7 +85,6 @@ typedef struct ysw_menu_item_s {
 
 typedef struct ysw_menu_s {
     ysw_bus_t *bus;
-    bool seamless_transition;
     ysw_menu_root_handling_t root_handling; // whether or not to show root menu on menu-
     uint32_t softkey_map_size; // number of scan codes in softmap
     const ysw_menu_softkey_t *softkey_map; // scan codes comprising soft keys
