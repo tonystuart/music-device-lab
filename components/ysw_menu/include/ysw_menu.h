@@ -13,6 +13,8 @@
 #include "ysw_event.h"
 #include "lvgl.h"
 
+#define YSW_MENU_NOP 0x00
+
 typedef enum {
     YSW_MENU_ROOT_HIDE,
     YSW_MENU_ROOT_SHOW,
@@ -33,14 +35,18 @@ typedef enum {
     YSW_MENU_DOWN = 0x10,
     YSW_MENU_UP = 0x20,
     YSW_MENU_PRESS = 0x40,
-    YSW_MENU_WATCH = 0x80,
+    YSW_MENU_PREVIEW = 0x80,
 } ysw_menu_cb_activation_t;
 
 #define YSW_MENU_CB_ACTIVATION_MASK 0xf0
 
-#define YSW_MENU_NOP 0x00
-#define YSW_MENU_LUCID 0x4000
-#define YSW_MENU_END 0x8000
+typedef enum {
+    YSW_MENU_REPEAT = 0x100,
+    YSW_MENU_LUCID = 0x200,
+    YSW_MENU_END = 0x400,
+} ysw_menu_control_t;
+
+#define YSW_MENU_CONTROL_MASK 0xf00
 
 // Common combinations of above flags
 
@@ -48,7 +54,7 @@ typedef enum {
 #define YSW_MF_PRESS (YSW_MENU_PRESS)
 #define YSW_MF_BUTTON (YSW_MENU_DOWN|YSW_MENU_UP)
 #define YSW_MF_COMMAND (YSW_MENU_PRESS|YSW_MENU_RESET)
-#define YSW_MF_WATCH (YSW_MENU_WATCH|YSW_MENU_PRESS)
+#define YSW_MF_PREVIEW (YSW_MENU_PREVIEW|YSW_MENU_PRESS)
 #define YSW_MF_PLUS (YSW_MENU_UP|YSW_MENU_PLUS)
 #define YSW_MF_MINUS (YSW_MENU_UP|YSW_MENU_MINUS)
 #define YSW_MF_HIDE (YSW_MENU_HIDE)

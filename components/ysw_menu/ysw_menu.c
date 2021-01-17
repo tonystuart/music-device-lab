@@ -82,16 +82,16 @@ static void event_handler(lv_obj_t *btnmatrix, lv_event_t button_event)
             if (scan_code != -1) {
                 ysw_menu_item_t *item = find_item_by_scan_code(menu, scan_code);
                 if (item) { // may have a scan_code but no menu_item
-                    if (item->flags & YSW_MENU_WATCH) {
+                    if (item->flags & YSW_MENU_PREVIEW) {
                         if (button_event == LV_EVENT_PRESSED) {
-                            // lv_obj_set_hidden cancels btnmatrix event processing
+                            // note that lv_obj_set_hidden cancels btnmatrix event processing
                             ysw_style_softkeys_hidden(menu->softkeys->container,
                                     menu->softkeys->label,
                                     menu->softkeys->btnmatrix);
                             fire_events(menu, scan_code);
-                        } else if (button_event == LV_EVENT_LONG_PRESSED_REPEAT) {
-                            // Called every LV_INDEV_LONG_PRESS_REP_TIME ms
-                            // after LV_INDEV_LONG_PRESS_TIME
+                        } else if (button_event == LV_EVENT_LONG_PRESSED_REPEAT &&
+                                item->flags & YSW_MENU_REPEAT) {
+                            // called every LV_INDEV_LONG_PRESS_REP_TIME ms after LV_INDEV_LONG_PRESS_TIME
                             fire_events(menu, scan_code);
                         } else if (button_event == LV_EVENT_RELEASED) {
                             ysw_style_softkeys(menu->softkeys->container,
