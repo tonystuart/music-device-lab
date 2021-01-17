@@ -76,7 +76,6 @@ typedef struct {
     zm_duration_t drum_cadence;
 
     zm_section_t *original_section;
-    ysw_array_t *clipboard;
 
     zm_time_x down_at;
     zm_time_x up_at;
@@ -99,6 +98,8 @@ typedef struct {
     zm_chord_t chord_builder;
 
 } ysw_editor_t;
+
+static ysw_array_t *clipboard; // shared clipboard
 
 // Note that position is 2x the step index and encodes both the step index and the space before it.
 
@@ -1198,17 +1199,17 @@ static void on_edit_to_clipboard(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_
     right_step_index = min(right_step_index, step_count - 1);
     int32_t count = right_step_index - left_step_index + 1; // +1 because it's inclusive
 
-    ysw_array_free_elements(editor->clipboard);
+    ysw_array_free_elements(clipboard);
 
     for (int32_t i = 0; i < count; i++) {
         if (item->value == EDIT_COPY) {
             zm_step_t *step = ysw_array_get(editor->section->steps, left_step_index + i);
             zm_step_t *new_step = ysw_heap_allocate(sizeof(zm_step_t));
             *new_step = *step;
-            ysw_array_push(editor->clipboard, new_step);
+            ysw_array_push(clipboard, new_step);
         } else if (item->value == EDIT_CUT) {
             zm_step_t *step = ysw_array_remove(editor->section->steps, left_step_index);
-            ysw_array_push(editor->clipboard, step);
+            ysw_array_push(clipboard, step);
         }
     }
 
@@ -1224,9 +1225,9 @@ static void on_edit_paste(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t 
 {
     ysw_editor_t *editor = menu->context;
     uint32_t new_position = editor->position;
-    uint32_t clipboard_count = ysw_array_get_count(editor->clipboard);
+    uint32_t clipboard_count = ysw_array_get_count(clipboard);
     for (uint32_t i = 0; i < clipboard_count; i++) {
-        zm_step_t *step = ysw_array_get(editor->clipboard, i);
+        zm_step_t *step = ysw_array_get(clipboard, i);
         zm_step_t *new_step = ysw_heap_allocate(sizeof(zm_step_t));
         *new_step = *step;
         ysw_array_insert(editor->section->steps, new_position / 2, new_step);
@@ -1976,7 +1977,10 @@ void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *se
     editor->music = music;
     editor->original_section = section;
     editor->section = zm_create_duplicate_section(section);
-    editor->clipboard = ysw_array_create(8);
+
+    if (!clipboard) {
+        clipboard = ysw_array_create(8);
+    }
 
     editor->chord_type = ysw_array_get(music->chord_types, DEFAULT_CHORD_TYPE);
     editor->chord_style = ysw_array_get(music->chord_styles, DEFAULT_CHORD_STYLE);
@@ -2039,7 +2043,6 @@ void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *se
 
     ysw_menu_free(editor->menu);
     lv_obj_del(editor->container);
-    ysw_array_free_all(editor->clipboard);
     ysw_heap_free(editor);
 }
 
