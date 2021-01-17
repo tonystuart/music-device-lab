@@ -1943,6 +1943,7 @@ const ysw_menu_item_t editor_menu[] = {
     { 23, "G#5", YSW_MF_BUTTON, on_note, 68, NULL },
     { 24, "A#5", YSW_MF_BUTTON, on_note, 70, NULL },
 
+    { YSW_R3_C1, "Close", YSW_MF_MINUS, on_close, 0, NULL },
     { 27, "Settings", YSW_MF_PLUS, ysw_menu_nop, 0, settings_menu },
     { 28, "Left", YSW_MF_COMMAND, on_left, 0, NULL },
 
@@ -1954,7 +1955,7 @@ const ysw_menu_item_t editor_menu[] = {
     { 34, "A5", YSW_MF_BUTTON, on_note, 69, NULL },
     { 35, "B5", YSW_MF_BUTTON, on_note, 71, NULL },
 
-    { 36, "Close", YSW_MF_MINUS, on_close, 0, NULL },
+    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
     { 37, "Delete", YSW_MF_COMMAND, on_delete, 0, NULL },
     { 38, "Hide\nMenu", YSW_MF_TOGGLE, ysw_menu_nop, 0, NULL },
     { 39, "Right", YSW_MF_COMMAND, on_right, 0, NULL },

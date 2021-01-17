@@ -391,8 +391,6 @@ void ysw_shell_create(ysw_bus_t *bus, zm_music_t *music)
     shell->menu = ysw_menu_create(bus, start_menu, ysw_app_softkey_map, shell);
     shell->queue = ysw_app_create_queue();
 
-    ysw_menu_set_root_handling(shell->menu, YSW_MENU_ROOT_SHOW);
-
     create_splash_screen(shell);
     start_listening_all(shell);
     ysw_app_handle_events(shell->queue, process_event, shell);

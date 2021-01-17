@@ -16,8 +16,8 @@
 #define YSW_MENU_NOP 0x00
 
 typedef enum {
-    YSW_MENU_ROOT_HIDE,
     YSW_MENU_ROOT_SHOW,
+    YSW_MENU_ROOT_HIDE,
 } ysw_menu_root_handling_t;
 
 typedef enum {
