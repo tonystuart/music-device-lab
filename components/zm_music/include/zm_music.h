@@ -30,6 +30,7 @@ typedef bool zm_yesno_t;
 // alphabetical order by type
 
 typedef int8_t zm_distance_t;
+typedef int32_t zm_range_x;
 
 typedef uint8_t zm_beat_x;
 typedef uint8_t zm_bpm_x;
@@ -270,6 +271,11 @@ typedef struct {
     ysw_array_t *compositions;
 } zm_music_t;
 
+typedef struct {
+    zm_range_x first;
+    zm_range_x last;
+} zm_range_t;
+
 void zm_section_free(zm_section_t *section);
 void zm_section_delete(zm_music_t *music, zm_section_t *section);
 void zm_music_free(zm_music_t *music);
@@ -315,7 +321,7 @@ bool zm_sections_equal(zm_section_t *left, zm_section_t *right);
 
 ysw_array_t *zm_get_section_references(zm_music_t *music, zm_section_t *section);
 
-bool zm_transpose_section(zm_section_t *section, uint8_t delta);
+bool zm_transpose_section(zm_section_t *section, zm_range_t *range, uint8_t delta);
 
 // See https://en.wikipedia.org/wiki/C_(musical_note) for octave designation
 

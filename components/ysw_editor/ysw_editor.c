@@ -721,29 +721,42 @@ static void delete_step(ysw_editor_t *editor)
     }
 }
 
-static bool transpose_step(ysw_editor_t *editor, uint8_t delta)
+static void transpose(ysw_editor_t *editor, zm_range_t *range, int32_t delta)
 {
-    zm_step_t *step = get_step(editor);
-    if (step) {
-        if (editor->mode == YSW_EDITOR_MODE_MELODY) {
-            if (step->melody.note) {
-                zm_note_t new_note = step->melody.note + delta;
-                if (YSW_MIDI_LPN <= new_note && new_note <= YSW_MIDI_HPN) {
-                    step->melody.note = new_note;
-                    return true;
-                }
-            }
-        } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
-            if (step->chord.root) {
-                zm_note_t new_root = step->chord.root + delta;
-                if (YSW_MIDI_LPN <= new_root && new_root <= YSW_MIDI_HPN) {
-                    step->chord.root = new_root;
-                    return true;
-                }
-            }
-        }
+    if (zm_transpose_section(editor->section, range, delta)) {
+        play_position(editor);
+        display_mode(editor);
+        ysw_staff_invalidate(editor->staff);
+        save_undo_action(editor);
     }
-    return false;
+}
+
+static bool get_range(ysw_editor_t *editor, zm_range_t *range)
+{
+    zm_step_x step_count = ysw_array_get_count(editor->section->steps);
+    if (!step_count) {
+        range->first = 0;
+        range->last = -1;
+        return false;
+    }
+
+    int32_t first = 0;
+    int32_t last = 0;
+    int32_t anchor = ysw_staff_get_anchor(editor->staff);
+    if (anchor == YSW_STAFF_NO_ANCHOR) {
+        first = editor->position;
+        last = editor->position;
+    } else if (anchor < editor->position) {
+        first = anchor;
+        last = editor->position;
+    } else {
+        first = editor->position;
+        last = anchor;
+    }
+
+    range->first = min(first / 2, step_count - 1);
+    range->last = min(last / 2, step_count - 1);
+    return true;
 }
 
 // Generators
@@ -1132,24 +1145,27 @@ static void on_edit_next(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *
     }
 }
 
-static void on_edit_step_pitch(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_edit_pitch(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
+    zm_range_t range;
     ysw_editor_t *editor = menu->context;
-    if (transpose_step(editor, item->value)) {
-        play_position(editor);
-        display_mode(editor);
-        ysw_staff_invalidate(editor->staff);
-        save_undo_action(editor);
+    if (get_range(editor, &range)) {
+        transpose(editor, &range, item->value);
     }
 }
 
-static void on_edit_section_pitch(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_edit_length(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
+    zm_range_t range;
     ysw_editor_t *editor = menu->context;
-    if (zm_transpose_section(editor->section, item->value)) {
+    if (get_range(editor, &range)) {
+        for (zm_step_x i = range.first; i < range.last; i++) {
+            zm_step_t *step = ysw_array_get(editor->section->steps, i);
+            step->melody.duration = zm_get_next_dotted_duration(step->melody.duration, item->value);
+        }
         play_position(editor);
         display_mode(editor);
-        ysw_staff_invalidate(editor->staff);
+        recalculate(editor);
         save_undo_action(editor);
     }
 }
@@ -1174,51 +1190,35 @@ typedef enum {
 static void on_edit_to_clipboard(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    zm_step_x step_count = ysw_array_get_count(editor->section->steps);
-    if (!step_count) {
+
+    zm_range_t range;
+    if (!get_range(editor, &range)) {
         return;
     }
 
-    int32_t left = 0;
-    int32_t right = 0;
-    int32_t anchor = ysw_staff_get_anchor(editor->staff);
-    if (anchor == YSW_STAFF_NO_ANCHOR) {
-        left = editor->position;
-        right = editor->position;
-    } else if (anchor < editor->position) {
-        left = anchor;
-        right = editor->position;
-    } else {
-        left = editor->position;
-        right = anchor;
-    }
-
-    int32_t left_step_index = left / 2;
-    int32_t right_step_index = right / 2;
-    left_step_index = min(left_step_index, step_count - 1);
-    right_step_index = min(right_step_index, step_count - 1);
-    int32_t count = right_step_index - left_step_index + 1; // +1 because it's inclusive
+    int32_t count = range.last - range.first + 1; // +1 because it's inclusive
 
     ysw_array_free_elements(clipboard);
 
     for (int32_t i = 0; i < count; i++) {
         if (item->value == EDIT_COPY) {
-            zm_step_t *step = ysw_array_get(editor->section->steps, left_step_index + i);
+            zm_step_t *step = ysw_array_get(editor->section->steps, range.first + i);
             zm_step_t *new_step = ysw_heap_allocate(sizeof(zm_step_t));
             *new_step = *step;
             ysw_array_push(clipboard, new_step);
         } else if (item->value == EDIT_CUT) {
-            zm_step_t *step = ysw_array_remove(editor->section->steps, left_step_index);
+            zm_step_t *step = ysw_array_remove(editor->section->steps, range.first);
             ysw_array_push(clipboard, step);
         }
     }
 
-    ysw_staff_set_anchor(editor->staff, YSW_STAFF_NO_ANCHOR);
     if (item->value == EDIT_CUT) {
-        set_position(editor, left); // will be adjusted as necessary
+        set_position(editor, ysw_staff_get_anchor(editor->staff)); // will be adjusted as necessary
         recalculate(editor);
         save_undo_action(editor);
     }
+
+    ysw_staff_set_anchor(editor->staff, YSW_STAFF_NO_ANCHOR);
 }
 
 static void on_edit_paste(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -1514,21 +1514,6 @@ static void on_note_status(ysw_editor_t *editor, ysw_event_t *event)
     }
 }
 
-static void on_note_length(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
-{
-    ysw_editor_t *editor = menu->context;
-    int32_t direction = item->value;
-    ESP_LOGD(TAG, "direction=%d", direction);
-    zm_step_t *step = get_step(editor);
-    if (step) {
-        step->melody.duration = zm_get_next_dotted_duration(step->melody.duration, direction);
-        play_position(editor);
-        display_mode(editor);
-        recalculate(editor);
-        save_undo_action(editor);
-    }
-}
-
 static void process_event(void *context, ysw_event_t *event)
 {
     ysw_editor_t *editor = context;
@@ -1561,22 +1546,25 @@ static void process_event(void *context, ysw_event_t *event)
 
 static const ysw_menu_item_t edit_menu_2[] = {
 
-    { YSW_R1_C1, "Section\nPitch-", YSW_MF_STICKY, on_edit_section_pitch, -1, NULL },
-    { YSW_R1_C2, "Section\nPitch+", YSW_MF_STICKY, on_edit_section_pitch, +1, NULL },
-    { YSW_R1_C3, "Note\nPitch-", YSW_MF_STICKY, on_edit_step_pitch, -1, NULL },
-    { YSW_R1_C4, "Note\nPitch+", YSW_MF_STICKY, on_edit_step_pitch, +1, NULL },
+    { YSW_R1_C2, "Pitch-", YSW_MF_STICKY, on_edit_pitch, -1, NULL },
+    { YSW_R1_C3, "Pitch+", YSW_MF_STICKY, on_edit_pitch, +1, NULL },
 
-    { YSW_R2_C1, "Note\nLength-", YSW_MF_STICKY, on_note_length, -1, NULL },
-    { YSW_R3_C1, "Note\nLength+", YSW_MF_STICKY, on_note_length, +1, NULL },
+    { YSW_R2_C1, "Length-", YSW_MF_STICKY, on_edit_length, -1, NULL },
+
+    { YSW_R3_C1, "Length+", YSW_MF_STICKY, on_edit_length, +1, NULL },
+    { YSW_R3_C4, "Left", YSW_MF_STICKY, on_left, 0, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C3, "Hide\nMenu", YSW_MF_TOGGLE, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C4, "Right", YSW_MF_STICKY, on_right, 0, NULL },
 
-    { 0, "More", YSW_MF_END, NULL, 0, NULL },
+    { 0, "Sound", YSW_MF_END, NULL, 0, NULL },
 };
 
 static const ysw_menu_item_t edit_menu[] = {
-    { YSW_R1_C1, "Drop\nAnchor", YSW_MF_STICKY, on_edit_drop_anchor, 0, NULL },
-    { YSW_R1_C2, "Clear\nAnchor", YSW_MF_STICKY, on_edit_clear_anchor, 0, NULL },
+    { YSW_R1_C1, "Sound", YSW_MF_PLUS, ysw_menu_nop, 0, edit_menu_2 },
+    { YSW_R1_C2, "Drop\nAnchor", YSW_MF_STICKY, on_edit_drop_anchor, 0, NULL },
+    { YSW_R1_C3, "Clear\nAnchor", YSW_MF_STICKY, on_edit_clear_anchor, 0, NULL },
     { YSW_R1_C4, "Previous", YSW_MF_STICKY, on_edit_previous, 0, NULL },
 
     { YSW_R2_C1, "Cut", YSW_MF_STICKY, on_edit_to_clipboard, EDIT_CUT, NULL },
@@ -1590,10 +1578,10 @@ static const ysw_menu_item_t edit_menu[] = {
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
     { YSW_R4_C2, "Delete", YSW_MF_STICKY, on_delete, 0, NULL },
-    { YSW_R4_C3, "More", YSW_MF_PLUS, ysw_menu_nop, 0, edit_menu_2 },
+    { YSW_R4_C3, "Hide\nMenu", YSW_MF_TOGGLE, ysw_menu_nop, 0, NULL },
     { YSW_R4_C4, "Right", YSW_MF_STICKY, on_right, 0, NULL },
 
-    { 0, "Edit", YSW_MF_END, NULL, 0, NULL },
+    { 0, "Edit (Sticky)", YSW_MF_END, NULL, 0, NULL },
 };
 
 static const ysw_menu_item_t listen_menu[] = {
@@ -1924,7 +1912,7 @@ const ysw_menu_item_t editor_menu[] = {
     { 5, "Input\nMode", YSW_MF_PLUS, ysw_menu_nop, 0, input_mode_menu },
     { 6, "Insert", YSW_MF_PLUS, ysw_menu_nop, 0, insert_menu },
     { 7, "Remove", YSW_MF_PLUS, ysw_menu_nop, 0, remove_menu },
-    { 8, "Up", YSW_MF_COMMAND, on_edit_step_pitch, +1, NULL },
+    { 8, "Up", YSW_MF_COMMAND, on_edit_pitch, +1, NULL },
 
     { 9, "C6", YSW_MF_BUTTON, on_note, 72, NULL },
     { 10, "D6", YSW_MF_BUTTON, on_note, 74, NULL },
@@ -1936,7 +1924,7 @@ const ysw_menu_item_t editor_menu[] = {
 
     { 16, "Listen", YSW_MF_PLUS, ysw_menu_nop, 0, listen_menu },
     { 17, "Edit", YSW_MF_PLUS, ysw_menu_nop, 0, edit_menu },
-    { 19, "Down", YSW_MF_COMMAND, on_edit_step_pitch, -1, NULL },
+    { 19, "Down", YSW_MF_COMMAND, on_edit_pitch, -1, NULL },
 
     { 20, "C#5", YSW_MF_BUTTON, on_note, 61, NULL },
     { 21, "D#5", YSW_MF_BUTTON, on_note, 63, NULL },
