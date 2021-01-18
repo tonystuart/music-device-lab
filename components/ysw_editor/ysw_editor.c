@@ -1092,6 +1092,12 @@ static void on_play(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
     ysw_event_fire_play(editor->bus, notes, editor->section->tempo);
 }
 
+static void on_volume_change(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    ysw_event_fire_volume_change(editor->bus, item->value);
+}
+
 static void on_demo(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
@@ -1542,16 +1548,14 @@ static void process_event(void *context, ysw_event_t *event)
 //   20, 21,     22, 23, 24,     25, 26, 27, 28,
 // 29, 30, 31, 32, 33, 34, 35,   36, 37, 38, 39,
 
-// Actions that pop a menu (e.g. COMMAND_POP) must be performed on UP, not DOWN or PRESS.
-
 static const ysw_menu_item_t edit_menu_2[] = {
 
     { YSW_R1_C2, "Pitch-", YSW_MF_STICKY, on_edit_pitch, -1, NULL },
     { YSW_R1_C3, "Pitch+", YSW_MF_STICKY, on_edit_pitch, +1, NULL },
 
-    { YSW_R2_C1, "Length-", YSW_MF_STICKY, on_edit_length, -1, NULL },
+    { YSW_R2_C1, "Note\nLength-", YSW_MF_STICKY, on_edit_length, -1, NULL },
 
-    { YSW_R3_C1, "Length+", YSW_MF_STICKY, on_edit_length, +1, NULL },
+    { YSW_R3_C1, "Note\nLength+", YSW_MF_STICKY, on_edit_length, +1, NULL },
     { YSW_R3_C4, "Left", YSW_MF_STICKY, on_left, 0, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
@@ -1584,20 +1588,36 @@ static const ysw_menu_item_t edit_menu[] = {
     { 0, "Edit (Sticky)", YSW_MF_END, NULL, 0, NULL },
 };
 
+static const ysw_menu_item_t volume_menu[] = {
+    { YSW_R1_C1, "10\n(Soft)", YSW_MF_COMMAND, on_volume_change, 10, NULL },
+    { YSW_R1_C2, "25", YSW_MF_COMMAND, on_volume_change, 25, NULL },
+    { YSW_R1_C3, "50", YSW_MF_COMMAND, on_volume_change, 50, NULL },
+
+    { YSW_R2_C1, "75", YSW_MF_COMMAND, on_volume_change, 75, NULL },
+    { YSW_R2_C2, "100\n(Normal)", YSW_MF_COMMAND, on_volume_change, 100, NULL },
+    { YSW_R2_C3, "200", YSW_MF_COMMAND, on_volume_change, 200, NULL },
+
+    { YSW_R3_C1, "300", YSW_MF_COMMAND, on_volume_change, 300, NULL },
+    { YSW_R3_C2, "400", YSW_MF_COMMAND, on_volume_change, 400, NULL },
+    { YSW_R3_C3, "500\n(Loud)", YSW_MF_COMMAND, on_volume_change, 500, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Volume (%)", YSW_MF_END, NULL, 0, NULL },
+};
+
 static const ysw_menu_item_t listen_menu[] = {
-    { 5, "Play", YSW_MF_COMMAND, on_play, 0, NULL },
-    { 6, "Pause", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
-    { 7, "Resume", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
+    { YSW_R1_C1, "Play", YSW_MF_COMMAND, on_play, 0, NULL },
+    { YSW_R1_C2, "Pause", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
+    { YSW_R1_C3, "Resume", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
 
-    { 16, "Stop", YSW_MF_COMMAND, on_stop, 0, NULL },
-    { 17, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 18, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C1, "Stop", YSW_MF_COMMAND, on_stop, 0, NULL },
 
-    { 25, "Loop", YSW_MF_COMMAND, on_loop, 0, NULL },
-    { 26, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { 27, "Cycle\nDemo", YSW_MF_COMMAND, on_demo, 0, NULL },
+    { YSW_R3_C1, "Loop", YSW_MF_COMMAND, on_loop, 0, NULL },
+    { YSW_R3_C3, "Volume", YSW_MF_PLUS, ysw_menu_nop, 0, volume_menu },
 
-    { 36, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C4, "Cycle\nDemo", YSW_MF_COMMAND, on_demo, 0, NULL },
 
     { 0, "Listen", YSW_MF_END, NULL, 0, NULL },
 };

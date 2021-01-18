@@ -147,6 +147,9 @@ void ysw_mod_generate_samples(ysw_mod_synth_t *mod_synth,
             right = (right + (left >> 1));
         }
 
+        left = (left * mod_synth->percent_volume) / 100;
+        right = (right * mod_synth->percent_volume) / 100;
+
         if (left > 32767) {
             left = 32767;
         } else if (left < -32768) {
@@ -279,6 +282,11 @@ static void on_program_change(ysw_mod_synth_t *mod_synth, ysw_event_program_chan
     mod_synth->channel_programs[m->channel] = m->program;
 }
 
+static void on_volume_change(ysw_mod_synth_t *mod_synth, ysw_event_volume_change_t *m)
+{
+    mod_synth->percent_volume = m->percent_volume;
+}
+
 static void process_event(void *context, ysw_event_t *event)
 {
     ysw_mod_synth_t *mod_synth = context;
@@ -292,6 +300,9 @@ static void process_event(void *context, ysw_event_t *event)
         case YSW_EVENT_PROGRAM_CHANGE:
             on_program_change(mod_synth, &event->program_change);
             break;
+        case YSW_EVENT_VOLUME_CHANGE:
+            on_volume_change(mod_synth, &event->volume_change);
+            break;
         default:
             break;
     }
@@ -301,6 +312,7 @@ ysw_mod_synth_t *ysw_mod_synth_create_task(ysw_bus_t *bus, ysw_mod_host_t *mod_h
 {
     ysw_mod_synth_t *mod_synth = ysw_heap_allocate(sizeof(ysw_mod_synth_t));
     mod_synth->mod_host = mod_host;
+    mod_synth->percent_volume = 100;
 
     initialize_synthesizer(mod_synth);
 
