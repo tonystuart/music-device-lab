@@ -27,7 +27,7 @@ typedef enum {
     YSW_EVENT_NOTE_ON,
     YSW_EVENT_NOTE_OFF,
     YSW_EVENT_PROGRAM_CHANGE,
-    YSW_EVENT_VOLUME_CHANGE,
+    YSW_EVENT_SYNTH_GAIN,
     YSW_EVENT_SAMPLE_LOAD,
     YSW_EVENT_LOOP_DONE,
     YSW_EVENT_PLAY_DONE,
@@ -89,8 +89,8 @@ typedef struct {
 } ysw_event_program_change_t;
 
 typedef struct {
-    uint16_t percent_volume;
-} ysw_event_volume_change_t;
+    uint16_t percent_gain;
+} ysw_event_synth_gain_t;
 
 typedef struct {
     ysw_note_t note;
@@ -141,7 +141,7 @@ typedef struct {
         ysw_event_note_on_t note_on;
         ysw_event_note_off_t note_off;
         ysw_event_program_change_t program_change;
-        ysw_event_volume_change_t volume_change;
+        ysw_event_synth_gain_t synth_gain;
         ysw_event_sample_load_t sample_load;
         ysw_event_key_down_t key_down;
         ysw_event_key_pressed_t key_pressed;
@@ -156,7 +156,7 @@ void ysw_event_publish(ysw_bus_t *bus, ysw_event_t *event);
 void ysw_event_fire_note_on(ysw_bus_t *bus, ysw_origin_t origin, ysw_event_note_on_t *note_on);
 void ysw_event_fire_note_off(ysw_bus_t *bus, ysw_origin_t origin, ysw_event_note_off_t *note_off);
 void ysw_event_fire_program_change(ysw_bus_t *bus, ysw_origin_t origin, ysw_event_program_change_t *program);
-void ysw_event_fire_volume_change(ysw_bus_t *bus, uint16_t percent_volume);
+void ysw_event_fire_synth_gain(ysw_bus_t *bus, uint16_t percent_gain);
 void ysw_event_fire_loop_done(ysw_bus_t *bus);
 void ysw_event_fire_play_done(ysw_bus_t *bus);
 void ysw_event_fire_idle(ysw_bus_t *bus);

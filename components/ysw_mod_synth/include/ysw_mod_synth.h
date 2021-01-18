@@ -67,7 +67,7 @@ typedef struct {
     int16_t stereo;
     int16_t stereo_separation;
     int16_t filter;
-    uint16_t percent_volume;
+    uint16_t percent_gain;
     SemaphoreHandle_t mutex;
     ysw_mod_host_t *mod_host;
 } ysw_mod_synth_t;
