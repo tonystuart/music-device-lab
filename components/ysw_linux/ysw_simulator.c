@@ -34,8 +34,8 @@ static ysw_bus_t *cb_bus;
 // T = top row of digits
 // N = numeric keypad digits
 //
-//   T2, T3,     T4, T5, T6,     LK,  /,  *, UP,
-//  Q,  W,  E,  R,  T,  Y,  Y,   N7, N8, N9, DN,
+//   T2, T3,     T5, T6, T7,     LK,  /,  *, UP,
+//  Q,  W,  E,  R,  T,  Y,  U,   N7, N8, N9, DN,
 //    S,  D,      G,  H,  I,     N4, N5, N6, LT,
 //  Z,  X,  C,  V,  B,  N,  M,   N1, N2, N3, RT,
 //
@@ -79,9 +79,9 @@ static const keycode_map_t scan_code_map[] = {
 //   20, 21,     22, 23, 24,     25, 26, 27, 28,
 // 29, 30, 31, 32, 33, 34, 35,   36, 37, 38, 39,
 
-//   T2, T3,     T4, T5, T6,     LK,  /,  *, UP,
-//  Q,  W,  E,  R,  T,  Y,  Y,   N7, N8, N9, DN,
-//    S,  D,      G,  H,  I,     N4, N5, N6, LT,
+//   T2, T3,     T5, T6, T7,     LK,  /,  *, UP,
+//  Q,  W,  E,  R,  T,  Y,  U,   N7, N8, N9, DN,
+//    S,  D,      G,  H,  J,     N4, N5, N6, LT,
 //  Z,  X,  C,  V,  B,  N,  M,   N1, N2, N3, RT,
 
     { SDL_SCANCODE_RIGHT, 39 }, // Right Arrow

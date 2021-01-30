@@ -26,6 +26,7 @@
 #include "ysw_sequencer.h"
 #include "ysw_staff.h"
 #include "ysw_spiffs.h"
+#include "ysw_tty.h"
 #include "ysw_vs_synth.h"
 #include "zm_music.h"
 #include "eli_ili9341_xpt2046.h"
@@ -39,9 +40,11 @@
 
 #define TAG "YSW_MAIN_ESP32"
 
-#define MM_V02 2
-#define MM_V04 4
-#define MM_VERSION MM_V04
+#define MM_V02 2 // JLCPCB board with internal DAC
+#define MM_V04 4 // Wire-wrapped board with CS4344 DAC
+#define MM_V05 5 // Ai Thinker esp32-audio-kit with AC101 Codec
+
+#define MM_VERSION MM_V05
 
 UNUSED
 static void initialize_bt_synthesizer(ysw_bus_t *bus, zm_music_t *music)
@@ -121,6 +124,7 @@ static void initialize_i2s_mmv02(void)
     $(i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN));
 }
 
+UNUSED
 static void initialize_i2s_mmv04(void)
 {
     // Enable I2S external Cirrus Logic CS4344 DAC using GPIO 0 for MCLK
@@ -163,6 +167,44 @@ static void initialize_i2s_mmv04(void)
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0_CLK_OUT1);
 }
 
+#include "board.h"
+#include "ac101.h"
+
+UNUSED
+static void initialize_i2s_mmv05(void)
+{
+    // Enable Ai Thinker esp32-audio-kit onboard AC101 Codec
+    ESP_LOGD(TAG, "Enabling Ai Thinker esp32-audio-kit onboard AC101 Codec");
+
+    audio_board_init();
+
+    ac101_ctrl_state(AUDIO_HAL_CODEC_MODE_BOTH, AUDIO_HAL_CTRL_START);
+
+    i2s_config_t i2s_config = {
+        .mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_RX,
+        .sample_rate = YSW_I2S_SAMPLE_RATE,
+        .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+        .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+        .communication_format = I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB,
+        .intr_alloc_flags = ESP_INTR_FLAG_LEVEL2 | ESP_INTR_FLAG_IRAM,
+        .dma_buf_count = YSW_I2S_BUFFER_COUNT,
+        .dma_buf_len = YSW_I2S_SAMPLE_COUNT,
+        .use_apll = true,
+        .tx_desc_auto_clear = true,
+        .fixed_mclk = 0,
+    };
+
+    $(i2s_driver_install(0, &i2s_config, 0, NULL));
+
+    i2s_pin_config_t pin_config = { };
+
+    get_i2s_pins(0, &pin_config);
+
+    $(i2s_set_pin(0, &pin_config));
+
+    i2s_mclk_gpio_select(0, GPIO_NUM_0);
+}
+
 // TODO: pass ysw_mod_synth to I2S task event handlers
 
 ysw_mod_synth_t *ysw_mod_synth;
@@ -170,6 +212,8 @@ ysw_mod_synth_t *ysw_mod_synth;
 #if MM_VERSION == MM_V02
 static ysw_mod_sample_type_t sample_type = YSW_MOD_16BIT_UNSIGNED;
 #elif MM_VERSION == MM_V04
+static ysw_mod_sample_type_t sample_type = YSW_MOD_16BIT_SIGNED;
+#elif MM_VERSION == MM_V05
 static ysw_mod_sample_type_t sample_type = YSW_MOD_16BIT_SIGNED;
 #else
 #error define MM_VERSION
@@ -196,6 +240,8 @@ static void initialize_mod_synthesizer(ysw_bus_t *bus, zm_music_t *music)
     ysw_i2s_create_task(initialize_i2s_mmv02, generate_audio);
 #elif MM_VERSION == MM_V04
     ysw_i2s_create_task(initialize_i2s_mmv04, generate_audio);
+#elif MM_VERSION == MM_V05
+    ysw_i2s_create_task(initialize_i2s_mmv05, generate_audio);
 #else
 #error define MM_VERSION
 #endif
@@ -226,8 +272,6 @@ static void initialize_mmv01_touch_screen(void)
     eli_ili9341_xpt2046_initialize(&new_config);
 }
 
-// Music Machine v02
-
 UNUSED
 static void initialize_mmv02_touch_screen(void)
 {
@@ -252,8 +296,7 @@ static void initialize_mmv02_touch_screen(void)
     eli_ili9341_xpt2046_initialize(&new_config);
 }
 
-// Music Machine v04 (wire-wrapped prototype)
-
+UNUSED
 static void initialize_mmv04_touch_screen(void)
 {
     ESP_LOGD(TAG, "configuring Music Machine v04 touch screen");
@@ -267,6 +310,31 @@ static void initialize_mmv04_touch_screen(void)
         .bckl = 14,
         .miso = 33,
         .irq = 32,
+        .x_min = 353,
+        .y_min = 313,
+        .x_max = 3829,
+        .y_max = 3853,
+        .is_invert_y = false,
+        .spi_host = VSPI_HOST,
+    };
+    eli_ili9341_xpt2046_initialize(&new_config);
+}
+
+UNUSED
+static void initialize_mmv05_touch_screen(void)
+{
+    // TODO: figure out best pin assignments... note that GPIO0 may be used for MCLK
+    ESP_LOGD(TAG, "configuring Music Machine v05 touch screen");
+    eli_ili9341_xpt2046_config_t new_config = {
+        .mosi = 13,
+        .clk = 22,
+        .ili9341_cs = 19,
+        .xpt2046_cs = 23,
+        .dc = 18,
+        .rst = -1,
+        .bckl = -1,
+        .miso = 5,
+        .irq = 21,
         .x_min = 353,
         .y_min = 313,
         .x_max = 3829,
@@ -340,6 +408,9 @@ void ysw_main_init_device(ysw_bus_t *bus)
     ysw_keyboard_create_task(bus, &keyboard_config);
 #elif MM_VERSION == MM_V04
     initialize_mmv04_touch_screen();
+#elif MM_VERSION == MM_V05
+    initialize_mmv05_touch_screen();
+    ysw_tty_create_task(bus);
 #else
 #error define MM_VERSION
 #endif
