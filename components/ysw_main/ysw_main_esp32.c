@@ -408,6 +408,8 @@ void ysw_main_init_device(ysw_bus_t *bus)
     ysw_keyboard_create_task(bus, &keyboard_config);
 #elif MM_VERSION == MM_V04
     initialize_mmv04_touch_screen();
+    ysw_array_t *addresses = ysw_array_load(2, 0x5a, 0x5c);
+    ysw_touch_create_task(bus, I2C_NUM_1, 18, 23, ysw_array_t *addresses);
 #elif MM_VERSION == MM_V05
     initialize_mmv05_touch_screen();
     ysw_tty_create_task(bus);
