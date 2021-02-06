@@ -26,6 +26,7 @@
 #include "ysw_sequencer.h"
 #include "ysw_staff.h"
 #include "ysw_spiffs.h"
+#include "ysw_touch.h"
 #include "ysw_tty.h"
 #include "ysw_vs_synth.h"
 #include "zm_music.h"
@@ -33,6 +34,7 @@
 #include "lvgl/lvgl.h"
 #include "driver/gpio.h"
 #include "driver/dac.h"
+#include "driver/i2c.h"
 #include "driver/i2s.h"
 #include "driver/spi_master.h"
 #include "esp_log.h"
@@ -44,7 +46,7 @@
 #define MM_V04 4 // Wire-wrapped board with CS4344 DAC
 #define MM_V05 5 // Ai Thinker esp32-audio-kit with AC101 Codec
 
-#define MM_VERSION MM_V05
+#define MM_VERSION MM_V04
 
 UNUSED
 static void initialize_bt_synthesizer(ysw_bus_t *bus, zm_music_t *music)
@@ -408,8 +410,17 @@ void ysw_main_init_device(ysw_bus_t *bus)
     ysw_keyboard_create_task(bus, &keyboard_config);
 #elif MM_VERSION == MM_V04
     initialize_mmv04_touch_screen();
-    ysw_array_t *addresses = ysw_array_load(2, 0x5a, 0x5c);
-    ysw_touch_create_task(bus, I2C_NUM_1, 18, 23, ysw_array_t *addresses);
+	i2c_config_t i2c_config = {
+		.mode = I2C_MODE_MASTER,
+		.sda_io_num = 18,
+		.sda_pullup_en = GPIO_PULLUP_ENABLE,
+		.scl_io_num = 23,
+		.scl_pullup_en = GPIO_PULLUP_ENABLE,
+		.master.clk_speed = 100000,
+	};
+    ysw_i2c_t *i2c = ysw_i2c_create(I2C_NUM_1, &i2c_config, YSW_I2C_EXCLUSIVE);
+    ysw_array_t *addresses = ysw_array_load(2, 0x5a, 0x5d);
+    ysw_touch_create_task(bus, i2c, addresses);
 #elif MM_VERSION == MM_V05
     initialize_mmv05_touch_screen();
     ysw_tty_create_task(bus);

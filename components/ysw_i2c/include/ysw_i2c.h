@@ -12,8 +12,18 @@
 #include "driver/i2c.h"
 #include "stdint.h"
 
-void ysw_i2c_init(i2c_port_t port, gpio_num_t sda, gpio_num_t scl);
-void ysw_i2c_read_reg(i2c_port_t port, uint8_t addr, uint8_t reg, uint8_t *value, size_t value_len);
-void ysw_i2c_write_reg(i2c_port_t port, uint8_t addr, uint8_t reg, uint8_t value);
-void ysw_i2c_read_event(i2c_port_t port, uint8_t addr, uint8_t *buf);
+typedef enum {
+    YSW_I2C_SHARED,
+    YSW_I2C_EXCLUSIVE,
+} ysw_i2c_access_t;
 
+typedef struct {
+    i2c_port_t port;
+    xSemaphoreHandle mutex;
+} ysw_i2c_t;
+
+ysw_i2c_t *ysw_i2c_create(i2c_port_t port, i2c_config_t *config, ysw_i2c_access_t access);
+void ysw_i2c_read_reg(ysw_i2c_t *i2c, uint8_t addr, uint8_t reg, uint8_t *value, size_t value_len);
+void ysw_i2c_write_reg(ysw_i2c_t *i2c, uint8_t addr, uint8_t reg, uint8_t value);
+void ysw_i2c_read_event(ysw_i2c_t *i2c, uint8_t addr, uint8_t *buf);
+void ysw_i2c_free(ysw_i2c_t *i2c);

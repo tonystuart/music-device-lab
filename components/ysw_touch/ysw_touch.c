@@ -19,14 +19,13 @@
 #include "freertos/queue.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "stdint.h"
 
 #define TAG "YSW_TOUCH"
 
 typedef struct {
     ysw_bus_t *bus;
-    i2c_port_t port;
-    gpio_num_t sda;
-    gpio_num_t scl;
+    ysw_i2c_t *i2c;
     ysw_array_t *addresses;
 } ysw_touch_t;
 
@@ -56,13 +55,11 @@ static void fire_key_events(ysw_touch_t *touch, uint8_t scan_code)
 
 static void initialize(void *context)
 {
-    ESP_LOGD(TAG, "initialize entered");
     ysw_touch_t *touch = context;
-    ysw_i2c_init(touch->port, touch->sda, touch->scl);
     uint8_t address_count = ysw_array_get_count(touch->addresses);
     for (uint8_t i = 0; i < address_count; i++) {
         uint8_t address = (uintptr_t)ysw_array_get(touch->addresses, i);
-        ysw_mpr121_initialize(touch->port, address);
+        ysw_mpr121_initialize(touch->i2c, address);
     }
 }
 
@@ -71,7 +68,7 @@ static void scan_touch_sensors(ysw_touch_t *touch)
     uint8_t address_count = ysw_array_get_count(touch->addresses);
     for (uint8_t i = 0; i < address_count; i++) {
         uint8_t address = (uintptr_t)ysw_array_get(touch->addresses, i);
-        uint16_t touches = ysw_mpr121_get_touches(touch->port, address);
+        uint16_t touches = ysw_mpr121_get_touches(touch->i2c, address);
         if (touches) {
             ESP_LOGD(TAG, "address=%#x, touches=%#x", address, touches);
         }
@@ -90,13 +87,11 @@ static void process_event(void *context, ysw_event_t *event)
     scan_touch_sensors(touch);
 }
 
-void ysw_touch_create_task(ysw_bus_t *bus, i2c_port_t port, gpio_num_t sda, gpio_num_t scl, ysw_array_t *addresses)
+void ysw_touch_create_task(ysw_bus_t *bus, ysw_i2c_t *i2c, ysw_array_t *addresses)
 {
     ysw_touch_t *touch = ysw_heap_allocate(sizeof(ysw_touch_t));
     touch->bus = bus;
-    touch->port = port;
-    touch->sda = sda;
-    touch->sda = scl;
+    touch->i2c = i2c;
     touch->addresses = addresses;
 
     ysw_task_config_t config = ysw_task_default_config;

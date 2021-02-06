@@ -35,6 +35,13 @@
 
 #define $ ESP_ERROR_CHECK
 
+#define $$(x) do {                                                          \
+        if (!(x)) {                                                         \
+            ESP_LOGE(TAG, "call failed: %s:%d %s", __FILE__, __LINE__, #x); \
+            abort();                                                        \
+        }                                                                   \
+    } while(0)
+
 static inline void *ysw_common_validate_pointer(void *p, char *file, int line, char *arg)
 {
     if (!p) {

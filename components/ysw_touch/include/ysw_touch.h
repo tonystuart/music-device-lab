@@ -11,7 +11,6 @@
 
 #include "ysw_array.h"
 #include "ysw_bus.h"
-#include "driver/i2c.h"
-#include "stdint.h"
+#include "ysw_i2c.h"
 
-void ysw_touch_create_task(ysw_bus_t *bus, i2c_port_t port, gpio_num_t sda, gpio_num_t scl, ysw_array_t *addresses);
+void ysw_touch_create_task(ysw_bus_t *bus, ysw_i2c_t *i2c, ysw_array_t *addresses);

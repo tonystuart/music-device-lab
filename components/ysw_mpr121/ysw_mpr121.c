@@ -57,54 +57,54 @@ enum {
     MPR121_SOFTRESET = 0x80,
 };
 
-static void write_register(i2c_port_t port, uint8_t address, uint8_t reg, uint8_t value) {
-    ysw_i2c_write_reg(port, address, reg, value);
+static void write_register(ysw_i2c_t *i2c, uint8_t address, uint8_t reg, uint8_t value) {
+    ysw_i2c_write_reg(i2c, address, reg, value);
 }
 
-static uint8_t read_uint8(i2c_port_t port, uint8_t address, uint8_t reg) {
+static uint8_t read_uint8(ysw_i2c_t *i2c, uint8_t address, uint8_t reg) {
     uint8_t value;
-    ysw_i2c_read_reg(port, address, reg, &value, 1);
+    ysw_i2c_read_reg(i2c, address, reg, &value, 1);
     return value;
 }
 
-static uint16_t read_uint16(i2c_port_t port, uint8_t address, uint8_t reg)
+static uint16_t read_uint16(ysw_i2c_t *i2c, uint8_t address, uint8_t reg)
 {
     uint16_t value;
-    ysw_i2c_read_reg(port, address, reg, (uint8_t *)&value, 2);
+    ysw_i2c_read_reg(i2c, address, reg, (uint8_t *)&value, 2);
     // TODO: Consider endianess
     return value;
 }
 
-void ysw_mpr121_initialize(i2c_port_t port, uint8_t address)
+void ysw_mpr121_initialize(ysw_i2c_t *i2c, uint8_t address)
 {
-    write_register(port, address, MPR121_SOFTRESET, 0x63);
-    write_register(port, address, MPR121_ECR, 0x0);
-    uint8_t c = read_uint8(port, address, MPR121_CONFIG2);
+    write_register(i2c, address, MPR121_SOFTRESET, 0x63);
+    write_register(i2c, address, MPR121_ECR, 0x0);
+    uint8_t c = read_uint8(i2c, address, MPR121_CONFIG2);
     if (c != 0x24) {
         ESP_LOGE(TAG, "read_uint8(MPR121_CONFIG2) failed");
         abort();
     }
 
-    ysw_mpr121_set_thresholds(port, address, 12, 6);
-    write_register(port, address, MPR121_MHDR, 0x01);
-    write_register(port, address, MPR121_NHDR, 0x01);
-    write_register(port, address, MPR121_NCLR, 0x0E);
-    write_register(port, address, MPR121_FDLR, 0x00);
+    ysw_mpr121_set_thresholds(i2c, address, 12, 6);
+    write_register(i2c, address, MPR121_MHDR, 0x01);
+    write_register(i2c, address, MPR121_NHDR, 0x01);
+    write_register(i2c, address, MPR121_NCLR, 0x0E);
+    write_register(i2c, address, MPR121_FDLR, 0x00);
 
-    write_register(port, address, MPR121_MHDF, 0x01);
-    write_register(port, address, MPR121_NHDF, 0x05);
-    write_register(port, address, MPR121_NCLF, 0x01);
-    write_register(port, address, MPR121_FDLF, 0x00);
+    write_register(i2c, address, MPR121_MHDF, 0x01);
+    write_register(i2c, address, MPR121_NHDF, 0x05);
+    write_register(i2c, address, MPR121_NCLF, 0x01);
+    write_register(i2c, address, MPR121_FDLF, 0x00);
 
-    write_register(port, address, MPR121_NHDT, 0x00);
-    write_register(port, address, MPR121_NCLT, 0x00);
-    write_register(port, address, MPR121_FDLT, 0x00);
+    write_register(i2c, address, MPR121_NHDT, 0x00);
+    write_register(i2c, address, MPR121_NCLT, 0x00);
+    write_register(i2c, address, MPR121_FDLT, 0x00);
 
-    write_register(port, address, MPR121_DEBOUNCE, 0);
-    write_register(port, address, MPR121_CONFIG1, 0x10); // default, 16uA charge current
-    write_register(port, address, MPR121_CONFIG2, 0x20); // 0.5uS encoding, 1ms period
+    write_register(i2c, address, MPR121_DEBOUNCE, 0);
+    write_register(i2c, address, MPR121_CONFIG1, 0x10); // default, 16uA charge current
+    write_register(i2c, address, MPR121_CONFIG2, 0x20); // 0.5uS encoding, 1ms period
 
-    write_register(port, address, MPR121_ECR, 0x8F); // start with first 5 bits of baseline tracking
+    write_register(i2c, address, MPR121_ECR, 0x8F); // start with first 5 bits of baseline tracking
 }
 
 /*!
@@ -122,11 +122,11 @@ void ysw_mpr121_initialize(i2c_port_t port, uint8_t address)
  *  @param      release 
  *              the release threshold from 0 to 255.
  */
-void ysw_mpr121_set_thresholds(i2c_port_t port, uint8_t address, uint8_t touch, uint8_t release)
+void ysw_mpr121_set_thresholds(ysw_i2c_t *i2c, uint8_t address, uint8_t touch, uint8_t release)
 {
     for (uint8_t i = 0; i < 12; i++) {
-        write_register(port, address, MPR121_TOUCHTH_0 + 2 * i, touch);
-        write_register(port, address, MPR121_RELEASETH_0 + 2 * i, release);
+        write_register(i2c, address, MPR121_TOUCHTH_0 + 2 * i, touch);
+        write_register(i2c, address, MPR121_RELEASETH_0 + 2 * i, release);
     }
 }
 
@@ -139,10 +139,10 @@ void ysw_mpr121_set_thresholds(i2c_port_t port, uint8_t address, uint8_t touch, 
  *              the channel to read
  *  @returns    the filtered reading as a 10 bit unsigned value
  */
-uint16_t ysw_mpr121_get_filtered_data(i2c_port_t port, uint8_t address, uint8_t t)
+uint16_t ysw_mpr121_get_filtered_data(ysw_i2c_t *i2c, uint8_t address, uint8_t t)
 {
     assert(t <= 12);
-    return read_uint16(port, address, MPR121_FILTDATA_0L + t * 2);
+    return read_uint16(i2c, address, MPR121_FILTDATA_0L + t * 2);
 }
 
 /*!
@@ -153,10 +153,10 @@ uint16_t ysw_mpr121_get_filtered_data(i2c_port_t port, uint8_t address, uint8_t 
  *              the channel to read.
  *  @returns    the baseline data that was read
  */
-uint16_t ysw_mpr121_get_baseline_data(i2c_port_t port, uint8_t address, uint8_t t)
+uint16_t ysw_mpr121_get_baseline_data(ysw_i2c_t *i2c, uint8_t address, uint8_t t)
 {
     assert(t <= 12);
-    uint16_t bl = read_uint8(port, address, MPR121_BASELINE_0 + t);
+    uint16_t bl = read_uint8(i2c, address, MPR121_BASELINE_0 + t);
     return (bl << 2);
 }
 
@@ -166,9 +166,9 @@ uint16_t ysw_mpr121_get_baseline_data(i2c_port_t port, uint8_t address, uint8_t 
  *              of a sensor. For example, if bit 0 is set then channel 0 of the device is
  *              currently deemed to be touched.
  */
-uint16_t ysw_mpr121_get_touches(i2c_port_t port, uint8_t address)
+uint16_t ysw_mpr121_get_touches(ysw_i2c_t *i2c, uint8_t address)
 {
-    uint16_t t = read_uint16(port, address, MPR121_TOUCHSTATUS_L);
+    uint16_t t = read_uint16(i2c, address, MPR121_TOUCHSTATUS_L);
     return t & 0x0FFF;
 }
 
