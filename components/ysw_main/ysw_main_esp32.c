@@ -18,6 +18,7 @@
 #include "ysw_fluid_synth.h"
 #include "ysw_heap.h"
 #include "ysw_i2s.h"
+#include "ysw_ir.h"
 #include "ysw_keyboard.h"
 #include "ysw_led.h"
 #include "ysw_midi.h"
@@ -47,6 +48,9 @@
 #define MM_V05 5 // Ai Thinker esp32-audio-kit with AC101 Codec
 
 #define MM_VERSION MM_V04
+
+#define RMT_CHANNEL_LED 0
+#define RMT_CHANNEL_IR 1
 
 UNUSED
 static void initialize_bt_synthesizer(ysw_bus_t *bus, zm_music_t *music)
@@ -410,6 +414,9 @@ void ysw_main_init_device(ysw_bus_t *bus)
     ysw_keyboard_create_task(bus, &keyboard_config);
 #elif MM_VERSION == MM_V04
     initialize_mmv04_touch_screen();
+
+    ysw_ir_create_task(bus, RMT_CHANNEL_IR, 22);
+
 	i2c_config_t i2c_config = {
 		.mode = I2C_MODE_MASTER,
 		.sda_io_num = 18,
