@@ -13,4 +13,4 @@
 #include "ysw_bus.h"
 #include "ysw_i2c.h"
 
-void ysw_touch_create_task(ysw_bus_t *bus, ysw_i2c_t *i2c, ysw_array_t *addresses);
+void ysw_touch_create_task(ysw_bus_t *bus, ysw_i2c_t *i2c, ysw_array_t *addresses, const uint8_t scan_code_map[]);

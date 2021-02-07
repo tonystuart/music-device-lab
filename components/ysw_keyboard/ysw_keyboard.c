@@ -12,6 +12,7 @@
 #include "ysw_common.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
+#include "ysw_keystate.h"
 #include "ysw_task.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -32,15 +33,10 @@
 // 29, 30, 31, 32, 33, 34, 35,   36, 37, 38, 39,
 
 typedef struct {
-    uint32_t down_time;
-    uint32_t repeat_count;
-} state_t;
-
-typedef struct {
     ysw_bus_t *bus;
     ysw_array_t *rows;
     ysw_array_t *columns;
-    state_t state[];
+    ysw_keystate_t *keystate;
 } ysw_keyboard_t;
 
 static void configure_row(uint8_t gpio)
@@ -72,53 +68,6 @@ static void configure_column(uint8_t gpio)
     $(gpio_set_level(gpio, HIGH));
 }
 
-static void on_key_pressed(ysw_bus_t *bus, uint8_t scan_code, state_t *state)
-{
-    //ESP_LOGD(TAG, "col=%d, row=%d, scan_code=%d", column_index, row_index, scan_code);
-    uint32_t current_millis = ysw_get_millis();
-    if (!state->down_time) {
-        state->repeat_count = 0;
-        state->down_time = current_millis;
-        ysw_event_key_down_t key_down = {
-            .scan_code = scan_code,
-            .time = state->down_time,
-        };
-        ysw_event_fire_key_down(bus, &key_down);
-    } else if (state->down_time + ((state->repeat_count + 1) * 100) < current_millis) {
-        state->repeat_count++;
-        ysw_event_key_pressed_t key_pressed = {
-            .scan_code = scan_code,
-            .time = state->down_time,
-            .duration = current_millis - state->down_time,
-            .repeat_count = state->repeat_count,
-        };
-        ysw_event_fire_key_pressed(bus, &key_pressed);
-    }
-}
-
-static void on_key_released(ysw_bus_t *bus, uint8_t scan_code, state_t *state)
-{
-    uint32_t current_millis = ysw_get_millis();
-    uint32_t duration = current_millis - state->down_time;
-    if (!state->repeat_count) {
-        ysw_event_key_pressed_t key_pressed = {
-            .scan_code = scan_code,
-            .time = state->down_time,
-            .duration = duration,
-            .repeat_count = state->repeat_count,
-        };
-        ysw_event_fire_key_pressed(bus, &key_pressed);
-    }
-    ysw_event_key_up_t key_up = {
-        .scan_code = scan_code,
-        .time = state->down_time,
-        .duration = duration,
-        .repeat_count = state->repeat_count,
-    };
-    ysw_event_fire_key_up(bus, &key_up);
-    state->down_time = 0;
-}
-
 static void scan_keyboard(ysw_keyboard_t *keyboard)
 {
     uint32_t row_count = ysw_array_get_count(keyboard->rows);
@@ -132,9 +81,9 @@ static void scan_keyboard(ysw_keyboard_t *keyboard)
             uint8_t row_gpio = (uintptr_t)ysw_array_get(keyboard->rows, row_index);
             int key_pressed = gpio_get_level(row_gpio) == LOW;
             if (key_pressed) {
-                on_key_pressed(keyboard->bus, scan_code, &keyboard->state[scan_code]);
-            } else if (keyboard->state[scan_code].down_time) {
-                on_key_released(keyboard->bus,scan_code,  &keyboard->state[scan_code]);
+                ysw_keystate_on_press(keyboard->keystate, scan_code);
+            } else {
+                ysw_keystate_on_release(keyboard->keystate, scan_code);
             }
         }
         $(gpio_set_level(column_gpio, HIGH));
@@ -169,12 +118,12 @@ void ysw_keyboard_create_task(ysw_bus_t *bus, ysw_keyboard_config_t *keyboard_co
         configure_column(column_gpio);
     }
 
-    ysw_keyboard_t *keyboard = ysw_heap_allocate(sizeof(ysw_keyboard_t) +
-            (sizeof(state_t) * row_count * column_count));
+    ysw_keyboard_t *keyboard = ysw_heap_allocate(sizeof(ysw_keyboard_t));
 
     keyboard->bus = bus;
     keyboard->rows = keyboard_config->rows;
     keyboard->columns = keyboard_config->columns;
+    keyboard->keystate = ysw_keystate_create(bus, row_count * column_count);
 
     ysw_task_config_t config = ysw_task_default_config;
 

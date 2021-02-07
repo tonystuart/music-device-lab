@@ -392,6 +392,14 @@ void ysw_main_display_tasks()
 #endif
 }
 
+#if MM_VERSION == MM_V04
+static const uint8_t scan_code_map[] = {
+    0,   1,  2,  3,  4,  5 , 6,  7,  8,  9, 10, 11,
+    12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+    24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+};
+#endif
+
 void ysw_main_init_device(ysw_bus_t *bus)
 {
     esp_log_level_set("efuse", ESP_LOG_INFO);
@@ -427,7 +435,7 @@ void ysw_main_init_device(ysw_bus_t *bus)
 	};
     ysw_i2c_t *i2c = ysw_i2c_create(I2C_NUM_1, &i2c_config, YSW_I2C_EXCLUSIVE);
     ysw_array_t *addresses = ysw_array_load(2, 0x5a, 0x5d);
-    ysw_touch_create_task(bus, i2c, addresses);
+    ysw_touch_create_task(bus, i2c, addresses, scan_code_map);
 #elif MM_VERSION == MM_V05
     initialize_mmv05_touch_screen();
     ysw_tty_create_task(bus);
