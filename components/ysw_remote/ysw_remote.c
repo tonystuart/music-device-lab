@@ -7,7 +7,7 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_ir.h"
+#include "ysw_remote.h"
 #include "ysw_common.h"
 #include "ysw_heap.h"
 #include "ysw_task.h"
@@ -17,7 +17,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#define TAG "YSW_IR"
+#define TAG "YSW_REMOTE"
 
 #define RMT_CLK_DIV      100    /*!< RMT counter clock divider */
 #define RMT_TICK_10_US    (80000000/RMT_CLK_DIV/100000)   /*!< RMT counter value for 10 us.(Source clock is APB clock) */
@@ -44,7 +44,7 @@ typedef struct {
     rmt_channel_t channel;
     gpio_num_t gpio_num;
     RingbufHandle_t rb;
-} ysw_ir_t;
+} ysw_remote_t;
 
 static item_type_t get_item_type(rmt_item32_t *item, int index)
 {
@@ -137,23 +137,23 @@ static void handle_ring_buffer(void *context)
 {
     ESP_LOGD(TAG, "handle_ring_buffer entered");
 
-    ysw_ir_t *ir = context;
+    ysw_remote_t *remote = context;
 
     for (;;) {
         size_t rx_size = 0;
-        rmt_item32_t* items = (rmt_item32_t *)xRingbufferReceive(ir->rb, &rx_size, portMAX_DELAY);
+        rmt_item32_t* items = (rmt_item32_t *)xRingbufferReceive(remote->rb, &rx_size, portMAX_DELAY);
         if (items) {
             process_items(items, rx_size);
-            vRingbufferReturnItem(ir->rb, items);
+            vRingbufferReturnItem(remote->rb, items);
         }
     }
 }
 
-void ysw_ir_create_task(ysw_bus_t *bus, rmt_channel_t channel, gpio_num_t gpio_num)
+void ysw_remote_create_task(ysw_bus_t *bus, rmt_channel_t channel, gpio_num_t gpio_num)
 {
-    ESP_LOGI(TAG, "ysw_ir_create_task channel=%d, gpio_num=%d", channel, gpio_num);
+    ESP_LOGI(TAG, "ysw_remote_create_task channel=%d, gpio_num=%d", channel, gpio_num);
 
-    ysw_ir_t *ir = ysw_heap_allocate(sizeof(ysw_ir_t));
+    ysw_remote_t *remote = ysw_heap_allocate(sizeof(ysw_remote_t));
 
     rmt_config_t rmt_conf = {
         .channel = channel,
@@ -168,14 +168,14 @@ void ysw_ir_create_task(ysw_bus_t *bus, rmt_channel_t channel, gpio_num_t gpio_n
 
     $(rmt_config(&rmt_conf));
     $(rmt_driver_install(channel, 1000, 0));
-    $(rmt_get_ringbuf_handle(channel, &ir->rb));
+    $(rmt_get_ringbuf_handle(channel, &remote->rb));
     $(rmt_rx_start(channel, 1));
 
     ysw_task_config_t task_conf = ysw_task_default_config;
     task_conf.name = TAG;
     task_conf.bus = bus;
     task_conf.function = handle_ring_buffer;
-    task_conf.context = ir;
+    task_conf.context = remote;
 
     ysw_task_create(&task_conf);
 }

@@ -13,4 +13,4 @@
 #include "driver/gpio.h"
 #include "driver/rmt.h"
 
-void ysw_ir_create_task(ysw_bus_t *bus, rmt_channel_t channel, gpio_num_t gpio_num);
+void ysw_remote_create_task(ysw_bus_t *bus, rmt_channel_t channel, gpio_num_t gpio_num);
