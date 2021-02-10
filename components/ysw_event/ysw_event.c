@@ -53,6 +53,16 @@ void ysw_event_fire_program_change(ysw_bus_t *bus, ysw_origin_t origin, ysw_even
     ysw_event_publish(bus, &event);
 }
 
+void ysw_event_fire_amp_volume(ysw_bus_t *bus, uint16_t percent_volume)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_EDITOR,
+        .header.type = YSW_EVENT_AMP_VOLUME,
+        .amp_volume.percent_volume = percent_volume,
+    };
+    ysw_event_publish(bus, &event);
+}
+
 void ysw_event_fire_synth_gain(ysw_bus_t *bus, uint16_t percent_gain)
 {
     ysw_event_t event = {

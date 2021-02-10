@@ -52,10 +52,10 @@ static void process_touches(ysw_touch_t *touch, uint8_t mpr121_index, uint16_t t
         uint8_t scan_code = touch->scan_code_map[button_index];
         bool pressed = touches & (1 << i);
         if (pressed) {
-            //ESP_LOGI(TAG, "press i=%d, touches=%#x, scan_code=%d", i, touches, scan_code);
+            ESP_LOGI(TAG, "press i=%d, touches=%#x, scan_code=%d", i, touches, scan_code);
             ysw_keystate_on_press(touch->keystate, scan_code);
         } else {
-            //ESP_LOGI(TAG, "release i=%d, touches=%#x, scan_code=%d", i, touches, scan_code);
+            ESP_LOGI(TAG, "release i=%d, touches=%#x, scan_code=%d", i, touches, scan_code);
             ysw_keystate_on_release(touch->keystate, scan_code);
         }
     }
@@ -102,7 +102,9 @@ void ysw_touch_create_task(ysw_bus_t *bus, ysw_i2c_t *i2c,
     touch->i2c = i2c;
     touch->addresses = addresses;
     touch->scan_code_map = scan_code_map;
-    touch->keystate = ysw_keystate_create(bus, mpr121_count * SENSORS_PER_MPR121);
+    // TODO: find an alternative to using mmv02's keymap for everything
+    touch->keystate = ysw_keystate_create(bus, 40);
+    //touch->keystate = ysw_keystate_create(bus, mpr121_count * SENSORS_PER_MPR121);
 
     ysw_task_config_t config = ysw_task_default_config;
 

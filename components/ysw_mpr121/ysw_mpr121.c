@@ -77,6 +77,7 @@ static uint16_t read_uint16(ysw_i2c_t *i2c, uint8_t address, uint8_t reg)
 
 void ysw_mpr121_initialize(ysw_i2c_t *i2c, uint8_t address)
 {
+    ESP_LOGI(TAG, "initializing mpr121 port=%d, mutex=%p, address=%d", i2c->port, i2c->mutex, address);
     write_register(i2c, address, MPR121_SOFTRESET, 0x63);
     write_register(i2c, address, MPR121_ECR, 0x0);
     uint8_t c = read_uint8(i2c, address, MPR121_CONFIG2);
