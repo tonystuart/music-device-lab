@@ -1092,16 +1092,29 @@ static void on_play(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
     ysw_event_fire_play(editor->bus, notes, editor->section->tempo);
 }
 
-static void on_amp_volume(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_headphone_volume(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
     ysw_event_fire_amp_volume(editor->bus, item->value);
+#ifdef IDF_VER
     // TODO: move this to a codec task
-    ESP_LOGD(TAG, "percent_volume=%d", item->value);
-    extern esp_err_t ac101_set_voice_volume(int volume);
-    ac101_set_voice_volume(item->value);
+    ESP_LOGD(TAG, "headphone_volume=%d", item->value);
+    extern esp_err_t ac101_set_earph_volume(int volume);
+	$(ac101_set_earph_volume(((item->value % 101) * 63) / 100));
+#endif
 }
 
+static void on_speaker_volume(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    ysw_event_fire_amp_volume(editor->bus, item->value);
+#ifdef IDF_VER
+    // TODO: move this to a codec task
+    ESP_LOGD(TAG, "speaker_volume=%d", item->value);
+    extern esp_err_t ac101_set_spk_volume(int volume);
+	$(ac101_set_spk_volume(((item->value % 101) * 63) / 100));
+#endif
+}
 static void on_synth_gain(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
@@ -1598,22 +1611,42 @@ static const ysw_menu_item_t edit_menu[] = {
     { 0, "Edit (Sticky)", YSW_MF_END, NULL, 0, NULL },
 };
 
-static const ysw_menu_item_t amp_volume_menu[] = {
-    { YSW_R1_C1, "10\n(Soft)", YSW_MF_COMMAND, on_amp_volume, 10, NULL },
-    { YSW_R1_C2, "20", YSW_MF_COMMAND, on_amp_volume, 25, NULL },
-    { YSW_R1_C3, "30", YSW_MF_COMMAND, on_amp_volume, 50, NULL },
+static const ysw_menu_item_t headphone_volume_menu[] = {
+    { YSW_R1_C1, "10\n(Soft)", YSW_MF_COMMAND, on_headphone_volume, 10, NULL },
+    { YSW_R1_C2, "20", YSW_MF_COMMAND, on_headphone_volume, 25, NULL },
+    { YSW_R1_C3, "30", YSW_MF_COMMAND, on_headphone_volume, 50, NULL },
 
-    { YSW_R2_C1, "40", YSW_MF_COMMAND, on_amp_volume, 75, NULL },
-    { YSW_R2_C2, "50\n(Normal)", YSW_MF_COMMAND, on_amp_volume, 100, NULL },
-    { YSW_R2_C3, "60", YSW_MF_COMMAND, on_amp_volume, 200, NULL },
+    { YSW_R2_C1, "40", YSW_MF_COMMAND, on_headphone_volume, 75, NULL },
+    { YSW_R2_C2, "50\n(Normal)", YSW_MF_COMMAND, on_headphone_volume, 100, NULL },
+    { YSW_R2_C3, "60", YSW_MF_COMMAND, on_headphone_volume, 200, NULL },
 
-    { YSW_R3_C1, "70", YSW_MF_COMMAND, on_amp_volume, 300, NULL },
-    { YSW_R3_C2, "80", YSW_MF_COMMAND, on_amp_volume, 400, NULL },
-    { YSW_R3_C3, "90\n(Loud)", YSW_MF_COMMAND, on_amp_volume, 500, NULL },
+    { YSW_R3_C1, "70", YSW_MF_COMMAND, on_headphone_volume, 300, NULL },
+    { YSW_R3_C2, "80", YSW_MF_COMMAND, on_headphone_volume, 400, NULL },
+    { YSW_R3_C3, "90\n(Loud)", YSW_MF_COMMAND, on_headphone_volume, 500, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C4, "Off", YSW_MF_COMMAND, on_headphone_volume, 0, NULL },
 
-    { 0, "Volume (%)", YSW_MF_END, NULL, 0, NULL },
+    { 0, "Headphone Volume", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t speaker_volume_menu[] = {
+    { YSW_R1_C1, "10\n(Soft)", YSW_MF_COMMAND, on_speaker_volume, 10, NULL },
+    { YSW_R1_C2, "20", YSW_MF_COMMAND, on_speaker_volume, 25, NULL },
+    { YSW_R1_C3, "30", YSW_MF_COMMAND, on_speaker_volume, 50, NULL },
+
+    { YSW_R2_C1, "40", YSW_MF_COMMAND, on_speaker_volume, 75, NULL },
+    { YSW_R2_C2, "50\n(Normal)", YSW_MF_COMMAND, on_speaker_volume, 100, NULL },
+    { YSW_R2_C3, "60", YSW_MF_COMMAND, on_speaker_volume, 200, NULL },
+
+    { YSW_R3_C1, "70", YSW_MF_COMMAND, on_speaker_volume, 300, NULL },
+    { YSW_R3_C2, "80", YSW_MF_COMMAND, on_speaker_volume, 400, NULL },
+    { YSW_R3_C3, "90\n(Loud)", YSW_MF_COMMAND, on_speaker_volume, 500, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C4, "Off", YSW_MF_COMMAND, on_speaker_volume, 0, NULL },
+
+    { 0, "Speaker Volume", YSW_MF_END, NULL, 0, NULL },
 };
 
 static const ysw_menu_item_t synth_gain_menu[] = {
@@ -1640,7 +1673,8 @@ static const ysw_menu_item_t listen_menu[] = {
     { YSW_R1_C3, "Resume", YSW_MF_COMMAND, ysw_menu_nop, 0, NULL },
 
     { YSW_R2_C1, "Stop", YSW_MF_COMMAND, on_stop, 0, NULL },
-    { YSW_R2_C2, "Amp\nVolume", YSW_MF_PLUS, ysw_menu_nop, 0, amp_volume_menu },
+    { YSW_R2_C2, "Headphn\nVolume", YSW_MF_PLUS, ysw_menu_nop, 0, headphone_volume_menu },
+    { YSW_R2_C3, "Speaker\nVolume", YSW_MF_PLUS, ysw_menu_nop, 0, speaker_volume_menu },
 
     { YSW_R3_C1, "Loop", YSW_MF_COMMAND, on_loop, 0, NULL },
     { YSW_R3_C3, "Synth\nGain", YSW_MF_PLUS, ysw_menu_nop, 0, synth_gain_menu },

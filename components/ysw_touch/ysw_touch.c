@@ -52,10 +52,11 @@ static void process_touches(ysw_touch_t *touch, uint8_t mpr121_index, uint16_t t
         uint8_t scan_code = touch->scan_code_map[button_index];
         bool pressed = touches & (1 << i);
         if (pressed) {
-            ESP_LOGI(TAG, "press i=%d, touches=%#x, scan_code=%d", i, touches, scan_code);
+            //ESP_LOGD(TAG, "press i=%d, touches=%#x, scan_code=%d", i, touches, scan_code);
+            ESP_LOGD(TAG, "press button_index=%d, scan_code=%d", button_index, scan_code);
             ysw_keystate_on_press(touch->keystate, scan_code);
         } else {
-            ESP_LOGI(TAG, "release i=%d, touches=%#x, scan_code=%d", i, touches, scan_code);
+            //ESP_LOGD(TAG, "release i=%d, touches=%#x, scan_code=%d", i, touches, scan_code);
             ysw_keystate_on_release(touch->keystate, scan_code);
         }
     }
@@ -67,8 +68,8 @@ static void scan_touch_sensors(ysw_touch_t *touch)
     for (uint8_t i = 0; i < address_count; i++) {
         uint8_t address = (uintptr_t)ysw_array_get(touch->addresses, i);
         uint16_t touches = ysw_mpr121_get_touches(touch->i2c, address);
-        if (touches != touch->previous_touches[i]) {
-            ESP_LOGD(TAG, "address=%#x, touches=%#x", address, touches);
+        if (touches /* handle repeat */ || touches != touch->previous_touches[i]) {
+            //ESP_LOGD(TAG, "address=%#x, touches=%#x", address, touches);
             process_touches(touch, i, touches);
             touch->previous_touches[i] = touches;
         }
@@ -94,7 +95,7 @@ void ysw_touch_create_task(ysw_bus_t *bus, ysw_i2c_t *i2c,
     uint32_t previous_touches_sz = mpr121_count * YSW_FIELD_SIZE(ysw_touch_t, previous_touches[0]);
     uint32_t touch_sz = sizeof(ysw_touch_t) + previous_touches_sz;
 
-    ESP_LOGD(TAG, "previous_touches_sz=%d, touch_sz=%d", previous_touches_sz, touch_sz);
+    //ESP_LOGD(TAG, "previous_touches_sz=%d, touch_sz=%d", previous_touches_sz, touch_sz);
 
     ysw_touch_t *touch = ysw_heap_allocate(touch_sz);
 

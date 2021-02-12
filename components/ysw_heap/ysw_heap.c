@@ -13,7 +13,13 @@
 #include "stdlib.h"
 
 #define TAG "YSW_HEAP"
+
 #define YSW_HEAP_TRACE 1
+
+#define YSW_HEAP_SOURCE_SPIRAM MALLOC_CAP_SPIRAM
+#define YSW_HEAP_SOURCE_DEFAULT MALLOC_CAP_DEFAULT
+
+#define YSW_HEAP_SOURCE YSW_HEAP_SOURCE_SPIRAM
 
 #ifdef IDF_VER
 
@@ -21,11 +27,11 @@
 
 static void *xmalloc(size_t size)
 {
-    return heap_caps_malloc(size, MALLOC_CAP_SPIRAM);
+    return heap_caps_malloc(size, YSW_HEAP_SOURCE);
 }
 static void *xrealloc(void *p, size_t size)
 {
-    return heap_caps_realloc(p, size, MALLOC_CAP_SPIRAM);
+    return heap_caps_realloc(p, size, YSW_HEAP_SOURCE);
 }
 static void xfree(void *p)
 {
