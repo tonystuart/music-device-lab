@@ -14,25 +14,27 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
-#define YSW_R1_C1 5
-#define YSW_R1_C2 6
-#define YSW_R1_C3 7
-#define YSW_R1_C4 8
+typedef enum {
+	YSW_R1_C1,
+	YSW_R1_C2,
+	YSW_R1_C3,
+	YSW_R1_C4,
 
-#define YSW_R2_C1 16
-#define YSW_R2_C2 17
-#define YSW_R2_C3 18
-#define YSW_R2_C4 19
+	YSW_R2_C1,
+	YSW_R2_C2,
+	YSW_R2_C3,
+	YSW_R2_C4,
 
-#define YSW_R3_C1 25
-#define YSW_R3_C2 26
-#define YSW_R3_C3 27
-#define YSW_R3_C4 28
+	YSW_R3_C1,
+	YSW_R3_C2,
+	YSW_R3_C3,
+	YSW_R3_C4,
 
-#define YSW_R4_C1 36
-#define YSW_R4_C2 37
-#define YSW_R4_C3 38
-#define YSW_R4_C4 39
+	YSW_R4_C1,
+	YSW_R4_C2,
+	YSW_R4_C3,
+	YSW_R4_C4,
+} ysw_app_softkey_t;
 
 extern const ysw_menu_softkey_t ysw_app_softkey_map[];
 

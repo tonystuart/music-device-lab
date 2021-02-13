@@ -82,7 +82,7 @@ typedef struct ysw_menu_item_s ysw_menu_item_t;
 typedef void (*ysw_menu_cb_t)(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item);
 
 typedef struct ysw_menu_item_s {
-    uint32_t scan_code;
+    uint32_t softkey;
     const char *name;
     uint32_t flags;
     ysw_menu_cb_t cb;
@@ -100,11 +100,11 @@ typedef struct ysw_menu_s {
     void *context; // arbitrary context passed through from caller
 } ysw_menu_t;
 
-void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event);
+void ysw_menu_on_softkey_down(ysw_menu_t *menu, ysw_event_t *event);
 
-void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event);
+void ysw_menu_on_softkey_up(ysw_menu_t *menu, ysw_event_t *event);
 
-void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event);
+void ysw_menu_on_softkey_pressed(ysw_menu_t *menu, ysw_event_t *event);
 
 void ysw_menu_nop(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item);
 

@@ -27,11 +27,11 @@ static inline ysw_menu_item_t *get_items(ysw_menu_t *menu)
     return ysw_array_get_top(menu->stack);
 }
 
-static ysw_menu_item_t *find_item_by_scan_code(ysw_menu_t *menu, uint32_t scan_code)
+static ysw_menu_item_t *find_item_by_softkey(ysw_menu_t *menu, uint32_t softkey)
 {
     ysw_menu_item_t *menu_item = ysw_array_get_top(menu->stack);
     while (!(menu_item->flags & YSW_MENU_END)) {
-        if (menu_item->scan_code == scan_code) {
+        if (menu_item->softkey == softkey) {
             return menu_item;
         }
         menu_item++;
@@ -39,7 +39,7 @@ static ysw_menu_item_t *find_item_by_scan_code(ysw_menu_t *menu, uint32_t scan_c
     return NULL;
 }
 
-static int32_t find_scan_code_by_button_index(ysw_menu_t *menu, int32_t button_index)
+static int32_t find_softkey_by_button_index(ysw_menu_t *menu, int32_t button_index)
 {
     uint16_t label_index = 0;
     const ysw_menu_softkey_t *softkey = menu->softkey_map;
@@ -54,22 +54,22 @@ static int32_t find_scan_code_by_button_index(ysw_menu_t *menu, int32_t button_i
     return -1;
 }
 
-static void fire_events(ysw_menu_t *menu, uint32_t scan_code)
+static void fire_events(ysw_menu_t *menu, uint32_t softkey)
 {
-    ysw_event_key_down_t key_down = {
-        .scan_code = scan_code,
+    ysw_event_softkey_down_t key_down = {
+        .softkey = softkey,
     };
-    ysw_event_fire_key_down(menu->bus, &key_down);
+    ysw_event_fire_softkey_down(menu->bus, &key_down);
 
-    ysw_event_key_pressed_t key_pressed = {
-        .scan_code = scan_code,
+    ysw_event_softkey_pressed_t key_pressed = {
+        .softkey = softkey,
     };
-    ysw_event_fire_key_pressed(menu->bus, &key_pressed);
+    ysw_event_fire_softkey_pressed(menu->bus, &key_pressed);
 
-    ysw_event_key_up_t key_up = {
-        .scan_code = scan_code,
+    ysw_event_softkey_up_t key_up = {
+        .softkey = softkey,
     };
-    ysw_event_fire_key_up(menu->bus, &key_up);
+    ysw_event_fire_softkey_up(menu->bus, &key_up);
 }
 
 static void event_handler(lv_obj_t *btnmatrix, lv_event_t button_event)
@@ -78,28 +78,28 @@ static void event_handler(lv_obj_t *btnmatrix, lv_event_t button_event)
     if (menu) {
         uint16_t button_index = lv_btnmatrix_get_active_btn(btnmatrix);
         if (button_index != LV_BTNMATRIX_BTN_NONE) {
-            int32_t scan_code = find_scan_code_by_button_index(menu, button_index);
-            if (scan_code != -1) {
-                ysw_menu_item_t *item = find_item_by_scan_code(menu, scan_code);
-                if (item) { // may have a scan_code but no menu_item
+            int32_t softkey = find_softkey_by_button_index(menu, button_index);
+            if (softkey != -1) {
+                ysw_menu_item_t *item = find_item_by_softkey(menu, softkey);
+                if (item) { // may have a softkey but no menu_item
                     if (item->flags & YSW_MENU_PREVIEW) {
                         if (button_event == LV_EVENT_PRESSED) {
                             // note that lv_obj_set_hidden cancels btnmatrix event processing
                             ysw_style_softkeys_hidden(menu->softkeys->container,
                                     menu->softkeys->label,
                                     menu->softkeys->btnmatrix);
-                            fire_events(menu, scan_code);
+                            fire_events(menu, softkey);
                         } else if (button_event == LV_EVENT_LONG_PRESSED_REPEAT &&
                                 item->flags & YSW_MENU_REPEAT) {
                             // called every LV_INDEV_LONG_PRESS_REP_TIME ms after LV_INDEV_LONG_PRESS_TIME
-                            fire_events(menu, scan_code);
+                            fire_events(menu, softkey);
                         } else if (button_event == LV_EVENT_RELEASED) {
                             ysw_style_softkeys(menu->softkeys->container,
                                     menu->softkeys->label,
                                     menu->softkeys->btnmatrix);
                         }
                     } else if (button_event == LV_EVENT_RELEASED) {
-                        fire_events(menu, scan_code);
+                        fire_events(menu, softkey);
                     }
                 }
             }
@@ -156,7 +156,7 @@ static const char** create_button_map(ysw_menu_t *menu)
         if (*softkey == YSW_MENU_ENDLINE) {
             *p = "\n";
         } else {
-            ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, *softkey);
+            ysw_menu_item_t *menu_item = find_item_by_softkey(menu, *softkey);
             if (menu_item) {
                 *p = menu_item->name;
             } else {
@@ -289,17 +289,17 @@ static void reset_menu(ysw_menu_t *menu)
     }
 }
 
-void ysw_menu_on_key_down(ysw_menu_t *menu, ysw_event_t *event)
+void ysw_menu_on_softkey_down(ysw_menu_t *menu, ysw_event_t *event)
 {
-    ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_down.scan_code);
+    ysw_menu_item_t *menu_item = find_item_by_softkey(menu, event->softkey_down.softkey);
     if (menu_item && menu_item->flags & YSW_MENU_DOWN) {
         menu_item->cb(menu, event, menu_item);
     }
 }
 
-void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
+void ysw_menu_on_softkey_up(ysw_menu_t *menu, ysw_event_t *event)
 {
-    ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_up.scan_code);
+    ysw_menu_item_t *menu_item = find_item_by_softkey(menu, event->softkey_up.softkey);
     if (menu_item) {
         if (menu_item->flags & YSW_MENU_UP) {
             menu_item->cb(menu, event, menu_item);
@@ -328,9 +328,9 @@ void ysw_menu_on_key_up(ysw_menu_t *menu, ysw_event_t *event)
     }
 }
 
-void ysw_menu_on_key_pressed(ysw_menu_t *menu, ysw_event_t *event)
+void ysw_menu_on_softkey_pressed(ysw_menu_t *menu, ysw_event_t *event)
 {
-    ysw_menu_item_t *menu_item = find_item_by_scan_code(menu, event->key_pressed.scan_code);
+    ysw_menu_item_t *menu_item = find_item_by_softkey(menu, event->softkey_pressed.softkey);
     if (menu_item && menu_item->flags & YSW_MENU_PRESS) {
         menu_item->cb(menu, event, menu_item);
     }

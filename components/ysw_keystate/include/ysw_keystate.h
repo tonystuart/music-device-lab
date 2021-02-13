@@ -19,11 +19,11 @@ typedef struct {
 
 typedef struct {
     ysw_bus_t *bus;
-    uint8_t size;
+    uint32_t size;
     ysw_keystate_state_t state[];
 } ysw_keystate_t;
 
-ysw_keystate_t *ysw_keystate_create(ysw_bus_t *bus, uint8_t size);
+ysw_keystate_t *ysw_keystate_create(ysw_bus_t *bus, uint32_t size);
 void ysw_keystate_on_press(ysw_keystate_t *keystate, uint8_t scan_code);
 void ysw_keystate_on_release(ysw_keystate_t *keystate, uint8_t scan_code);
 void ysw_keystate_free(ysw_keystate_t *keystate);

@@ -37,6 +37,11 @@ typedef enum {
     YSW_EVENT_KEY_DOWN,
     YSW_EVENT_KEY_PRESSED,
     YSW_EVENT_KEY_UP,
+    YSW_EVENT_NOTEKEY_DOWN,
+    YSW_EVENT_NOTEKEY_UP,
+    YSW_EVENT_SOFTKEY_DOWN,
+    YSW_EVENT_SOFTKEY_PRESSED,
+    YSW_EVENT_SOFTKEY_UP,
     YSW_EVENT_CHOOSER_SELECT,
 } ysw_event_type_t;
 
@@ -113,7 +118,6 @@ typedef struct {
 typedef struct {
     uint8_t scan_code;
     uint32_t time;
-    uint32_t duration;
 } ysw_event_key_down_t;
 
 typedef struct {
@@ -129,6 +133,36 @@ typedef struct {
     uint32_t duration;
     uint32_t repeat_count;
 } ysw_event_key_up_t;
+
+typedef struct {
+    uint8_t midi_note;
+    uint32_t time;
+} ysw_event_notekey_down_t;
+
+typedef struct {
+    uint8_t midi_note;
+    uint32_t time;
+    uint32_t duration;
+} ysw_event_notekey_up_t;
+
+typedef struct {
+    uint8_t softkey;
+    uint32_t time;
+} ysw_event_softkey_down_t;
+
+typedef struct {
+    uint8_t softkey;
+    uint32_t time;
+    uint32_t duration;
+    uint32_t repeat_count;
+} ysw_event_softkey_pressed_t;
+
+typedef struct {
+    uint8_t softkey;
+    uint32_t time;
+    uint32_t duration;
+    uint32_t repeat_count;
+} ysw_event_softkey_up_t;
 
 typedef struct {
     zm_section_t *section;
@@ -152,6 +186,11 @@ typedef struct {
         ysw_event_key_down_t key_down;
         ysw_event_key_pressed_t key_pressed;
         ysw_event_key_up_t key_up;
+        ysw_event_notekey_down_t notekey_down;
+        ysw_event_notekey_up_t notekey_up;
+        ysw_event_softkey_down_t softkey_down;
+        ysw_event_softkey_pressed_t softkey_pressed;
+        ysw_event_softkey_up_t softkey_up;
         ysw_event_chooser_select_t chooser_select;
     };
 } ysw_event_t;
@@ -171,6 +210,11 @@ void ysw_event_fire_note_status(ysw_bus_t *bus, ysw_note_t *note);
 void ysw_event_fire_key_down(ysw_bus_t *bus, ysw_event_key_down_t *key_down);
 void ysw_event_fire_key_pressed(ysw_bus_t *bus, ysw_event_key_pressed_t *key_pressed);
 void ysw_event_fire_key_up(ysw_bus_t *bus, ysw_event_key_up_t *key_up);
+void ysw_event_fire_notekey_down(ysw_bus_t *bus, ysw_event_notekey_down_t *notekey_down);
+void ysw_event_fire_notekey_up(ysw_bus_t *bus, ysw_event_notekey_up_t *notekey_up);
+void ysw_event_fire_softkey_down(ysw_bus_t *bus, ysw_event_softkey_down_t *softkey_down);
+void ysw_event_fire_softkey_pressed(ysw_bus_t *bus, ysw_event_softkey_pressed_t *softkey_pressed);
+void ysw_event_fire_softkey_up(ysw_bus_t *bus, ysw_event_softkey_up_t *softkey_up);
 void ysw_event_fire_loop(ysw_bus_t *bus, bool loop);
 void ysw_event_fire_play(ysw_bus_t *bus, ysw_array_t *notes, uint8_t bpm);
 void ysw_event_fire_stop(ysw_bus_t *bus);

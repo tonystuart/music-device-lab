@@ -30,7 +30,6 @@ typedef struct {
     ysw_bus_t *bus;
     ysw_i2c_t *i2c;
     ysw_array_t *addresses;
-    const uint8_t *scan_code_map;
     ysw_keystate_t *keystate;
     uint16_t previous_touches[];
 } ysw_touch_t;
@@ -49,15 +48,12 @@ static void process_touches(ysw_touch_t *touch, uint8_t mpr121_index, uint16_t t
 {
     for (uint8_t i = 0; i < SENSORS_PER_MPR121; i++) {
         uint8_t button_index = (mpr121_index * SENSORS_PER_MPR121) + i;
-        uint8_t scan_code = touch->scan_code_map[button_index];
         bool pressed = touches & (1 << i);
         if (pressed) {
-            //ESP_LOGD(TAG, "press i=%d, touches=%#x, scan_code=%d", i, touches, scan_code);
-            ESP_LOGD(TAG, "press button_index=%d, scan_code=%d", button_index, scan_code);
-            ysw_keystate_on_press(touch->keystate, scan_code);
+            ESP_LOGD(TAG, "press button_index=%d", button_index);
+            ysw_keystate_on_press(touch->keystate, button_index);
         } else {
-            //ESP_LOGD(TAG, "release i=%d, touches=%#x, scan_code=%d", i, touches, scan_code);
-            ysw_keystate_on_release(touch->keystate, scan_code);
+            ysw_keystate_on_release(touch->keystate, button_index);
         }
     }
 }
@@ -88,24 +84,19 @@ static void process_event(void *context, ysw_event_t *event)
     scan_touch_sensors(touch);
 }
 
-void ysw_touch_create_task(ysw_bus_t *bus, ysw_i2c_t *i2c,
-        ysw_array_t *addresses, const uint8_t scan_code_map[])
+void ysw_touch_create_task(ysw_bus_t *bus, ysw_i2c_t *i2c, ysw_array_t *addresses)
 {
     uint8_t mpr121_count = ysw_array_get_count(addresses);
-    uint32_t previous_touches_sz = mpr121_count * YSW_FIELD_SIZE(ysw_touch_t, previous_touches[0]);
-    uint32_t touch_sz = sizeof(ysw_touch_t) + previous_touches_sz;
+    uint32_t sensor_count = mpr121_count * SENSORS_PER_MPR121;
+    uint32_t fam_size = mpr121_count * YSW_FIELD_SIZE(ysw_touch_t, previous_touches[0]);
+    uint32_t touch_size = sizeof(ysw_touch_t) + fam_size;
 
-    //ESP_LOGD(TAG, "previous_touches_sz=%d, touch_sz=%d", previous_touches_sz, touch_sz);
-
-    ysw_touch_t *touch = ysw_heap_allocate(touch_sz);
+    ysw_touch_t *touch = ysw_heap_allocate(touch_size);
 
     touch->bus = bus;
     touch->i2c = i2c;
     touch->addresses = addresses;
-    touch->scan_code_map = scan_code_map;
-    // TODO: find an alternative to using mmv02's keymap for everything
-    touch->keystate = ysw_keystate_create(bus, 40);
-    //touch->keystate = ysw_keystate_create(bus, mpr121_count * SENSORS_PER_MPR121);
+    touch->keystate = ysw_keystate_create(bus, sensor_count);
 
     ysw_task_config_t config = ysw_task_default_config;
 

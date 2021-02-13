@@ -9,8 +9,10 @@
 
 #pragma once
 
-#include "ysw_array.h"
 #include "ysw_bus.h"
-#include "ysw_i2c.h"
+#include "stdlib.h"
 
-void ysw_touch_create_task(ysw_bus_t *bus, ysw_i2c_t *i2c, ysw_array_t *addresses);
+typedef int8_t ysw_mapper_item_t;
+
+void ysw_mapper_create_task(ysw_bus_t *bus, const ysw_mapper_item_t *map);
+

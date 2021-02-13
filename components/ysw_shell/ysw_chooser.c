@@ -213,14 +213,14 @@ static void process_event(void *context, ysw_event_t *event)
 {
     ysw_chooser_t *chooser = context;
     switch (event->header.type) {
-        case YSW_EVENT_KEY_DOWN:
-            ysw_menu_on_key_down(chooser->menu, event);
+        case YSW_EVENT_SOFTKEY_DOWN:
+            ysw_menu_on_softkey_down(chooser->menu, event);
             break;
-        case YSW_EVENT_KEY_UP:
-            ysw_menu_on_key_up(chooser->menu, event);
+        case YSW_EVENT_SOFTKEY_UP:
+            ysw_menu_on_softkey_up(chooser->menu, event);
             break;
-        case YSW_EVENT_KEY_PRESSED:
-            ysw_menu_on_key_pressed(chooser->menu, event);
+        case YSW_EVENT_SOFTKEY_PRESSED:
+            ysw_menu_on_softkey_pressed(chooser->menu, event);
             break;
         default:
             break;
@@ -324,11 +324,11 @@ void ysw_chooser_create(ysw_bus_t *bus, zm_music_t *music, zm_section_x row, voi
     chooser->menu = ysw_menu_create(bus, chooser_menu, ysw_app_softkey_map, chooser);
 
     chooser->queue = ysw_app_create_queue();
-    ysw_bus_subscribe(bus, YSW_ORIGIN_KEYBOARD, chooser->queue);
+    ysw_bus_subscribe(bus, YSW_ORIGIN_SOFTKEY, chooser->queue);
 
     ysw_app_handle_events(chooser->queue, process_event, chooser);
 
-    ysw_bus_unsubscribe(bus, YSW_ORIGIN_KEYBOARD, chooser->queue);
+    ysw_bus_unsubscribe(bus, YSW_ORIGIN_SOFTKEY, chooser->queue);
     ysw_bus_delete_queue(bus, chooser->queue);
 
     ysw_menu_free(chooser->menu);

@@ -140,6 +140,56 @@ void ysw_event_fire_key_up(ysw_bus_t *bus, ysw_event_key_up_t *key_up)
     ysw_event_publish(bus, &event);
 }
 
+void ysw_event_fire_notekey_down(ysw_bus_t *bus, ysw_event_notekey_down_t *notekey_down)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_NOTE,
+        .header.type = YSW_EVENT_NOTEKEY_DOWN,
+        .notekey_down = *notekey_down,
+    };
+    ysw_event_publish(bus, &event);
+}
+
+void ysw_event_fire_notekey_up(ysw_bus_t *bus, ysw_event_notekey_up_t *notekey_up)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_NOTE,
+        .header.type = YSW_EVENT_NOTEKEY_UP,
+        .notekey_up = *notekey_up,
+    };
+    ysw_event_publish(bus, &event);
+}
+
+void ysw_event_fire_softkey_down(ysw_bus_t *bus, ysw_event_softkey_down_t *softkey_down)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_SOFTKEY,
+        .header.type = YSW_EVENT_SOFTKEY_DOWN,
+        .softkey_down = *softkey_down,
+    };
+    ysw_event_publish(bus, &event);
+}
+
+void ysw_event_fire_softkey_pressed(ysw_bus_t *bus, ysw_event_softkey_pressed_t *softkey_pressed)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_SOFTKEY,
+        .header.type = YSW_EVENT_SOFTKEY_PRESSED,
+        .softkey_pressed = *softkey_pressed,
+    };
+    ysw_event_publish(bus, &event);
+}
+
+void ysw_event_fire_softkey_up(ysw_bus_t *bus, ysw_event_softkey_up_t *softkey_up)
+{
+    ysw_event_t event = {
+        .header.origin = YSW_ORIGIN_SOFTKEY,
+        .header.type = YSW_EVENT_SOFTKEY_UP,
+        .softkey_up = *softkey_up,
+    };
+    ysw_event_publish(bus, &event);
+}
+
 void ysw_event_fire_loop(ysw_bus_t *bus, bool loop)
 {
     ysw_event_t event = {

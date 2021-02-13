@@ -328,7 +328,6 @@ ysw_mod_synth_t *ysw_mod_synth_create_task(ysw_bus_t *bus, ysw_mod_host_t *mod_h
     ysw_task_subscribe(task, YSW_ORIGIN_EDITOR);
     ysw_task_subscribe(task, YSW_ORIGIN_SEQUENCER);
     ysw_task_subscribe(task, YSW_ORIGIN_SAMPLER);
-    ysw_task_subscribe(task, YSW_ORIGIN_SINK);
 
     return mod_synth;
 }

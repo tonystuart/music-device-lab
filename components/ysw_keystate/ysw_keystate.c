@@ -69,7 +69,7 @@ void ysw_keystate_on_release(ysw_keystate_t *keystate, uint8_t scan_code)
     }
 }
 
-ysw_keystate_t *ysw_keystate_create(ysw_bus_t *bus, uint8_t size)
+ysw_keystate_t *ysw_keystate_create(ysw_bus_t *bus, uint32_t size)
 {
     ysw_keystate_t *keystate = ysw_heap_allocate(
             sizeof(ysw_keystate_t) + (sizeof(ysw_keystate_state_t) * size));
