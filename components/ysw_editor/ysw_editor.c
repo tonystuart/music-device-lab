@@ -61,6 +61,14 @@ typedef struct {
 
 #define YSW_EDITOR_MODE_COUNT 3
 
+// TODO: lookup chord type by name
+
+#define MAJOR 0
+#define MINOR 1
+#define DOMINANT 4
+#define AUGMENTED 5
+#define DIMINISHED 6
+
 typedef struct {
     ysw_bus_t *bus;
     ysw_menu_t *menu;
@@ -84,6 +92,7 @@ typedef struct {
     bool loop;
     bool insert;
     bool modified;
+    bool harp;
     zm_step_x position;
     ysw_editor_mode_t mode;
 
@@ -96,6 +105,9 @@ typedef struct {
 
     insert_settings insert_settings;
     zm_chord_t chord_builder;
+
+    zm_note_t harp_chord;
+    zm_note_t harp_notes[16];
 
 } ysw_editor_t;
 
@@ -270,7 +282,11 @@ static void display_melody_mode(ysw_editor_t *editor)
     } else {
         snprintf(value, sizeof(value), "%s", editor->section->name);
     }
-    ysw_header_set_mode(editor->header, modes[editor->mode], value);
+    if (editor->harp) {
+        ysw_header_set_mode(editor->header, "Harp", value);
+    } else {
+        ysw_header_set_mode(editor->header, modes[editor->mode], value);
+    }
 }
 
 static void display_chord_mode(ysw_editor_t *editor)
@@ -971,6 +987,14 @@ static void on_mode_rhythm(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t
     display_mode(editor);
 }
 
+static void on_mode_harp(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_editor_t *editor = menu->context;
+    editor->mode = YSW_EDITOR_MODE_MELODY;
+    editor->harp = !editor->harp;
+    display_mode(editor);
+}
+
 static ysw_menu_item_t program_template[YSW_APP_SOFTKEY_SZ + 1];
 
 static void on_program_melody_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -1538,12 +1562,113 @@ static void on_note_status(ysw_editor_t *editor, ysw_event_t *event)
 
 static void on_notekey_down(ysw_editor_t *editor, ysw_event_notekey_down_t *m)
 {
-    press_note(editor, m->midi_note, m->time);
+    if (editor->harp) {
+        int8_t type_index = -1;
+        int8_t root_index = -1;
+        int8_t note_index = -1;
+        switch (m->midi_note) {
+            case 60:
+                root_index = m->midi_note;
+                break;
+            case 61:
+                type_index = MAJOR;
+                break;
+            case 62:
+                root_index = m->midi_note;
+                break;
+            case 63:
+                type_index = MINOR;
+                break;
+            case 64:
+                root_index = m->midi_note;
+                break;
+            case 65:
+                root_index = m->midi_note;
+                break;
+            case 66:
+                type_index = DOMINANT;
+                break;
+            case 67:
+                root_index = m->midi_note;
+                break;
+            case 68:
+                type_index = AUGMENTED;
+                break;
+            case 69:
+                root_index = m->midi_note;
+                break;
+            case 70:
+                type_index = DIMINISHED;
+                break;
+            case 71:
+                root_index = m->midi_note;
+                break;
+            case 77:
+                note_index = 0;
+                break;
+            case 79:
+                note_index = 1;
+                break;
+            case 81:
+                note_index = 2;
+                break;
+            case 83:
+                note_index = 3;
+                break;
+            case 84:
+                note_index = 4;
+                break;
+        }
+        if (type_index != -1) {
+            editor->chord_type = ysw_array_get(editor->music->chord_types, type_index);
+        } else if (root_index != -1) {
+            editor->harp_chord = root_index;
+        } else if (note_index != -1) {
+            uint32_t note_count = ysw_array_get_count(editor->chord_type->distances);
+            if (note_index < note_count) {
+                zm_note_t note = editor->harp_chord +
+                        YSW_INT ysw_array_get(editor->chord_type->distances, note_index);
+                editor->harp_notes[note_index] = note;
+                ESP_LOGD(TAG, "press note_index=%d, chord=%s, note=%d", note_index, editor->chord_type->name, note);
+                press_note(editor, note, m->time);
+            }
+        }
+    } else {
+        press_note(editor, m->midi_note, m->time);
+    }
 }
 
 static void on_notekey_up(ysw_editor_t *editor, ysw_event_notekey_up_t *m)
 {
-    release_note(editor, m->midi_note, m->time, m->duration);
+    if (editor->harp) {
+        int8_t note_index = -1;
+        switch (m->midi_note) {
+            case 77:
+                note_index = 0;
+                break;
+            case 79:
+                note_index = 1;
+                break;
+            case 81:
+                note_index = 2;
+                break;
+            case 83:
+                note_index = 3;
+                break;
+            case 84:
+                note_index = 4;
+                break;
+        }
+        if (note_index != -1) {
+            uint32_t note_count = ysw_array_get_count(editor->chord_type->distances);
+            if (note_index < note_count) {
+                ESP_LOGD(TAG, "release note_index=%d, note=%d", note_index, editor->harp_notes[note_index]);
+                release_note(editor, editor->harp_notes[note_index], m->time, m->duration);
+            }
+        }
+    } else {
+        release_note(editor, m->midi_note, m->time, m->duration);
+    }
 }
 
 static void process_event(void *context, ysw_event_t *event)
@@ -1980,6 +2105,8 @@ static const ysw_menu_item_t input_mode_menu[] = {
     { YSW_R1_C1, "Note", YSW_MF_COMMAND, on_mode_melody, 0, NULL },
     { YSW_R1_C2, "Chord", YSW_MF_COMMAND, on_mode_chord, 0, NULL },
     { YSW_R1_C3, "Rhythm", YSW_MF_COMMAND, on_mode_rhythm, 0, NULL },
+
+    { YSW_R2_C1, "Harp", YSW_MF_COMMAND, on_mode_harp, 0, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
