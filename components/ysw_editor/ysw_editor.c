@@ -469,7 +469,8 @@ static zm_chord_style_t *find_matching_style(ysw_editor_t *editor, bool preincre
             current = (current + 1) % style_count;
         }
     }
-    assert(false);
+    ESP_LOGE(TAG, "no matching style for chord with distance_count=%d", distance_count);
+    abort();
 }
 
 static void set_chord_type(ysw_editor_t *editor, zm_chord_type_x chord_type_x)

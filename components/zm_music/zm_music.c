@@ -31,7 +31,7 @@
 
 #define PATH_SIZE 128
 #define RECORD_SIZE 128
-#define TOKENS_SIZE 20
+#define TOKENS_SIZE 64
 #define NAME_SIZE 32
 
 // For drum beat and stroke, see https://en.wikipedia.org/wiki/Drum_beat
@@ -275,7 +275,7 @@ static void emit_programs(zm_mfw_t *zm_mfw)
     }
 }
 
-#define MAX_DISTANCES 16
+#define MAX_DISTANCES 32
 
 static void parse_chord_type(zm_mfr_t *zm_mfr)
 {
