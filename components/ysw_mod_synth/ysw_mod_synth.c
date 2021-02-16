@@ -185,19 +185,37 @@ static uint8_t allocate_voice(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8
 {
     voice_t *voice = NULL;
     uint8_t voice_index = 0;
-    // TODO: use stealing logic to free any voices that have reached end of sample
+    // See if there are any free voices to allocate
     if (mod_synth->voice_count < MAX_VOICES) {
+        // If so allocate the first one from the free zone
         voice_index = mod_synth->voice_count++;
         voice = &mod_synth->voices[voice_index];
     } else {
-        // steal oldest voice
+        // Otherwise no free voices to allocate, so iterate through all active voices
         uint32_t time = UINT_MAX;
         for (uint8_t i = 0; i < mod_synth->voice_count; i++) {
-            if (mod_synth->voices[i].time < time) {
+            // See if voice has reached end of sample without repeat
+            if (!mod_synth->voices[i].length && mod_synth->voices[i].replen < 2) {
+                ESP_LOGD(TAG, "voice_count=%d, voice[%d] reached end of sample", mod_synth->voice_count, i);
+                // Yes, see if it is last one in active zone and will be first one in free zone
+                if (--mod_synth->voice_count != voice_index) {
+                    // It wasn't last one so replace it with the one that was previously at the end
+                    mod_synth->voices[i] = mod_synth->voices[mod_synth->voice_count];
+                    // And process the newly relocated voice on next iteration
+                    i--;
+                }
+            } else if (mod_synth->voices[i].time < time) {
+                // Otherwise voice is still playing, keep track of oldest voice in case we need to steal it
                 time = mod_synth->voices[i].time = time;
                 voice_index = i;
             }
         }
+        // See if we freed one or more voices
+        if (mod_synth->voice_count < MAX_VOICES) {
+            // Yes, allocate first one from free zone
+            voice_index = mod_synth->voice_count++;
+        }
+        // At this point, voice_index is either first one in free zone or oldest voice encountered
         voice = &mod_synth->voices[voice_index];
     }
     voice->channel = channel;
