@@ -27,6 +27,7 @@
 #include "esp_log.h"
 #include "assert.h"
 #include "limits.h"
+#include "stdlib.h"
 
 #define TAG "YSW_EDITOR"
 
@@ -1560,78 +1561,26 @@ static void on_note_status(ysw_editor_t *editor, ysw_event_t *event)
     }
 }
 
+static int8_t notekey_types[] = {
+    +1, -1, +2, -2, +3, +4, -3, +5, -4, +6, -5, +7, +8, -6, +9, -7, +10, +11, -8, +12, -9, +13, -10, +14
+};
+
+#define NOTE_INDEX_SZ (sizeof(notekey_types) / sizeof(notekey_types[0]))
+
 static void on_notekey_down(ysw_editor_t *editor, ysw_event_notekey_down_t *m)
 {
     if (editor->harp) {
-        int8_t type_index = -1;
-        int8_t root_index = -1;
-        int8_t note_index = -1;
-        switch (m->midi_note) {
-            case 60:
-                root_index = m->midi_note;
-                break;
-            case 61:
-                type_index = MAJOR;
-                break;
-            case 62:
-                root_index = m->midi_note;
-                break;
-            case 63:
-                type_index = MINOR;
-                break;
-            case 64:
-                root_index = m->midi_note;
-                break;
-            case 65:
-                root_index = m->midi_note;
-                break;
-            case 66:
-                type_index = DOMINANT;
-                break;
-            case 67:
-                root_index = m->midi_note;
-                break;
-            case 68:
-                type_index = AUGMENTED;
-                break;
-            case 69:
-                root_index = m->midi_note;
-                break;
-            case 70:
-                type_index = DIMINISHED;
-                break;
-            case 71:
-                root_index = m->midi_note;
-                break;
-            case 77:
-                note_index = 0;
-                break;
-            case 79:
-                note_index = 1;
-                break;
-            case 81:
-                note_index = 2;
-                break;
-            case 83:
-                note_index = 3;
-                break;
-            case 84:
-                note_index = 4;
-                break;
-        }
-        if (type_index != -1) {
-            editor->chord_type = ysw_array_get(editor->music->chord_types, type_index);
-        } else if (root_index != -1) {
-            editor->harp_chord = root_index;
-        } else if (note_index != -1) {
-            uint32_t note_count = ysw_array_get_count(editor->chord_type->distances);
-            if (note_index < note_count) {
-                zm_note_t note = editor->harp_chord +
-                        YSW_INT ysw_array_get(editor->chord_type->distances, note_index);
-                editor->harp_notes[note_index] = note;
-                ESP_LOGD(TAG, "press note_index=%d, chord=%s, note=%d", note_index, editor->chord_type->name, note);
-                press_note(editor, note, m->time);
-            }
+        int8_t semitone = (m->midi_note - 60) % NOTE_INDEX_SZ;
+        int8_t notekey_type = notekey_types[semitone];
+        if (notekey_type > 0) {
+            uint32_t distance_count = ysw_array_get_count(editor->chord_type->distances);
+            int8_t note_index = notekey_type - 1;
+            int8_t distance_index = note_index % distance_count;
+            int8_t octave = note_index / distance_count;
+            int8_t distance = YSW_INT ysw_array_get(editor->chord_type->distances, distance_index);
+            zm_note_t note = 36 + (octave * 12) + distance;
+            ESP_LOGD(TAG, "input=%d, note_index=%d, distance_index=%d, octave=%d, distance=%d, output=%d", m->midi_note, note_index, distance_index, octave, distance, note);
+            press_note(editor, note, m->time);
         }
     } else {
         press_note(editor, m->midi_note, m->time);
@@ -1641,31 +1590,6 @@ static void on_notekey_down(ysw_editor_t *editor, ysw_event_notekey_down_t *m)
 static void on_notekey_up(ysw_editor_t *editor, ysw_event_notekey_up_t *m)
 {
     if (editor->harp) {
-        int8_t note_index = -1;
-        switch (m->midi_note) {
-            case 77:
-                note_index = 0;
-                break;
-            case 79:
-                note_index = 1;
-                break;
-            case 81:
-                note_index = 2;
-                break;
-            case 83:
-                note_index = 3;
-                break;
-            case 84:
-                note_index = 4;
-                break;
-        }
-        if (note_index != -1) {
-            uint32_t note_count = ysw_array_get_count(editor->chord_type->distances);
-            if (note_index < note_count) {
-                ESP_LOGD(TAG, "release note_index=%d, note=%d", note_index, editor->harp_notes[note_index]);
-                release_note(editor, editor->harp_notes[note_index], m->time, m->duration);
-            }
-        }
     } else {
         release_note(editor, m->midi_note, m->time, m->duration);
     }
