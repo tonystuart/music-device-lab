@@ -11,7 +11,6 @@
 
 #ifndef IDF_VER
 
-#include "ysw_editor.h"
 #include "ysw_alsa.h"
 #include "ysw_app.h"
 #include "ysw_event.h"
@@ -20,9 +19,9 @@
 #include "ysw_mapper.h"
 #include "ysw_midi.h"
 #include "ysw_sequencer.h"
-#include "ysw_staff.h"
 #include "ysw_mod_music.h"
 #include "ysw_mod_synth.h"
+#include "ysw_shell.h"
 #include "ysw_simulator.h"
 #include "zm_music.h"
 #include "lvgl.h"
@@ -214,9 +213,12 @@ int main(int argc, char *argv[])
     extern void ysw_test_all();
     ysw_test_all();
 #endif
-    extern void ysw_main_create();
-    ysw_main_create();
-
+    ysw_bus_t *bus = ysw_event_create_bus();
+    ysw_main_init_device(bus);
+    zm_music_t *music = zm_load_music();
+    ysw_main_init_synthesizer(bus, music);
+    ysw_sequencer_create_task(bus);
+    ysw_shell_create(bus, music);
     return 0;
 }
 
