@@ -9,7 +9,7 @@ include $(IDF_PATH)/make/project.mk
 
 # Uses -Werror=all by default, to allow a warning, use -W-no-error=warning-name
 
-CFLAGS += -DYSW_MAIN_SYNTH_MODEL=4 -DYSW_MAIN_DISPLAY_MODEL=2 -DA2DP_SUPPORT=1
+# CFLAGS += -DYSW_MAIN_SYNTH_MODEL=4 -DYSW_MAIN_DISPLAY_MODEL=2 -DA2DP_SUPPORT=1
 
 display-macros:
 	echo CC=$(CC)

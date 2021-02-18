@@ -9,8 +9,9 @@
 
 #pragma once
 
-#include "ysw_bus.h"
+#include "fluid_sys.h"
+#include "fluid_adriver.h"
+#include "fluid_settings.h"
 
-#define YSW_MUSIC_SOUNDFONT "/spiffs/music.sf2"
-
-void ysw_fluid_synth_create_task(ysw_bus_t *bus, const char *sf_filename, const char *driver);
+fluid_audio_driver_t *ysw_i2s_driver_new(fluid_settings_t *settings, fluid_synth_t *synth);
+void ysw_i2s_driver_delete(fluid_audio_driver_t *p);

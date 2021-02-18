@@ -107,9 +107,6 @@ typedef struct {
     insert_settings insert_settings;
     zm_chord_t chord_builder;
 
-    zm_note_t harp_chord;
-    zm_note_t harp_notes[16];
-
 } ysw_editor_t;
 
 static ysw_array_t *clipboard; // shared clipboard
@@ -1584,6 +1581,7 @@ static void on_notekey_down(ysw_editor_t *editor, ysw_event_notekey_down_t *m)
         }
     } else {
         press_note(editor, m->midi_note, m->time);
+        //fire_note_on(editor, m->midi_note, MELODY_CHANNEL);
     }
 }
 
@@ -1592,6 +1590,7 @@ static void on_notekey_up(ysw_editor_t *editor, ysw_event_notekey_up_t *m)
     if (editor->harp) {
     } else {
         release_note(editor, m->midi_note, m->time, m->duration);
+        //fire_note_off(editor, m->midi_note, MELODY_CHANNEL);
     }
 }
 

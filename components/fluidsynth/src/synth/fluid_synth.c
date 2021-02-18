@@ -4069,11 +4069,14 @@ round_clip_to_i16(float x)
  * @note Dithering is performed when converting from internal floating point to
  * 16 bit audio.
  */
+#include "esp_log.h"
+#define TAG "FLUID_SYNTH"
 int
 fluid_synth_write_s16(fluid_synth_t *synth, int len,
                       void *lout, int loff, int lincr,
                       void *rout, int roff, int rincr)
 {
+    //ESP_LOGD(TAG, "fluid_synth_write_s16 synth=%p", synth);
     int di, n, cur, size;
     int16_t *left_out = (int16_t *)lout + loff;
     int16_t *right_out = (int16_t *)rout + roff;
@@ -4095,6 +4098,8 @@ fluid_synth_write_s16(fluid_synth_t *synth, int len,
        TRUE instructs the mixer that internal audio effects will be mixed in first internal
        audio dry buffers.
     */
+    //ESP_LOGD(TAG, "fluid_synth_write_s16 synth->eventhandler=%p", synth->eventhandler);
+    //ESP_LOGD(TAG, "fluid_synth_write_s16 eventhandler->mixer=%p", synth->eventhandler->mixer);
     fluid_rvoice_mixer_set_mix_fx(synth->eventhandler->mixer, TRUE);
     /* get first internal mixer audio dry buffer's pointer (left and right channel) */
     fluid_rvoice_mixer_get_bufs(synth->eventhandler->mixer, &left_in, &right_in);

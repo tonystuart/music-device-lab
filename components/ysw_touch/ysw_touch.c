@@ -50,7 +50,7 @@ static void process_touches(ysw_touch_t *touch, uint8_t mpr121_index, uint16_t t
         uint8_t button_index = (mpr121_index * SENSORS_PER_MPR121) + i;
         bool pressed = touches & (1 << i);
         if (pressed) {
-            ESP_LOGD(TAG, "press button_index=%d", button_index);
+            //ESP_LOGD(TAG, "press button_index=%d", button_index);
             ysw_keystate_on_press(touch->keystate, button_index);
         } else {
             ysw_keystate_on_release(touch->keystate, button_index);

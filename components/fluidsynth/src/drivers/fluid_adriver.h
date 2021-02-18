@@ -61,6 +61,10 @@ void fluid_alsa_audio_driver_settings(fluid_settings_t *settings);
 #include "ysw_a2dp_driver.h"
 #endif
 
+#if I2S_SUPPORT
+#include "ysw_i2s_driver.h"
+#endif
+
 #if OSS_SUPPORT
 fluid_audio_driver_t *new_fluid_oss_audio_driver(fluid_settings_t *settings,
         fluid_synth_t *synth);

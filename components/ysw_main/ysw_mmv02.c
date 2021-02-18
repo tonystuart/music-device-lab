@@ -189,7 +189,7 @@ void ysw_main_init_synthesizer(ysw_bus_t *bus, zm_music_t *music)
     ysw_bt_synth_create_task(bus);
 #elif SYNTH_TYPE == FLUID_SYNTH
     ESP_LOGD(TAG, "configuring FluidSynth synth");
-    ysw_fluid_synth_create_task(bus, YSW_MUSIC_SOUNDFONT);
+    ysw_fluid_synth_create_task(bus, YSW_MUSIC_SOUNDFONT, "a2dp");
 #elif SYNTH_TYPE == MOD_SYNTH
     ysw_mod_host_t *mod_host = ysw_mod_music_create_host(music);
     ysw_mod_synth = ysw_mod_synth_create_task(bus, mod_host);

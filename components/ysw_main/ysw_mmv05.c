@@ -43,6 +43,11 @@
 
 #define TAG "YSW_MMV05"
 
+#define MOD_SYNTH_I2S 1
+#define FLUID_SYNTH_I2S 2
+
+#define AUDIO_TYPE MOD_SYNTH_I2S
+
 #include "board.h"
 #include "ac101.h"
 
@@ -79,6 +84,7 @@ static const ysw_mapper_item_t mmv05_map[] = {
     /* 29 */ YSW_R3_C4,
 };
 
+#if AUDIO_TYPE == MOD_SYNTH_I2S
 ysw_mod_synth_t *ysw_mod_synth;
 
 static int32_t generate_audio(uint8_t *buffer, int32_t bytes_requested)
@@ -90,6 +96,7 @@ static int32_t generate_audio(uint8_t *buffer, int32_t bytes_requested)
     }
     return bytes_generated;
 }
+#endif
 
 static void initialize_audio_output(void)
 {
@@ -123,6 +130,10 @@ static void initialize_audio_output(void)
     $(i2s_set_pin(0, &pin_config));
 
     i2s_mclk_gpio_select(0, GPIO_NUM_0);
+
+    ESP_LOGW(TAG, "****** Turning Speaker Off *******");
+    extern esp_err_t ac101_set_spk_volume(int volume);
+	$(ac101_set_spk_volume(0));
 }
 
 static void initialize_touch_screen(void)
@@ -168,9 +179,16 @@ void ysw_main_init_device(ysw_bus_t *bus)
 
 void ysw_main_init_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
+#if AUDIO_TYPE == MOD_SYNTH_I2S
     ysw_mod_host_t *mod_host = ysw_mod_music_create_host(music);
     ysw_mod_synth = ysw_mod_synth_create_task(bus, mod_host);
+    // TODO: consider whether we can initialize audio output in this task before launching the i2s task
+    // I think the previous approach is a remnant of the common main logic
     ysw_i2s_create_task(initialize_audio_output, generate_audio);
+#elif AUDIO_TYPE == FLUID_SYNTH_I2S
+    initialize_audio_output();
+    ysw_fluid_synth_create_task(bus, YSW_MUSIC_SOUNDFONT, "i2s");
+#endif
 }
 
 #endif

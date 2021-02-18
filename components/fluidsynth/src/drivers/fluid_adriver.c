@@ -70,6 +70,16 @@ static const fluid_audriver_definition_t fluid_audio_drivers[] =
     },
 #endif
 
+#if I2S_SUPPORT
+    {
+        "i2s",
+        ysw_i2s_driver_new,
+        NULL,
+        ysw_i2s_driver_delete,
+        NULL
+    },
+#endif
+
 #if PULSE_SUPPORT
     {
         "pulseaudio",

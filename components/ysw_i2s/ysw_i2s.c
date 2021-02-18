@@ -49,6 +49,7 @@ void ysw_i2s_create_task(ysw_i2s_initialize_cb_t initialize_i2s, ysw_i2s_generat
     config.name = TAG;
     config.function = run_synth;
     config.context = i2s;
+    config.priority = 5;
 
     ysw_task_create(&config);
 }

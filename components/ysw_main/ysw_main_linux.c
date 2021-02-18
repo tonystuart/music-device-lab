@@ -39,7 +39,7 @@ UNUSED
 static void initialize_fs_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
     ESP_LOGD(TAG, "configuring FluidSynth synth");
-    ysw_fluid_synth_create_task(bus, YSW_MUSIC_SOUNDFONT);
+    ysw_fluid_synth_create_task(bus, YSW_MUSIC_SOUNDFONT, "alsa");
 }
 
 // TODO: pass ysw_mod_synth to ALSA task event handlers
@@ -202,7 +202,7 @@ void ysw_main_init_device(ysw_bus_t *bus)
 
 void ysw_main_init_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
-    initialize_mod_synthesizer(bus, music);
+    initialize_fs_synthesizer(bus, music);
 }
 
 //#define YSW_TEST 1

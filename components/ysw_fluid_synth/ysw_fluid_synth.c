@@ -65,11 +65,12 @@ static void process_event(void *context, ysw_event_t *event)
 #define MAXIMUM_GAIN (10f)
 #define DEFAULT_GAIN (0.200f)
 
-static void initialize_synthesizer(ysw_fluid_synth_t *fluid_synth)
+static void initialize_synthesizer(ysw_fluid_synth_t *fluid_synth, const char *driver)
 {
     fluid_settings_t *settings = new_fluid_settings();
 
     // See fluid_synth_settings
+    fluid_settings_setint(settings, "synth.dynamic-sample-loading", 1);
     fluid_settings_setint(settings, "synth.polyphony", 8);
     fluid_settings_setint(settings, "synth.reverb.active", 0);
     fluid_settings_setint(settings, "synth.chorus.active", 0);
@@ -84,19 +85,17 @@ static void initialize_synthesizer(ysw_fluid_synth_t *fluid_synth)
 
     fluid_synth_set_gain(fluid_synth->synth, INITIAL_GAIN);
 
-#ifdef IDF_VER
-    fluid_settings_setstr(settings, "audio.driver", "a2dp");
-#else
-    fluid_settings_setstr(settings, "audio.driver", "alsa");
-#endif
-    fluid_synth->driver = new_fluid_audio_driver(settings, fluid_synth->synth);
+    if (driver) {
+        fluid_settings_setstr(settings, "audio.driver", driver);
+        fluid_synth->driver = new_fluid_audio_driver(settings, fluid_synth->synth);
+    }
 }
 
-void ysw_fluid_synth_create_task(ysw_bus_t *bus, const char *sf_filename)
+void ysw_fluid_synth_create_task(ysw_bus_t *bus, const char *sf_filename, const char *driver)
 {
     ysw_fluid_synth_t *fluid_synth = ysw_heap_allocate(sizeof(ysw_fluid_synth_t));
     fluid_synth->sf_filename = sf_filename;
-    initialize_synthesizer(fluid_synth);
+    initialize_synthesizer(fluid_synth, driver);
 
     ysw_task_config_t config = ysw_task_default_config;
 
