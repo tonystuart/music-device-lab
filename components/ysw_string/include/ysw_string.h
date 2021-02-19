@@ -38,3 +38,4 @@ ysw_string_t *ysw_string_substring(ysw_string_t *source, uint32_t begin_index, u
 void ysw_string_trim_left(ysw_string_t *source, const char *unwanted);
 void ysw_string_trim_right(ysw_string_t *source, const char *unwanted);
 void ysw_string_trim(ysw_string_t *source, const char *unwanted);
+void ysw_string_strip(ysw_string_t *s, const char *unwanted);

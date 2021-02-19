@@ -18,6 +18,8 @@
 
 #define TAG "YSW_STRING"
 
+// TODO: consider relative merits of immutability versus minimizing heap allocations
+
 static uint32_t fast_length(const char *value)
 {
     const char *value_p = value;
@@ -238,32 +240,47 @@ void ysw_string_shorten(ysw_string_t *s, uint32_t max_length)
     }
 }
 
-void ysw_string_trim_left(ysw_string_t *source, const char *unwanted)
+void ysw_string_trim_left(ysw_string_t *s, const char *unwanted)
 {
-    char *source_p = source->buffer;
-    while (*source_p && is_in(*source_p, unwanted)) {
-        source_p++;
+    char *p = s->buffer;
+    while (*p && is_in(*p, unwanted)) {
+        p++;
     }
-    if (*source_p && source_p > source->buffer) {
-        char *target_p = source->buffer;
-        while (*source_p) {
-            *target_p++ = *source_p++;
+    if (*p && p > s->buffer) {
+        char *q = s->buffer;
+        while (*p) {
+            *q++ = *p++;
         }
-        source->length = source_p - source->buffer - RFT;
-        source->buffer[source->length] = EOS;
+        *q++ = EOS;
+        s->length = q - s->buffer;
     }
 }
 
-void ysw_string_trim_right(ysw_string_t *source, const char *unwanted)
+void ysw_string_trim_right(ysw_string_t *s, const char *unwanted)
 {
-    char *source_p = source->buffer + source->length - RFT;
-    while (source_p > source->buffer && is_in(*source_p, unwanted)) {
-        source_p--;
+    char *p = s->buffer + s->length - RFT;
+    while (p > s->buffer && is_in(*p, unwanted)) {
+        p--;
     }
-    if (*source_p && source_p < (source->buffer + source->length - RFT)) {
-        source->length = source_p - source->buffer;
-        source->buffer[source->length] = EOS;
+    p++;
+    *p++ = EOS;
+    s->length = p - s->buffer;
+}
+
+void ysw_string_strip(ysw_string_t *s, const char *unwanted)
+{
+    assert(s);
+    char *p = s->buffer;
+    char *q = p;
+    while (*p) {
+        if (is_in(*p, unwanted)) {
+            p++;
+        } else {
+            *q++ = *p++;
+        }
     }
+    *q++ = EOS;
+    s->length = q - s->buffer;
 }
 
 void ysw_string_trim(ysw_string_t *source, const char *unwanted)

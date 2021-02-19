@@ -202,17 +202,23 @@ void ysw_main_init_device(ysw_bus_t *bus)
 
 void ysw_main_init_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
-    initialize_fs_synthesizer(bus, music);
+    //initialize_fs_synthesizer(bus, music);
+    initialize_mod_synthesizer(bus, music);
 }
 
 //#define YSW_TEST 1
+#define YSW_EXTRACTOR 1
 
 int main(int argc, char *argv[])
 {
 #if YSW_TEST
     extern void ysw_test_all();
     ysw_test_all();
-#endif
+#elif YSW_EXTRACTOR
+    extern int extract(int argc, char *argv[]);
+    char *args[] = {"extract", "extractor/music.sf2", "extractor/tmp"};
+    extract(3, args);
+#else
     ysw_bus_t *bus = ysw_event_create_bus();
     ysw_main_init_device(bus);
     zm_music_t *music = zm_load_music();
@@ -220,6 +226,7 @@ int main(int argc, char *argv[])
     ysw_sequencer_create_task(bus);
     ysw_shell_create(bus, music);
     return 0;
+#endif
 }
 
 #endif
