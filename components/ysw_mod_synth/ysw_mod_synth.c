@@ -239,6 +239,14 @@ static void free_voice(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi
     }
 }
 
+#include "math.h"
+
+#define WAVETABLE_CENTS_SHIFT(C) (pow(2.0, (C)/1200.0))
+#define WAVETABLE_NOTE_TO_FREQUENCY(N) (440.0 * pow(2.0, ((N) - 69) / 12.0))
+#define WAVETABLE_DECIBEL_SHIFT(dB) (pow(10.0, (dB)/20.0))
+
+#define AUDIO_SAMPLE_RATE_EXACT 44100.0
+
 static void start_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi_note, uint8_t velocity)
 {
     uint16_t period = period_map[midi_note];
@@ -248,6 +256,27 @@ static void start_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi
 
     enter_critical_section(mod_synth);
 
+    uint32_t length_bits = 0;
+    uint32_t length = sample->length;
+    while (length) {
+        length_bits++;
+        length >>= 1;
+    }
+
+    uint32_t sampinc = (1 << (32 - length_bits)) *
+        WAVETABLE_CENTS_SHIFT(sample->fine_tune) *
+        44100.0 /
+        WAVETABLE_NOTE_TO_FREQUENCY(sample->root_key) /
+        AUDIO_SAMPLE_RATE_EXACT + 0.5;
+
+    sampinc *= WAVETABLE_NOTE_TO_FREQUENCY(midi_note);
+
+    uint32_t old_sampinc = mod_synth->sampleticksconst / period;
+
+    ESP_LOGD(TAG, "root_key=%d, midi_note=%d, note=%d, sampinc=%d, old_sampinc=%d",
+            sample->root_key, midi_note, sample->root_key + (sample->root_key - midi_note),
+            sampinc, old_sampinc);
+
     uint8_t voice_index = allocate_voice(mod_synth, channel, midi_note);
     voice_t *voice = &mod_synth->voices[voice_index];
     voice->sample = sample;
@@ -255,7 +284,7 @@ static void start_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi
     voice->reppnt = sample->reppnt;
     voice->replen = sample->replen;
     voice->volume = velocity / 2; // mod volume range is 0-63
-    voice->sampinc = mod_synth->sampleticksconst / period;
+    voice->sampinc = sampinc;
     voice->period = period;
     voice->samppos = 0;
     voice->time = mod_synth->voice_time++;

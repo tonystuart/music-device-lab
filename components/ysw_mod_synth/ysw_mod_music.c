@@ -52,6 +52,8 @@ ysw_mod_sample_t *provide_sample(void *context, uint8_t program_index, uint8_t m
         mod_sample->replen = sample->replen;
         mod_sample->volume = sample->volume;
         mod_sample->pan = sample->pan;
+        mod_sample->fine_tune = sample->fine_tune;
+        mod_sample->root_key = sample->root_key;
         if (!hash_alloc_insert(ysw_mod_music->sample_map, sample, mod_sample)) {
             ESP_LOGE(TAG, "hash_alloc_insert failed");
             abort();

@@ -30,6 +30,8 @@ typedef struct {
     uint16_t replen;
     uint8_t volume;
     ysw_mod_pan_t pan;
+    int16_t fine_tune;
+    int16_t root_key;
 } ysw_mod_sample_t;
 
 typedef ysw_mod_sample_t *(*ysw_mod_sample_provider_t)(void *context, uint8_t program, uint8_t note);
