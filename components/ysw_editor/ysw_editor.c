@@ -898,7 +898,7 @@ static void generate_surface_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_me
     for (zm_chord_style_x i = 0; i < count && (p - template) < 12; i++) {
         zm_patch_t *patch = ysw_array_get(editor->section->rhythm_program->patches, i);
         // TODO: consider adding a label representation of the name
-        initialize_item(p, softkey_map[p - template], patch->name, cb, i, submenu);
+        initialize_item(p, softkey_map[p - template], patch->sample->name, cb, i, submenu);
         p++;
     }
     finalize_menu(p, name);
@@ -1437,8 +1437,8 @@ static void on_insert_stroke_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_it
 {
     ysw_editor_t *editor = menu->context;
     zm_patch_t *patch = ysw_array_get(editor->section->rhythm_program->patches, item->value);
-    play_stroke(editor, patch->up_to);
-    realize_stroke(editor, patch->up_to);
+    play_stroke(editor, patch->from_note);
+    realize_stroke(editor, patch->from_note);
 }
 
 static void on_insert_stroke_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)

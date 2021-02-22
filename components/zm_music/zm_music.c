@@ -178,6 +178,8 @@ static void parse_sample(zm_mfr_t *zm_mfr)
     sample->replen = atoi(zm_mfr->tokens[4]);
     sample->volume = atoi(zm_mfr->tokens[5]);
     sample->pan = atoi(zm_mfr->tokens[6]);
+    sample->fine_tune = atoi(zm_mfr->tokens[7]);
+    sample->root_key = atoi(zm_mfr->tokens[8]);
 
     ysw_array_push(zm_mfr->music->samples, sample);
 }
@@ -190,14 +192,16 @@ static void emit_samples(zm_mfw_t *zm_mfw)
         zm_sample_t *sample = ysw_array_get(zm_mfw->music->samples, i);
         put_map(zm_mfw->sample_map, sample, i);
         ysw_csv_escape(sample->name, name, sizeof(name));
-        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d\n",
+        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d\n",
                 ZM_MF_SAMPLE,
                 i,
                 name,
                 sample->reppnt,
                 sample->replen,
                 sample->volume,
-                sample->pan);
+                sample->pan,
+                sample->fine_tune,
+                sample->root_key);
     }
 }
 
@@ -216,19 +220,26 @@ static void parse_program(zm_mfr_t *zm_mfr)
     program->label = ysw_make_label(program->name);
     program->type = atoi(zm_mfr->tokens[3]);
     program->gm = atoi(zm_mfr->tokens[4]);
+    program->delay = atoi(zm_mfr->tokens[5]);
+    program->attack = atoi(zm_mfr->tokens[6]);
+    program->hold = atoi(zm_mfr->tokens[7]);
+    program->decay = atoi(zm_mfr->tokens[8]);
+    program->sustain = atoi(zm_mfr->tokens[9]);
+    program->release = atoi(zm_mfr->tokens[10]);
+    program->attenuation = atoi(zm_mfr->tokens[11]);
     program->patches = ysw_array_create(1);
 
     zm_yesno_t done = false;
 
     while (!done && get_tokens(zm_mfr)) {
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_PATCH && (zm_mfr->token_count == 3 || zm_mfr->token_count == 4)) {
+        if (type == ZM_MF_PATCH && zm_mfr->token_count == 6) {
             zm_patch_t *patch = ysw_heap_allocate(sizeof(zm_patch_t));
-            patch->up_to = atoi(zm_mfr->tokens[1]);
-            patch->sample = ysw_array_get(zm_mfr->music->samples, atoi(zm_mfr->tokens[2]));
-            if (zm_mfr->token_count == 4) {
-                patch->name = ysw_heap_strdup(zm_mfr->tokens[3]);
-            }
+            patch->from_note = atoi(zm_mfr->tokens[1]);
+            patch->to_note = atoi(zm_mfr->tokens[2]);
+            patch->from_velocity = atoi(zm_mfr->tokens[3]);
+            patch->to_velocity = atoi(zm_mfr->tokens[4]);
+            patch->sample = ysw_array_get(zm_mfr->music->samples, atoi(zm_mfr->tokens[5]));
             ysw_array_push(program->patches, patch);
         } else {
             push_back_tokens(zm_mfr);
@@ -247,30 +258,31 @@ static void emit_programs(zm_mfw_t *zm_mfw)
         zm_program_t *program = ysw_array_get(zm_mfw->music->programs, i);
         put_map(zm_mfw->program_map, program, i);
         ysw_csv_escape(program->name, name, sizeof(name));
-        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d\n",
+        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
                 ZM_MF_PROGRAM,
                 i,
                 name,
                 program->type,
-                program->gm);
+                program->gm,
+                program->delay,
+                program->attack,
+                program->hold,
+                program->decay,
+                program->sustain,
+                program->release,
+                program->attenuation);
 
         uint32_t patch_count = ysw_array_get_count(program->patches);
         for (uint32_t j = 0; j < patch_count; j++) {
             zm_patch_t *patch = ysw_array_get(program->patches, j);
             zm_patch_x patch_index = get_map(zm_mfw->sample_map, patch->sample);
-            if (patch->name) {
-                ysw_csv_escape(patch->name, name, sizeof(name));
-                fprintf(zm_mfw->file, "%d,%d,%d,%s\n",
+                fprintf(zm_mfw->file, "%d,%d,%d,%d,%d,%d\n",
                         ZM_MF_PATCH,
-                        patch->up_to,
-                        patch_index,
-                        name);
-            } else {
-                fprintf(zm_mfw->file, "%d,%d,%d\n",
-                        ZM_MF_PATCH,
-                        patch->up_to,
+                        patch->from_note,
+                        patch->to_note,
+                        patch->from_velocity,
+                        patch->to_velocity,
                         patch_index);
-            }
         }
     }
 }
@@ -730,9 +742,9 @@ zm_music_t *zm_parse_file(FILE *file)
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
         if (type == ZM_MF_SETTINGS && zm_mfr->token_count == 2) {
             parse_settings(zm_mfr);
-        } else if (type == ZM_MF_SAMPLE && zm_mfr->token_count == 7) {
+        } else if (type == ZM_MF_SAMPLE && zm_mfr->token_count == 9) {
             parse_sample(zm_mfr);
-        } else if (type == ZM_MF_PROGRAM && zm_mfr->token_count == 5) {
+        } else if (type == ZM_MF_PROGRAM && zm_mfr->token_count == 12) {
             parse_program(zm_mfr);
         } else if (type == ZM_MF_CHORD_TYPE && zm_mfr->token_count > 4) {
             parse_chord_type(zm_mfr);
@@ -1459,9 +1471,9 @@ zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note)
     zm_patch_t *patch = NULL;
     zm_patch_x patch_count = ysw_array_get_count(patches);
     for (zm_patch_x i = 0; i < patch_count && !patch; i++) {
-        zm_patch_t *candidate = ysw_array_get(patches, i);
-        if (midi_note <= candidate->up_to || i == (patch_count - 1)) {
-            patch = candidate;
+        zm_patch_t *p = ysw_array_get(patches, i);
+        if ((p->from_note <= midi_note && midi_note <= p->to_note) || i == (patch_count - 1)) {
+            patch = p;
         }
     }
     return patch;

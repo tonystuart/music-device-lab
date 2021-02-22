@@ -81,9 +81,9 @@ static void extract_ranges(char *ofn, FILE *csvf, fluid_inst_t *inst, int *sx)
 }
 
 static const int inst_gen_x[] = {
-    GEN_CHORUSSEND,
-    GEN_REVERBSEND,
+    GEN_VOLENVDELAY,
     GEN_VOLENVATTACK,
+    GEN_VOLENVHOLD,
     GEN_VOLENVDECAY,
     GEN_VOLENVSUSTAIN,
     GEN_VOLENVRELEASE,
@@ -128,7 +128,7 @@ static void extract_samples(char *ofn, FILE *csvf, fluid_inst_t *inst, int sx)
 static void write_comment(FILE *csvf)
 {
     fprintf(csvf, "#type(1=sample),index,name,reppnt,replen,volume,pan,fine-tune,root-key\n");
-    fprintf(csvf, "#type(2=program),index,name,type,gm,chorus,reverb,attack,decay,sustain,release,attenuation\n");
+    fprintf(csvf, "#type(2=program),index,name,type,gm,delay,attack,hold,decay,sustain,release,attenuation\n");
     fprintf(csvf, "#type(3=patch),from-note,to-note,from-vel,to-vel,sample\n");
 }
 

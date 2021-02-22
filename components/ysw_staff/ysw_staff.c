@@ -401,11 +401,9 @@ static void visit_rhythm(dc_t *dc, zm_rhythm_t *rhythm)
     // currently display surface first because patch can be multiple lines
     if (rhythm->surface) {
         zm_patch_t *patch = zm_get_patch(dc->patches, rhythm->surface);
-        if (patch && patch->name) {
-            lv_area_t extent = { };
-            visit_text(&coords, dc->clip_area, &dsc, patch->name, dc->visit_type, &extent);
-            coords.y1 += 9;
-        }
+        lv_area_t extent = { };
+        visit_text(&coords, dc->clip_area, &dsc, patch->sample->name, dc->visit_type, &extent);
+        coords.y1 += 9;
     }
     if (rhythm->beat) {
         lv_area_t extent = { };

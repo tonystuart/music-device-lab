@@ -48,14 +48,18 @@ typedef uint8_t zm_tempo_x;
 typedef uint8_t zm_tie_x;
 typedef uint8_t zm_velocity_x;
 
+typedef uint16_t zm_chord_style_x;
+typedef uint16_t zm_chord_type_x;
+typedef uint16_t zm_composition_x;
 typedef uint16_t zm_measure_x;
 typedef uint16_t zm_note_x;
 typedef uint16_t zm_part_x;
-typedef uint16_t zm_section_x;
-typedef uint16_t zm_chord_type_x;
 typedef uint16_t zm_sample_x;
-typedef uint16_t zm_composition_x;
-typedef uint16_t zm_chord_style_x;
+typedef uint16_t zm_section_x;
+
+typedef int16_t zm_centibels_t;
+typedef int16_t zm_fine_tune_t;
+typedef int16_t zm_timecents_t;
 
 typedef uint32_t zm_step_x;
 typedef uint32_t zm_time_x;
@@ -127,6 +131,8 @@ typedef struct {
     zm_medium_t replen;
     zm_small_t volume;
     zm_pan_t pan;
+    zm_fine_tune_t fine_tune;
+    zm_note_t root_key;
 } zm_sample_t;
 
 typedef enum {
@@ -140,12 +146,21 @@ typedef struct {
     zm_program_type_t type;
     zm_gm_x gm;
     ysw_array_t *patches;
+    zm_timecents_t delay;
+    zm_timecents_t attack;
+    zm_timecents_t hold;
+    zm_timecents_t decay;
+    zm_centibels_t sustain;
+    zm_timecents_t release;
+    zm_timecents_t attenuation;
 } zm_program_t;
 
 typedef struct {
-    zm_note_t up_to;
+    zm_note_t from_note;
+    zm_note_t to_note;
+    zm_velocity_x from_velocity;
+    zm_velocity_x to_velocity;
     zm_sample_t *sample;
-    char *name;
 } zm_patch_t;
 
 typedef struct {

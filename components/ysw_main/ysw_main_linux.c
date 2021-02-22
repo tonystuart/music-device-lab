@@ -207,7 +207,7 @@ void ysw_main_init_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 }
 
 //#define YSW_TEST 1
-#define YSW_EXTRACTOR 1
+//#define YSW_EXTRACTOR 1
 
 int main(int argc, char *argv[])
 {
