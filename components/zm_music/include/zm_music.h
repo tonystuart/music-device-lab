@@ -131,8 +131,15 @@ typedef struct {
     zm_medium_t replen;
     zm_small_t volume;
     zm_pan_t pan;
+    zm_timecents_t attenuation;
     zm_fine_tune_t fine_tune;
     zm_note_t root_key;
+    zm_timecents_t delay;
+    zm_timecents_t attack;
+    zm_timecents_t hold;
+    zm_timecents_t decay;
+    zm_centibels_t sustain;
+    zm_timecents_t release;
 } zm_sample_t;
 
 typedef enum {
@@ -146,13 +153,6 @@ typedef struct {
     zm_program_type_t type;
     zm_gm_x gm;
     ysw_array_t *patches;
-    zm_timecents_t delay;
-    zm_timecents_t attack;
-    zm_timecents_t hold;
-    zm_timecents_t decay;
-    zm_centibels_t sustain;
-    zm_timecents_t release;
-    zm_timecents_t attenuation;
 } zm_program_t;
 
 typedef struct {

@@ -20,13 +20,20 @@
 // See http://www.synthfont.com/SFSPEC21.PDF
 
 static const int iz_gen_x[] = {
+    GEN_ATTENUATION,
     GEN_FINETUNE,
     GEN_OVERRIDEROOTKEY,
+    GEN_VOLENVDELAY,
+    GEN_VOLENVATTACK,
+    GEN_VOLENVHOLD,
+    GEN_VOLENVDECAY,
+    GEN_VOLENVSUSTAIN,
+    GEN_VOLENVRELEASE,
 };
 
 #define IZ_GEN_SZ (sizeof(iz_gen_x) / sizeof(iz_gen_x[0]))
 
-static void extract_sample(char *ofn, FILE *csvf, fluid_inst_zone_t *iz, int sx)
+static void extract_sample(char *ofn, FILE *csvf, fluid_inst_t *inst, fluid_inst_zone_t *iz, int sx)
 {
     fluid_sample_t *sample = fluid_inst_zone_get_sample(iz);
     int length = sample->end - sample->start;
@@ -48,6 +55,8 @@ static void extract_sample(char *ofn, FILE *csvf, fluid_inst_zone_t *iz, int sx)
         fluid_gen_t *gen = &iz->gen[iz_gen_x[i]];
         if (gen->flags) {
             fprintf(csvf, ",%g", gen->val);
+        } else if (inst->global_zone->gen[iz_gen_x[i]].flags) {
+            fprintf(csvf, ",%g", inst->global_zone->gen[iz_gen_x[i]].val);
         } else {
             fprintf(csvf, ",");
         }
@@ -80,18 +89,6 @@ static void extract_ranges(char *ofn, FILE *csvf, fluid_inst_t *inst, int *sx)
     }
 }
 
-static const int inst_gen_x[] = {
-    GEN_VOLENVDELAY,
-    GEN_VOLENVATTACK,
-    GEN_VOLENVHOLD,
-    GEN_VOLENVDECAY,
-    GEN_VOLENVSUSTAIN,
-    GEN_VOLENVRELEASE,
-    GEN_ATTENUATION,
-};
-
-#define INST_GEN_SZ (sizeof(inst_gen_x) / sizeof(inst_gen_x[0]))
-
 static void extract_program(FILE *csvf, fluid_defpreset_t *dp, fluid_inst_t *inst, int px)
 {
     char preset_name[64];
@@ -101,25 +98,14 @@ static void extract_program(FILE *csvf, fluid_defpreset_t *dp, fluid_inst_t *ins
         preset_name[length] = 0;
     }
 
-    fprintf(csvf, "2,%d,%s,0,%d", px, preset_name, dp->num);
-
-    for (int i = 0; i < INST_GEN_SZ; i++) {
-        fluid_gen_t *gen = &inst->global_zone->gen[inst_gen_x[i]];
-        if (gen->flags) {
-            fprintf(csvf, ",%g", gen->val);
-        } else {
-            fprintf(csvf, ",");
-        }
-    }
-
-    fprintf(csvf, "\n");
+    fprintf(csvf, "2,%d,%s,0,%d\n", px, preset_name, dp->num);
 }
 
 static void extract_samples(char *ofn, FILE *csvf, fluid_inst_t *inst, int sx)
 {
     fluid_inst_zone_t *iz = fluid_inst_get_zone(inst);
     while (iz) {
-        extract_sample(ofn, csvf, iz, sx);
+        extract_sample(ofn, csvf, inst, iz, sx);
         iz = fluid_inst_zone_next(iz);
         sx++;
     }
@@ -127,8 +113,8 @@ static void extract_samples(char *ofn, FILE *csvf, fluid_inst_t *inst, int sx)
 
 static void write_comment(FILE *csvf)
 {
-    fprintf(csvf, "#type(1=sample),index,name,reppnt,replen,volume,pan,fine-tune,root-key\n");
-    fprintf(csvf, "#type(2=program),index,name,type,gm,delay,attack,hold,decay,sustain,release,attenuation\n");
+    fprintf(csvf, "#type(1=sample),index,name,reppnt,replen,volume,pan,attenuation,fine-tune,root-key,delay,attack,hold,decay,sustain,release\n");
+    fprintf(csvf, "#type(2=program),index,name,type,gm\n");
     fprintf(csvf, "#type(3=patch),from-note,to-note,from-vel,to-vel,sample\n");
 }
 

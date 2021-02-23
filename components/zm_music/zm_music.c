@@ -162,6 +162,11 @@ static void emit_settings(zm_mfw_t *zm_mfw)
             zm_mfw->music->settings.clock);
 }
 
+static zm_timecents_t parse_timecents(const char *token)
+{
+    return token[0] ? atoi(token) : -32768;
+}
+
 static void parse_sample(zm_mfr_t *zm_mfr)
 {
     zm_sample_x index = atoi(zm_mfr->tokens[1]);
@@ -178,8 +183,15 @@ static void parse_sample(zm_mfr_t *zm_mfr)
     sample->replen = atoi(zm_mfr->tokens[4]);
     sample->volume = atoi(zm_mfr->tokens[5]);
     sample->pan = atoi(zm_mfr->tokens[6]);
-    sample->fine_tune = atoi(zm_mfr->tokens[7]);
-    sample->root_key = atoi(zm_mfr->tokens[8]);
+    sample->attenuation = atoi(zm_mfr->tokens[7]);
+    sample->fine_tune = atoi(zm_mfr->tokens[8]);
+    sample->root_key = atoi(zm_mfr->tokens[9]);
+    sample->delay = parse_timecents(zm_mfr->tokens[10]);
+    sample->attack = parse_timecents(zm_mfr->tokens[11]);
+    sample->hold = parse_timecents(zm_mfr->tokens[12]);
+    sample->decay = parse_timecents(zm_mfr->tokens[13]);
+    sample->sustain = atoi(zm_mfr->tokens[14]);
+    sample->release = parse_timecents(zm_mfr->tokens[15]);
 
     ysw_array_push(zm_mfr->music->samples, sample);
 }
@@ -192,7 +204,7 @@ static void emit_samples(zm_mfw_t *zm_mfw)
         zm_sample_t *sample = ysw_array_get(zm_mfw->music->samples, i);
         put_map(zm_mfw->sample_map, sample, i);
         ysw_csv_escape(sample->name, name, sizeof(name));
-        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d\n",
+        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
                 ZM_MF_SAMPLE,
                 i,
                 name,
@@ -200,8 +212,15 @@ static void emit_samples(zm_mfw_t *zm_mfw)
                 sample->replen,
                 sample->volume,
                 sample->pan,
+                sample->attenuation,
                 sample->fine_tune,
-                sample->root_key);
+                sample->root_key,
+                sample->delay,
+                sample->attack,
+                sample->hold,
+                sample->decay,
+                sample->sustain,
+                sample->release);
     }
 }
 
@@ -220,13 +239,6 @@ static void parse_program(zm_mfr_t *zm_mfr)
     program->label = ysw_make_label(program->name);
     program->type = atoi(zm_mfr->tokens[3]);
     program->gm = atoi(zm_mfr->tokens[4]);
-    program->delay = atoi(zm_mfr->tokens[5]);
-    program->attack = atoi(zm_mfr->tokens[6]);
-    program->hold = atoi(zm_mfr->tokens[7]);
-    program->decay = atoi(zm_mfr->tokens[8]);
-    program->sustain = atoi(zm_mfr->tokens[9]);
-    program->release = atoi(zm_mfr->tokens[10]);
-    program->attenuation = atoi(zm_mfr->tokens[11]);
     program->patches = ysw_array_create(1);
 
     zm_yesno_t done = false;
@@ -258,19 +270,12 @@ static void emit_programs(zm_mfw_t *zm_mfw)
         zm_program_t *program = ysw_array_get(zm_mfw->music->programs, i);
         put_map(zm_mfw->program_map, program, i);
         ysw_csv_escape(program->name, name, sizeof(name));
-        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d\n",
                 ZM_MF_PROGRAM,
                 i,
                 name,
                 program->type,
-                program->gm,
-                program->delay,
-                program->attack,
-                program->hold,
-                program->decay,
-                program->sustain,
-                program->release,
-                program->attenuation);
+                program->gm);
 
         uint32_t patch_count = ysw_array_get_count(program->patches);
         for (uint32_t j = 0; j < patch_count; j++) {
@@ -742,9 +747,9 @@ zm_music_t *zm_parse_file(FILE *file)
         zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
         if (type == ZM_MF_SETTINGS && zm_mfr->token_count == 2) {
             parse_settings(zm_mfr);
-        } else if (type == ZM_MF_SAMPLE && zm_mfr->token_count == 9) {
+        } else if (type == ZM_MF_SAMPLE && zm_mfr->token_count == 16) {
             parse_sample(zm_mfr);
-        } else if (type == ZM_MF_PROGRAM && zm_mfr->token_count == 12) {
+        } else if (type == ZM_MF_PROGRAM && zm_mfr->token_count == 5) {
             parse_program(zm_mfr);
         } else if (type == ZM_MF_CHORD_TYPE && zm_mfr->token_count > 4) {
             parse_chord_type(zm_mfr);
