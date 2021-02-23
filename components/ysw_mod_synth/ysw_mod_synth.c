@@ -21,6 +21,8 @@
 
 #define TAG "YSW_MOD_SYNTH"
 
+#define SCALE_FACTOR 10
+
 static const short period_map[] = {
     /*  0 */ 13696, 12928, 12192, 11520, 10848, 10240,  9664,  9120,  8606,  8128,  7680,  7248,
     /*  1 */  6848,  6464,  6096,  5760,  5424,  5120,  4832,  4560,  4304,  4064,  3840,  3624,
@@ -97,38 +99,32 @@ void ysw_mod_generate_samples(ysw_mod_synth_t *mod_synth,
         for (uint16_t j = 0; j < mod_synth->voice_count; j++, voice++) {
             if (voice->period != 0) {
                 voice->samppos += voice->sampinc;
+                uint32_t index = voice->samppos >> SCALE_FACTOR;
 
-                if (voice->replen < 2) {
-                    if ((voice->samppos >> 11) >= voice->length) {
+                if (voice->replen) {
+                    if (index >= (voice->reppnt + voice->replen)) {
+                        index = voice->reppnt;
+                        voice->samppos = index << SCALE_FACTOR;
+                    }
+                } else {
+                    if (index >= voice->length) {
                         voice->length = 0;
                         voice->reppnt = 0;
                         voice->samppos = 0;
                     }
-                } else {
-                    if ((voice->samppos >> 11) >= (uint32_t)(voice->replen + voice->reppnt)) {
-                        voice->samppos = ((uint32_t)(voice->reppnt)<<11) + (voice->samppos % ((uint32_t)(voice->replen + voice->reppnt)<<11));
-                    }
                 }
-
-                uint32_t k = voice->samppos >> 10;
-
-#if 0
-                if (voice->samppos) {
-                    ESP_LOGD(TAG, "period=%d, sampinc=%d, samppos=%d, samppos>>11=%d, k=%d, length=%d", (int)voice->period, (int)voice->sampinc, (int)voice->samppos, (int)(voice->samppos >> 11), (int)k, (int)voice->length);
-                }
-#endif
 
                 switch (voice->sample->pan) {
                     case YSW_MOD_PAN_LEFT:
-                        left += (voice->sample->data[k] * voice->volume);
+                        left += (voice->sample->data[index] * voice->volume);
                         break;
                     case YSW_MOD_PAN_RIGHT:
-                        right += (voice->sample->data[k] * voice->volume);
+                        right += (voice->sample->data[index] * voice->volume);
                         break;
                     case YSW_MOD_PAN_CENTER:
                     default:
-                        left += (voice->sample->data[k] * voice->volume);
-                        right += (voice->sample->data[k] * voice->volume);
+                        left += (voice->sample->data[index] * voice->volume);
+                        right += (voice->sample->data[index] * voice->volume);
                         break;
                 }
             }
@@ -256,26 +252,17 @@ static void start_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi
 
     enter_critical_section(mod_synth);
 
-    uint32_t length_bits = 0;
-    uint32_t length = sample->length;
-    while (length) {
-        length_bits++;
-        length >>= 1;
-    }
-
-    uint32_t sampinc = (1 << (32 - length_bits)) *
+    uint32_t sampinc = ((1 << SCALE_FACTOR) *
         WAVETABLE_CENTS_SHIFT(sample->fine_tune) *
         44100.0 /
         WAVETABLE_NOTE_TO_FREQUENCY(sample->root_key) /
-        AUDIO_SAMPLE_RATE_EXACT + 0.5;
-
-    sampinc *= WAVETABLE_NOTE_TO_FREQUENCY(midi_note);
+        AUDIO_SAMPLE_RATE_EXACT) *
+        WAVETABLE_NOTE_TO_FREQUENCY(midi_note);
 
     uint32_t old_sampinc = mod_synth->sampleticksconst / period;
 
-    ESP_LOGD(TAG, "root_key=%d, midi_note=%d, note=%d, sampinc=%d, old_sampinc=%d",
-            sample->root_key, midi_note, sample->root_key + (sample->root_key - midi_note),
-            sampinc, old_sampinc);
+    ESP_LOGD(TAG, "root_key=%d, midi_note=%d, sampinc=%d, old_sampinc=%d",
+            sample->root_key, midi_note, sampinc, old_sampinc);
 
     uint8_t voice_index = allocate_voice(mod_synth, channel, midi_note);
     voice_t *voice = &mod_synth->voices[voice_index];
@@ -285,14 +272,17 @@ static void start_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi
     voice->replen = sample->replen;
     voice->volume = velocity / 2; // mod volume range is 0-63
     voice->sampinc = sampinc;
+    //voice->sampinc = old_sampinc;
     voice->period = period;
     voice->samppos = 0;
     voice->time = mod_synth->voice_time++;
 
     leave_critical_section(mod_synth);
 
+#if 0
     ESP_LOGD(TAG, "channel=%d, program=%d, midi_note=%d, velocity=%d, period=%d, voices=%d",
             channel, program_index, midi_note, velocity, period, mod_synth->voice_count);
+#endif
 }
 
 static void stop_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi_note)

@@ -46,9 +46,9 @@ typedef struct {
     uint32_t samppos;
     uint32_t sampinc;
     uint32_t time;
-    uint16_t length;
-    uint16_t reppnt;
-    uint16_t replen;
+    uint32_t length;
+    uint32_t reppnt;
+    uint32_t replen;
     uint16_t period;
     uint8_t volume;
     uint8_t channel;

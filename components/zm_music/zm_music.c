@@ -851,7 +851,7 @@ void zm_save_music(zm_music_t *music)
     }
 }
 
-void *zm_load_sample(const char* name, uint16_t *word_count)
+void *zm_load_sample(const char* name, uint16_t *byte_count)
 {
     char path[PATH_SIZE];
     snprintf(path, sizeof(path), "%s/samples/%s", ZM_MF_PARTITION, name);
@@ -885,10 +885,10 @@ void *zm_load_sample(const char* name, uint16_t *word_count)
         abort();
     }
 
-    ESP_LOGD(TAG, "zm_load_sample: path=%s, sample_size=%d (%d words)", path, sample_size, sample_size / 2);
+    ESP_LOGD(TAG, "zm_load_sample: path=%s, sample_size=%d bytes", path, sample_size);
 
-    if (word_count) {
-        *word_count = sample_size / 2; // length is in 2 byte (16 bit) words
+    if (byte_count) {
+        *byte_count = sample_size;
     }
 
     return sample_data;

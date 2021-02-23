@@ -298,7 +298,7 @@ zm_music_t *zm_parse_file(FILE *file);
 zm_music_t *zm_load_music(void);
 void zm_save_music(zm_music_t *music);
 
-void *zm_load_sample(const char* name, uint16_t *word_count);
+void *zm_load_sample(const char* name, uint16_t *byte_count);
 
 int zm_note_compare(const void *left, const void *right);
 

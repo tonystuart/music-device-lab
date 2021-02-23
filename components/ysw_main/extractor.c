@@ -35,8 +35,8 @@ static void extract_sample(char *ofn, FILE *csvf, fluid_inst_zone_t *iz, int sx)
             iz->range.vello, iz->range.velhi,
             sample->name, sample->start, sample->end, length);
 
-    int loop_start = (sample->loopstart - sample->start) / 2; // divide by 2 for int8_t
-    int loop_end = (sample->loopend - sample->start) / 2;
+    int loop_start = sample->loopstart - sample->start;
+    int loop_end = sample->loopend - sample->start;
     int loop_length = loop_end - loop_start - 1;
 
     char sn[64];
