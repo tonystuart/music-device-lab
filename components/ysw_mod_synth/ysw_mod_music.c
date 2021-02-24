@@ -24,7 +24,7 @@ typedef struct {
     hash_t *sample_map;
 } ysw_mod_music_t;
 
-ysw_mod_sample_t *provide_sample(void *context, uint8_t program_index, uint8_t midi_note)
+ysw_mod_sample_t *provide_sample(void *context, uint8_t program_index, uint8_t midi_note, bool *is_new)
 {
     assert(context);
     assert(program_index <= YSW_MIDI_MAX);
@@ -45,6 +45,9 @@ ysw_mod_sample_t *provide_sample(void *context, uint8_t program_index, uint8_t m
     hnode_t *node = hash_lookup(ysw_mod_music->sample_map, sample);
     if (node) {
         mod_sample = hnode_get(node);
+        if (is_new) {
+            *is_new = false;
+        }
     } else {
         mod_sample = ysw_heap_allocate(sizeof(ysw_mod_sample_t));
         mod_sample->data = zm_load_sample(sample->name, &mod_sample->length);
@@ -54,9 +57,20 @@ ysw_mod_sample_t *provide_sample(void *context, uint8_t program_index, uint8_t m
         mod_sample->pan = sample->pan;
         mod_sample->fine_tune = sample->fine_tune;
         mod_sample->root_key = sample->root_key;
+        mod_sample->delay = sample->delay;
+        mod_sample->attack = sample->attack;
+        mod_sample->hold = sample->hold;
+        mod_sample->decay = sample->decay;
+        mod_sample->release = sample->release;
+        mod_sample->sustain = sample->sustain;
+
         if (!hash_alloc_insert(ysw_mod_music->sample_map, sample, mod_sample)) {
             ESP_LOGE(TAG, "hash_alloc_insert failed");
             abort();
+        }
+
+        if (is_new) {
+            *is_new = true;
         }
     }
 

@@ -17,27 +17,22 @@
 #include "esp_log.h"
 #include "assert.h"
 #include "limits.h"
+#include "math.h"
 #include "stdlib.h"
 
 #define TAG "YSW_MOD_SYNTH"
 
-#define SCALE_FACTOR 10
+#define SAMPLE_RATE 44100.0
 
-static const short period_map[] = {
-    /*  0 */ 13696, 12928, 12192, 11520, 10848, 10240,  9664,  9120,  8606,  8128,  7680,  7248,
-    /*  1 */  6848,  6464,  6096,  5760,  5424,  5120,  4832,  4560,  4304,  4064,  3840,  3624,
-    /*  2 */  3424,  3232,  3048,  2880,  2712,  2560,  2416,  2280,  2152,  2032,  1920,  1812,
-    /*  3 */  1712,  1616,  1524,  1440,  1356,  1280,  1208,  1140,  1076,  1016,   960,   906,
-    /*  4 */   856,   808,   762,   720,   678,   640,   604,   570,   538,   508,   480,   453,
-    /*  5 */   428,   404,   381,   360,   339,   320,   302,   285,   269,   254,   240,   226,
-    /*  6 */   214,   202,   190,   180,   170,   160,   151,   143,   135,   127,   120,   113,
-    /*  7 */   107,   101,    95,    90,    85,    80,    75,    71,    67,    63,    60,    56,
-    /*  8 */    53,    50,    47,    45,    42,    40,    37,    35,    33,    31,    30,    28,
-    /*  9 */    27,    25,    24,    22,    21,    20,    19,    18,    17,    16,    15,    14,
-    /* 10 */    13,    13,    12,    11,    11,    10,     9,     9,     8,     8,     7,     7
-};
+#define POS_SCALE_FACTOR 10
+#define AMP_SCALE_FACTOR 20
 
-#define PERIOD_MAP_SIZE (sizeof(period_map) / sizeof(period_map[0]))
+#define CENTS_TO_MILLIS(timecents) (pow(2.0, (timecents)/1200.0))
+#define NOTE_TO_FREQUENCY(note) (440.0 * pow(2.0, ((note) - 69) / 12.0))
+
+// TODO: establish naming conventions for scaled values, positions vs indices, sample properties, etc.
+
+// TODO: evaluate cost of generating samples via ysw_bus (or alternative) and remove mutex
 
 static void enter_critical_section(ysw_mod_synth_t *mod_synth)
 {
@@ -53,13 +48,98 @@ static void initialize_synthesizer(ysw_mod_synth_t *mod_synth)
 {
     assert(mod_synth);
 
-    mod_synth->playrate = 44100;
+    mod_synth->playrate = SAMPLE_RATE; // TODO: update with actual clock rate from I2S layer
     mod_synth->stereo = 1;
     mod_synth->stereo_separation = 1;
     mod_synth->filter = 1;
-    mod_synth->sampleticksconst = ((3546894UL * 16) / mod_synth->playrate) << 6; //8287*428/playrate;
     mod_synth->mod_loaded = 1;
     mod_synth->mutex = xSemaphoreCreateMutex();
+}
+
+static int32_t get_ramp_step(voice_t *voice, uint32_t from_pct, uint32_t to_pct)
+{
+    // TODO: use Christian Schoenebeck’s Fast Exponential Envelope Generator
+    //return ((to_pct - from_pct) << AMP_SCALE_FACTOR) / (voice->next_change - voice->iterations);
+    int32_t n = to_pct - from_pct;
+    int32_t scaled_n = n << AMP_SCALE_FACTOR;
+    int32_t d = voice->next_change - voice->iterations;
+    int32_t r = scaled_n / d;
+    return r;
+}
+
+static void apply_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *voice)
+{
+    switch (voice->state) {
+        case YSW_MOD_NOTE_ON:
+            voice->iterations = 0;
+            voice->amplitude = 0;
+            voice->ramp_step = 0;
+            voice->next_change = voice->iterations + voice->sample->delay;
+            voice->state = YSW_MOD_DELAY;
+            // fall through
+        case YSW_MOD_DELAY:
+            if (voice->iterations >= voice->next_change) {
+                voice->state = YSW_MOD_ATTACK;
+                voice->next_change = voice->iterations + voice->sample->attack;
+                voice->ramp_step = get_ramp_step(voice, 0, mod_synth->percent_gain);
+                ESP_LOGD(TAG, "attack iterations=%d, next_change=%d, delta=%d (%g)", voice->iterations, voice->next_change, voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE);
+            }
+            voice->amplitude += voice->ramp_step;
+            break;
+        case YSW_MOD_ATTACK:
+            if (voice->iterations >= voice->next_change) {
+                voice->state = YSW_MOD_HOLD;
+                voice->next_change = voice->iterations + voice->sample->hold;
+                voice->ramp_step = 0;
+                ESP_LOGD(TAG, "hold iterations=%d, next_change=%d, delta=%d (%g)", voice->iterations, voice->next_change, voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE);
+            }
+            voice->amplitude += voice->ramp_step;
+            break;
+        case YSW_MOD_HOLD:
+            if (voice->iterations >= voice->next_change) {
+                voice->state = YSW_MOD_DECAY;
+                voice->next_change = voice->iterations + voice->sample->decay;
+                voice->ramp_step = get_ramp_step(voice, mod_synth->percent_gain, voice->sample->sustain);
+                ESP_LOGD(TAG, "decay iterations=%d, next_change=%d, delta=%d (%g), amplitude=%d, ramp_step=%d", voice->iterations, voice->next_change, voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, voice->amplitude, voice->ramp_step);
+            }
+            voice->amplitude += voice->ramp_step;
+            break;
+        case YSW_MOD_DECAY:
+            if (voice->iterations >= voice->next_change) {
+                voice->state = YSW_MOD_SUSTAIN;
+                voice->ramp_step = 0;
+                ESP_LOGD(TAG, "sustain amplitude=%d, sustain=%d, delta=%d", voice->amplitude, voice->sample->sustain, voice->amplitude - voice->sample->sustain);
+
+            }
+            voice->amplitude += voice->ramp_step;
+            break;
+        case YSW_MOD_SUSTAIN:
+            if ((voice->amplitude >> AMP_SCALE_FACTOR) <= 0) {
+                voice->state = YSW_MOD_IDLE;
+                ESP_LOGD(TAG, "sustain->idle");
+            }
+            break;
+        case YSW_MOD_NOTE_OFF:
+            voice->state = YSW_MOD_RELEASE;
+            voice->next_change = voice->iterations + voice->sample->release;
+            voice->ramp_step = get_ramp_step(voice, voice->amplitude >> AMP_SCALE_FACTOR, 0);
+            ESP_LOGD(TAG, "note_off iterations=%d, next_change=%d, delta=%d (%g), amplitude=%d, ramp_step=%d", voice->iterations, voice->next_change, voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, voice->amplitude, voice->ramp_step);
+            voice->amplitude += voice->ramp_step;
+            break;
+        case YSW_MOD_RELEASE:
+            if (voice->iterations >= voice->next_change) {
+                voice->state = YSW_MOD_IDLE;
+                voice->ramp_step = 0;
+                voice->amplitude = 0;
+                ESP_LOGD(TAG, "release->idle");
+            }
+            voice->amplitude += voice->ramp_step;
+            break;
+        case YSW_MOD_IDLE:
+            ESP_LOGD(TAG, "idle");
+            break;
+    }
+    voice->iterations++;
 }
 
 /**
@@ -97,20 +177,21 @@ void ysw_mod_generate_samples(ysw_mod_synth_t *mod_synth,
         voice_t *voice = mod_synth->voices;
 
         for (uint16_t j = 0; j < mod_synth->voice_count; j++, voice++) {
-            if (voice->period != 0) {
+            if (voice->state != YSW_MOD_IDLE) {
+
+                apply_amplitude_envelope(mod_synth, voice);
+
                 voice->samppos += voice->sampinc;
-                uint32_t index = voice->samppos >> SCALE_FACTOR;
+                uint32_t index = voice->samppos >> POS_SCALE_FACTOR;
 
                 if (voice->replen) {
                     if (index >= (voice->reppnt + voice->replen)) {
                         index = voice->reppnt;
-                        voice->samppos = index << SCALE_FACTOR;
+                        voice->samppos = index << POS_SCALE_FACTOR;
                     }
                 } else {
                     if (index >= voice->length) {
-                        voice->length = 0;
-                        voice->reppnt = 0;
-                        voice->samppos = 0;
+                        voice->state = YSW_MOD_IDLE;
                     }
                 }
 
@@ -127,6 +208,11 @@ void ysw_mod_generate_samples(ysw_mod_synth_t *mod_synth,
                         right += (voice->sample->data[index] * voice->volume);
                         break;
                 }
+
+                left = (left * (voice->amplitude >> AMP_SCALE_FACTOR)) / 100;
+                right = (right * (voice->amplitude >> AMP_SCALE_FACTOR)) / 100;
+                //ESP_LOGD(TAG, "left=%d, right=%d", left, right);
+
             }
         }
 
@@ -142,9 +228,6 @@ void ysw_mod_generate_samples(ysw_mod_synth_t *mod_synth,
             left = (left + (right >> 1));
             right = (right + (left >> 1));
         }
-
-        left = (left * mod_synth->percent_gain) / 100;
-        right = (right * mod_synth->percent_gain) / 100;
 
         if (left > 32767) {
             left = 32767;
@@ -190,8 +273,8 @@ static uint8_t allocate_voice(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8
         // Otherwise no free voices to allocate, so iterate through all active voices
         uint32_t time = UINT_MAX;
         for (uint8_t i = 0; i < mod_synth->voice_count; i++) {
-            // See if voice has reached end of sample without repeat
-            if (!mod_synth->voices[i].length && mod_synth->voices[i].replen < 2) {
+            // See if voice has reached end of sample or 100% attenuation
+            if (mod_synth->voices[i].state == YSW_MOD_IDLE) {
                 ESP_LOGD(TAG, "voice_count=%d, voice[%d] reached end of sample", mod_synth->voice_count, i);
                 // Yes, see if it is last one in active zone and will be first one in free zone
                 if (--mod_synth->voice_count != voice_index) {
@@ -220,49 +303,46 @@ static uint8_t allocate_voice(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8
     return voice_index;
 }
 
-static void free_voice(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi_note)
+static inline uint32_t scale_timecents(ysw_mod_synth_t *mod_synth, zm_timecents_t timecents)
 {
-    uint8_t voice_index = mod_synth->active_notes[channel][midi_note];
-    voice_t *voice = &mod_synth->voices[voice_index];
-    // if channel and note don't match, voice was stolen, nothing more to do
-    if (voice->channel == channel && voice->midi_note == midi_note) {
-        // if we're not freeing the last voice
-        if (--mod_synth->voice_count != voice_index) {
-            // move former last item to position of newly freed item
-            *voice = mod_synth->voices[mod_synth->voice_count];
-            mod_synth->active_notes[voice->channel][voice->midi_note] = voice_index;
-        }
-    }
+    return CENTS_TO_MILLIS(timecents) * mod_synth->playrate;
 }
 
-#include "math.h"
-
-#define WAVETABLE_CENTS_SHIFT(C) (pow(2.0, (C)/1200.0))
-#define WAVETABLE_NOTE_TO_FREQUENCY(N) (440.0 * pow(2.0, ((N) - 69) / 12.0))
-#define WAVETABLE_DECIBEL_SHIFT(dB) (pow(10.0, (dB)/20.0))
-
-#define AUDIO_SAMPLE_RATE_EXACT 44100.0
+static inline uint32_t normalize_centibels(ysw_mod_synth_t *mod_synth, zm_centibels_t centibels)
+{
+    return mod_synth->percent_gain * powf(10.0, (-centibels / 10.0 / 20.0));
+}
 
 static void start_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi_note, uint8_t velocity)
 {
-    uint16_t period = period_map[midi_note];
-    uint8_t program_index = mod_synth->channel_programs[channel];
-    ysw_mod_sample_t *sample = mod_synth->mod_host->provide_sample(
-            mod_synth->mod_host->context, program_index, midi_note);
-
+    // Only one task can load the sample at a time
     enter_critical_section(mod_synth);
 
-    uint32_t sampinc = ((1 << SCALE_FACTOR) *
-        WAVETABLE_CENTS_SHIFT(sample->fine_tune) *
-        44100.0 /
-        WAVETABLE_NOTE_TO_FREQUENCY(sample->root_key) /
-        AUDIO_SAMPLE_RATE_EXACT) *
-        WAVETABLE_NOTE_TO_FREQUENCY(midi_note);
+    bool is_new = false;
+    uint8_t program_index = mod_synth->channel_programs[channel];
+    ysw_mod_sample_t *sample = mod_synth->mod_host->provide_sample(
+            mod_synth->mod_host->context, program_index, midi_note, &is_new);
 
-    uint32_t old_sampinc = mod_synth->sampleticksconst / period;
+    if (is_new) {
+        sample->delay = scale_timecents(mod_synth, sample->delay);
+        sample->attack = scale_timecents(mod_synth, sample->attack);
+        sample->hold = scale_timecents(mod_synth, sample->hold);
+        sample->decay = scale_timecents(mod_synth, sample->decay);
+        sample->release = scale_timecents(mod_synth, sample->release);
+        sample->sustain = normalize_centibels(mod_synth, sample->sustain);
+    }
 
+    uint32_t sampinc = ((1 << POS_SCALE_FACTOR) *
+        CENTS_TO_MILLIS(sample->fine_tune) *
+        SAMPLE_RATE /
+        NOTE_TO_FREQUENCY(sample->root_key) /
+        mod_synth->playrate) *
+        NOTE_TO_FREQUENCY(midi_note);
+
+#if 0
     ESP_LOGD(TAG, "root_key=%d, midi_note=%d, sampinc=%d, old_sampinc=%d",
             sample->root_key, midi_note, sampinc, old_sampinc);
+#endif
 
     uint8_t voice_index = allocate_voice(mod_synth, channel, midi_note);
     voice_t *voice = &mod_synth->voices[voice_index];
@@ -272,10 +352,9 @@ static void start_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi
     voice->replen = sample->replen;
     voice->volume = velocity / 2; // mod volume range is 0-63
     voice->sampinc = sampinc;
-    //voice->sampinc = old_sampinc;
-    voice->period = period;
     voice->samppos = 0;
     voice->time = mod_synth->voice_time++;
+    voice->state = YSW_MOD_NOTE_ON;
 
     leave_critical_section(mod_synth);
 
@@ -289,7 +368,23 @@ static void stop_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi_
 {
     enter_critical_section(mod_synth);
 
-    free_voice(mod_synth, channel, midi_note);
+    uint8_t voice_index = mod_synth->active_notes[channel][midi_note];
+    voice_t *voice = &mod_synth->voices[voice_index];
+    // If channel and note don't match, voice was stolen, nothing more to do
+    if (voice->channel == channel && voice->midi_note == midi_note) {
+        // See if voice is already idle
+        if (voice->state == YSW_MOD_IDLE) {
+            // If so, we can free this voice, see if it's the last allocate voice
+            if (--mod_synth->voice_count != voice_index) {
+                // If not move former last item to position of newly freed item
+                *voice = mod_synth->voices[mod_synth->voice_count];
+                mod_synth->active_notes[voice->channel][voice->midi_note] = voice_index;
+            }
+        } else {
+            // Note is still playing, let it end properly, voice will be freed in allocate_voice
+            voice->state = YSW_MOD_NOTE_OFF;
+        }
+    }
 
     leave_critical_section(mod_synth);
 }
