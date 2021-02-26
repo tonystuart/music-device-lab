@@ -18,6 +18,7 @@
 #define MAX_VOICES 32
 
 typedef enum {
+    YSW_MOD_IDLE = 0,
     YSW_MOD_NOTE_ON,
     YSW_MOD_DELAY,
     YSW_MOD_ATTACK,
@@ -26,7 +27,6 @@ typedef enum {
     YSW_MOD_SUSTAIN,
     YSW_MOD_NOTE_OFF,
     YSW_MOD_RELEASE,
-    YSW_MOD_IDLE,
 } ysw_mod_state_t;
 
 typedef enum {

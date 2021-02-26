@@ -185,9 +185,10 @@ void ysw_mod_generate_samples(ysw_mod_synth_t *mod_synth,
                 uint32_t index = voice->samppos >> POS_SCALE_FACTOR;
 
                 if (voice->replen) {
-                    if (index >= (voice->reppnt + voice->replen)) {
-                        index = voice->reppnt;
-                        voice->samppos = index << POS_SCALE_FACTOR;
+                    if (index >= (voice->reppnt + voice->replen) + 5) {
+                        voice->samppos = (voice->reppnt << POS_SCALE_FACTOR) +
+                            (voice->samppos % ((voice->reppnt + voice->replen) << POS_SCALE_FACTOR));
+                        index = voice->samppos >> POS_SCALE_FACTOR;
                     }
                 } else {
                     if (index >= voice->length) {
