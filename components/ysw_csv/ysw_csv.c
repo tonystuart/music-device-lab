@@ -8,7 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_csv.h"
-
+#include "ysw_heap.h"
 #include "assert.h"
 #include "stdbool.h"
 #include "stdint.h"
@@ -17,6 +17,10 @@
 
 int ysw_csv_parse(char *buffer, char *tokens[], int max_tokens)
 {
+    assert(buffer);
+    assert(tokens);
+    assert(max_tokens > 0);
+
     typedef enum {
         INITIAL,
         ESCAPE,
@@ -88,3 +92,74 @@ void ysw_csv_escape(const char *source, char *target, int target_size)
     *t = 0;
 }
 
+uint32_t ysw_csv_parse_next_record(ysw_csv_t *csv)
+{
+    assert(csv);
+
+    if (csv->is_pushback) {
+        csv->is_pushback = false;
+    } else {
+        csv->token_count = 0;
+        while (!csv->token_count && fgets(csv->buffer, csv->record_size, csv->file)) {
+            csv->token_count = ysw_csv_parse(csv->buffer, csv->tokens, csv->tokens_size);
+            csv->record_count++;
+        }
+    }
+    return csv->token_count;
+}
+
+void ysw_csv_push_back_record(ysw_csv_t *csv)
+{
+    assert(csv);
+    assert(!csv->is_pushback);
+
+    csv->is_pushback = true;
+}
+
+int32_t ysw_csv_get_token_count(ysw_csv_t *csv)
+{
+    assert(csv);
+
+    return csv->token_count;
+}
+
+int32_t ysw_csv_get_record_count(ysw_csv_t *csv)
+{
+    assert(csv);
+
+    return csv->record_count;
+}
+
+char *ysw_csv_get_token(ysw_csv_t *csv, uint32_t index)
+{
+    assert(csv);
+    assert(index < csv->tokens_size);
+
+    return csv->tokens[index];
+}
+
+ysw_csv_t *ysw_csv_create(FILE *file, uint32_t record_size, uint32_t tokens_size)
+{
+    assert(file);
+    assert(record_size);
+    assert(tokens_size);
+
+    ysw_csv_t *csv = ysw_heap_allocate(sizeof(ysw_csv_t));
+    csv->buffer = ysw_heap_allocate(sizeof(char) *record_size);
+    csv->tokens = ysw_heap_allocate(sizeof(char *) *tokens_size);
+    csv->file = file;
+    csv->record_size = record_size;
+    csv->tokens_size = tokens_size;
+    return csv;
+}
+
+void ysw_csv_free(ysw_csv_t *csv)
+{
+    assert(csv);
+    assert(csv->tokens);
+    assert(csv->buffer);
+
+    ysw_heap_free(csv->tokens);
+    ysw_heap_free(csv->buffer);
+    ysw_heap_free(csv);
+}

@@ -11,28 +11,229 @@
 
 #include "ysw_mod_synth.h"
 #include "ysw_common.h"
+#include "ysw_csv.h"
 #include "ysw_event.h"
 #include "ysw_heap.h"
+#include "ysw_midi.h"
 #include "ysw_task.h"
 #include "esp_log.h"
+#include "sys/types.h"
+#include "sys/stat.h"
 #include "assert.h"
+#include "fcntl.h"
 #include "limits.h"
 #include "math.h"
+#include "stdio.h"
 #include "stdlib.h"
+#include "unistd.h"
 
 #define TAG "YSW_MOD_SYNTH"
+
+// TODO: establish naming conventions for scaled values, positions vs indices, sample properties, etc.
+// TODO: evaluate cost of generating samples via ysw_bus (or alternative) and remove mutex
+// TODO: make ysw_mod_generate_samples private and handle via ysw_bus
+
+#define PATH_SIZE 128
+#define RECORD_SIZE 128
+#define TOKENS_SIZE 64
 
 #define SAMPLE_RATE 44100.0
 
 #define POS_SCALE_FACTOR 10
 #define AMP_SCALE_FACTOR 20
+#define AMP_MAX_VALUE 100
+#define AMP_MAX_SCALED (AMP_MAX_VALUE << AMP_SCALE_FACTOR)
 
-#define CENTS_TO_MILLIS(timecents) (pow(2.0, (timecents)/1200.0))
-#define NOTE_TO_FREQUENCY(note) (440.0 * pow(2.0, ((note) - 69) / 12.0))
+typedef enum {
+    YSW_MOD_PRESET = 0,
+    YSW_MOD_INSTRUMENT = 1,
+    YSW_MOD_SAMPLE = 2,
+} ysw_mod_record_t;
 
-// TODO: establish naming conventions for scaled values, positions vs indices, sample properties, etc.
+static inline float to_millis(int16_t timecents)
+{
+    return pow(2.0, timecents / 1200.0);
+}
 
-// TODO: evaluate cost of generating samples via ysw_bus (or alternative) and remove mutex
+static inline float to_frequency(int8_t note)
+{
+    return 440.0 * pow(2.0, (note - 69) / 12.0);
+}
+
+static inline uint32_t apply_envelope_amplitude(int32_t amplitude, int32_t value)
+{
+    return (value * (amplitude >> AMP_SCALE_FACTOR)) / AMP_MAX_VALUE;
+}
+
+static inline uint32_t apply_percent_gain(uint16_t percent_gain, int32_t value)
+{
+    return (percent_gain * value) / 100;
+}
+
+static inline uint32_t parse_centibels(const char *token)
+{
+    int16_t centibels = atoi(token);
+    float amplitude = powf(10.0, (-centibels / 10.0 / 20.0));
+    uint32_t scaled_amplitude = amplitude * (1 << AMP_SCALE_FACTOR);
+    return scaled_amplitude;
+}
+
+static inline uint32_t parse_timecents(const char *token)
+{
+    int16_t timecents = token[0] ? atoi(token) : -32768;
+    uint32_t samples = to_millis(timecents) * SAMPLE_RATE;
+    return samples;
+}
+
+static ysw_mod_sample_t *parse_sample(ysw_csv_t *csv)
+{
+    ysw_mod_sample_t *sample = ysw_heap_allocate(sizeof(ysw_mod_sample_t));
+    sample->name = ysw_heap_strdup(ysw_csv_get_token(csv, 1));
+    sample->reppnt = atoi(ysw_csv_get_token(csv, 2));
+    sample->replen = atoi(ysw_csv_get_token(csv, 3));
+    sample->volume = atoi(ysw_csv_get_token(csv, 4));
+    sample->pan = atoi(ysw_csv_get_token(csv, 5));
+    sample->attenuation = atoi(ysw_csv_get_token(csv, 6));
+    sample->fine_tune = atoi(ysw_csv_get_token(csv, 7));
+    sample->root_key = atoi(ysw_csv_get_token(csv, 8));
+    sample->delay = parse_timecents(ysw_csv_get_token(csv, 9));
+    sample->attack = parse_timecents(ysw_csv_get_token(csv, 10));
+    sample->hold = parse_timecents(ysw_csv_get_token(csv, 11));
+    sample->decay = parse_timecents(ysw_csv_get_token(csv, 12));
+    sample->sustain = parse_centibels(ysw_csv_get_token(csv, 13));
+    sample->release = parse_timecents(ysw_csv_get_token(csv, 14));
+    sample->from_note = atoi(ysw_csv_get_token(csv, 15));
+    sample->to_note = atoi(ysw_csv_get_token(csv, 16));
+    sample->from_velocity = atoi(ysw_csv_get_token(csv, 17));
+    sample->to_velocity = atoi(ysw_csv_get_token(csv, 18));
+    return sample;
+}
+
+static ysw_mod_instrument_t *parse_instrument(ysw_csv_t *csv)
+{
+    ysw_mod_instrument_t *instrument = ysw_heap_allocate(sizeof(ysw_mod_instrument_t));
+    instrument->samples = ysw_array_create(8);
+
+    bool done = false;
+    uint32_t token_count = 0;
+    while (!done && ((token_count = ysw_csv_parse_next_record(csv)))) {
+        ysw_mod_record_t type = atoi(ysw_csv_get_token(csv, 0));
+        if (type == YSW_MOD_SAMPLE && token_count == 19) {
+            ysw_mod_sample_t *sample = parse_sample(csv);
+            ysw_array_push(instrument->samples, sample);
+        } else {
+            ysw_csv_push_back_record(csv);
+            done = true;
+        }
+    }
+
+    return instrument;
+}
+
+static ysw_mod_preset_t *parse_preset(ysw_csv_t *csv)
+{
+    ysw_mod_preset_t *preset = ysw_heap_allocate(sizeof(ysw_mod_preset_t));
+    preset->instruments = ysw_array_create(2);
+
+    preset->name = ysw_heap_strdup(ysw_csv_get_token(csv, 1));
+    preset->bank = atoi(ysw_csv_get_token(csv, 2));
+    preset->num = atoi(ysw_csv_get_token(csv, 3));
+
+    bool done = false;
+    uint32_t token_count = 0;
+    while (!done && ((token_count = ysw_csv_parse_next_record(csv)))) {
+        ysw_mod_record_t type = atoi(ysw_csv_get_token(csv, 0));
+        if (type == YSW_MOD_INSTRUMENT && token_count == 2) {
+            ysw_mod_instrument_t *instrument = parse_instrument(csv);
+            ysw_array_push(preset->instruments, instrument);
+        } else {
+            ysw_csv_push_back_record(csv);
+            done = true;
+        }
+    }
+
+    return preset;
+}
+
+ysw_mod_preset_t *parse_file(FILE *file)
+{
+    ysw_mod_preset_t *preset = NULL;
+    ysw_csv_t *csv = ysw_csv_create(file, RECORD_SIZE, TOKENS_SIZE);
+
+    uint32_t token_count = 0;
+    while ((token_count = ysw_csv_parse_next_record(csv))) {
+        ysw_mod_record_t type = atoi(ysw_csv_get_token(csv, 0));
+        if (type == YSW_MOD_PRESET && token_count == 4) {
+            preset = parse_preset(csv);
+        } else {
+            ESP_LOGW(TAG, "invalid record_count=%d, record type=%d, token_count=%d",
+                    ysw_csv_get_record_count(csv), type, token_count);
+            for (uint32_t i = 0; i < token_count; i++) {
+                ESP_LOGW(TAG, "token[%d]=%s", i, ysw_csv_get_token(csv, i));
+            }
+        }
+    }
+
+    ysw_csv_free(csv);
+    return preset;
+}
+
+static void load_preset(ysw_mod_synth_t *mod_synth, ysw_mod_bank_t *bank, uint8_t program)
+{
+    char buf[PATH_SIZE];
+    snprintf(buf, sizeof(buf), "%s/presets/%03d-%03d.csv", mod_synth->folder, bank->num, program);
+
+    FILE *file = fopen(buf, "r");
+    assert(file);
+
+    ysw_mod_preset_t *preset = parse_file(file);
+    bank->presets[program] = preset;
+
+    fclose(file);
+}
+
+static void *load_sample(ysw_mod_synth_t *mod_synth, const char* name, uint16_t *byte_count)
+{
+    char path[PATH_SIZE];
+    snprintf(path, sizeof(path), "%s/samples/%s", mod_synth->folder, name);
+
+    struct stat sb;
+    int rc = stat(path, &sb);
+    if (rc == -1) {
+        ESP_LOGE(TAG, "stat failed, file=%s", path);
+        abort();
+    }
+
+    int sample_size = sb.st_size;
+
+    void *sample_data = ysw_heap_allocate(sample_size);
+
+    int fd = open(path, O_RDONLY);
+    if (fd == -1) {
+        ESP_LOGE(TAG, "open failed, file=%s", path);
+        abort();
+    }
+
+    rc = read(fd, sample_data, sample_size);
+    if (rc != sample_size) {
+        ESP_LOGE(TAG, "read failed, rc=%d, sample_size=%d", rc, sample_size);
+        abort();
+    }
+
+    rc = close(fd);
+    if (rc == -1) {
+        ESP_LOGE(TAG, "close failed");
+        abort();
+    }
+
+    ESP_LOGD(TAG, "load_sample: path=%s, sample_size=%d bytes", path, sample_size);
+
+    if (byte_count) {
+        *byte_count = sample_size;
+    }
+
+    return sample_data;
+}
 
 static void enter_critical_section(ysw_mod_synth_t *mod_synth)
 {
@@ -56,14 +257,13 @@ static void initialize_synthesizer(ysw_mod_synth_t *mod_synth)
     mod_synth->mutex = xSemaphoreCreateMutex();
 }
 
-static int32_t get_ramp_step(voice_t *voice, uint32_t from_pct, uint32_t to_pct)
+// from and to must already be scaled up when passed to this function
+static int32_t get_ramp_step(voice_t *voice, uint32_t from, uint32_t to)
 {
     // TODO: use Christian Schoenebeck’s Fast Exponential Envelope Generator
-    //return ((to_pct - from_pct) << AMP_SCALE_FACTOR) / (voice->next_change - voice->iterations);
-    int32_t n = to_pct - from_pct;
-    int32_t scaled_n = n << AMP_SCALE_FACTOR;
+    int32_t n = to - from;
     int32_t d = voice->next_change - voice->iterations;
-    int32_t r = scaled_n / d;
+    int32_t r = d ? n / d : 0;
     return r;
 }
 
@@ -81,8 +281,8 @@ static void apply_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *voice)
             if (voice->iterations >= voice->next_change) {
                 voice->state = YSW_MOD_ATTACK;
                 voice->next_change = voice->iterations + voice->sample->attack;
-                voice->ramp_step = get_ramp_step(voice, 0, mod_synth->percent_gain);
-                ESP_LOGD(TAG, "attack iterations=%d, next_change=%d, delta=%d (%g)", voice->iterations, voice->next_change, voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE);
+                voice->ramp_step = get_ramp_step(voice, 0, AMP_MAX_SCALED);
+                ESP_LOGD(TAG, "attack samples=%d (%gs), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, 0, AMP_MAX_SCALED, voice->ramp_step);
             }
             voice->amplitude += voice->ramp_step;
             break;
@@ -91,7 +291,7 @@ static void apply_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *voice)
                 voice->state = YSW_MOD_HOLD;
                 voice->next_change = voice->iterations + voice->sample->hold;
                 voice->ramp_step = 0;
-                ESP_LOGD(TAG, "hold iterations=%d, next_change=%d, delta=%d (%g)", voice->iterations, voice->next_change, voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE);
+                ESP_LOGD(TAG, "hold samples=%d (%gs), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, voice->amplitude, voice->amplitude, voice->ramp_step);
             }
             voice->amplitude += voice->ramp_step;
             break;
@@ -99,8 +299,8 @@ static void apply_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *voice)
             if (voice->iterations >= voice->next_change) {
                 voice->state = YSW_MOD_DECAY;
                 voice->next_change = voice->iterations + voice->sample->decay;
-                voice->ramp_step = get_ramp_step(voice, mod_synth->percent_gain, voice->sample->sustain);
-                ESP_LOGD(TAG, "decay iterations=%d, next_change=%d, delta=%d (%g), amplitude=%d, ramp_step=%d", voice->iterations, voice->next_change, voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, voice->amplitude, voice->ramp_step);
+                voice->ramp_step = get_ramp_step(voice, AMP_MAX_SCALED, voice->sample->sustain);
+                ESP_LOGD(TAG, "decay samples=%d (%gs), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, AMP_MAX_SCALED, voice->sample->sustain, voice->ramp_step);
             }
             voice->amplitude += voice->ramp_step;
             break;
@@ -109,7 +309,6 @@ static void apply_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *voice)
                 voice->state = YSW_MOD_SUSTAIN;
                 voice->ramp_step = 0;
                 ESP_LOGD(TAG, "sustain amplitude=%d, sustain=%d, delta=%d", voice->amplitude, voice->sample->sustain, voice->amplitude - voice->sample->sustain);
-
             }
             voice->amplitude += voice->ramp_step;
             break;
@@ -122,12 +321,12 @@ static void apply_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *voice)
         case YSW_MOD_NOTE_OFF:
             voice->state = YSW_MOD_RELEASE;
             voice->next_change = voice->iterations + voice->sample->release;
-            voice->ramp_step = get_ramp_step(voice, voice->amplitude >> AMP_SCALE_FACTOR, 0);
-            ESP_LOGD(TAG, "note_off iterations=%d, next_change=%d, delta=%d (%g), amplitude=%d, ramp_step=%d", voice->iterations, voice->next_change, voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, voice->amplitude, voice->ramp_step);
+            voice->ramp_step = get_ramp_step(voice, voice->amplitude, 0);
+            ESP_LOGD(TAG, "note_off samples=%d (%g), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, voice->amplitude, 0, voice->ramp_step);
             voice->amplitude += voice->ramp_step;
             break;
         case YSW_MOD_RELEASE:
-            if (voice->iterations >= voice->next_change) {
+            if (voice->iterations >= voice->next_change || (voice->amplitude >> AMP_SCALE_FACTOR) <= 0) {
                 voice->state = YSW_MOD_IDLE;
                 voice->ramp_step = 0;
                 voice->amplitude = 0;
@@ -166,13 +365,13 @@ void ysw_mod_generate_samples(ysw_mod_synth_t *mod_synth,
         return;
     }
 
-    int last_left = mod_synth->last_left_sample;
-    int last_right = mod_synth->last_right_sample;;
+    int32_t last_left = mod_synth->last_left_sample;
+    int32_t last_right = mod_synth->last_right_sample;;
 
     for (uint32_t i = 0; i < number; i++) {
 
-        int left = 0;
-        int right = 0;
+        int32_t left = 0;
+        int32_t right = 0;
 
         voice_t *voice = mod_synth->voices;
 
@@ -210,15 +409,16 @@ void ysw_mod_generate_samples(ysw_mod_synth_t *mod_synth,
                         break;
                 }
 
-                left = (left * (voice->amplitude >> AMP_SCALE_FACTOR)) / 100;
-                right = (right * (voice->amplitude >> AMP_SCALE_FACTOR)) / 100;
-                //ESP_LOGD(TAG, "left=%d, right=%d", left, right);
+                left = apply_envelope_amplitude(voice->amplitude, left);
+                right = apply_envelope_amplitude(voice->amplitude, right);
 
+                left = apply_percent_gain(mod_synth->percent_gain, left);
+                right = apply_percent_gain(mod_synth->percent_gain, right);
             }
         }
 
-        int temp_left = (short)left;
-        int temp_right = (short)right;
+        int32_t temp_left = (short)left;
+        int32_t temp_right = (short)right;
 
         if (mod_synth->filter) {
             left = (left + last_left) >> 1;
@@ -304,65 +504,100 @@ static uint8_t allocate_voice(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8
     return voice_index;
 }
 
-static inline uint32_t scale_timecents(ysw_mod_synth_t *mod_synth, zm_timecents_t timecents)
+static ysw_mod_bank_t *find_bank(ysw_mod_synth_t *mod_synth, uint8_t num)
 {
-    return CENTS_TO_MILLIS(timecents) * mod_synth->playrate;
+    for (uint8_t i = 0; i < YSW_MOD_MAX_BANKS; i++) {
+        if (mod_synth->banks[i].num == num) {
+            return &mod_synth->banks[i];
+        }
+    }
+    return NULL;
 }
 
-static inline uint32_t normalize_centibels(ysw_mod_synth_t *mod_synth, zm_centibels_t centibels)
+static ysw_mod_preset_t *realize_preset(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t program)
 {
-    return mod_synth->percent_gain * powf(10.0, (-centibels / 10.0 / 20.0));
+    uint8_t num = 0;
+    if (channel == YSW_MIDI_DRUM_CHANNEL) {
+        num = YSW_MIDI_DRUM_BANK;
+        program = 0;
+    }
+
+    ysw_mod_bank_t *bank = find_bank(mod_synth, num);
+    assert(bank);
+
+    if (!bank->presets[program]) {
+        load_preset(mod_synth, bank, program);
+    }
+
+    return bank->presets[program];
+}
+
+static ysw_mod_sample_t *find_sample(ysw_mod_instrument_t *instrument, uint8_t midi_note)
+{
+    uint8_t sample_count = ysw_array_get_count(instrument->samples);
+    for (uint8_t i = 0; i < sample_count; i++) {
+        ysw_mod_sample_t *sample = ysw_array_get(instrument->samples, i);
+        if (sample->from_note <= midi_note && midi_note <= sample->to_note) {
+            return sample;
+        }
+    }
+    return NULL;
+}
+
+static ysw_mod_sample_t *get_sample(ysw_mod_synth_t *mod_synth, ysw_mod_instrument_t *instrument, uint8_t midi_note)
+{
+    ysw_mod_sample_t *sample = find_sample(instrument, midi_note);
+    assert(sample);
+
+    if (!sample->data) {
+        hnode_t *node = hash_lookup(mod_synth->sample_map, sample->name);
+        if (node) {
+            sample->data = hnode_get(node);
+        } else {
+            sample->data = load_sample(mod_synth, sample->name, &sample->length);
+            if (!hash_alloc_insert(mod_synth->sample_map, sample->name, sample->data)) {
+                ESP_LOGE(TAG, "hash_alloc_insert failed");
+                abort();
+            }
+        }
+    }
+
+    return sample;
 }
 
 static void start_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi_note, uint8_t velocity)
 {
-    // Only one task can load the sample at a time
     enter_critical_section(mod_synth);
 
-    bool is_new = false;
-    uint8_t program_index = mod_synth->channel_programs[channel];
-    ysw_mod_sample_t *sample = mod_synth->mod_host->provide_sample(
-            mod_synth->mod_host->context, program_index, midi_note, &is_new);
+    uint8_t program = mod_synth->channel_programs[channel];
+    ysw_mod_preset_t *preset = realize_preset(mod_synth, channel, program);
+    uint8_t instrument_count = ysw_array_get_count(preset->instruments);
+    for (uint8_t i = 0; i < instrument_count; i++) {
+        ysw_mod_instrument_t *instrument = ysw_array_get(preset->instruments, i);
+        ysw_mod_sample_t *sample = get_sample(mod_synth, instrument, midi_note);
 
-    if (is_new) {
-        sample->delay = scale_timecents(mod_synth, sample->delay);
-        sample->attack = scale_timecents(mod_synth, sample->attack);
-        sample->hold = scale_timecents(mod_synth, sample->hold);
-        sample->decay = scale_timecents(mod_synth, sample->decay);
-        sample->release = scale_timecents(mod_synth, sample->release);
-        sample->sustain = normalize_centibels(mod_synth, sample->sustain);
+        // TODO: determine whether we need the playrate correction, if so, also use in parse_timecents
+        uint32_t sampinc = ((1 << POS_SCALE_FACTOR) *
+                to_millis(sample->fine_tune) *
+                SAMPLE_RATE /
+                to_frequency(sample->root_key) /
+                mod_synth->playrate) *
+            to_frequency(midi_note);
+
+        uint8_t voice_index = allocate_voice(mod_synth, channel, midi_note);
+        voice_t *voice = &mod_synth->voices[voice_index];
+        voice->sample = sample;
+        voice->length = sample->length;
+        voice->reppnt = sample->reppnt;
+        voice->replen = sample->replen;
+        voice->volume = velocity / 2; // mod volume range is 0-63
+        voice->sampinc = sampinc;
+        voice->samppos = 0;
+        voice->time = mod_synth->voice_time++;
+        voice->state = YSW_MOD_NOTE_ON;
     }
 
-    uint32_t sampinc = ((1 << POS_SCALE_FACTOR) *
-        CENTS_TO_MILLIS(sample->fine_tune) *
-        SAMPLE_RATE /
-        NOTE_TO_FREQUENCY(sample->root_key) /
-        mod_synth->playrate) *
-        NOTE_TO_FREQUENCY(midi_note);
-
-#if 0
-    ESP_LOGD(TAG, "root_key=%d, midi_note=%d, sampinc=%d, old_sampinc=%d",
-            sample->root_key, midi_note, sampinc, old_sampinc);
-#endif
-
-    uint8_t voice_index = allocate_voice(mod_synth, channel, midi_note);
-    voice_t *voice = &mod_synth->voices[voice_index];
-    voice->sample = sample;
-    voice->length = sample->length;
-    voice->reppnt = sample->reppnt;
-    voice->replen = sample->replen;
-    voice->volume = velocity / 2; // mod volume range is 0-63
-    voice->sampinc = sampinc;
-    voice->samppos = 0;
-    voice->time = mod_synth->voice_time++;
-    voice->state = YSW_MOD_NOTE_ON;
-
     leave_critical_section(mod_synth);
-
-#if 0
-    ESP_LOGD(TAG, "channel=%d, program=%d, midi_note=%d, velocity=%d, period=%d, voices=%d",
-            channel, program_index, midi_note, velocity, period, mod_synth->voice_count);
-#endif
 }
 
 static void stop_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi_note)
@@ -412,6 +647,8 @@ static void on_program_change(ysw_mod_synth_t *mod_synth, ysw_event_program_chan
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
     assert(m->program < YSW_MIDI_MAX_COUNT);
 
+    realize_preset(mod_synth, m->channel, m->program);
+
     mod_synth->channel_programs[m->channel] = m->program;
 }
 
@@ -441,11 +678,17 @@ static void process_event(void *context, ysw_event_t *event)
     }
 }
 
-ysw_mod_synth_t *ysw_mod_synth_create_task(ysw_bus_t *bus, ysw_mod_host_t *mod_host)
+ysw_mod_synth_t *ysw_mod_synth_create_task(ysw_bus_t *bus)
 {
+    extern void hash_ensure_assert_off(void);
+    hash_ensure_assert_off();
+
     ysw_mod_synth_t *mod_synth = ysw_heap_allocate(sizeof(ysw_mod_synth_t));
-    mod_synth->mod_host = mod_host;
     mod_synth->percent_gain = 100;
+    mod_synth->folder = "/spiffs";
+    mod_synth->banks[0].num = 0;
+    mod_synth->banks[1].num = YSW_MIDI_DRUM_BANK;
+    mod_synth->sample_map = hash_create(128, NULL, NULL);
 
     initialize_synthesizer(mod_synth);
 

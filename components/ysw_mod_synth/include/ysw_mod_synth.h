@@ -11,11 +11,14 @@
 
 #include "ysw_bus.h"
 #include "ysw_midi.h"
+#include "hash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "stdint.h"
 
 #define MAX_VOICES 32
+
+#define YSW_MOD_MAX_BANKS 2
 
 typedef enum {
     YSW_MOD_IDLE = 0,
@@ -36,12 +39,14 @@ typedef enum {
 } ysw_mod_pan_t;
 
 typedef struct {
+    char *name;
     int8_t *data;
     uint16_t length;
     uint16_t reppnt;
     uint16_t replen;
     uint8_t volume;
     ysw_mod_pan_t pan;
+    int16_t attenuation;
     int16_t fine_tune;
     int16_t root_key;
     uint32_t delay;
@@ -50,14 +55,11 @@ typedef struct {
     uint32_t decay;
     uint32_t release;
     uint32_t sustain;
+    uint8_t from_note;
+    uint8_t to_note;
+    uint8_t from_velocity;
+    uint8_t to_velocity;
 } ysw_mod_sample_t;
-
-typedef ysw_mod_sample_t *(*ysw_mod_sample_provider_t)(void *context, uint8_t program, uint8_t note, bool *is_new);
-
-typedef struct {
-    void* context;
-    ysw_mod_sample_provider_t provide_sample;
-} ysw_mod_host_t;
 
 typedef struct {
     ysw_mod_sample_t *sample;
@@ -78,6 +80,22 @@ typedef struct {
 } voice_t;
 
 typedef struct {
+    ysw_array_t *samples;
+} ysw_mod_instrument_t;
+
+typedef struct {
+    char *name;
+    uint8_t bank;
+    uint8_t num;
+    ysw_array_t *instruments;
+} ysw_mod_preset_t;
+
+typedef struct {
+    uint8_t num;
+    ysw_mod_preset_t *presets[YSW_MIDI_MAX_COUNT];
+} ysw_mod_bank_t;
+
+typedef struct {
     uint8_t active_notes[YSW_MIDI_MAX_CHANNELS][YSW_MIDI_MAX_COUNT];
     uint8_t channel_programs[YSW_MIDI_MAX_CHANNELS];
     uint32_t playrate;
@@ -92,7 +110,9 @@ typedef struct {
     int16_t filter;
     uint16_t percent_gain;
     SemaphoreHandle_t mutex;
-    ysw_mod_host_t *mod_host;
+    const char *folder;
+    ysw_mod_bank_t banks[YSW_MOD_MAX_BANKS];
+    hash_t *sample_map;
 } ysw_mod_synth_t;
 
 typedef enum {
@@ -100,7 +120,7 @@ typedef enum {
     YSW_MOD_16BIT_UNSIGNED,
 } ysw_mod_sample_type_t;
 
-ysw_mod_synth_t *ysw_mod_synth_create_task(ysw_bus_t *bus, ysw_mod_host_t *mod_host);
+ysw_mod_synth_t *ysw_mod_synth_create_task(ysw_bus_t *bus);
 
 void ysw_mod_generate_samples(ysw_mod_synth_t *ysw_mod_synth,
         int16_t *buffer, uint32_t number, ysw_mod_sample_type_t sample_type);

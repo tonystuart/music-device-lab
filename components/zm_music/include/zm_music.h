@@ -40,7 +40,6 @@ typedef uint8_t zm_gm_x;
 typedef uint8_t zm_key_signature_x;
 typedef uint8_t zm_note_t;
 typedef uint8_t zm_octave_t;
-typedef uint8_t zm_patch_x;
 typedef uint8_t zm_percent_x;
 typedef uint8_t zm_program_x;
 typedef uint8_t zm_stroke_x;
@@ -54,12 +53,7 @@ typedef uint16_t zm_composition_x;
 typedef uint16_t zm_measure_x;
 typedef uint16_t zm_note_x;
 typedef uint16_t zm_part_x;
-typedef uint16_t zm_sample_x;
 typedef uint16_t zm_section_x;
-
-typedef int16_t zm_centibels_t;
-typedef int16_t zm_fine_tune_t;
-typedef int16_t zm_timecents_t;
 
 typedef uint32_t zm_step_x;
 typedef uint32_t zm_time_x;
@@ -118,50 +112,6 @@ typedef struct {
     const zm_duration_t unit;
     const zm_time_x ticks_per_measure;
 } zm_time_signature_t;
-
-typedef enum {
-    ZM_PAN_LEFT,
-    ZM_PAN_CENTER,
-    ZM_PAN_RIGHT,
-} zm_pan_t;
-
-typedef struct {
-    char *name;
-    zm_medium_t reppnt;
-    zm_medium_t replen;
-    zm_small_t volume;
-    zm_pan_t pan;
-    zm_timecents_t attenuation;
-    zm_fine_tune_t fine_tune;
-    zm_note_t root_key;
-    zm_timecents_t delay;
-    zm_timecents_t attack;
-    zm_timecents_t hold;
-    zm_timecents_t decay;
-    zm_centibels_t sustain;
-    zm_timecents_t release;
-} zm_sample_t;
-
-typedef enum {
-    ZM_PROGRAM_NOTE,
-    ZM_PROGRAM_BEAT,
-} zm_program_type_t;
-
-typedef struct {
-    char *name;
-    char *label;
-    zm_program_type_t type;
-    zm_gm_x gm;
-    ysw_array_t *patches;
-} zm_program_t;
-
-typedef struct {
-    zm_note_t from_note;
-    zm_note_t to_note;
-    zm_velocity_x from_velocity;
-    zm_velocity_x to_velocity;
-    zm_sample_t *sample;
-} zm_patch_t;
 
 typedef struct {
     char *name;
@@ -235,9 +185,9 @@ typedef struct {
     zm_time_signature_x time;
     zm_time_x tlm;
     ysw_array_t *steps;
-    zm_program_t *melody_program;
-    zm_program_t *chord_program;
-    zm_program_t *rhythm_program;
+    zm_program_x melody_program;
+    zm_program_x chord_program;
+    zm_program_x rhythm_program;
 } zm_section_t;
 
 typedef enum {
@@ -277,8 +227,6 @@ typedef struct {
 
 typedef struct {
     zm_settings_t settings;
-    ysw_array_t *samples;
-    ysw_array_t *programs;
     ysw_array_t *chord_types;
     ysw_array_t *chord_styles;
     ysw_array_t *beats;
@@ -321,8 +269,6 @@ zm_duration_t zm_round_duration(zm_duration_t duration, uint8_t *index, bool *is
 zm_duration_t zm_get_next_dotted_duration(zm_duration_t duration, int direction);
 const char *zm_get_duration_label(zm_duration_t duration);
 zm_duration_t zm_get_next_duration(zm_duration_t duration);
-
-zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note);
 
 zm_section_t *zm_create_section(zm_music_t *music);
 

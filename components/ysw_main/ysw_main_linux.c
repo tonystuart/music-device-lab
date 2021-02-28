@@ -19,7 +19,6 @@
 #include "ysw_mapper.h"
 #include "ysw_midi.h"
 #include "ysw_sequencer.h"
-#include "ysw_mod_music.h"
 #include "ysw_mod_synth.h"
 #include "ysw_shell.h"
 #include "ysw_simulator.h"
@@ -68,8 +67,7 @@ static void initialize_mod_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
     ESP_LOGD(TAG, "configuring MOD synth with ALSA");
 
-    ysw_mod_host_t *mod_host = ysw_mod_music_create_host(music);
-    ysw_mod_synth = ysw_mod_synth_create_task(bus, mod_host);
+    ysw_mod_synth = ysw_mod_synth_create_task(bus);
     pthread_t p;
     pthread_create(&p, NULL, &alsa_thread, NULL);
 }

@@ -24,7 +24,6 @@
 #include "ysw_mapper.h"
 #include "ysw_midi.h"
 #include "ysw_mod_synth.h"
-#include "ysw_mod_music.h"
 #include "ysw_sequencer.h"
 #include "ysw_staff.h"
 #include "ysw_spiffs.h"
@@ -191,8 +190,7 @@ void ysw_main_init_synthesizer(ysw_bus_t *bus, zm_music_t *music)
     ESP_LOGD(TAG, "configuring FluidSynth synth");
     ysw_fluid_synth_create_task(bus, YSW_MUSIC_SOUNDFONT, "a2dp");
 #elif SYNTH_TYPE == MOD_SYNTH
-    ysw_mod_host_t *mod_host = ysw_mod_music_create_host(music);
-    ysw_mod_synth = ysw_mod_synth_create_task(bus, mod_host);
+    ysw_mod_synth = ysw_mod_synth_create_task(bus);
 #endif
     ysw_i2s_create_task(initialize_audio_output, generate_audio);
 }

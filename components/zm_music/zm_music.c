@@ -41,11 +41,6 @@ typedef enum {
     // settings
     ZM_MF_SETTINGS = 0,
 
-    // instruments
-    ZM_MF_SAMPLE = 1,
-    ZM_MF_PROGRAM = 2,
-    ZM_MF_PATCH = 3,
-
     // chords
     ZM_MF_CHORD_TYPE = 4,
     ZM_MF_CHORD_STYLE = 5,
@@ -69,20 +64,13 @@ typedef enum {
 } zm_mf_type_t;
 
 typedef struct {
-    FILE *file;
-    char buffer[RECORD_SIZE];
-    char *tokens[TOKENS_SIZE];
     zm_music_t *music;
-    zm_small_t token_count;
-    zm_large_t record_count;
-    zm_yesno_t reuse_tokens;
+    ysw_csv_t *csv;
 } zm_mfr_t;
 
 typedef struct {
     FILE *file;
     zm_music_t *music;
-    hash_t *sample_map;
-    hash_t *program_map;
     hash_t *chord_type_map;
     hash_t *style_map;
     hash_t *beat_map;
@@ -124,35 +112,9 @@ static void free_map(hash_t *map)
     hash_destroy(map);
 }
 
-static int get_tokens(zm_mfr_t *zm_mfr)
+static void parse_settings(zm_mfr_t *mfr)
 {
-    if (zm_mfr->reuse_tokens) {
-        zm_mfr->reuse_tokens = false;
-        return true;
-    }
-
-    zm_yesno_t done = false;
-
-    while (!done && fgets(zm_mfr->buffer, RECORD_SIZE, zm_mfr->file)) {
-        zm_mfr->token_count = ysw_csv_parse(zm_mfr->buffer, zm_mfr->tokens, TOKENS_SIZE);
-        zm_mfr->record_count++;
-        if (zm_mfr->token_count > 0) {
-            done = true;
-        }
-    }
-
-    return done;
-}
-
-static void push_back_tokens(zm_mfr_t *zm_mfr)
-{
-    assert(!zm_mfr->reuse_tokens);
-    zm_mfr->reuse_tokens = true;
-}
-
-static void parse_settings(zm_mfr_t *zm_mfr)
-{
-    zm_mfr->music->settings.clock = atoi(zm_mfr->tokens[1]);
+    mfr->music->settings.clock = atoi(ysw_csv_get_token(mfr->csv, 1));
 }
 
 static void emit_settings(zm_mfw_t *zm_mfw)
@@ -162,142 +124,12 @@ static void emit_settings(zm_mfw_t *zm_mfw)
             zm_mfw->music->settings.clock);
 }
 
-static zm_timecents_t parse_timecents(const char *token)
-{
-    return token[0] ? atoi(token) : -32768;
-}
-
-static void parse_sample(zm_mfr_t *zm_mfr)
-{
-    zm_sample_x index = atoi(zm_mfr->tokens[1]);
-    zm_medium_t count = ysw_array_get_count(zm_mfr->music->samples);
-
-    if (index != count) {
-        ESP_LOGW(TAG, "parse_sample expected count=%d, got index=%d", count, index);
-        return;
-    }
-
-    zm_sample_t *sample = ysw_heap_allocate(sizeof(zm_sample_t));
-    sample->name = ysw_heap_strdup(zm_mfr->tokens[2]);
-    sample->reppnt = atoi(zm_mfr->tokens[3]);
-    sample->replen = atoi(zm_mfr->tokens[4]);
-    sample->volume = atoi(zm_mfr->tokens[5]);
-    sample->pan = atoi(zm_mfr->tokens[6]);
-    sample->attenuation = atoi(zm_mfr->tokens[7]);
-    sample->fine_tune = atoi(zm_mfr->tokens[8]);
-    sample->root_key = atoi(zm_mfr->tokens[9]);
-    sample->delay = parse_timecents(zm_mfr->tokens[10]);
-    sample->attack = parse_timecents(zm_mfr->tokens[11]);
-    sample->hold = parse_timecents(zm_mfr->tokens[12]);
-    sample->decay = parse_timecents(zm_mfr->tokens[13]);
-    sample->sustain = atoi(zm_mfr->tokens[14]);
-    sample->release = parse_timecents(zm_mfr->tokens[15]);
-
-    ysw_array_push(zm_mfr->music->samples, sample);
-}
-
-static void emit_samples(zm_mfw_t *zm_mfw)
-{
-    uint32_t sample_count = ysw_array_get_count(zm_mfw->music->samples);
-    for (uint32_t i = 0; i < sample_count; i++) {
-        char name[NAME_SIZE];
-        zm_sample_t *sample = ysw_array_get(zm_mfw->music->samples, i);
-        put_map(zm_mfw->sample_map, sample, i);
-        ysw_csv_escape(sample->name, name, sizeof(name));
-        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
-                ZM_MF_SAMPLE,
-                i,
-                name,
-                sample->reppnt,
-                sample->replen,
-                sample->volume,
-                sample->pan,
-                sample->attenuation,
-                sample->fine_tune,
-                sample->root_key,
-                sample->delay,
-                sample->attack,
-                sample->hold,
-                sample->decay,
-                sample->sustain,
-                sample->release);
-    }
-}
-
-static void parse_program(zm_mfr_t *zm_mfr)
-{
-    zm_program_x index = atoi(zm_mfr->tokens[1]);
-    zm_medium_t count = ysw_array_get_count(zm_mfr->music->programs);
-
-    if (index != count) {
-        ESP_LOGW(TAG, "parse_program index=%d, count=%d", index, count);
-        return;
-    }
-
-    zm_program_t *program = ysw_heap_allocate(sizeof(zm_program_t));
-    program->name = ysw_heap_strdup(zm_mfr->tokens[2]);
-    program->label = ysw_make_label(program->name);
-    program->type = atoi(zm_mfr->tokens[3]);
-    program->gm = atoi(zm_mfr->tokens[4]);
-    program->patches = ysw_array_create(1);
-
-    zm_yesno_t done = false;
-
-    while (!done && get_tokens(zm_mfr)) {
-        zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_PATCH && zm_mfr->token_count == 6) {
-            zm_patch_t *patch = ysw_heap_allocate(sizeof(zm_patch_t));
-            patch->from_note = atoi(zm_mfr->tokens[1]);
-            patch->to_note = atoi(zm_mfr->tokens[2]);
-            patch->from_velocity = atoi(zm_mfr->tokens[3]);
-            patch->to_velocity = atoi(zm_mfr->tokens[4]);
-            patch->sample = ysw_array_get(zm_mfr->music->samples, atoi(zm_mfr->tokens[5]));
-            ysw_array_push(program->patches, patch);
-        } else {
-            push_back_tokens(zm_mfr);
-            done = true;
-        }
-    }
-
-    ysw_array_push(zm_mfr->music->programs, program);
-}
-
-static void emit_programs(zm_mfw_t *zm_mfw)
-{
-    uint32_t program_count = ysw_array_get_count(zm_mfw->music->programs);
-    for (uint32_t i = 0; i < program_count; i++) {
-        char name[NAME_SIZE];
-        zm_program_t *program = ysw_array_get(zm_mfw->music->programs, i);
-        put_map(zm_mfw->program_map, program, i);
-        ysw_csv_escape(program->name, name, sizeof(name));
-        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d\n",
-                ZM_MF_PROGRAM,
-                i,
-                name,
-                program->type,
-                program->gm);
-
-        uint32_t patch_count = ysw_array_get_count(program->patches);
-        for (uint32_t j = 0; j < patch_count; j++) {
-            zm_patch_t *patch = ysw_array_get(program->patches, j);
-            zm_patch_x patch_index = get_map(zm_mfw->sample_map, patch->sample);
-                fprintf(zm_mfw->file, "%d,%d,%d,%d,%d,%d\n",
-                        ZM_MF_PATCH,
-                        patch->from_note,
-                        patch->to_note,
-                        patch->from_velocity,
-                        patch->to_velocity,
-                        patch_index);
-        }
-    }
-}
-
 #define MAX_DISTANCES 32
 
-static void parse_chord_type(zm_mfr_t *zm_mfr)
+static void parse_chord_type(zm_mfr_t *mfr)
 {
-    zm_chord_type_x index = atoi(zm_mfr->tokens[1]);
-    zm_medium_t count = ysw_array_get_count(zm_mfr->music->chord_types);
+    zm_chord_type_x index = atoi(ysw_csv_get_token(mfr->csv, 1));
+    zm_medium_t count = ysw_array_get_count(mfr->music->chord_types);
 
     if (index != count) {
         ESP_LOGW(TAG, "parse_chord_type expected count=%d, got index=%d", count, index);
@@ -305,19 +137,19 @@ static void parse_chord_type(zm_mfr_t *zm_mfr)
     }
 
     zm_chord_type_t *type = ysw_heap_allocate(sizeof(zm_chord_type_t));
-    type->name = ysw_heap_strdup(zm_mfr->tokens[2]);
-    type->label = ysw_heap_strdup(zm_mfr->tokens[3]);
+    type->name = ysw_heap_strdup(ysw_csv_get_token(mfr->csv, 2));
+    type->label = ysw_heap_strdup(ysw_csv_get_token(mfr->csv, 3));
     type->distances = ysw_array_create(8);
 
-    zm_distance_x distances_specified = zm_mfr->token_count - 4;
+    zm_distance_x distances_specified = ysw_csv_get_token_count(mfr->csv) - 4;
     zm_distance_x distances_allowed = min(distances_specified, MAX_DISTANCES);
 
     for (zm_small_t i = 0; i < distances_allowed; i++) {
-        zm_distance_t distance = atoi(zm_mfr->tokens[4 + i]);
+        zm_distance_t distance = atoi(ysw_csv_get_token(mfr->csv, 4 + i));
         ysw_array_push(type->distances, (void*)(intptr_t)distance);
     }
 
-    ysw_array_push(zm_mfr->music->chord_types, type);
+    ysw_array_push(mfr->music->chord_types, type);
 }
 
 static void emit_chord_types(zm_mfw_t *zm_mfw)
@@ -344,10 +176,10 @@ static void emit_chord_types(zm_mfw_t *zm_mfw)
     }
 }
 
-static void parse_chord_style(zm_mfr_t *zm_mfr)
+static void parse_chord_style(zm_mfr_t *mfr)
 {
-    zm_chord_style_x index = atoi(zm_mfr->tokens[1]);
-    zm_medium_t count = ysw_array_get_count(zm_mfr->music->chord_styles);
+    zm_chord_style_x index = atoi(ysw_csv_get_token(mfr->csv, 1));
+    zm_medium_t count = ysw_array_get_count(mfr->music->chord_styles);
 
     if (index != count) {
         ESP_LOGW(TAG, "parse_chord_style expected count=%d, got index=%d", count, index);
@@ -355,27 +187,28 @@ static void parse_chord_style(zm_mfr_t *zm_mfr)
     }
 
     zm_chord_style_t *style = ysw_heap_allocate(sizeof(zm_chord_style_t));
-    style->name = ysw_heap_strdup(zm_mfr->tokens[2]);
+    style->name = ysw_heap_strdup(ysw_csv_get_token(mfr->csv, 2));
     style->label = ysw_make_label(style->name);
     style->sounds = ysw_array_create(8);
 
     zm_yesno_t done = false;
     zm_distance_x distances[MAX_DISTANCES] = {};
 
-    while (!done && get_tokens(zm_mfr)) {
-        zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_SOUND && zm_mfr->token_count == 5) {
+    uint32_t token_count = 0;
+    while (!done && ((token_count = ysw_csv_parse_next_record(mfr->csv)))) {
+        zm_mf_type_t type = atoi(ysw_csv_get_token(mfr->csv, 0));
+        if (type == ZM_MF_SOUND && token_count == 5) {
             zm_sound_t *sound = ysw_heap_allocate(sizeof(zm_sound_t));
-            sound->distance_index = atoi(zm_mfr->tokens[1]);
+            sound->distance_index = atoi(ysw_csv_get_token(mfr->csv, 1));
             if (sound->distance_index < MAX_DISTANCES) {
                 distances[sound->distance_index]++;
-                sound->velocity = atoi(zm_mfr->tokens[2]);
-                sound->start = atoi(zm_mfr->tokens[3]);
-                sound->duration = atoi(zm_mfr->tokens[4]);
+                sound->velocity = atoi(ysw_csv_get_token(mfr->csv, 2));
+                sound->start = atoi(ysw_csv_get_token(mfr->csv, 3));
+                sound->duration = atoi(ysw_csv_get_token(mfr->csv, 4));
                 ysw_array_push(style->sounds, sound);
             }
         } else {
-            push_back_tokens(zm_mfr);
+            ysw_csv_push_back_record(mfr->csv);
             done = true;
         }
     }
@@ -386,7 +219,7 @@ static void parse_chord_style(zm_mfr_t *zm_mfr)
         }
     }
 
-    ysw_array_push(zm_mfr->music->chord_styles, style);
+    ysw_array_push(mfr->music->chord_styles, style);
 }
 
 static void emit_chord_styles(zm_mfw_t *zm_mfw)
@@ -415,10 +248,10 @@ static void emit_chord_styles(zm_mfw_t *zm_mfw)
     }
 }
 
-static void parse_beat(zm_mfr_t *zm_mfr)
+static void parse_beat(zm_mfr_t *mfr)
 {
-    zm_beat_x index = atoi(zm_mfr->tokens[1]);
-    zm_beat_x count = ysw_array_get_count(zm_mfr->music->beats);
+    zm_beat_x index = atoi(ysw_csv_get_token(mfr->csv, 1));
+    zm_beat_x count = ysw_array_get_count(mfr->music->beats);
 
     if (index != count) {
         ESP_LOGW(TAG, "parse_beat expected count=%d, got index=%d", count, index);
@@ -426,27 +259,28 @@ static void parse_beat(zm_mfr_t *zm_mfr)
     }
 
     zm_beat_t *beat = ysw_heap_allocate(sizeof(zm_beat_t));
-    beat->name = ysw_heap_strdup(zm_mfr->tokens[2]);
+    beat->name = ysw_heap_strdup(ysw_csv_get_token(mfr->csv, 2));
     beat->label = ysw_make_label(beat->name);
     beat->strokes = ysw_array_create(32);
 
     zm_yesno_t done = false;
 
-    while (!done && get_tokens(zm_mfr)) {
-        zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_STROKE && zm_mfr->token_count == 4) {
+    uint32_t token_count = 0;
+    while (!done && ((token_count = ysw_csv_parse_next_record(mfr->csv)))) {
+        zm_mf_type_t type = atoi(ysw_csv_get_token(mfr->csv, 0));
+        if (type == ZM_MF_STROKE && token_count == 4) {
             zm_stroke_t *stroke = ysw_heap_allocate(sizeof(zm_stroke_t));
-            stroke->start = atoi(zm_mfr->tokens[1]);
-            stroke->surface = atoi(zm_mfr->tokens[2]);
-            stroke->velocity = atoi(zm_mfr->tokens[3]);
+            stroke->start = atoi(ysw_csv_get_token(mfr->csv, 1));
+            stroke->surface = atoi(ysw_csv_get_token(mfr->csv, 2));
+            stroke->velocity = atoi(ysw_csv_get_token(mfr->csv, 3));
             ysw_array_push(beat->strokes, stroke);
         } else {
-            push_back_tokens(zm_mfr);
+            ysw_csv_push_back_record(mfr->csv);
             done = true;
         }
     }
 
-    ysw_array_push(zm_mfr->music->beats, beat);
+    ysw_array_push(mfr->music->beats, beat);
 }
 
 static void emit_beats(zm_mfw_t *zm_mfw)
@@ -474,10 +308,10 @@ static void emit_beats(zm_mfw_t *zm_mfw)
     }
 }
 
-static void parse_section(zm_mfr_t *zm_mfr)
+static void parse_section(zm_mfr_t *mfr)
 {
-    zm_section_x index = atoi(zm_mfr->tokens[1]);
-    zm_medium_t count = ysw_array_get_count(zm_mfr->music->sections);
+    zm_section_x index = atoi(ysw_csv_get_token(mfr->csv, 1));
+    zm_medium_t count = ysw_array_get_count(mfr->music->sections);
 
     if (index != count) {
         ESP_LOGW(TAG, "parse_section index=%d, count=%d", index, count);
@@ -485,46 +319,47 @@ static void parse_section(zm_mfr_t *zm_mfr)
     }
 
     zm_section_t *section = ysw_heap_allocate(sizeof(zm_section_t));
-    section->name = ysw_heap_strdup(zm_mfr->tokens[2]);
-    section->tempo = atoi(zm_mfr->tokens[3]);
-    section->key = atoi(zm_mfr->tokens[4]);
-    section->time = atoi(zm_mfr->tokens[5]);
-    section->tlm = atoi(zm_mfr->tokens[6]);
-    section->melody_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[7]));
-    section->chord_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[8]));
-    section->rhythm_program = ysw_array_get(zm_mfr->music->programs, atoi(zm_mfr->tokens[9]));
+    section->name = ysw_heap_strdup(ysw_csv_get_token(mfr->csv, 2));
+    section->tempo = atoi(ysw_csv_get_token(mfr->csv, 3));
+    section->key = atoi(ysw_csv_get_token(mfr->csv, 4));
+    section->time = atoi(ysw_csv_get_token(mfr->csv, 5));
+    section->tlm = atoi(ysw_csv_get_token(mfr->csv, 6));
+    section->melody_program = atoi(ysw_csv_get_token(mfr->csv, 7));
+    section->chord_program = atoi(ysw_csv_get_token(mfr->csv, 8));
+    section->rhythm_program = atoi(ysw_csv_get_token(mfr->csv, 9));
     section->steps = ysw_array_create(16);
 
     zm_yesno_t done = false;
     zm_step_t *step = NULL;
 
-    while (!done && get_tokens(zm_mfr)) {
-        zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_STEP && zm_mfr->token_count == 4) {
+    uint32_t token_count = 0;
+    while (!done && ((token_count = ysw_csv_parse_next_record(mfr->csv)))) {
+        zm_mf_type_t type = atoi(ysw_csv_get_token(mfr->csv, 0));
+        if (type == ZM_MF_STEP && token_count == 4) {
             step = ysw_heap_allocate(sizeof(zm_step_t));
-            step->start = atoi(zm_mfr->tokens[1]);
-            step->measure = atoi(zm_mfr->tokens[2]);
-            step->flags = atoi(zm_mfr->tokens[3]);
+            step->start = atoi(ysw_csv_get_token(mfr->csv, 1));
+            step->measure = atoi(ysw_csv_get_token(mfr->csv, 2));
+            step->flags = atoi(ysw_csv_get_token(mfr->csv, 3));
             ysw_array_push(section->steps, step);
-        } else if (step && type == ZM_MF_MELODY && zm_mfr->token_count == 4) {
-            step->melody.note = atoi(zm_mfr->tokens[1]);
-            step->melody.duration = atoi(zm_mfr->tokens[2]);
-            step->melody.tie = atoi(zm_mfr->tokens[3]);
-        } else if (step && type == ZM_MF_CHORD && zm_mfr->token_count == 5) {
-            step->chord.root = atoi(zm_mfr->tokens[1]);
-            step->chord.type = ysw_array_get(zm_mfr->music->chord_types, atoi(zm_mfr->tokens[2]));
-            step->chord.style = ysw_array_get(zm_mfr->music->chord_styles, atoi(zm_mfr->tokens[3]));
-            step->chord.frequency = atoi(zm_mfr->tokens[4]);
-        } else if (step && type == ZM_MF_RHYTHM && zm_mfr->token_count == 3) {
-            step->rhythm.beat = ysw_array_get(zm_mfr->music->beats, atoi(zm_mfr->tokens[1]));
-            step->rhythm.surface = atoi(zm_mfr->tokens[2]);
+        } else if (step && type == ZM_MF_MELODY && token_count == 4) {
+            step->melody.note = atoi(ysw_csv_get_token(mfr->csv, 1));
+            step->melody.duration = atoi(ysw_csv_get_token(mfr->csv, 2));
+            step->melody.tie = atoi(ysw_csv_get_token(mfr->csv, 3));
+        } else if (step && type == ZM_MF_CHORD && token_count == 5) {
+            step->chord.root = atoi(ysw_csv_get_token(mfr->csv, 1));
+            step->chord.type = ysw_array_get(mfr->music->chord_types, atoi(ysw_csv_get_token(mfr->csv, 2)));
+            step->chord.style = ysw_array_get(mfr->music->chord_styles, atoi(ysw_csv_get_token(mfr->csv, 3)));
+            step->chord.frequency = atoi(ysw_csv_get_token(mfr->csv, 4));
+        } else if (step && type == ZM_MF_RHYTHM && token_count == 3) {
+            step->rhythm.beat = ysw_array_get(mfr->music->beats, atoi(ysw_csv_get_token(mfr->csv, 1)));
+            step->rhythm.surface = atoi(ysw_csv_get_token(mfr->csv, 2));
         } else {
-            push_back_tokens(zm_mfr);
+            ysw_csv_push_back_record(mfr->csv);
             done = true;
         }
     }
 
-    ysw_array_push(zm_mfr->music->sections, section);
+    ysw_array_push(mfr->music->sections, section);
 }
 
 static void emit_sections(zm_mfw_t *zm_mfw)
@@ -543,9 +378,9 @@ static void emit_sections(zm_mfw_t *zm_mfw)
                 section->key,
                 section->time,
                 section->tlm,
-                get_map(zm_mfw->program_map, section->melody_program),
-                get_map(zm_mfw->program_map, section->chord_program),
-                get_map(zm_mfw->program_map, section->rhythm_program));
+                section->melody_program,
+                section->chord_program,
+                section->rhythm_program);
 
         uint32_t step_count = ysw_array_get_count(section->steps);
         for (uint32_t j = 0; j < step_count; j++) {
@@ -580,10 +415,10 @@ static void emit_sections(zm_mfw_t *zm_mfw)
     }
 }
 
-static void parse_composition(zm_mfr_t *zm_mfr)
+static void parse_composition(zm_mfr_t *mfr)
 {
-    zm_composition_x index = atoi(zm_mfr->tokens[1]);
-    zm_medium_t count = ysw_array_get_count(zm_mfr->music->compositions);
+    zm_composition_x index = atoi(ysw_csv_get_token(mfr->csv, 1));
+    zm_medium_t count = ysw_array_get_count(mfr->music->compositions);
 
     if (index != count) {
         ESP_LOGW(TAG, "parse_composition index=%d, count=%d", index, count);
@@ -591,29 +426,30 @@ static void parse_composition(zm_mfr_t *zm_mfr)
     }
 
     zm_composition_t *composition = ysw_heap_allocate(sizeof(zm_composition_t));
-    composition->name = ysw_heap_strdup(zm_mfr->tokens[2]);
-    composition->bpm = atoi(zm_mfr->tokens[3]);
+    composition->name = ysw_heap_strdup(ysw_csv_get_token(mfr->csv, 2));
+    composition->bpm = atoi(ysw_csv_get_token(mfr->csv, 3));
     composition->parts = ysw_array_create(16);
 
     zm_yesno_t done = false;
 
-    while (!done && get_tokens(zm_mfr)) {
-        zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_PART && zm_mfr->token_count == 6) {
+    uint32_t token_count = 0;
+    while (!done && ((token_count = ysw_csv_parse_next_record(mfr->csv)))) {
+        zm_mf_type_t type = atoi(ysw_csv_get_token(mfr->csv, 0));
+        if (type == ZM_MF_PART && token_count == 6) {
             zm_part_t *part = ysw_heap_allocate(sizeof(zm_part_t));
-            part->section = ysw_array_get(zm_mfr->music->sections, atoi(zm_mfr->tokens[1]));
-            part->percent_volume = atoi(zm_mfr->tokens[2]);
-            part->when.type = atoi(zm_mfr->tokens[3]);
-            part->when.part_index = atoi(zm_mfr->tokens[4]);
-            part->fit = atoi(zm_mfr->tokens[5]);
+            part->section = ysw_array_get(mfr->music->sections, atoi(ysw_csv_get_token(mfr->csv, 1)));
+            part->percent_volume = atoi(ysw_csv_get_token(mfr->csv, 2));
+            part->when.type = atoi(ysw_csv_get_token(mfr->csv, 3));
+            part->when.part_index = atoi(ysw_csv_get_token(mfr->csv, 4));
+            part->fit = atoi(ysw_csv_get_token(mfr->csv, 5));
             ysw_array_push(composition->parts, part);
         } else {
-            push_back_tokens(zm_mfr);
+            ysw_csv_push_back_record(mfr->csv);
             done = true;
         }
     }
 
-    ysw_array_push(zm_mfr->music->compositions, composition);
+    ysw_array_push(mfr->music->compositions, composition);
 }
 
 static void emit_compositions(zm_mfw_t *zm_mfw)
@@ -647,8 +483,6 @@ static void emit_compositions(zm_mfw_t *zm_mfw)
 static zm_music_t *create_music()
 {
     zm_music_t *music = ysw_heap_allocate(sizeof(zm_music_t));
-    music->samples = ysw_array_create(8);
-    music->programs = ysw_array_create(8);
     music->chord_types = ysw_array_create(32);
     music->chord_styles = ysw_array_create(64);
     music->beats = ysw_array_create(8);
@@ -677,23 +511,6 @@ void zm_section_delete(zm_music_t *music, zm_section_t *section)
 
 void zm_music_free(zm_music_t *music)
 {
-    zm_medium_t sample_count = ysw_array_get_count(music->samples);
-    for (zm_medium_t i = 0; i < sample_count; i++) {
-        zm_sample_t *sample = ysw_array_get(music->samples, i);
-        ysw_heap_free(sample->name);
-        ysw_heap_free(sample);
-    }
-    ysw_array_free(music->samples);
-
-    zm_medium_t program_count = ysw_array_get_count(music->programs);
-    for (zm_medium_t i = 0; i < program_count; i++) {
-        zm_program_t *program = ysw_array_get(music->programs, i);
-        ysw_heap_free(program->name);
-        ysw_heap_free(program->label);
-        ysw_array_free_all(program->patches);
-    }
-    ysw_array_free(music->programs);
-
     zm_medium_t chord_type_count = ysw_array_get_count(music->chord_types);
     for (zm_medium_t i = 0; i < chord_type_count; i++) {
         zm_chord_type_t *chord_type = ysw_array_get(music->chord_types, i);
@@ -738,39 +555,39 @@ void zm_music_free(zm_music_t *music)
 
 zm_music_t *zm_parse_file(FILE *file)
 {
-    zm_mfr_t *zm_mfr = &(zm_mfr_t) {
-        .file = file,
+    zm_mfr_t *mfr = &(zm_mfr_t) {
+        .csv = ysw_csv_create(file, RECORD_SIZE, TOKENS_SIZE),
         .music = create_music(),
     };
 
-    while (get_tokens(zm_mfr)) {
-        zm_mf_type_t type = atoi(zm_mfr->tokens[0]);
-        if (type == ZM_MF_SETTINGS && zm_mfr->token_count == 2) {
-            parse_settings(zm_mfr);
-        } else if (type == ZM_MF_SAMPLE && zm_mfr->token_count == 16) {
-            parse_sample(zm_mfr);
-        } else if (type == ZM_MF_PROGRAM && zm_mfr->token_count == 5) {
-            parse_program(zm_mfr);
-        } else if (type == ZM_MF_CHORD_TYPE && zm_mfr->token_count > 4) {
-            parse_chord_type(zm_mfr);
-        } else if (type == ZM_MF_CHORD_STYLE && zm_mfr->token_count == 3) {
-            parse_chord_style(zm_mfr);
-        } else if (type == ZM_MF_BEAT && zm_mfr->token_count == 3) {
-            parse_beat(zm_mfr);
-        } else if (type == ZM_MF_SECTION && zm_mfr->token_count == 10) {
-            parse_section(zm_mfr);
-        } else if (type == ZM_MF_COMPOSITION && zm_mfr->token_count == 4) {
-            parse_composition(zm_mfr);
+    uint32_t token_count = 0;
+    while ((token_count = ysw_csv_parse_next_record(mfr->csv))) {
+        zm_mf_type_t type = atoi(ysw_csv_get_token(mfr->csv, 0));
+        if (type == ZM_MF_SETTINGS && token_count == 2) {
+            parse_settings(mfr);
+        } else if (type == ZM_MF_CHORD_TYPE && token_count > 4) {
+            parse_chord_type(mfr);
+        } else if (type == ZM_MF_CHORD_STYLE && token_count == 3) {
+            parse_chord_style(mfr);
+        } else if (type == ZM_MF_BEAT && token_count == 3) {
+            parse_beat(mfr);
+        } else if (type == ZM_MF_SECTION && token_count == 10) {
+            parse_section(mfr);
+        } else if (type == ZM_MF_COMPOSITION && token_count == 4) {
+            parse_composition(mfr);
         } else {
+            uint32_t record_count = ysw_csv_get_record_count(mfr->csv);
             ESP_LOGW(TAG, "invalid record_count=%d, record type=%d, token_count=%d",
-                    zm_mfr->record_count, type, zm_mfr->token_count);
-            for (zm_medium_t i = 0; i < zm_mfr->token_count; i++) {
-                ESP_LOGW(TAG, "token[%d]=%s", i, zm_mfr->tokens[i]);
+                    record_count, type, token_count);
+            for (zm_medium_t i = 0; i < token_count; i++) {
+                ESP_LOGW(TAG, "token[%d]=%s", i, ysw_csv_get_token(mfr->csv, i));
             }
         }
     }
 
-    return zm_mfr->music;
+    ysw_csv_free(mfr->csv);
+
+    return mfr->music;
 }
 
 void zm_emit_file(FILE *file, zm_music_t *music)
@@ -781,8 +598,6 @@ void zm_emit_file(FILE *file, zm_music_t *music)
     zm_mfw_t *zm_mfw = &(zm_mfw_t){
         .file = file,
         .music = music,
-        .sample_map = create_map(100),
-        .program_map = create_map(100),
         .chord_type_map = create_map(100),
         .style_map = create_map(100),
         .beat_map = create_map(100),
@@ -791,16 +606,12 @@ void zm_emit_file(FILE *file, zm_music_t *music)
     };
 
     emit_settings(zm_mfw);
-    emit_samples(zm_mfw);
-    emit_programs(zm_mfw);
     emit_chord_types(zm_mfw);
     emit_chord_styles(zm_mfw);
     emit_beats(zm_mfw);
     emit_sections(zm_mfw);
     emit_compositions(zm_mfw);
 
-    free_map(zm_mfw->sample_map);
-    free_map(zm_mfw->program_map);
     free_map(zm_mfw->chord_type_map);
     free_map(zm_mfw->style_map);
     free_map(zm_mfw->beat_map);
@@ -854,49 +665,6 @@ void zm_save_music(zm_music_t *music)
         ESP_LOGE(TAG, "rename old=%s, new=%s failed, errno=%d", ZM_MF_TEMP, ZM_MF_CSV, errno);
         abort();
     }
-}
-
-void *zm_load_sample(const char* name, uint16_t *byte_count)
-{
-    char path[PATH_SIZE];
-    snprintf(path, sizeof(path), "%s/samples/%s", ZM_MF_PARTITION, name);
-
-    struct stat sb;
-    int rc = stat(path, &sb);
-    if (rc == -1) {
-        ESP_LOGE(TAG, "stat failed, file=%s", path);
-        abort();
-    }
-
-    int sample_size = sb.st_size;
-
-    void *sample_data = ysw_heap_allocate(sample_size);
-
-    int fd = open(path, O_RDONLY);
-    if (fd == -1) {
-        ESP_LOGE(TAG, "open failed, file=%s", path);
-        abort();
-    }
-
-    rc = read(fd, sample_data, sample_size);
-    if (rc != sample_size) {
-        ESP_LOGE(TAG, "read failed, rc=%d, sample_size=%d", rc, sample_size);
-        abort();
-    }
-
-    rc = close(fd);
-    if (rc == -1) {
-        ESP_LOGE(TAG, "close failed");
-        abort();
-    }
-
-    ESP_LOGD(TAG, "zm_load_sample: path=%s, sample_size=%d bytes", path, sample_size);
-
-    if (byte_count) {
-        *byte_count = sample_size;
-    }
-
-    return sample_data;
 }
 
 #include "ysw_midi.h"
@@ -1108,16 +876,13 @@ ysw_array_t *zm_render_step(zm_music_t *m, zm_section_t *p, zm_step_t *d, zm_cha
 {
     ysw_array_t *notes = ysw_array_create(16);
     if (d->melody.note) {
-        zm_program_x mx = ysw_array_find(m->programs, p->melody_program);
-        zm_render_melody(notes, &d->melody, 0, bc, mx, 0);
+        zm_render_melody(notes, &d->melody, 0, bc, p->melody_program, 0);
     }
     if (d->chord.root) {
-        zm_program_x cx = ysw_array_find(m->programs, p->chord_program);
-        zm_render_chord(notes, &d->chord, 0, bc + 1, cx);
+        zm_render_chord(notes, &d->chord, 0, bc + 1, p->chord_program);
     }
     if (d->rhythm.beat || d->rhythm.surface) {
-        zm_program_x bx = ysw_array_find(m->programs, p->rhythm_program);
-        zm_render_rhythm(notes, &d->rhythm, 0, bc + 2, bx);
+        zm_render_rhythm(notes, &d->rhythm, 0, bc + 2, p->rhythm_program);
     }
     ysw_array_sort(notes, zm_note_compare);
     return notes;
@@ -1128,15 +893,12 @@ zm_time_x zm_render_section_notes(ysw_array_t *notes, zm_music_t *music, zm_sect
 {
     zm_tie_x tie = 0;
     zm_step_x step_count = ysw_array_get_count(section->steps);
-    zm_program_x melody_program = ysw_array_find(music->programs, section->melody_program);
-    zm_program_x chord_program = ysw_array_find(music->programs, section->chord_program);
-    zm_program_x rhythm_program = ysw_array_find(music->programs, section->rhythm_program);
     // two passes: one to do melody note ties, the other for chords and rhythms
     for (zm_step_x i = 0; i < step_count; i++) {
         zm_step_t *step = ysw_array_get(section->steps, i);
         if (step->melody.note) {
             zm_time_x step_start = start_time + step->start;
-            zm_render_melody(notes, &step->melody, step_start, base_channel, melody_program, tie);
+            zm_render_melody(notes, &step->melody, step_start, base_channel, section->melody_program, tie);
             if (step->melody.tie) {
                 tie = step->melody.tie;
             } else if (tie) {
@@ -1150,10 +912,10 @@ zm_time_x zm_render_section_notes(ysw_array_t *notes, zm_music_t *music, zm_sect
         zm_step_t *step = ysw_array_get(section->steps, i);
         zm_time_x step_start = start_time + step->start;
         if (step->chord.root) {
-            zm_render_chord(notes, &step->chord, step_start, base_channel + 1, chord_program);
+            zm_render_chord(notes, &step->chord, step_start, base_channel + 1, section->chord_program);
         }
         if (step->rhythm.beat || step->rhythm.surface) {
-            zm_render_rhythm(notes, &step->rhythm, step_start, base_channel + 2, rhythm_program);
+            zm_render_rhythm(notes, &step->rhythm, step_start, base_channel + 2, section->rhythm_program);
         }
         zm_time_x step_duration = zm_get_step_duration(step, ticks_per_measure);
         step_end = step_start + step_duration;
@@ -1471,28 +1233,9 @@ zm_duration_t zm_get_next_duration(zm_duration_t duration)
     return next_duration;
 }
 
-zm_patch_t *zm_get_patch(ysw_array_t *patches, zm_note_t midi_note)
-{
-    zm_patch_t *patch = NULL;
-    zm_patch_x patch_count = ysw_array_get_count(patches);
-    for (zm_patch_x i = 0; i < patch_count && !patch; i++) {
-        zm_patch_t *p = ysw_array_get(patches, i);
-        if ((p->from_note <= midi_note && midi_note <= p->to_note) || i == (patch_count - 1)) {
-            patch = p;
-        }
-    }
-    return patch;
-}
-
 // TODO: consider whether this function belongs in this module
 
 #include "ysw_name.h"
-
-// TODO: find a better way to get the default programs
-
-#define DEFAULT_MELODY_PROGRAM 0
-#define DEFAULT_CHORD_PROGRAM 1
-#define DEFAULT_RHYTHM_PROGRAM 7
 
 zm_section_t *zm_create_section(zm_music_t *music)
 {
@@ -1505,9 +1248,9 @@ zm_section_t *zm_create_section(zm_music_t *music)
     section->time = ZM_TIME_4_4;
     section->tlm = 0;
     section->steps = ysw_array_create(64);
-    section->melody_program = ysw_array_get(music->programs, DEFAULT_MELODY_PROGRAM);
-    section->chord_program = ysw_array_get(music->programs, DEFAULT_CHORD_PROGRAM);
-    section->rhythm_program = ysw_array_get(music->programs, DEFAULT_RHYTHM_PROGRAM);
+    section->melody_program = 0;
+    section->chord_program = 0;
+    section->rhythm_program = 0;
     return section;
 }
 

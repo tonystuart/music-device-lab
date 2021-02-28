@@ -10,3 +10,4 @@ spiffs.bin
 *.mod
 eclipse
 ysw_splash_image.c
+spiffs/samples

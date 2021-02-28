@@ -33,7 +33,7 @@ static const int iz_gen_x[] = {
 
 #define IZ_GEN_SZ (sizeof(iz_gen_x) / sizeof(iz_gen_x[0]))
 
-static void extract_sample(char *ofn, FILE *csvf, fluid_inst_t *inst, fluid_inst_zone_t *iz, int sx)
+static void extract_sample(char *ofn, FILE *csvf, fluid_inst_t *inst, fluid_inst_zone_t *iz)
 {
     fluid_sample_t *sample = fluid_inst_zone_get_sample(iz);
     int length = sample->end - sample->start;
@@ -49,12 +49,11 @@ static void extract_sample(char *ofn, FILE *csvf, fluid_inst_t *inst, fluid_inst
     char sn[64];
     ysw_csv_escape(sample->name, sn, sizeof(sn));
 
-    fprintf(csvf, "1,%d,%s,%d,%d,60,0", sx, sn, loop_start, loop_length);
+    fprintf(csvf, "2,%s,%d,%d,60,0", sn, loop_start, loop_length);
 
     for (int i = 0; i < IZ_GEN_SZ; i++) {
-        fluid_gen_t *gen = &iz->gen[iz_gen_x[i]];
-        if (gen->flags) {
-            fprintf(csvf, ",%g", gen->val);
+        if (iz->gen[iz_gen_x[i]].flags) {
+            fprintf(csvf, ",%g", iz->gen[iz_gen_x[i]].val);
         } else if (inst->global_zone->gen[iz_gen_x[i]].flags) {
             fprintf(csvf, ",%g", inst->global_zone->gen[iz_gen_x[i]].val);
         } else {
@@ -62,7 +61,8 @@ static void extract_sample(char *ofn, FILE *csvf, fluid_inst_t *inst, fluid_inst
         }
     }
 
-    fprintf(csvf, "\n");
+    // Note that GEN_KEYRANGE and GEN_VELRANGE are not set in iz->gen or inst->global_zone->gen
+    fprintf(csvf, ",%d,%d,%d,%d\n", iz->range.keylo, iz->range.keyhi, iz->range.vello, iz->range.velhi);
 
     char sfn[128];
     snprintf(sfn, sizeof(sfn), "%s/samples/%s", ofn, sn);
@@ -77,20 +77,25 @@ static void extract_sample(char *ofn, FILE *csvf, fluid_inst_t *inst, fluid_inst
     fclose(sf);
 }
 
-static void extract_ranges(char *ofn, FILE *csvf, fluid_inst_t *inst, int *sx)
+static void extract_samples(char *ofn, FILE *csvf, fluid_inst_t *inst)
 {
     fluid_inst_zone_t *iz = fluid_inst_get_zone(inst);
     while (iz) {
-        fprintf(csvf, "3,%d,%d,%d,%d,%d\n",
-                iz->range.keylo, iz->range.keyhi,
-                iz->range.vello, iz->range.velhi, *sx);
+        extract_sample(ofn, csvf, inst, iz);
         iz = fluid_inst_zone_next(iz);
-        (*sx)++;
     }
 }
 
-static void extract_program(FILE *csvf, fluid_defpreset_t *dp, fluid_inst_t *inst, int px)
+static void extract_preset(char *ofn, fluid_preset_t *preset)
 {
+    fluid_defpreset_t *dp = fluid_preset_get_data(preset);
+    fluid_preset_zone_t *pz = fluid_defpreset_get_zone(dp);
+
+    char csv[128];
+    snprintf(csv, sizeof(csv), "%s/presets/%03d-%03d.csv", ofn, dp->bank, dp->num);
+    FILE *csvf = fopen(csv, "w");
+    assert(csvf);
+
     char preset_name[64];
     ysw_csv_escape(dp->name, preset_name, sizeof(preset_name));
     int length = strlen(preset_name);
@@ -98,55 +103,34 @@ static void extract_program(FILE *csvf, fluid_defpreset_t *dp, fluid_inst_t *ins
         preset_name[length] = 0;
     }
 
-    fprintf(csvf, "2,%d,%s,0,%d\n", px, preset_name, dp->num);
-}
-
-static void extract_samples(char *ofn, FILE *csvf, fluid_inst_t *inst, int sx)
-{
-    fluid_inst_zone_t *iz = fluid_inst_get_zone(inst);
-    while (iz) {
-        extract_sample(ofn, csvf, inst, iz, sx);
-        iz = fluid_inst_zone_next(iz);
-        sx++;
-    }
-}
-
-static void write_comment(FILE *csvf)
-{
-    fprintf(csvf, "#type(1=sample),index,name,reppnt,replen,volume,pan,attenuation,fine-tune,root-key,delay,attack,hold,decay,sustain,release\n");
-    fprintf(csvf, "#type(2=program),index,name,type,gm\n");
-    fprintf(csvf, "#type(3=patch),from-note,to-note,from-vel,to-vel,sample\n");
-}
-
-static void extract_preset(char *ofn, FILE *csvf, fluid_preset_t *preset, int *px, int *sx)
-{
-    fluid_defpreset_t *dp = fluid_preset_get_data(preset);
-    fluid_preset_zone_t *pz = fluid_defpreset_get_zone(dp);
+    fprintf(csvf, "0,%s,%d,%d\n", preset_name, dp->bank, dp->num);
 
     while (pz) {
         fluid_inst_t *inst = fluid_preset_zone_get_inst(pz);
-        write_comment(csvf);
 
-        extract_samples(ofn, csvf, inst, *sx);
-        extract_program(csvf, dp, inst, *px);
-        extract_ranges(ofn, csvf, inst, sx);
+        char instrument_name[64];
+        ysw_csv_escape(inst->name, instrument_name, sizeof(instrument_name));
+        fprintf(csvf, "1,%s\n", instrument_name);
+
+        extract_samples(ofn, csvf, inst);
 
         pz = fluid_preset_zone_next(pz);
-        (*px)++;
     }
+
+    fclose(csvf);
 }
 
-static void extract_all_presets(char *ofn, FILE *csvf, fluid_sfont_t *sfont, int *px, int *sx)
+static void extract_all_presets(char *ofn, fluid_sfont_t *sfont)
 {
     fluid_defsfont_t *defsfont = fluid_sfont_get_data(sfont);
     for (fluid_list_t *list = defsfont->preset; list != NULL; list = fluid_list_next(list))
     {
         fluid_preset_t *preset = (fluid_preset_t *)fluid_list_get(list);
-        extract_preset(ofn, csvf, preset, px, sx);
+        extract_preset(ofn, preset);
     }
 }
 
-static FILE *initialize_output(char *ofn)
+static void initialize_output(char *ofn)
 {
     if (access(ofn, F_OK) != -1) {
         fprintf(stderr, "folder %s already exists", ofn);
@@ -161,12 +145,10 @@ static FILE *initialize_output(char *ofn)
     rc = mkdir(samples, 0755);
     assert(rc != -1);
 
-    char csv[128];
-    snprintf(csv, sizeof(csv), "%s/extract.csv", ofn);
-    FILE *csvf = fopen(csv, "w");
-    assert(csvf);
-
-    return csvf;
+    char presets[128];
+    snprintf(presets, sizeof(presets), "%s/presets", ofn);
+    rc = mkdir(presets, 0755);
+    assert(rc != -1);
 }
 
 static fluid_sfont_t *load_soundfont(char *sffn)
@@ -191,19 +173,14 @@ int extract(int argc, char *argv[])
     }
 
     fluid_sfont_t *sfont = load_soundfont(argv[1]);
-    FILE *csvf = initialize_output(argv[2]);
-
-    int px = 0;
-    int sx = 0;
+    initialize_output(argv[2]);
 
     if (argc == 4) {
         fluid_preset_t *preset = fluid_sfont_get_preset(sfont, 0, 0);
-        extract_preset(argv[2], csvf, preset, &px, &sx);
+        extract_preset(argv[2], preset);
     } else {
-        extract_all_presets(argv[2], csvf, sfont, &px, &sx);
+        extract_all_presets(argv[2], sfont);
     }
-
-    fclose(csvf);
 
     return 0;
 }

@@ -129,7 +129,6 @@ typedef enum {
 typedef struct {
     lv_point_t point;
     lv_color_t color;
-    ysw_array_t *patches;
     visit_type_t visit_type;
     direction_t direction;
     const lv_font_t *font;
@@ -400,9 +399,9 @@ static void visit_rhythm(dc_t *dc, zm_rhythm_t *rhythm)
     };
     // currently display surface first because patch can be multiple lines
     if (rhythm->surface) {
-        zm_patch_t *patch = zm_get_patch(dc->patches, rhythm->surface);
         lv_area_t extent = { };
-        visit_text(&coords, dc->clip_area, &dsc, patch->sample->name, dc->visit_type, &extent);
+        // zm_patch_t *patch = zm_get_patch(dc->patches, rhythm->surface);
+        visit_text(&coords, dc->clip_area, &dsc, "N/A", dc->visit_type, &extent);
         coords.y1 += 9;
     }
     if (rhythm->beat) {
@@ -548,7 +547,6 @@ static lv_coord_t measure_position(ysw_staff_ext_t *ext, position_x position)
         .clip_area = &clip_area,
         .font = &MusiQwikT_48,
         .key_signature = zm_get_key_signature(ext->section->key),
-        .patches = ext->section->rhythm_program->patches,
     };
     if (is_space_position(position)) {
         visit_letter(&dc, YSW_STAFF_SPACE);
@@ -576,7 +574,6 @@ static lv_coord_t measure_staff_head(zm_section_t *section)
         .clip_area = &clip_area,
         .font = &MusiQwikT_48,
         .key_signature = zm_get_key_signature(section->key),
-        .patches = section->rhythm_program->patches,
     };
     visit_staff_head(&dc, section->time);
     return STAFF_LEFT_PADDING + (LV_HOR_RES_MAX - dc.point.x);
@@ -657,7 +654,6 @@ static void on_draw_main(lv_obj_t *staff, const lv_area_t *clip_area)
             .clip_area = clip_area,
             .font = &MusiQwikT_48,
             .key_signature = zm_get_key_signature(ext->section->key),
-            .patches = ext->section->rhythm_program->patches,
         };
         visit_staff(ext, &dc);
     }

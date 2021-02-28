@@ -23,7 +23,6 @@
 #include "ysw_mapper.h"
 #include "ysw_midi.h"
 #include "ysw_mod_synth.h"
-#include "ysw_mod_music.h"
 #include "ysw_sequencer.h"
 #include "ysw_staff.h"
 #include "ysw_spiffs.h"
@@ -180,8 +179,7 @@ void ysw_main_init_device(ysw_bus_t *bus)
 void ysw_main_init_synthesizer(ysw_bus_t *bus, zm_music_t *music)
 {
 #if AUDIO_TYPE == MOD_SYNTH_I2S
-    ysw_mod_host_t *mod_host = ysw_mod_music_create_host(music);
-    ysw_mod_synth = ysw_mod_synth_create_task(bus, mod_host);
+    ysw_mod_synth = ysw_mod_synth_create_task(bus);
     // TODO: consider whether we can initialize audio output in this task before launching the i2s task
     // I think the previous approach is a remnant of the common main logic
     ysw_i2s_create_task(initialize_audio_output, generate_audio);

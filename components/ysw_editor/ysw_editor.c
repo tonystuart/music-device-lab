@@ -40,7 +40,7 @@
 #define BASE_CHANNEL 0
 #define MELODY_CHANNEL (BASE_CHANNEL+0)
 #define CHORD_CHANNEL (BASE_CHANNEL+1)
-#define RHYTHM_CHANNEL (BASE_CHANNEL+2)
+#define RHYTHM_CHANNEL (BASE_CHANNEL+9)
 #define BACKGROUND_BASE (BASE_CHANNEL+3)
 
 typedef enum {
@@ -251,11 +251,11 @@ static void display_program(ysw_editor_t *editor)
 {
     const char *value = "";
     if (editor->mode == YSW_EDITOR_MODE_MELODY) {
-        value = editor->section->melody_program->name;
+        value = ysw_midi_get_program_name(editor->section->melody_program);
     } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
-        value = editor->section->chord_program->name;
+        value = ysw_midi_get_program_name(editor->section->chord_program);
     } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
-        value = editor->section->rhythm_program->name;
+        value = "Drums";
     }
     ysw_header_set_program(editor->header, value);
 }
@@ -358,11 +358,11 @@ static void set_position(ysw_editor_t *editor, int32_t position)
     display_mode(editor);
 }
 
-static void fire_program_change(ysw_editor_t *editor, zm_program_t *program, zm_channel_x channel)
+static void fire_program_change(ysw_editor_t *editor, zm_program_x program, zm_channel_x channel)
 {
     ysw_event_program_change_t program_change = {
         .channel = channel,
-        .program = ysw_array_find(editor->music->programs, program),
+        .program = program,
     };
     ysw_event_fire_program_change(editor->bus, YSW_ORIGIN_EDITOR, &program_change);
 }
@@ -388,9 +388,8 @@ static void fire_note_off(ysw_editor_t *editor, zm_note_t midi_note, zm_channel_
 
 // Setters
 
-static void set_program(ysw_editor_t *editor, ysw_editor_mode_t mode, zm_program_x program_x)
+static void set_program(ysw_editor_t *editor, ysw_editor_mode_t mode, zm_program_x program)
 {
-    zm_program_t *program = ysw_array_get(editor->music->programs, program_x);
     switch (mode) {
         case YSW_EDITOR_MODE_MELODY:
             editor->section->melody_program = program;
@@ -862,17 +861,13 @@ static void generate_chord_type_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw
     finalize_menu(p, name);
 }
 
-static void generate_program_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_menu_item_t *template, const ysw_menu_item_t *submenu, const char *name, zm_program_type_t type)
+static void generate_program_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_menu_item_t *template, const ysw_menu_item_t *submenu, const char *name)
 {
-    zm_program_x count = ysw_array_get_count(editor->music->programs);
-    // TODO: use multiple program menus if necessary
+    // TODO: use midi program names
     ysw_menu_item_t *p = template;
-    for (zm_chord_style_x i = 0; i < count && (p - template) < 12; i++) {
-        zm_program_t *program = ysw_array_get(editor->music->programs, i);
-        if (program->type == type) {
-            initialize_item(p, softkey_map[p - template], program->label, cb, i, submenu);
-            p++;
-        }
+    for (zm_chord_style_x i = 0; i < 12 && (p - template) < 12; i++) {
+        initialize_item(p, softkey_map[p - template], ysw_midi_get_program_name(i), cb, i, submenu);
+        p++;
     }
     finalize_menu(p, name);
 }
@@ -892,13 +887,10 @@ static void generate_beat_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_menu_
 
 static void generate_surface_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_menu_item_t *template, const ysw_menu_item_t *submenu, const char *name)
 {
-    zm_patch_x count = ysw_array_get_count(editor->section->rhythm_program->patches);
-    // TODO: use multiple surface menus if necessary
+    // TODO: use midi drum names
     ysw_menu_item_t *p = template;
-    for (zm_chord_style_x i = 0; i < count && (p - template) < 12; i++) {
-        zm_patch_t *patch = ysw_array_get(editor->section->rhythm_program->patches, i);
-        // TODO: consider adding a label representation of the name
-        initialize_item(p, softkey_map[p - template], patch->sample->name, cb, i, submenu);
+    for (zm_chord_style_x i = 0; i < 12 && (p - template) < 12; i++) {
+        initialize_item(p, softkey_map[p - template], ysw_midi_get_drum_name(i), cb, 35 + i, submenu);
         p++;
     }
     finalize_menu(p, name);
@@ -1004,7 +996,7 @@ static void on_program_melody_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_i
 static void on_program_melody_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    generate_program_menu(editor, on_program_melody_2, program_template, NULL, "Melody Program", ZM_PROGRAM_NOTE);
+    generate_program_menu(editor, on_program_melody_2, program_template, NULL, "Melody Program");
 }
 
 static void on_program_chord_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -1016,7 +1008,7 @@ static void on_program_chord_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_it
 static void on_program_chord_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    generate_program_menu(editor, on_program_chord_2, program_template, NULL, "Chord Program", ZM_PROGRAM_NOTE);
+    generate_program_menu(editor, on_program_chord_2, program_template, NULL, "Chord Program");
 }
 
 static void on_program_rhythm_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -1028,7 +1020,7 @@ static void on_program_rhythm_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_i
 static void on_program_rhythm_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    generate_program_menu(editor, on_program_rhythm_2, program_template, NULL, "Rhythm Program", ZM_PROGRAM_BEAT);
+    generate_program_menu(editor, on_program_rhythm_2, program_template, NULL, "Rhythm Program");
 }
 
 static void on_settings_chord_type_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -1436,9 +1428,8 @@ static ysw_menu_item_t stroke_template[YSW_APP_SOFTKEY_SZ + 1];
 static void on_insert_stroke_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    zm_patch_t *patch = ysw_array_get(editor->section->rhythm_program->patches, item->value);
-    play_stroke(editor, patch->from_note);
-    realize_stroke(editor, patch->from_note);
+    play_stroke(editor, item->value);
+    realize_stroke(editor, item->value);
 }
 
 static void on_insert_stroke_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -2061,7 +2052,6 @@ const ysw_menu_item_t editor_menu[] = {
 void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *section)
 {
     assert(music);
-    assert(ysw_array_get_count(music->programs));
     assert(ysw_array_get_count(music->chord_types) > DEFAULT_CHORD_TYPE);
     assert(ysw_array_get_count(music->chord_styles));
 
