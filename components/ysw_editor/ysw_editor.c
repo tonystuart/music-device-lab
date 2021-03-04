@@ -866,7 +866,7 @@ static void generate_program_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_me
     // TODO: use midi program names
     ysw_menu_item_t *p = template;
     for (zm_chord_style_x i = 0; i < 12 && (p - template) < 12; i++) {
-        initialize_item(p, softkey_map[p - template], ysw_midi_get_program_name(i), cb, i, submenu);
+        initialize_item(p, softkey_map[p - template], ysw_midi_get_program_label(i), cb, i, submenu);
         p++;
     }
     finalize_menu(p, name);

@@ -89,23 +89,24 @@ static ysw_mod_sample_t *parse_sample(ysw_csv_t *csv)
 {
     ysw_mod_sample_t *sample = ysw_heap_allocate(sizeof(ysw_mod_sample_t));
     sample->name = ysw_heap_strdup(ysw_csv_get_token(csv, 1));
-    sample->reppnt = atoi(ysw_csv_get_token(csv, 2));
-    sample->replen = atoi(ysw_csv_get_token(csv, 3));
+    sample->loop_start = atoi(ysw_csv_get_token(csv, 2));
+    sample->loop_end = atoi(ysw_csv_get_token(csv, 3));
     sample->volume = atoi(ysw_csv_get_token(csv, 4));
     sample->pan = atoi(ysw_csv_get_token(csv, 5));
-    sample->attenuation = atoi(ysw_csv_get_token(csv, 6));
-    sample->fine_tune = atoi(ysw_csv_get_token(csv, 7));
-    sample->root_key = atoi(ysw_csv_get_token(csv, 8));
-    sample->delay = parse_timecents(ysw_csv_get_token(csv, 9));
-    sample->attack = parse_timecents(ysw_csv_get_token(csv, 10));
-    sample->hold = parse_timecents(ysw_csv_get_token(csv, 11));
-    sample->decay = parse_timecents(ysw_csv_get_token(csv, 12));
-    sample->sustain = parse_centibels(ysw_csv_get_token(csv, 13));
-    sample->release = parse_timecents(ysw_csv_get_token(csv, 14));
-    sample->from_note = atoi(ysw_csv_get_token(csv, 15));
-    sample->to_note = atoi(ysw_csv_get_token(csv, 16));
-    sample->from_velocity = atoi(ysw_csv_get_token(csv, 17));
-    sample->to_velocity = atoi(ysw_csv_get_token(csv, 18));
+    sample->loop_type = atoi(ysw_csv_get_token(csv, 6));
+    sample->attenuation = atoi(ysw_csv_get_token(csv, 7));
+    sample->fine_tune = atoi(ysw_csv_get_token(csv, 8));
+    sample->root_key = atoi(ysw_csv_get_token(csv, 9));
+    sample->delay = parse_timecents(ysw_csv_get_token(csv, 10));
+    sample->attack = parse_timecents(ysw_csv_get_token(csv, 11));
+    sample->hold = parse_timecents(ysw_csv_get_token(csv, 12));
+    sample->decay = parse_timecents(ysw_csv_get_token(csv, 13));
+    sample->sustain = parse_centibels(ysw_csv_get_token(csv, 14));
+    sample->release = parse_timecents(ysw_csv_get_token(csv, 15));
+    sample->from_note = atoi(ysw_csv_get_token(csv, 16));
+    sample->to_note = atoi(ysw_csv_get_token(csv, 17));
+    sample->from_velocity = atoi(ysw_csv_get_token(csv, 18));
+    sample->to_velocity = atoi(ysw_csv_get_token(csv, 19));
     return sample;
 }
 
@@ -118,7 +119,7 @@ static ysw_mod_instrument_t *parse_instrument(ysw_csv_t *csv)
     uint32_t token_count = 0;
     while (!done && ((token_count = ysw_csv_parse_next_record(csv)))) {
         ysw_mod_record_t type = atoi(ysw_csv_get_token(csv, 0));
-        if (type == YSW_MOD_SAMPLE && token_count == 19) {
+        if (type == YSW_MOD_SAMPLE && token_count == 20) {
             ysw_mod_sample_t *sample = parse_sample(csv);
             ysw_array_push(instrument->samples, sample);
         } else {
@@ -282,7 +283,7 @@ static void apply_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *voice)
                 voice->state = YSW_MOD_ATTACK;
                 voice->next_change = voice->iterations + voice->sample->attack;
                 voice->ramp_step = get_ramp_step(voice, 0, AMP_MAX_SCALED);
-                ESP_LOGD(TAG, "attack samples=%d (%gs), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, 0, AMP_MAX_SCALED, voice->ramp_step);
+                // ESP_LOGD(TAG, "attack samples=%d (%gs), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, 0, AMP_MAX_SCALED, voice->ramp_step);
             }
             voice->amplitude += voice->ramp_step;
             break;
@@ -291,7 +292,7 @@ static void apply_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *voice)
                 voice->state = YSW_MOD_HOLD;
                 voice->next_change = voice->iterations + voice->sample->hold;
                 voice->ramp_step = 0;
-                ESP_LOGD(TAG, "hold samples=%d (%gs), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, voice->amplitude, voice->amplitude, voice->ramp_step);
+                // ESP_LOGD(TAG, "hold samples=%d (%gs), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, voice->amplitude, voice->amplitude, voice->ramp_step);
             }
             voice->amplitude += voice->ramp_step;
             break;
@@ -300,7 +301,7 @@ static void apply_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *voice)
                 voice->state = YSW_MOD_DECAY;
                 voice->next_change = voice->iterations + voice->sample->decay;
                 voice->ramp_step = get_ramp_step(voice, AMP_MAX_SCALED, voice->sample->sustain);
-                ESP_LOGD(TAG, "decay samples=%d (%gs), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, AMP_MAX_SCALED, voice->sample->sustain, voice->ramp_step);
+                // ESP_LOGD(TAG, "decay samples=%d (%gs), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, AMP_MAX_SCALED, voice->sample->sustain, voice->ramp_step);
             }
             voice->amplitude += voice->ramp_step;
             break;
@@ -308,21 +309,22 @@ static void apply_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *voice)
             if (voice->iterations >= voice->next_change) {
                 voice->state = YSW_MOD_SUSTAIN;
                 voice->ramp_step = 0;
-                ESP_LOGD(TAG, "sustain amplitude=%d, sustain=%d, delta=%d", voice->amplitude, voice->sample->sustain, voice->amplitude - voice->sample->sustain);
+                // ESP_LOGD(TAG, "sustain amplitude=%d, sustain=%d, delta=%d", voice->amplitude, voice->sample->sustain, voice->amplitude - voice->sample->sustain);
             }
             voice->amplitude += voice->ramp_step;
             break;
         case YSW_MOD_SUSTAIN:
             if ((voice->amplitude >> AMP_SCALE_FACTOR) <= 0) {
                 voice->state = YSW_MOD_IDLE;
-                ESP_LOGD(TAG, "sustain->idle");
+                // ESP_LOGD(TAG, "sustain->idle");
             }
             break;
         case YSW_MOD_NOTE_OFF:
+            // TODO: consider impact of loop_type
             voice->state = YSW_MOD_RELEASE;
             voice->next_change = voice->iterations + voice->sample->release;
             voice->ramp_step = get_ramp_step(voice, voice->amplitude, 0);
-            ESP_LOGD(TAG, "note_off samples=%d (%g), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, voice->amplitude, 0, voice->ramp_step);
+            // ESP_LOGD(TAG, "note_off samples=%d (%g), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, voice->amplitude, 0, voice->ramp_step);
             voice->amplitude += voice->ramp_step;
             break;
         case YSW_MOD_RELEASE:
@@ -330,12 +332,12 @@ static void apply_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *voice)
                 voice->state = YSW_MOD_IDLE;
                 voice->ramp_step = 0;
                 voice->amplitude = 0;
-                ESP_LOGD(TAG, "release->idle");
+                // ESP_LOGD(TAG, "release->idle");
             }
             voice->amplitude += voice->ramp_step;
             break;
         case YSW_MOD_IDLE:
-            ESP_LOGD(TAG, "idle");
+            // ESP_LOGD(TAG, "idle");
             break;
     }
     voice->iterations++;
@@ -383,10 +385,11 @@ void ysw_mod_generate_samples(ysw_mod_synth_t *mod_synth,
                 voice->samppos += voice->sampinc;
                 uint32_t index = voice->samppos >> POS_SCALE_FACTOR;
 
-                if (voice->replen) {
-                    if (index >= ((voice->reppnt + voice->replen) + 1)) {
-                        index = voice->reppnt;
+                if (voice->loop_type == YSW_MOD_LOOP_CONTINUOUS || voice->loop_type == YSW_MOD_LOOP_THROUGH) {
+                    if (index >= voice->loop_end) {
+                        index = voice->loop_start;
                         voice->samppos = index << POS_SCALE_FACTOR;
+                        voice->samppos -= voice->sampinc; // samppos is incremented before next use
                     }
                 } else {
                     if (index >= voice->length) {
@@ -587,8 +590,9 @@ static void start_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi
         voice_t *voice = &mod_synth->voices[voice_index];
         voice->sample = sample;
         voice->length = sample->length;
-        voice->reppnt = sample->reppnt;
-        voice->replen = sample->replen;
+        voice->loop_start = sample->loop_start;
+        voice->loop_end = sample->loop_end;
+        voice->loop_type = sample->loop_type;
         voice->volume = velocity / 2; // mod volume range is 0-63
         voice->sampinc = sampinc;
         voice->samppos = 0;

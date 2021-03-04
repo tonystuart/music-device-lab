@@ -221,7 +221,7 @@ void ysw_string_shorten(ysw_string_t *s, uint32_t max_length)
     ysw_string_trim(s, " ");
 
     // Remove ASCII vowels starting from right
-    uint32_t index = s->length;
+    int32_t index = s->length - RFT;
     while (index > 0 && s->length > max_length) {
         if (is_in(s->buffer[index], "aeiouAEIOU")) {
             ysw_string_shift(s, index, -1);
@@ -229,7 +229,7 @@ void ysw_string_shorten(ysw_string_t *s, uint32_t max_length)
         index--;
     }
     // Remove every other consonant starting from right
-    index = s->length;
+    index = s->length - RFT;
     while (index > 1 && s->length > max_length) {
         ysw_string_shift(s, index, -1);
         index -= 2;

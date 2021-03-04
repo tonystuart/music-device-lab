@@ -20,6 +20,7 @@
 // See http://www.synthfont.com/SFSPEC21.PDF
 
 static const int iz_gen_x[] = {
+    GEN_SAMPLEMODE,
     GEN_ATTENUATION,
     GEN_FINETUNE,
     GEN_OVERRIDEROOTKEY,
@@ -44,12 +45,11 @@ static void extract_sample(char *ofn, FILE *csvf, fluid_inst_t *inst, fluid_inst
 
     int loop_start = sample->loopstart - sample->start;
     int loop_end = sample->loopend - sample->start;
-    int loop_length = loop_end - loop_start - 1;
 
     char sn[64];
     ysw_csv_escape(sample->name, sn, sizeof(sn));
 
-    fprintf(csvf, "2,%s,%d,%d,60,0", sn, loop_start, loop_length);
+    fprintf(csvf, "2,%s,%d,%d,60,0", sn, loop_start, loop_end);
 
     for (int i = 0; i < IZ_GEN_SZ; i++) {
         if (iz->gen[iz_gen_x[i]].flags) {

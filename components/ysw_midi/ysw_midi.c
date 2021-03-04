@@ -8,6 +8,7 @@
 // warranties or conditions of any kind, either express or implied.
 
 #include "ysw_midi.h"
+#include "ysw_common.h"
 #include "assert.h"
 
 static bool major_diatonics[] = {
@@ -277,6 +278,8 @@ const char *ysw_midi_category_names[] = {
     "Sound Effects" //
 };
 
+static const char *ysw_midi_program_labels[PROGRAM_NAME_SIZE];
+
 const char *ysw_midi_get_drum_name(uint32_t drum)
 {
     assert(drum < DRUM_NAME_SIZE);
@@ -287,4 +290,13 @@ const char *ysw_midi_get_program_name(uint32_t program)
 {
     assert(program < PROGRAM_NAME_SIZE);
     return ysw_midi_program_names[program];
+}
+
+const char *ysw_midi_get_program_label(uint32_t program)
+{
+    assert(program < PROGRAM_NAME_SIZE);
+    if (!ysw_midi_program_labels[program]) {
+        ysw_midi_program_labels[program] = ysw_make_label(ysw_midi_program_names[program]);
+    }
+    return ysw_midi_program_labels[program];
 }

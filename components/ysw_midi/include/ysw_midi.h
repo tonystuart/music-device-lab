@@ -49,3 +49,4 @@ static inline uint8_t ysw_midi_get_octave(uint8_t midi_note)
 
 const char *ysw_midi_get_drum_name(uint32_t drum);
 const char *ysw_midi_get_program_name(uint32_t program);
+const char *ysw_midi_get_program_label(uint32_t program);

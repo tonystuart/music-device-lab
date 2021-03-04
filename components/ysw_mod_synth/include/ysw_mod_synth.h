@@ -38,12 +38,20 @@ typedef enum {
     YSW_MOD_PAN_RIGHT,
 } ysw_mod_pan_t;
 
+typedef enum {
+    YSW_MOD_LOOP_NONE,
+    YSW_MOD_LOOP_CONTINUOUS,
+    YSW_MOD_LOOP_UNUSED,
+    YSW_MOD_LOOP_THROUGH,
+} ysw_mod_loop_t;
+
 typedef struct {
     char *name;
     int8_t *data;
     uint16_t length;
-    uint16_t reppnt;
-    uint16_t replen;
+    uint32_t loop_start;
+    uint32_t loop_end;
+    ysw_mod_loop_t loop_type;
     uint8_t volume;
     ysw_mod_pan_t pan;
     int16_t attenuation;
@@ -67,8 +75,9 @@ typedef struct {
     uint32_t sampinc;
     uint32_t time;
     uint32_t length;
-    uint32_t reppnt;
-    uint32_t replen;
+    uint32_t loop_start;
+    uint32_t loop_end;
+    ysw_mod_loop_t loop_type;
     uint32_t iterations;
     uint32_t next_change;
     int32_t amplitude;
