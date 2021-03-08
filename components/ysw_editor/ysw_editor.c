@@ -1567,7 +1567,7 @@ static void on_notekey_down(ysw_editor_t *editor, ysw_event_notekey_down_t *m)
             int8_t octave = note_index / distance_count;
             int8_t distance = YSW_INT ysw_array_get(editor->chord_type->distances, distance_index);
             zm_note_t note = 36 + (octave * 12) + distance;
-            ESP_LOGD(TAG, "input=%d, note_index=%d, distance_index=%d, octave=%d, distance=%d, output=%d", m->midi_note, note_index, distance_index, octave, distance, note);
+            // ESP_LOGD(TAG, "input=%d, note_index=%d, distance_index=%d, octave=%d, distance=%d, output=%d", m->midi_note, note_index, distance_index, octave, distance, note);
             press_note(editor, note, m->time);
         }
     } else {

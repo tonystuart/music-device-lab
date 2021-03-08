@@ -20,15 +20,17 @@
 
 #define YSW_MOD_MAX_BANKS 2
 
+// NB: ysw_mod_synth.c depends on the order and relationship of DAHDSR states
+
 typedef enum {
     YSW_MOD_IDLE = 0,
     YSW_MOD_NOTE_ON,
+    YSW_MOD_NOTE_OFF,
     YSW_MOD_DELAY,
     YSW_MOD_ATTACK,
     YSW_MOD_HOLD,
     YSW_MOD_DECAY,
     YSW_MOD_SUSTAIN,
-    YSW_MOD_NOTE_OFF,
     YSW_MOD_RELEASE,
 } ysw_mod_state_t;
 
@@ -105,7 +107,6 @@ typedef struct {
 } ysw_mod_bank_t;
 
 typedef struct {
-    uint8_t active_notes[YSW_MIDI_MAX_CHANNELS][YSW_MIDI_MAX_COUNT];
     uint8_t channel_programs[YSW_MIDI_MAX_CHANNELS];
     uint32_t playrate;
     uint32_t voice_time;
