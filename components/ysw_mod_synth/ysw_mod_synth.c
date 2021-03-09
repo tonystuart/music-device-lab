@@ -74,7 +74,7 @@ static inline uint32_t parse_centibels(const char *token)
 {
     int16_t centibels = atoi(token);
     float amplitude = powf(10.0, (-centibels / 10.0 / 20.0));
-    uint32_t scaled_amplitude = amplitude * (1 << AMP_SCALE_FACTOR);
+    uint32_t scaled_amplitude = amplitude * (AMP_MAX_VALUE << AMP_SCALE_FACTOR);
     return scaled_amplitude;
 }
 
