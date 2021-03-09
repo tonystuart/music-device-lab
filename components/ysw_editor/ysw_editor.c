@@ -1892,7 +1892,7 @@ static const ysw_menu_item_t program_category_2_menu[] = {
 
     { YSW_R2_C1, "Synth\nEffects", YSW_MF_PLUS, on_program_2, 12, program_template },
     { YSW_R2_C2, "Ethnic", YSW_MF_PLUS, on_program_2, 13, program_template },
-    { YSW_R2_C3, "Percussive", YSW_MF_PLUS, on_program_2, 14, program_template },
+    { YSW_R2_C3, "Perc", YSW_MF_PLUS, on_program_2, 14, program_template },
     { YSW_R2_C4, "Sound\nEffects", YSW_MF_PLUS, on_program_2, 15, program_template },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
@@ -1908,7 +1908,7 @@ static const ysw_menu_item_t program_category_1_menu[] = {
 
     { YSW_R2_C1, "Bass", YSW_MF_PLUS, on_program_2, 4, program_template },
     { YSW_R2_C2, "Strings", YSW_MF_PLUS, on_program_2, 5, program_template },
-    { YSW_R2_C3, "Ensmbl", YSW_MF_PLUS, on_program_2, 6, program_template },
+    { YSW_R2_C3, "Ensem\nble", YSW_MF_PLUS, on_program_2, 6, program_template },
     { YSW_R2_C4, "Brass", YSW_MF_PLUS, on_program_2, 7, program_template },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },

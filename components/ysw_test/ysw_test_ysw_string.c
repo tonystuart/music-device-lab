@@ -68,4 +68,3 @@ void ysw_test_ysw_string_shift()
     assert(strcmp(ysw_string_get_chars(s), "abef") == 0);
     assert(ysw_string_get_length(s) == 4);
 }
-

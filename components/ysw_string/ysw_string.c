@@ -251,7 +251,7 @@ void ysw_string_trim_left(ysw_string_t *s, const char *unwanted)
         while (*p) {
             *q++ = *p++;
         }
-        *q++ = EOS;
+        *q = EOS;
         s->length = q - s->buffer;
     }
 }
@@ -263,7 +263,7 @@ void ysw_string_trim_right(ysw_string_t *s, const char *unwanted)
         p--;
     }
     p++;
-    *p++ = EOS;
+    *p = EOS;
     s->length = p - s->buffer;
 }
 

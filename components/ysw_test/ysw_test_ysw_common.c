@@ -7,22 +7,15 @@
 // This program is made available on an "as is" basis, without
 // warranties or conditions of any kind, either express or implied.
 
-#include "ysw_string.h"
+#include "ysw_common.h"
 #include "esp_log.h"
 #include "assert.h"
 #include "string.h"
 
-#define TAG "YSW_TEST_ALL"
+#define TAG "YSW_TEST_YSW_COMMON"
 
-void ysw_test_all()
+void ysw_test_ysw_make_label(void)
 {
-    void ysw_test_zm_generate_scales(void);
-    ysw_test_zm_generate_scales();
-
-    void ysw_test_ysw_string_shift(void);
-    ysw_test_ysw_string_shift();
-
-    void ysw_test_ysw_make_label(void);
-    ysw_test_ysw_make_label();
+    const char *s = ysw_make_label("Honky Tonk Piano");
+    ESP_LOGD(TAG, "ysw_test_ysw_make_label s=%s", s);
 }
-
