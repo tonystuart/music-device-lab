@@ -24,7 +24,6 @@
 #include "ysw_mapper.h"
 #include "ysw_midi.h"
 #include "ysw_mod_synth.h"
-#include "ysw_mod_music.h"
 #include "ysw_sequencer.h"
 #include "ysw_shell.h"
 #include "ysw_spiffs.h"
