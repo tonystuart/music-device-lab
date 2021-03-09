@@ -108,7 +108,6 @@ typedef struct {
 
 typedef struct {
     uint8_t channel_programs[YSW_MIDI_MAX_CHANNELS];
-    uint32_t playrate;
     uint32_t voice_time;
     voice_t voices[MAX_VOICES];
     uint16_t voice_count;

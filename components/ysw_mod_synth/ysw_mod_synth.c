@@ -85,15 +85,11 @@ static inline uint32_t parse_timecents(const char *token)
     return samples;
 }
 
-static inline uint32_t calculate_sample_increment(
-        ysw_mod_synth_t *mod_synth, ysw_mod_sample_t *sample, uint8_t midi_note)
+static inline uint32_t calculate_sample_increment(ysw_mod_sample_t *sample, uint8_t midi_note)
 {
-    // TODO: move SAMPLE_RATE / playrate correction to to_millis
-    uint32_t sampinc = ((1 << POS_SCALE_FACTOR) *
-            to_millis(sample->fine_tune) *
-            SAMPLE_RATE /
-            to_frequency(sample->root_key) /
-            mod_synth->playrate) *
+    uint32_t sampinc = (1 << POS_SCALE_FACTOR) *
+        to_millis(sample->fine_tune) /
+        to_frequency(sample->root_key) *
         to_frequency(midi_note);
     return sampinc;
 }
@@ -263,7 +259,6 @@ static void initialize_synthesizer(ysw_mod_synth_t *mod_synth)
 {
     assert(mod_synth);
 
-    mod_synth->playrate = SAMPLE_RATE; // TODO: update with actual clock rate from I2S layer
     mod_synth->stereo = 1;
     mod_synth->stereo_separation = 1;
     mod_synth->filter = 1;
@@ -602,7 +597,7 @@ static void start_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi
             voice->loop_end = sample->loop_end;
             voice->loop_type = sample->loop_type;
             voice->volume = velocity / 2; // mod volume range is 0-63
-            voice->sampinc = calculate_sample_increment(mod_synth, sample, midi_note);
+            voice->sampinc = calculate_sample_increment(sample, midi_note);
             voice->samppos = 0;
             voice->time = mod_synth->voice_time++;
             voice->state = YSW_MOD_NOTE_ON;
