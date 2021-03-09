@@ -106,6 +106,7 @@ typedef struct {
 
     insert_settings insert_settings;
     zm_chord_t chord_builder;
+    ysw_editor_mode_t program_builder;
 
 } ysw_editor_t;
 
@@ -861,12 +862,13 @@ static void generate_chord_type_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw
     finalize_menu(p, name);
 }
 
-static void generate_program_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_menu_item_t *template, const ysw_menu_item_t *submenu, const char *name)
+static void generate_program_menu(ysw_editor_t *editor, ysw_menu_cb_t cb, ysw_menu_item_t *template, uint8_t category, const char *name)
 {
-    // TODO: use midi program names
     ysw_menu_item_t *p = template;
-    for (zm_chord_style_x i = 0; i < 12 && (p - template) < 12; i++) {
-        initialize_item(p, softkey_map[p - template], ysw_midi_get_program_label(i), cb, i, submenu);
+    for (zm_chord_style_x i = 0; i < 8; i++) {
+        uint8_t program = (category * 8) + i;
+        const char *label = ysw_midi_get_program_label(program);
+        initialize_item(p, softkey_map[p - template], label, cb, program, NULL);
         p++;
     }
     finalize_menu(p, name);
@@ -987,40 +989,22 @@ static void on_mode_harp(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *
 
 static ysw_menu_item_t program_template[YSW_APP_SOFTKEY_SZ + 1];
 
-static void on_program_melody_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_program_3(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    set_program(editor, YSW_EDITOR_MODE_MELODY, item->value);
+    set_program(editor, editor->program_builder, item->value);
 }
 
-static void on_program_melody_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_program_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    generate_program_menu(editor, on_program_melody_2, program_template, NULL, "Melody Program");
+    generate_program_menu(editor, on_program_3, program_template, item->value, "Program");
 }
 
-static void on_program_chord_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+static void on_program_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_editor_t *editor = menu->context;
-    set_program(editor, YSW_EDITOR_MODE_CHORD, item->value);
-}
-
-static void on_program_chord_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
-{
-    ysw_editor_t *editor = menu->context;
-    generate_program_menu(editor, on_program_chord_2, program_template, NULL, "Chord Program");
-}
-
-static void on_program_rhythm_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
-{
-    ysw_editor_t *editor = menu->context;
-    set_program(editor, YSW_EDITOR_MODE_RHYTHM, item->value);
-}
-
-static void on_program_rhythm_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
-{
-    ysw_editor_t *editor = menu->context;
-    generate_program_menu(editor, on_program_rhythm_2, program_template, NULL, "Rhythm Program");
+    editor->program_builder = item->value;
 }
 
 static void on_settings_chord_type_2(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -1900,15 +1884,48 @@ static const ysw_menu_item_t settings_duration_menu[] = {
     { 0, "Duration", YSW_MF_END, NULL, 0, NULL },
 };
 
+static const ysw_menu_item_t program_category_2_menu[] = {
+    { YSW_R1_C1, "Reed", YSW_MF_PLUS, on_program_2, 8, program_template },
+    { YSW_R1_C2, "Pipe", YSW_MF_PLUS, on_program_2, 9, program_template },
+    { YSW_R1_C3, "Synth\nLead", YSW_MF_PLUS, on_program_2, 10, program_template },
+    { YSW_R1_C4, "Synth\nPad", YSW_MF_PLUS, on_program_2, 11, program_template },
+
+    { YSW_R2_C1, "Synth\nEffects", YSW_MF_PLUS, on_program_2, 12, program_template },
+    { YSW_R2_C2, "Ethnic", YSW_MF_PLUS, on_program_2, 13, program_template },
+    { YSW_R2_C3, "Percussive", YSW_MF_PLUS, on_program_2, 14, program_template },
+    { YSW_R2_C4, "Sound\nEffects", YSW_MF_PLUS, on_program_2, 15, program_template },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "More", YSW_MF_END, NULL, 0, NULL },
+};
+
+static const ysw_menu_item_t program_category_1_menu[] = {
+    { YSW_R1_C1, "Piano", YSW_MF_PLUS, on_program_2, 0, program_template },
+    { YSW_R1_C2, "Chrom\nPerc", YSW_MF_PLUS, on_program_2, 1, program_template },
+    { YSW_R1_C3, "Organ", YSW_MF_PLUS, on_program_2, 2, program_template },
+    { YSW_R1_C4, "Guitar", YSW_MF_PLUS, on_program_2, 3, program_template },
+
+    { YSW_R2_C1, "Bass", YSW_MF_PLUS, on_program_2, 4, program_template },
+    { YSW_R2_C2, "Strings", YSW_MF_PLUS, on_program_2, 5, program_template },
+    { YSW_R2_C3, "Ensmbl", YSW_MF_PLUS, on_program_2, 6, program_template },
+    { YSW_R2_C4, "Brass", YSW_MF_PLUS, on_program_2, 7, program_template },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C4, "More", YSW_MF_PLUS, ysw_menu_nop, 0, program_category_2_menu },
+
+    { 0, "Category", YSW_MF_END, NULL, 0, NULL },
+};
+
 static const ysw_menu_item_t settings_menu[] = {
     { YSW_R1_C1, "Key\nSig", YSW_MF_PLUS, ysw_menu_nop, 0, key_signature_menu },
     { YSW_R1_C2, "Time\nSig", YSW_MF_PLUS, ysw_menu_nop, 0, time_signature_menu },
     { YSW_R1_C3, "Tempo\n(BPM)", YSW_MF_PLUS, ysw_menu_nop, 0, tempo_menu },
     { YSW_R1_C4, "Duration", YSW_MF_PLUS, ysw_menu_nop, 0, settings_duration_menu },
 
-    { YSW_R2_C1, "Melody\nProgram", YSW_MF_PLUS, on_program_melody_1, 0, program_template },
-    { YSW_R2_C2, "Chord\nProgram", YSW_MF_PLUS, on_program_chord_1, 0, program_template },
-    { YSW_R2_C3, "Rhythm\nProgram", YSW_MF_PLUS, on_program_rhythm_1, 0, program_template },
+    { YSW_R2_C1, "Melody\nProgram", YSW_MF_PLUS, on_program_1, 0, program_category_1_menu },
+    { YSW_R2_C2, "Chord\nProgram", YSW_MF_PLUS, on_program_1, 1, program_category_1_menu },
+    { YSW_R2_C3, "Rhythm\nProgram", YSW_MF_PLUS, on_program_1, 2, program_category_1_menu },
 
     { YSW_R3_C1, "Chord\nType", YSW_MF_PLUS, on_settings_chord_type_1, 0, chord_type_template },
     { YSW_R3_C2, "Chord\nStyle", YSW_MF_PLUS, on_settings_chord_style_1, 0, chord_style_template },
