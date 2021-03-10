@@ -29,7 +29,7 @@ static void on_key_down(ysw_mapper_t *mapper, ysw_event_key_down_t *m)
             .time = m->time,
         };
         ysw_event_fire_notekey_down(mapper->bus, &notekey_down);
-    } else {
+    } else if (item > 0) {
         ysw_event_softkey_down_t softkey_down = {
             .softkey = item,
             .time = m->time,
@@ -48,7 +48,7 @@ static void on_key_up(ysw_mapper_t *mapper, ysw_event_key_up_t *m)
             .duration = m->duration,
         };
         ysw_event_fire_notekey_up(mapper->bus, &notekey_up);
-    } else {
+    } else if (item > 0) {
         ysw_event_softkey_up_t softkey_up = {
             .softkey = item,
             .time = m->time,
@@ -64,7 +64,7 @@ static void on_key_pressed(ysw_mapper_t *mapper, ysw_event_key_pressed_t *m)
     ysw_mapper_item_t item = mapper->map[m->scan_code];
     if (item < 0) {
         // notekeys don't do pressed
-    } else {
+    } else if (item > 0) {
         ysw_event_softkey_pressed_t softkey_pressed = {
             .softkey = item,
             .time = m->time,

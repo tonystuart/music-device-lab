@@ -12,7 +12,7 @@
 #include "ysw_bus.h"
 #include "stdlib.h"
 
-typedef int8_t ysw_mapper_item_t;
+typedef int8_t ysw_mapper_item_t; // ysw_mapper interprets a target value of zero as a no-op
 
 void ysw_mapper_create_task(ysw_bus_t *bus, const ysw_mapper_item_t *map);
 

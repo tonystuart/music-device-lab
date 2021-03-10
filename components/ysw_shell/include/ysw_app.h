@@ -15,7 +15,7 @@
 #include "freertos/queue.h"
 
 typedef enum {
-	YSW_R1_C1,
+	YSW_R1_C1 = 1, // ysw_mapper interprets a target value of zero as a no-op
 	YSW_R1_C2,
 	YSW_R1_C3,
 	YSW_R1_C4,

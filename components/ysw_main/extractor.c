@@ -65,7 +65,7 @@ static void extract_sample(char *ofn, FILE *csvf, fluid_inst_t *inst, fluid_inst
     fprintf(csvf, ",%d,%d,%d,%d\n", iz->range.keylo, iz->range.keyhi, iz->range.vello, iz->range.velhi);
 
     char sfn[128];
-    snprintf(sfn, sizeof(sfn), "%s/samples/%s", ofn, sn);
+    snprintf(sfn, sizeof(sfn), "%s/samples/%s", ofn, sample->name); // use unescaped name for filename
 
     FILE *sf = fopen(sfn, "w");
     assert(sf);

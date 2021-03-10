@@ -16,7 +16,7 @@
 #include "freertos/semphr.h"
 #include "stdint.h"
 
-#define MAX_VOICES 32
+#define MAX_VOICES 16
 
 #define YSW_MOD_MAX_BANKS 2
 
