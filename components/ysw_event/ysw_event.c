@@ -43,6 +43,16 @@ void ysw_event_fire_note_off(ysw_bus_t *bus, ysw_origin_t origin, ysw_event_note
     ysw_event_publish(bus, &event);
 }
 
+void ysw_event_fire_bank_select(ysw_bus_t *bus, ysw_origin_t origin, ysw_event_bank_select_t *bank)
+{
+    ysw_event_t event = {
+        .header.origin = origin,
+        .header.type = YSW_EVENT_BANK_SELECT,
+        .bank_select = *bank,
+    };
+    ysw_event_publish(bus, &event);
+}
+
 void ysw_event_fire_program_change(ysw_bus_t *bus, ysw_origin_t origin, ysw_event_program_change_t *program)
 {
     ysw_event_t event = {

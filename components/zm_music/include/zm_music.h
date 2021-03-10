@@ -32,6 +32,7 @@ typedef bool zm_yesno_t;
 typedef int8_t zm_distance_t;
 typedef int32_t zm_range_x;
 
+typedef uint8_t zm_bank_x;
 typedef uint8_t zm_beat_x;
 typedef uint8_t zm_bpm_x;
 typedef uint8_t zm_channel_x;
@@ -187,7 +188,6 @@ typedef struct {
     ysw_array_t *steps;
     zm_program_x melody_program;
     zm_program_x chord_program;
-    zm_program_x rhythm_program;
 } zm_section_t;
 
 typedef enum {

@@ -188,16 +188,16 @@ ysw_mod_preset_t *parse_file(FILE *file)
     return preset;
 }
 
-static void load_preset(ysw_mod_synth_t *mod_synth, ysw_mod_bank_t *bank, uint8_t program)
+static void load_preset(ysw_mod_synth_t *mod_synth, ysw_mod_bank_t *bank, uint8_t preset)
 {
     char buf[PATH_SIZE];
-    snprintf(buf, sizeof(buf), "%s/presets/%03d-%03d.csv", mod_synth->folder, bank->num, program);
+    snprintf(buf, sizeof(buf), "%s/presets/%03d-%03d.csv", mod_synth->folder, bank->num, preset);
 
     FILE *file = fopen(buf, "r");
     assert(file);
 
-    ysw_mod_preset_t *preset = parse_file(file);
-    bank->presets[program] = preset;
+    ysw_mod_preset_t *p = parse_file(file);
+    bank->presets[preset] = p;
 
     fclose(file);
 }
@@ -530,22 +530,16 @@ static ysw_mod_bank_t *find_bank(ysw_mod_synth_t *mod_synth, uint8_t num)
     return NULL;
 }
 
-static ysw_mod_preset_t *realize_preset(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t program)
+static ysw_mod_preset_t *realize_preset(ysw_mod_synth_t *mod_synth, uint8_t bank, uint8_t preset)
 {
-    uint8_t num = 0;
-    if (channel == YSW_MIDI_DRUM_CHANNEL) {
-        num = YSW_MIDI_DRUM_BANK;
-        program = 0;
+    ysw_mod_bank_t *b = find_bank(mod_synth, bank);
+    assert(b);
+
+    if (!b->presets[preset]) {
+        load_preset(mod_synth, b, preset);
     }
 
-    ysw_mod_bank_t *bank = find_bank(mod_synth, num);
-    assert(bank);
-
-    if (!bank->presets[program]) {
-        load_preset(mod_synth, bank, program);
-    }
-
-    return bank->presets[program];
+    return b->presets[preset];
 }
 
 static ysw_mod_sample_t *find_sample(ysw_mod_instrument_t *instrument, uint8_t midi_note)
@@ -582,11 +576,12 @@ static void start_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi
 {
     enter_critical_section(mod_synth);
 
-    uint8_t program = mod_synth->channel_programs[channel];
-    ysw_mod_preset_t *preset = realize_preset(mod_synth, channel, program);
-    uint8_t instrument_count = ysw_array_get_count(preset->instruments);
+    uint8_t bank = mod_synth->channel_banks[channel];
+    uint8_t preset = mod_synth->channel_presets[channel];
+    ysw_mod_preset_t *p = realize_preset(mod_synth, bank, preset);
+    uint8_t instrument_count = ysw_array_get_count(p->instruments);
     for (uint8_t i = 0; i < instrument_count; i++) {
-        ysw_mod_instrument_t *instrument = ysw_array_get(preset->instruments, i);
+        ysw_mod_instrument_t *instrument = ysw_array_get(p->instruments, i);
         ysw_mod_sample_t *sample = get_sample(mod_synth, instrument, midi_note);
         if (sample) {
             uint8_t voice_index = allocate_voice(mod_synth, channel, midi_note);
@@ -643,14 +638,19 @@ static void on_note_off(ysw_mod_synth_t *mod_synth, ysw_event_note_off_t *m)
     stop_note(mod_synth, m->channel, m->midi_note);
 }
 
+static void on_bank_select(ysw_mod_synth_t *mod_synth, ysw_event_bank_select_t *m)
+{
+    assert(m->channel < YSW_MIDI_MAX_CHANNELS);
+
+    mod_synth->channel_banks[m->channel] = m->bank;
+}
+
 static void on_program_change(ysw_mod_synth_t *mod_synth, ysw_event_program_change_t *m)
 {
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
     assert(m->program < YSW_MIDI_MAX_COUNT);
 
-    realize_preset(mod_synth, m->channel, m->program);
-
-    mod_synth->channel_programs[m->channel] = m->program;
+    mod_synth->channel_presets[m->channel] = m->program;
 }
 
 static void on_synth_gain(ysw_mod_synth_t *mod_synth, ysw_event_synth_gain_t *m)
@@ -667,6 +667,9 @@ static void process_event(void *context, ysw_event_t *event)
             break;
         case YSW_EVENT_NOTE_OFF:
             on_note_off(mod_synth, &event->note_off);
+            break;
+        case YSW_EVENT_BANK_SELECT:
+            on_bank_select(mod_synth, &event->bank_select);
             break;
         case YSW_EVENT_PROGRAM_CHANGE:
             on_program_change(mod_synth, &event->program_change);

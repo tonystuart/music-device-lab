@@ -15,7 +15,11 @@
 #define YSW_MIDI_MAX 127 // TODO: rename YSW_MIDI_MAX_INDEX
 #define YSW_MIDI_MAX_COUNT 128
 
+// See http://www.synthfont.com/Tutorial6.html
+
 #define YSW_MIDI_DRUM_BANK 128
+#define YSW_MIDI_DRUM_PROGRAM 0
+
 #define YSW_MIDI_DRUM_CHANNEL 9
 #define YSW_MIDI_MAX_CHANNELS 16
 

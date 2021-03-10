@@ -291,50 +291,50 @@
 #type(7=beat),index,name
 #type(8=stroke),time,surface,velocity
 7,0,Basic Rock
-8,0,60,16 # bass
-8,0,64,16 # hi-hat
-8,128,64,16 # hi-hat
-8,256,62,16 # snare
-8,256,64,16 # hi-hat
-8,384,64,16 # hi-hat
-8,512,60,16 # bass
-8,512,64,16 # hi-hat
-8,640,64,16 # hi-hat
-8,768,62,16 # snare
-8,768,64,16 # hi-hat
-8,896,64,16 # hi-hat
+8,0,35,16 # bass
+8,0,42,16 # hi-hat
+8,128,42,16 # hi-hat
+8,256,38,16 # snare
+8,256,42,16 # hi-hat
+8,384,42,16 # hi-hat
+8,512,35,16 # bass
+8,512,42,16 # hi-hat
+8,640,42,16 # hi-hat
+8,768,38,16 # snare
+8,768,42,16 # hi-hat
+8,896,42,16 # hi-hat
 
 #type(7=beat),index,name
 #type(8=stroke),time,surface,velocity
 7,1,8th Note Groove
-8,0,60,16 # bass
-8,0,62,16 # snare
-8,0,64,16 # hi-hat
-8,0,65,16 # cymbal
-8,128,64,16 # hi-hat
-8,256,60,16 # bass
-8,256,62,16 # snare
-8,256,64,16 # hi-hat
-8,256,65,16 # cymbal
-8,384,64,16 # hi-hat
-8,512,60,16 # bass
-8,512,62,16 # snare
-8,512,64,16 # hi-hat
-8,512,65,16 # cymbal
-8,640,64,16 # hi-hat
-8,768,60,16 # bass
-8,768,62,16 # snare
-8,768,64,16 # hi-hat
-8,768,65,16 # cymbal
-8,896,64,16 # hi-hat
+8,0,35,16 # bass
+8,0,38,16 # snare
+8,0,42,16 # hi-hat
+8,0,51,16 # cymbal
+8,128,42,16 # hi-hat
+8,256,35,16 # bass
+8,256,38,16 # snare
+8,256,42,16 # hi-hat
+8,256,51,16 # cymbal
+8,384,42,16 # hi-hat
+8,512,35,16 # bass
+8,512,38,16 # snare
+8,512,42,16 # hi-hat
+8,512,51,16 # cymbal
+8,640,42,16 # hi-hat
+8,768,35,16 # bass
+8,768,38,16 # snare
+8,768,42,16 # hi-hat
+8,768,51,16 # cymbal
+8,896,42,16 # hi-hat
 
-#type(9=section),index,name,tempo,key,time,clock,melody,chord,rhythm
+#type(9=section),index,name,tempo,key,time,clock,melody,chord
 #type(10=step),start,measure,flags
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration_type
 #type(13=rhythm),beat
 
-9,0,Summer Nights Verse,100,2,3,1,1,3,7
+9,0,Summer Nights Verse,100,2,3,1,0,89
 
 # Line 1 - Measure 1
 10,0,1,0
@@ -528,7 +528,7 @@
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat
-9,1,Summer Nights Walking Scale,100,2,3,2,0,3,7
+9,1,Summer Nights Walking Scale,100,2,3,2,0,3
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
@@ -557,7 +557,7 @@
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat
-9,2,Summer Nights Intro,100,2,3,3,1,3,7
+9,2,Summer Nights Intro,100,2,3,3,0,89
 
 # Key of D-Major:
 # D     E     F# G     A     B     C#
@@ -623,7 +623,7 @@
 15,0,100,1,0,0 # Verse 1
 15,1,10,0,1,1 # Walking Scale
 
-9,3,Simple Example,100,0,3,4,0,3,7
+9,3,Simple Example,100,0,3,4,0,3
 10,0,1,0
 11,60,128,0
 12,60,6,10,2
@@ -649,7 +649,7 @@
 #type(11=melody),note,duration,tie
 #type(12=chord),root,quality,style,duration
 #type(13=rhythm),beat
-9,4,Something Stupid,100,0,3,5,0,1,7
+9,4,Something Stupid,100,0,3,5,0,1
 10,0,1,0
 11,60,124,0
 10,128,1,0

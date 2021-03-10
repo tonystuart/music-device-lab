@@ -40,8 +40,12 @@
 #define BASE_CHANNEL 0
 #define MELODY_CHANNEL (BASE_CHANNEL+0)
 #define CHORD_CHANNEL (BASE_CHANNEL+1)
-#define RHYTHM_CHANNEL (BASE_CHANNEL+9)
+#define RHYTHM_CHANNEL (BASE_CHANNEL+2)
+
 #define BACKGROUND_BASE (BASE_CHANNEL+3)
+#define BACKGROUND_MELODY (BACKGROUND_BASE+0)
+#define BACKGROUND_CHORD (BACKGROUND_BASE+1)
+#define BACKGROUND_RHYTHM (BACKGROUND_BASE+2)
 
 typedef enum {
     YSW_EDITOR_MODE_MELODY,
@@ -359,7 +363,16 @@ static void set_position(ysw_editor_t *editor, int32_t position)
     display_mode(editor);
 }
 
-static void fire_program_change(ysw_editor_t *editor, zm_program_x program, zm_channel_x channel)
+static void fire_bank_select(ysw_editor_t *editor, zm_channel_x channel, zm_bank_x bank)
+{
+    ysw_event_bank_select_t bank_select = {
+        .channel = channel,
+        .bank = bank,
+    };
+    ysw_event_fire_bank_select(editor->bus, YSW_ORIGIN_EDITOR, &bank_select);
+}
+
+static void fire_program_change(ysw_editor_t *editor, zm_channel_x channel, zm_program_x program)
 {
     ysw_event_program_change_t program_change = {
         .channel = channel,
@@ -368,7 +381,7 @@ static void fire_program_change(ysw_editor_t *editor, zm_program_x program, zm_c
     ysw_event_fire_program_change(editor->bus, YSW_ORIGIN_EDITOR, &program_change);
 }
 
-static void fire_note_on(ysw_editor_t *editor, zm_note_t midi_note, zm_channel_x channel)
+static void fire_note_on(ysw_editor_t *editor, zm_channel_x channel, zm_note_t midi_note)
 {
     ysw_event_note_on_t note_on = {
         .channel = channel,
@@ -378,7 +391,7 @@ static void fire_note_on(ysw_editor_t *editor, zm_note_t midi_note, zm_channel_x
     ysw_event_fire_note_on(editor->bus, YSW_ORIGIN_EDITOR, &note_on);
 }
 
-static void fire_note_off(ysw_editor_t *editor, zm_note_t midi_note, zm_channel_x channel)
+static void fire_note_off(ysw_editor_t *editor, zm_channel_x channel, zm_note_t midi_note)
 {
     ysw_event_note_off_t note_off = {
         .channel = channel,
@@ -394,15 +407,14 @@ static void set_program(ysw_editor_t *editor, ysw_editor_mode_t mode, zm_program
     switch (mode) {
         case YSW_EDITOR_MODE_MELODY:
             editor->section->melody_program = program;
-            fire_program_change(editor, editor->section->melody_program, MELODY_CHANNEL);
+            fire_program_change(editor, MELODY_CHANNEL, editor->section->melody_program);
             break;
         case YSW_EDITOR_MODE_CHORD:
             editor->section->chord_program = program;
-            fire_program_change(editor, editor->section->chord_program, CHORD_CHANNEL);
+            fire_program_change(editor, CHORD_CHANNEL, editor->section->chord_program);
             break;
         case YSW_EDITOR_MODE_RHYTHM:
-            editor->section->rhythm_program = program;
-            fire_program_change(editor, editor->section->rhythm_program, RHYTHM_CHANNEL);
+            // no program change for rhythm channel
             break;
     }
     display_program(editor);
@@ -679,7 +691,7 @@ static void press_note(ysw_editor_t *editor, zm_note_t midi_note, uint32_t down_
         editor->down_at = down_at;
         editor->delta = editor->down_at - editor->up_at;
         if (midi_note) {
-            fire_note_on(editor, midi_note, MELODY_CHANNEL);
+            fire_note_on(editor, MELODY_CHANNEL, midi_note);
         }
     } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
         zm_step_t step = {
@@ -691,7 +703,7 @@ static void press_note(ysw_editor_t *editor, zm_note_t midi_note, uint32_t down_
         play_step(editor, &step);
     } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
         if (midi_note) {
-            fire_note_on(editor, midi_note, RHYTHM_CHANNEL);
+            fire_note_on(editor, RHYTHM_CHANNEL, midi_note);
         }
     }
 }
@@ -701,7 +713,7 @@ static void release_note(ysw_editor_t *editor, zm_note_t midi_note, uint32_t up_
     if (editor->mode == YSW_EDITOR_MODE_MELODY) {
         editor->up_at = up_at;
         if (midi_note) {
-            fire_note_off(editor, midi_note, MELODY_CHANNEL);
+            fire_note_off(editor, MELODY_CHANNEL, midi_note);
         }
         realize_note(editor, midi_note, duration);
     } else if (editor->mode == YSW_EDITOR_MODE_CHORD) {
@@ -714,7 +726,7 @@ static void release_note(ysw_editor_t *editor, zm_note_t midi_note, uint32_t up_
         realize_chord(editor, &chord);
     } else if (editor->mode == YSW_EDITOR_MODE_RHYTHM) {
         if (midi_note) {
-            fire_note_off(editor, midi_note, RHYTHM_CHANNEL);
+            fire_note_off(editor, RHYTHM_CHANNEL, midi_note);
         }
         realize_stroke(editor, midi_note);
     }
@@ -1556,7 +1568,7 @@ static void on_notekey_down(ysw_editor_t *editor, ysw_event_notekey_down_t *m)
         }
     } else {
         press_note(editor, m->midi_note, m->time);
-        //fire_note_on(editor, m->midi_note, MELODY_CHANNEL);
+        //fire_note_on(editor, MELODY_CHANNEL, m->midi_note);
     }
 }
 
@@ -1565,7 +1577,7 @@ static void on_notekey_up(ysw_editor_t *editor, ysw_event_notekey_up_t *m)
     if (editor->harp) {
     } else {
         release_note(editor, m->midi_note, m->time, m->duration);
-        //fire_note_off(editor, m->midi_note, MELODY_CHANNEL);
+        //fire_note_off(editor, MELODY_CHANNEL, m->midi_note);
     }
 }
 
@@ -1925,7 +1937,6 @@ static const ysw_menu_item_t settings_menu[] = {
 
     { YSW_R2_C1, "Melody\nProgram", YSW_MF_PLUS, on_program_1, 0, program_category_1_menu },
     { YSW_R2_C2, "Chord\nProgram", YSW_MF_PLUS, on_program_1, 1, program_category_1_menu },
-    { YSW_R2_C3, "Rhythm\nProgram", YSW_MF_PLUS, on_program_1, 2, program_category_1_menu },
 
     { YSW_R3_C1, "Chord\nType", YSW_MF_PLUS, on_settings_chord_type_1, 0, chord_type_template },
     { YSW_R3_C2, "Chord\nStyle", YSW_MF_PLUS, on_settings_chord_style_1, 0, chord_style_template },
@@ -2124,9 +2135,10 @@ void ysw_editor_edit_section(ysw_bus_t *bus, zm_music_t *music, zm_section_t *se
     ysw_footer_set_key(editor->footer, editor->section->key);
     ysw_footer_set_time(editor->footer, editor->section->time);
     ysw_footer_set_tempo(editor->footer, editor->section->tempo);
-    fire_program_change(editor, editor->section->melody_program, MELODY_CHANNEL);
-    fire_program_change(editor, editor->section->chord_program, CHORD_CHANNEL);
-    fire_program_change(editor, editor->section->rhythm_program, RHYTHM_CHANNEL);
+    fire_program_change(editor, MELODY_CHANNEL, editor->section->melody_program);
+    fire_program_change(editor, CHORD_CHANNEL, editor->section->chord_program);
+    fire_bank_select(editor, RHYTHM_CHANNEL, YSW_MIDI_DRUM_BANK);
+    fire_bank_select(editor, BACKGROUND_RHYTHM, YSW_MIDI_DRUM_BANK);
     display_mode(editor); // mode displays program
 
     editor->menu = ysw_menu_create(bus, editor_menu, ysw_app_softkey_map, editor);

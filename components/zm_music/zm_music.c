@@ -326,7 +326,6 @@ static void parse_section(zm_mfr_t *mfr)
     section->tlm = atoi(ysw_csv_get_token(mfr->csv, 6));
     section->melody_program = atoi(ysw_csv_get_token(mfr->csv, 7));
     section->chord_program = atoi(ysw_csv_get_token(mfr->csv, 8));
-    section->rhythm_program = atoi(ysw_csv_get_token(mfr->csv, 9));
     section->steps = ysw_array_create(16);
 
     zm_yesno_t done = false;
@@ -370,7 +369,7 @@ static void emit_sections(zm_mfw_t *zm_mfw)
         zm_section_t *section = ysw_array_get(zm_mfw->music->sections, i);
         put_map(zm_mfw->section_map, section, i);
         ysw_csv_escape(section->name, name, sizeof(name));
-        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d,%d\n",
+        fprintf(zm_mfw->file, "%d,%d,%s,%d,%d,%d,%d,%d,%d\n",
                 ZM_MF_SECTION,
                 i,
                 name,
@@ -379,8 +378,7 @@ static void emit_sections(zm_mfw_t *zm_mfw)
                 section->time,
                 section->tlm,
                 section->melody_program,
-                section->chord_program,
-                section->rhythm_program);
+                section->chord_program);
 
         uint32_t step_count = ysw_array_get_count(section->steps);
         for (uint32_t j = 0; j < step_count; j++) {
@@ -571,7 +569,7 @@ zm_music_t *zm_parse_file(FILE *file)
             parse_chord_style(mfr);
         } else if (type == ZM_MF_BEAT && token_count == 3) {
             parse_beat(mfr);
-        } else if (type == ZM_MF_SECTION && token_count == 10) {
+        } else if (type == ZM_MF_SECTION && token_count == 9) {
             parse_section(mfr);
         } else if (type == ZM_MF_COMPOSITION && token_count == 4) {
             parse_composition(mfr);
@@ -882,7 +880,7 @@ ysw_array_t *zm_render_step(zm_music_t *m, zm_section_t *p, zm_step_t *d, zm_cha
         zm_render_chord(notes, &d->chord, 0, bc + 1, p->chord_program);
     }
     if (d->rhythm.beat || d->rhythm.surface) {
-        zm_render_rhythm(notes, &d->rhythm, 0, bc + 2, p->rhythm_program);
+        zm_render_rhythm(notes, &d->rhythm, 0, bc + 2, YSW_MIDI_DRUM_PROGRAM);
     }
     ysw_array_sort(notes, zm_note_compare);
     return notes;
@@ -915,7 +913,7 @@ zm_time_x zm_render_section_notes(ysw_array_t *notes, zm_music_t *music, zm_sect
             zm_render_chord(notes, &step->chord, step_start, base_channel + 1, section->chord_program);
         }
         if (step->rhythm.beat || step->rhythm.surface) {
-            zm_render_rhythm(notes, &step->rhythm, step_start, base_channel + 2, section->rhythm_program);
+            zm_render_rhythm(notes, &step->rhythm, step_start, base_channel + 2, YSW_MIDI_DRUM_PROGRAM);
         }
         zm_time_x step_duration = zm_get_step_duration(step, ticks_per_measure);
         step_end = step_start + step_duration;
@@ -1250,7 +1248,6 @@ zm_section_t *zm_create_section(zm_music_t *music)
     section->steps = ysw_array_create(64);
     section->melody_program = 0;
     section->chord_program = 0;
-    section->rhythm_program = 0;
     return section;
 }
 
@@ -1267,7 +1264,6 @@ zm_section_t *zm_create_duplicate_section(zm_section_t *old_section)
     new_section->steps = ysw_array_create(step_count);
     new_section->melody_program = old_section->melody_program;
     new_section->chord_program = old_section->chord_program;
-    new_section->rhythm_program = old_section->rhythm_program;
 
     for (zm_step_x i = 0; i < step_count; i++) {
         zm_step_t *old_step = ysw_array_get(old_section->steps, i);
@@ -1295,7 +1291,6 @@ void zm_copy_section(zm_section_t *to_section, zm_section_t *from_section)
     // reuse to_section->steps instead of reallocating
     to_section->melody_program = from_section->melody_program;
     to_section->chord_program = from_section->chord_program;
-    to_section->rhythm_program = from_section->rhythm_program;
 
     zm_step_x to_count = ysw_array_get_count(to_section->steps);
     zm_step_x from_count = ysw_array_get_count(from_section->steps);
@@ -1360,7 +1355,6 @@ bool zm_sections_equal(zm_section_t *left, zm_section_t *right)
             (left->time == right->time) &&
             (left->melody_program == right->melody_program) &&
             (left->chord_program == right->chord_program) &&
-            (left->rhythm_program == right->rhythm_program) &&
             zm_step_arrays_equal(left->steps, right->steps));
 }
 
