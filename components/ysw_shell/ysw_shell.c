@@ -16,6 +16,7 @@
 #include "ysw_heap.h"
 #include "ysw_menu.h"
 #include "ysw_name.h"
+#include "ysw_performer.h"
 #include "ysw_popup.h"
 #include "ysw_string.h"
 #include "ysw_style.h"
@@ -59,6 +60,13 @@ static void start_listening_all(ysw_shell_t *shell)
 static void stop_listening(ysw_shell_t *shell)
 {
     ysw_bus_unsubscribe(shell->bus, YSW_ORIGIN_SOFTKEY, shell->queue);
+}
+
+static void create_performance(ysw_shell_t *shell)
+{
+    stop_listening(shell);
+    ysw_performer_create(shell->bus, shell->music);
+    start_listening(shell);
 }
 
 static void create_section(ysw_shell_t *shell)
@@ -170,6 +178,12 @@ static void rename_section(ysw_shell_t *shell, zm_section_t *section)
     ysw_edit_pane_create("Rename Section", section->name, on_new_section_name, shell);
 }
 
+static void on_new_performance(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_shell_t *shell = menu->context;
+    create_performance(shell);
+}
+
 static void on_new_section(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_shell_t *shell = menu->context;
@@ -222,6 +236,7 @@ static const ysw_menu_item_t new_menu[] = {
     { YSW_R2_C2, "Arrange-\nment", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
 
     { YSW_R3_C1, "Chord\nStyle", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R3_C3, "Perfor\nmance", YSW_MF_COMMAND, on_new_performance, 0, NULL },
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
