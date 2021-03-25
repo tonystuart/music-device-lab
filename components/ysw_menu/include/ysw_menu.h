@@ -27,6 +27,7 @@ typedef enum {
     YSW_MENU_HIDE = 0x04,
     YSW_MENU_TOGGLE = 0x05,
     YSW_MENU_RESET = 0x06,
+    YSW_MENU_REPLACE = 0x07,
 } ysw_menu_action_t;
 
 #define YSW_MENU_ACTION_MASK 0x0f
@@ -63,6 +64,7 @@ typedef enum {
 #define YSW_MF_TOGGLE (YSW_MENU_TOGGLE)
 #define YSW_MF_END (YSW_MENU_END)
 #define YSW_MF_LUCID_END (YSW_MENU_LUCID|YSW_MENU_END)
+#define YSW_MF_REPLACE (YSW_MENU_UP|YSW_MENU_REPLACE)
 
 typedef enum {
     YSW_MENU_ENDLINE = -1,

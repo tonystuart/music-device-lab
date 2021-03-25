@@ -189,6 +189,12 @@ static const ysw_mapper_item_t mmv02_map[SDL_NUM_SCANCODES] = {
     [ SDL_SCANCODE_KP_PERIOD] = YSW_R3_C2, // Keypad ./Delete    -> Same as DELETE
 
     [ SDL_SCANCODE_DELETE] = YSW_R3_C2, // Delete Button
+
+    [ SDL_SCANCODE_F1 ] = YSW_BUTTON_1,
+    [ SDL_SCANCODE_F2 ] = YSW_BUTTON_2,
+    [ SDL_SCANCODE_F3 ] = YSW_BUTTON_3,
+    [ SDL_SCANCODE_F4 ] = YSW_BUTTON_4,
+    [ SDL_SCANCODE_F5 ] = YSW_BUTTON_5,
 };
 
 void ysw_main_init_device(ysw_bus_t *bus)

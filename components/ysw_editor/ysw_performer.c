@@ -51,6 +51,7 @@ typedef enum {
     YSW_PERFORMER_MODE_MELODY,
     YSW_PERFORMER_MODE_CHORD,
     YSW_PERFORMER_MODE_RHYTHM,
+    YSW_PERFORMER_MODE_HARP,
 } ysw_performer_mode_t;
 
 typedef struct {
@@ -63,12 +64,12 @@ typedef struct {
     zm_program_x chord_program;
 
     zm_chord_type_t *chord_type;
+    zm_note_t root;
 
     zm_time_x down_at;
     zm_time_x up_at;
     zm_time_x delta;
 
-    bool harp;
     ysw_performer_mode_t mode;
 
     lv_obj_t *container;
@@ -120,6 +121,7 @@ static void set_program(ysw_performer_t *performer, ysw_performer_mode_t mode, z
 {
     switch (mode) {
         case YSW_PERFORMER_MODE_MELODY:
+        case YSW_PERFORMER_MODE_HARP:
             performer->melody_program = program;
             fire_program_change(performer, MELODY_CHANNEL, performer->melody_program);
             break;
@@ -142,32 +144,35 @@ static void set_chord_type(ysw_performer_t *performer, zm_chord_type_x chord_typ
 
 static void press_note(ysw_performer_t *performer, zm_note_t midi_note, uint32_t down_at)
 {
-    if (performer->mode == YSW_PERFORMER_MODE_MELODY) {
-        performer->down_at = down_at;
-        performer->delta = performer->down_at - performer->up_at;
-        if (midi_note) {
+    performer->down_at = down_at;
+    performer->delta = performer->down_at - performer->up_at;
+
+    switch (performer->mode) {
+        case YSW_PERFORMER_MODE_MELODY:
+        case YSW_PERFORMER_MODE_HARP:
             fire_note_on(performer, MELODY_CHANNEL, midi_note);
-        }
-    } else if (performer->mode == YSW_PERFORMER_MODE_CHORD) {
-    } else if (performer->mode == YSW_PERFORMER_MODE_RHYTHM) {
-        if (midi_note) {
+            break;
+        case YSW_PERFORMER_MODE_RHYTHM:
             fire_note_on(performer, RHYTHM_CHANNEL, midi_note);
-        }
+            break;
+        case YSW_PERFORMER_MODE_CHORD:
+            break;
     }
 }
 
 static void release_note(ysw_performer_t *performer, zm_note_t midi_note, uint32_t up_at, uint32_t duration)
 {
-    if (performer->mode == YSW_PERFORMER_MODE_MELODY) {
-        performer->up_at = up_at;
-        if (midi_note) {
+    performer->up_at = up_at;
+    switch (performer->mode) {
+        case YSW_PERFORMER_MODE_MELODY:
+        case YSW_PERFORMER_MODE_HARP:
             fire_note_off(performer, MELODY_CHANNEL, midi_note);
-        }
-    } else if (performer->mode == YSW_PERFORMER_MODE_CHORD) {
-    } else if (performer->mode == YSW_PERFORMER_MODE_RHYTHM) {
-        if (midi_note) {
+            break;
+        case YSW_PERFORMER_MODE_RHYTHM:
             fire_note_off(performer, RHYTHM_CHANNEL, midi_note);
-        }
+            break;
+        case YSW_PERFORMER_MODE_CHORD:
+            break;
     }
 }
 
@@ -203,7 +208,7 @@ static void initialize_item(ysw_menu_item_t *item, uint32_t softkey, const char 
 {
     item->softkey = softkey;
     item->name = name;
-    item->flags = submenu ? YSW_MF_PLUS : YSW_MF_COMMAND;
+    item->flags = submenu ? YSW_MF_REPLACE : YSW_MF_PRESS;
     item->cb = cb;
     item->value = value;
     item->submenu = submenu;
@@ -223,12 +228,13 @@ static void finalize_menu(ysw_menu_item_t *p, const char *name)
     p->flags = YSW_MF_END;
 }
 
-static ysw_menu_item_t chord_type_template[YSW_APP_SOFTKEY_SZ + 1];
+static const ysw_menu_item_t root_menu[];
+static const ysw_menu_item_t program_category_1_menu[];
+static void on_program_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item);
 
 static void generate_chord_type_menu(ysw_performer_t *performer, ysw_menu_cb_t cb, ysw_menu_item_t *template, const ysw_menu_item_t *submenu, const char *name)
 {
     zm_chord_type_x count = ysw_array_get_count(performer->music->chord_types);
-    // TODO: use multiple chord type menus if necessary
     count = min(count, 12);
     ysw_menu_item_t *p = template;
     for (zm_chord_type_x i = 0; i < count; i++) {
@@ -236,8 +242,14 @@ static void generate_chord_type_menu(ysw_performer_t *performer, ysw_menu_cb_t c
         initialize_item(p, softkey_map[i], chord_type->label, cb, i, submenu);
         p++;
     }
+
+    initialize_item(p++, YSW_BUTTON_2, "Root", ysw_menu_nop, 0, root_menu);
+    initialize_item(p++, YSW_BUTTON_3, "Program", on_program_1, 0, program_category_1_menu);
     finalize_menu(p, name);
 }
+
+static ysw_menu_item_t chord_type_template[YSW_APP_SOFTKEY_SZ + 3 + 1];
+static void on_settings_chord_type_1(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item);
 
 static void generate_program_menu(ysw_performer_t *performer, ysw_menu_cb_t cb, ysw_menu_item_t *template, uint8_t category, const char *name)
 {
@@ -248,6 +260,8 @@ static void generate_program_menu(ysw_performer_t *performer, ysw_menu_cb_t cb, 
         initialize_item(p, softkey_map[p - template], label, cb, program, NULL);
         p++;
     }
+    initialize_item(p++, YSW_BUTTON_1, "Type", on_settings_chord_type_1, 0, chord_type_template);
+    initialize_item(p++, YSW_BUTTON_2, "Root", ysw_menu_nop, 0, root_menu);
     finalize_menu(p, name);
 }
 
@@ -274,8 +288,7 @@ static void on_mode_rhythm(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t
 static void on_mode_harp(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
 {
     ysw_performer_t *performer = menu->context;
-    performer->mode = YSW_PERFORMER_MODE_MELODY;
-    performer->harp = !performer->harp;
+    performer->mode = YSW_PERFORMER_MODE_HARP;
 }
 
 static ysw_menu_item_t program_template[YSW_APP_SOFTKEY_SZ + 1];
@@ -308,6 +321,12 @@ static void on_settings_chord_type_1(ysw_menu_t *menu, ysw_event_t *event, ysw_m
 {
     ysw_performer_t *performer = menu->context;
     generate_chord_type_menu(performer, on_settings_chord_type_2, chord_type_template, NULL, "Type");
+}
+
+static void on_root(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
+{
+    ysw_performer_t *performer = menu->context;
+    performer->root = item->value;
 }
 
 static void on_headphone_volume(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item)
@@ -352,14 +371,14 @@ static void on_close(ysw_menu_t *menu, ysw_event_t *event, ysw_menu_item_t *item
 }
 
 static int8_t notekey_types[] = {
-    +1, -1, +2, -2, +3, +4, -3, +5, -4, +6, -5, +7, +8, -6, +9, -7, +10, +11, -8, +12, -9, +13, -10, +14
+    +1, -1, +2, -2, +3, +4, -3, +5, -4, +6, -5, +7, +8, -6, +9, -7, +10, +11, -8, +12, -9, +13, -10, +14, +15,
 };
 
 #define NOTE_INDEX_SZ (sizeof(notekey_types) / sizeof(notekey_types[0]))
 
 static void on_notekey_down(ysw_performer_t *performer, ysw_event_notekey_down_t *m)
 {
-    if (performer->harp) {
+    if (performer->mode == YSW_PERFORMER_MODE_HARP) {
         int8_t semitone = (m->midi_note - 60) % NOTE_INDEX_SZ;
         int8_t notekey_type = notekey_types[semitone];
         if (notekey_type > 0) {
@@ -368,22 +387,20 @@ static void on_notekey_down(ysw_performer_t *performer, ysw_event_notekey_down_t
             int8_t distance_index = note_index % distance_count;
             int8_t octave = note_index / distance_count;
             int8_t distance = YSW_INT ysw_array_get(performer->chord_type->distances, distance_index);
-            zm_note_t note = 36 + (octave * 12) + distance;
+            zm_note_t note = 36 + performer->root + (octave * 12) + distance;
             // ESP_LOGD(TAG, "input=%d, note_index=%d, distance_index=%d, octave=%d, distance=%d, output=%d", m->midi_note, note_index, distance_index, octave, distance, note);
             press_note(performer, note, m->time);
         }
     } else {
         press_note(performer, m->midi_note, m->time);
-        //fire_note_on(performer, MELODY_CHANNEL, m->midi_note);
     }
 }
 
 static void on_notekey_up(ysw_performer_t *performer, ysw_event_notekey_up_t *m)
 {
-    if (performer->harp) {
+    if (performer->mode == YSW_PERFORMER_MODE_HARP) {
     } else {
         release_note(performer, m->midi_note, m->time, m->duration);
-        //fire_note_off(performer, MELODY_CHANNEL, m->midi_note);
     }
 }
 
@@ -410,6 +427,32 @@ static void process_event(void *context, ysw_event_t *event)
             break;
     }
 }
+
+#if 0
+static const ysw_menu_item_t menu_template[] = {
+    { YSW_R1_C1, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R1_C2, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R1_C3, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R1_C4, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+
+    { YSW_R2_C1, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C2, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C3, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R2_C4, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+
+    { YSW_R3_C1, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R3_C2, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R3_C3, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R3_C4, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C2, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C3, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+    { YSW_R4_C4, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
+
+    { 0, "Menu Name", YSW_MF_END, NULL, 0, NULL },
+};
+#endif
 
 static const ysw_menu_item_t headphone_volume_menu[] = {
     { YSW_R1_C1, "10\n(Soft)", YSW_MF_COMMAND, on_headphone_volume, 10, NULL },
@@ -491,6 +534,10 @@ static const ysw_menu_item_t program_category_2_menu[] = {
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
 
+    { YSW_BUTTON_1, "Type", YSW_MF_REPLACE, on_settings_chord_type_1, 0, chord_type_template },
+    { YSW_BUTTON_2, "Root", YSW_MF_REPLACE, ysw_menu_nop, 0, root_menu },
+    { YSW_BUTTON_3, "Program", YSW_MF_REPLACE, on_program_1, 0, program_category_1_menu },
+
     { 0, "More", YSW_MF_END, NULL, 0, NULL },
 };
 
@@ -508,6 +555,10 @@ static const ysw_menu_item_t program_category_1_menu[] = {
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
     { YSW_R4_C4, "More", YSW_MF_PLUS, ysw_menu_nop, 0, program_category_2_menu },
 
+    { YSW_BUTTON_1, "Type", YSW_MF_REPLACE, on_settings_chord_type_1, 0, chord_type_template },
+    { YSW_BUTTON_2, "Root", YSW_MF_REPLACE, ysw_menu_nop, 0, root_menu },
+    { YSW_BUTTON_3, "Program", YSW_MF_REPLACE, on_program_1, 0, program_category_1_menu },
+
     { 0, "Category", YSW_MF_END, NULL, 0, NULL },
 };
 
@@ -523,32 +574,6 @@ static const ysw_menu_item_t settings_menu[] = {
     { 0, "Settings", YSW_MF_END, NULL, 0, NULL },
 };
 
-#if 0
-static const ysw_menu_item_t menu_template[] = {
-    { YSW_R1_C1, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { YSW_R1_C2, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { YSW_R1_C3, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { YSW_R1_C4, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-
-    { YSW_R2_C1, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { YSW_R2_C2, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { YSW_R2_C3, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { YSW_R2_C4, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-
-    { YSW_R3_C1, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { YSW_R3_C2, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { YSW_R3_C3, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { YSW_R3_C4, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-
-    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
-    { YSW_R4_C2, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { YSW_R4_C3, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-    { YSW_R4_C4, " ", YSW_MF_NOP, ysw_menu_nop, 0, NULL },
-
-    { 0, "Menu Name", YSW_MF_END, NULL, 0, NULL },
-};
-#endif
-
 static const ysw_menu_item_t input_mode_menu[] = {
     { YSW_R1_C1, "Note", YSW_MF_COMMAND, on_mode_melody, 0, NULL },
     { YSW_R1_C2, "Chord", YSW_MF_COMMAND, on_mode_chord, 0, NULL },
@@ -561,8 +586,27 @@ static const ysw_menu_item_t input_mode_menu[] = {
     { 0, "Input Mode", YSW_MF_END, NULL, 0, NULL },
 };
 
+static const ysw_menu_item_t root_menu[] = {
+    { YSW_R1_C1, "C", YSW_MF_PRESS, on_root, 0, NULL },
+    { YSW_R1_C2, "D", YSW_MF_PRESS, on_root, 2, NULL },
+    { YSW_R1_C3, "E", YSW_MF_PRESS, on_root, 4, NULL },
+    { YSW_R1_C4, "F", YSW_MF_PRESS, on_root, 5, NULL },
+
+    { YSW_R2_C1, "G", YSW_MF_PRESS, on_root, 7, NULL },
+    { YSW_R2_C2, "A", YSW_MF_PRESS, on_root, 9, NULL },
+    { YSW_R2_C3, "B", YSW_MF_PRESS, on_root, 11, NULL },
+
+    { YSW_BUTTON_1, "Type", YSW_MF_REPLACE, on_settings_chord_type_1, 0, chord_type_template },
+    { YSW_BUTTON_2, "Root", YSW_MF_REPLACE, ysw_menu_nop, 0, root_menu },
+    { YSW_BUTTON_3, "Program", YSW_MF_REPLACE, on_program_1, 0, program_category_1_menu },
+
+    { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
+
+    { 0, "Menu Name", YSW_MF_END, NULL, 0, NULL },
+};
 const ysw_menu_item_t performer_menu[] = {
     { YSW_R1_C1, "Input\nMode", YSW_MF_PLUS, ysw_menu_nop, 0, input_mode_menu },
+    { YSW_R1_C2, "Root", YSW_MF_REPLACE, ysw_menu_nop, 0, root_menu },
 
     { YSW_R2_C1, "Listen", YSW_MF_PLUS, ysw_menu_nop, 0, listen_menu },
 
@@ -571,6 +615,10 @@ const ysw_menu_item_t performer_menu[] = {
 
     { YSW_R4_C1, "Back", YSW_MF_MINUS, ysw_menu_nop, 0, NULL },
     { YSW_R4_C3, "Hide\nMenu", YSW_MF_TOGGLE, ysw_menu_nop, 0, NULL },
+
+    { YSW_BUTTON_1, "Type", YSW_MF_REPLACE, on_settings_chord_type_1, 0, chord_type_template },
+    { YSW_BUTTON_2, "Root", YSW_MF_REPLACE, ysw_menu_nop, 0, root_menu },
+    { YSW_BUTTON_3, "Program", YSW_MF_REPLACE, on_program_1, 0, program_category_1_menu },
 
     { 0, "Music", YSW_MF_END, NULL, 0, NULL },
 };
@@ -583,8 +631,12 @@ void ysw_performer_create(ysw_bus_t *bus, zm_music_t *music)
 
     performer->bus = bus;
     performer->music = music;
+    performer->mode = YSW_PERFORMER_MODE_HARP;
 
     performer->chord_type = ysw_array_get(music->chord_types, DEFAULT_CHORD_TYPE);
+
+    fire_bank_select(performer, RHYTHM_CHANNEL, YSW_MIDI_DRUM_BANK);
+    fire_bank_select(performer, BACKGROUND_RHYTHM, YSW_MIDI_DRUM_BANK);
 
     performer->container = lv_obj_create(lv_scr_act(), NULL);
     assert(performer->container);

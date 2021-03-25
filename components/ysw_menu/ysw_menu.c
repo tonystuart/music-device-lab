@@ -289,6 +289,13 @@ static void reset_menu(ysw_menu_t *menu)
     }
 }
 
+static void replace_menu(ysw_menu_t *menu, ysw_menu_item_t *item)
+{
+    reset_menu(menu);
+    ysw_array_push(menu->stack, (void*)item->submenu);
+    show_softkeys(menu);
+}
+
 void ysw_menu_on_softkey_down(ysw_menu_t *menu, ysw_event_t *event)
 {
     ysw_menu_item_t *menu_item = find_item_by_softkey(menu, event->softkey_down.softkey);
@@ -323,6 +330,9 @@ void ysw_menu_on_softkey_up(ysw_menu_t *menu, ysw_event_t *event)
                 break;
             case YSW_MENU_RESET:
                 reset_menu(menu);
+                break;
+            case YSW_MENU_REPLACE:
+                replace_menu(menu, menu_item);
                 break;
         }
     }

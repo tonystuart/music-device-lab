@@ -2074,6 +2074,12 @@ const ysw_menu_item_t editor_menu[] = {
     { YSW_R4_C3, "Hide\nMenu", YSW_MF_TOGGLE, ysw_menu_nop, 0, NULL },
     { YSW_R4_C4, "Right", YSW_MF_COMMAND, on_right, 0, NULL },
 
+    { YSW_BUTTON_1, "Left", YSW_MF_COMMAND, on_left, 0, NULL },
+    { YSW_BUTTON_2, "Right", YSW_MF_COMMAND, on_right, 0, NULL },
+    { YSW_BUTTON_3, "Delete", YSW_MF_COMMAND, on_delete, 0, NULL },
+    { YSW_BUTTON_4, "Up", YSW_MF_COMMAND, on_edit_pitch, +1, NULL },
+    { YSW_BUTTON_5, "Down", YSW_MF_COMMAND, on_edit_pitch, -1, NULL },
+
     { 0, "Music", YSW_MF_END, NULL, 0, NULL },
 };
 

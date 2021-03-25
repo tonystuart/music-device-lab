@@ -76,11 +76,11 @@ static const ysw_mapper_item_t mmv05_map[] = {
     /* 22 */ -82,
     /* 23 */ -83,
     /* 24 */ -84,
-    /* 25 */ YSW_R1_C4, // wired right-to-left
-    /* 26 */ YSW_R2_C4,
-    /* 27 */ YSW_R4_C2,
-    /* 28 */ YSW_R4_C4,
-    /* 29 */ YSW_R3_C4,
+    /* 25 */ YSW_BUTTON_5, // wired right-to-left on prototype
+    /* 26 */ YSW_BUTTON_4,
+    /* 27 */ YSW_BUTTON_3,
+    /* 28 */ YSW_BUTTON_2,
+    /* 29 */ YSW_BUTTON_1,
 };
 
 #if AUDIO_TYPE == MOD_SYNTH_I2S

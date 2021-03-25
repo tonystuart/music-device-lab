@@ -34,6 +34,12 @@ typedef enum {
 	YSW_R4_C2,
 	YSW_R4_C3,
 	YSW_R4_C4,
+
+    YSW_BUTTON_1,
+    YSW_BUTTON_2,
+    YSW_BUTTON_3,
+    YSW_BUTTON_4,
+    YSW_BUTTON_5,
 } ysw_app_softkey_t;
 
 extern const ysw_menu_softkey_t ysw_app_softkey_map[];
