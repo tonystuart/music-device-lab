@@ -116,6 +116,15 @@ static ysw_mod_sample_t *parse_sample(ysw_csv_t *csv)
     sample->to_note = atoi(ysw_csv_get_token(csv, 17));
     sample->from_velocity = atoi(ysw_csv_get_token(csv, 18));
     sample->to_velocity = atoi(ysw_csv_get_token(csv, 19));
+
+    ESP_LOGD(TAG, "%-12s %-12g %-12g %-12g %-12g %-12g",
+            sample->name,
+            (float)sample->attack / SAMPLE_RATE,
+            (float)sample->hold / SAMPLE_RATE,
+            (float)sample->decay / SAMPLE_RATE,
+            (float)atoi(ysw_csv_get_token(csv, 14)) / 10,
+            (float)sample->release / SAMPLE_RATE);
+
     return sample;
 }
 
@@ -123,6 +132,9 @@ static ysw_mod_instrument_t *parse_instrument(ysw_csv_t *csv)
 {
     ysw_mod_instrument_t *instrument = ysw_heap_allocate(sizeof(ysw_mod_instrument_t));
     instrument->samples = ysw_array_create(8);
+
+    ESP_LOGD(TAG, "%-12s %-12s %-12s %-12s %-12s %-12s",
+            "Sample", "Attack (s)", "Hold (s)", "Decay (s)", "Sustain (dB)", "Release (s)");
 
     bool done = false;
     uint32_t token_count = 0;
@@ -309,7 +321,7 @@ static void calculate_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *vo
                 voice->state = YSW_MOD_DECAY;
                 voice->next_change = voice->iterations + voice->sample->decay;
                 voice->ramp_step = get_ramp_step(voice, AMP_MAX_SCALED, voice->sample->sustain);
-                // ESP_LOGD(TAG, "decay samples=%d (%gs), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, AMP_MAX_SCALED, voice->sample->sustain, voice->ramp_step);
+                ESP_LOGD(TAG, "decay samples=%d (%gs), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, AMP_MAX_SCALED, voice->sample->sustain, voice->ramp_step);
             }
             voice->amplitude += voice->ramp_step;
             break;
@@ -317,14 +329,14 @@ static void calculate_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *vo
             if (voice->iterations >= voice->next_change) {
                 voice->state = YSW_MOD_SUSTAIN;
                 voice->ramp_step = 0;
-                // ESP_LOGD(TAG, "sustain amplitude=%d, sustain=%d, delta=%d", voice->amplitude, voice->sample->sustain, voice->amplitude - voice->sample->sustain);
+                ESP_LOGD(TAG, "sustain amplitude=%d, sustain=%d, delta=%d", voice->amplitude, voice->sample->sustain, voice->amplitude - voice->sample->sustain);
             }
             voice->amplitude += voice->ramp_step;
             break;
         case YSW_MOD_SUSTAIN:
             if ((voice->amplitude >> AMP_SCALE_FACTOR) <= 0) {
                 voice->state = YSW_MOD_IDLE;
-                // ESP_LOGD(TAG, "sustain->idle");
+                ESP_LOGD(TAG, "sustain->idle");
             }
             break;
         case YSW_MOD_NOTE_OFF:
