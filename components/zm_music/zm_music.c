@@ -996,6 +996,8 @@ ysw_array_t *zm_render_composition(zm_music_t *music, zm_composition_t *composit
 // |       |       |       |       |       |       |       |       |
 // |   0   |   2   |   4   |   5   |   7   |   9   |  11   |  12   |
 // +-------+-------+-------+-------+-------+-------+-------+-------+
+//    60      62      64      65      67      69      71      72
+//    72      74      76      77      79      81      83      84
 
 // https://en.wikipedia.org/wiki/Key_signature
 // https://en.wikipedia.org/wiki/C-sharp_major for A-sharp minor

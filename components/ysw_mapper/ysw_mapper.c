@@ -23,6 +23,7 @@ typedef struct {
 static void on_key_down(ysw_mapper_t *mapper, ysw_event_key_down_t *m)
 {
     ysw_mapper_item_t item = mapper->map[m->scan_code];
+    ESP_LOGD(TAG, "mapping scan_code=%d to item=%d", m->scan_code, item);
     if (item < 0) {
         ysw_event_notekey_down_t notekey_down = {
             .midi_note = -item,

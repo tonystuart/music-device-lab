@@ -29,7 +29,8 @@
 #type(quality),index,name,distances
 4,0,Major,Maj,0,4,7
 4,1,Minor,min,0,3,7
-4,2,Major 7th,Maj7,0,4,7,11
+4,2,7th,7,0,4,7,10
+#4,2,Major 7th,Maj7,0,4,7,11
 4,3,Minor 7th,min7,0,3,7,10
 4,4,Dominant 7th,dom7,0,4,7,10
 4,5,Augmented,aug,0,4,8

@@ -319,7 +319,8 @@ static void calculate_amplitude_envelope(ysw_mod_synth_t *mod_synth, voice_t *vo
         case YSW_MOD_HOLD:
             if (voice->iterations >= voice->next_change) {
                 voice->state = YSW_MOD_DECAY;
-                voice->next_change = voice->iterations + voice->sample->decay;
+                //voice->next_change = voice->iterations + voice->sample->decay;
+                voice->next_change = voice->iterations + (3 * SAMPLE_RATE);
                 voice->ramp_step = get_ramp_step(voice, AMP_MAX_SCALED, voice->sample->sustain);
                 ESP_LOGD(TAG, "decay samples=%d (%gs), from=%d, to=%d, step=%d", voice->next_change - voice->iterations, (float)(voice->next_change - voice->iterations)/SAMPLE_RATE, AMP_MAX_SCALED, voice->sample->sustain, voice->ramp_step);
             }

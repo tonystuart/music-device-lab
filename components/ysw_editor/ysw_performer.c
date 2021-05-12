@@ -388,7 +388,7 @@ static void on_notekey_down(ysw_performer_t *performer, ysw_event_notekey_down_t
             int8_t octave = note_index / distance_count;
             int8_t distance = YSW_INT ysw_array_get(performer->chord_type->distances, distance_index);
             zm_note_t note = 36 + performer->root + (octave * 12) + distance;
-            // ESP_LOGD(TAG, "input=%d, note_index=%d, distance_index=%d, octave=%d, distance=%d, output=%d", m->midi_note, note_index, distance_index, octave, distance, note);
+            ESP_LOGD(TAG, "input=%d, note_index=%d, distance_index=%d, octave=%d, distance=%d, output=%d, note=%s", m->midi_note, note_index, distance_index, octave, distance, note, zm_get_note_name(note));
             press_note(performer, note, m->time);
         }
     } else {
@@ -404,6 +404,43 @@ static void on_notekey_up(ysw_performer_t *performer, ysw_event_notekey_up_t *m)
     }
 }
 
+static void on_softkey_down(ysw_performer_t *performer, ysw_event_t *event)
+{
+    ysw_event_softkey_down_t *m = &event->softkey_down;
+    if (m->softkey >= 100 && m->softkey < 121) {
+    } else {
+        ysw_menu_on_softkey_down(performer->menu, event);
+    }
+}
+
+static uint8_t note_to_semitone[] = {
+    0, 2, 4, 5, 7, 9, 11,
+};
+
+static void on_softkey_up(ysw_performer_t *performer, ysw_event_t *event)
+{
+    // TODO: handle multiple keys down
+    ysw_event_softkey_up_t *m = &event->softkey_up;
+    if (m->softkey >= 100 && m->softkey < 121) {
+        uint8_t i = m->softkey - 100;
+        uint8_t chord_index = i / 7;
+        performer->chord_type = ysw_array_get(performer->music->chord_types, chord_index);
+        performer->root = note_to_semitone[i % 7];
+        ESP_LOGD(TAG, "chord_index=%d, root=%d", chord_index, performer->root);
+    } else {
+        ysw_menu_on_softkey_up(performer->menu, event);
+    }
+}
+
+static void on_softkey_pressed(ysw_performer_t *performer, ysw_event_t *event)
+{
+    ysw_event_softkey_pressed_t *m = &event->softkey_pressed;
+    if (m->softkey >= 100 && m->softkey < 121) {
+    } else {
+        ysw_menu_on_softkey_pressed(performer->menu, event);
+    }
+}
+
 static void process_event(void *context, ysw_event_t *event)
 {
     ysw_performer_t *performer = context;
@@ -415,13 +452,13 @@ static void process_event(void *context, ysw_event_t *event)
             on_notekey_up(performer, &event->notekey_up);
             break;
         case YSW_EVENT_SOFTKEY_DOWN:
-            ysw_menu_on_softkey_down(performer->menu, event);
+            on_softkey_down(performer, event);
             break;
         case YSW_EVENT_SOFTKEY_UP:
-            ysw_menu_on_softkey_up(performer->menu, event);
+            on_softkey_up(performer, event);
             break;
         case YSW_EVENT_SOFTKEY_PRESSED:
-            ysw_menu_on_softkey_pressed(performer->menu, event);
+            on_softkey_pressed(performer, event);
             break;
         default:
             break;
