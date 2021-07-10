@@ -212,6 +212,7 @@ static void play_note(ysw_sequencer_t *sequencer, ysw_note_t *note, int next_not
         ysw_event_program_change_t program_change = {
             .channel = note->channel,
             .program = note->program,
+            .preload = false, // TODO: before starting playback, scan song and preload all programs
         };
         ysw_event_fire_program_change(sequencer->bus, YSW_ORIGIN_EDITOR, &program_change);
         sequencer->programs[note->channel] = note->program;

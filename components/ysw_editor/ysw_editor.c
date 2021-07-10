@@ -377,6 +377,7 @@ static void fire_program_change(ysw_editor_t *editor, zm_channel_x channel, zm_p
     ysw_event_program_change_t program_change = {
         .channel = channel,
         .program = program,
+        .preload = true,
     };
     ysw_event_fire_program_change(editor->bus, YSW_ORIGIN_EDITOR, &program_change);
 }

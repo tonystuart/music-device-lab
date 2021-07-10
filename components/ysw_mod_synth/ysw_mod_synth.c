@@ -567,9 +567,8 @@ static ysw_mod_sample_t *find_sample(ysw_mod_instrument_t *instrument, uint8_t m
     return NULL;
 }
 
-static ysw_mod_sample_t *get_sample(ysw_mod_synth_t *mod_synth, ysw_mod_instrument_t *instrument, uint8_t midi_note)
+static void realize_sample_data(ysw_mod_synth_t *mod_synth, ysw_mod_sample_t *sample)
 {
-    ysw_mod_sample_t *sample = find_sample(instrument, midi_note);
     if (sample && !sample->data) {
         hnode_t *node = hash_lookup(mod_synth->sample_map, sample->name);
         if (node) {
@@ -582,6 +581,12 @@ static ysw_mod_sample_t *get_sample(ysw_mod_synth_t *mod_synth, ysw_mod_instrume
             }
         }
     }
+}
+
+static ysw_mod_sample_t *get_sample(ysw_mod_synth_t *mod_synth, ysw_mod_instrument_t *instrument, uint8_t midi_note)
+{
+    ysw_mod_sample_t *sample = find_sample(instrument, midi_note);
+    realize_sample_data(mod_synth, sample);
     return sample;
 }
 
@@ -634,6 +639,20 @@ static void stop_note(ysw_mod_synth_t *mod_synth, uint8_t channel, uint8_t midi_
     leave_critical_section(mod_synth);
 }
 
+static void preload_preset(ysw_mod_synth_t *mod_synth, uint8_t bank, uint8_t preset)
+{
+    ysw_mod_preset_t *p = realize_preset(mod_synth, bank, preset);
+    uint8_t instrument_count = ysw_array_get_count(p->instruments);
+    for (uint8_t i = 0; i < instrument_count; i++) {
+        ysw_mod_instrument_t *instrument = ysw_array_get(p->instruments, i);
+        uint8_t sample_count = ysw_array_get_count(instrument->samples);
+        for (uint8_t j = 0; j < sample_count; j++) {
+            ysw_mod_sample_t *sample = ysw_array_get(instrument->samples, j);
+            realize_sample_data(mod_synth, sample);
+        }
+    }
+}
+
 static void on_note_on(ysw_mod_synth_t *mod_synth, ysw_event_note_on_t *m)
 {
     assert(m->channel < YSW_MIDI_MAX_CHANNELS);
@@ -664,6 +683,11 @@ static void on_program_change(ysw_mod_synth_t *mod_synth, ysw_event_program_chan
     assert(m->program < YSW_MIDI_MAX_COUNT);
 
     mod_synth->channel_presets[m->channel] = m->program;
+
+    if (m->preload) {
+        uint8_t bank = mod_synth->channel_banks[m->channel];
+        preload_preset(mod_synth, bank, m->program);
+    }
 }
 
 static void on_synth_gain(ysw_mod_synth_t *mod_synth, ysw_event_synth_gain_t *m)

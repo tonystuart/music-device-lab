@@ -92,6 +92,7 @@ static void fire_program_change(ysw_performer_t *performer, zm_channel_x channel
     ysw_event_program_change_t program_change = {
         .channel = channel,
         .program = program,
+        .preload = true,
     };
     ysw_event_fire_program_change(performer->bus, YSW_ORIGIN_EDITOR, &program_change);
 }
@@ -674,6 +675,9 @@ void ysw_performer_create(ysw_bus_t *bus, zm_music_t *music)
 
     fire_bank_select(performer, RHYTHM_CHANNEL, YSW_MIDI_DRUM_BANK);
     fire_bank_select(performer, BACKGROUND_RHYTHM, YSW_MIDI_DRUM_BANK);
+
+    fire_program_change(performer, MELODY_CHANNEL, performer->melody_program);
+    fire_program_change(performer, CHORD_CHANNEL, performer->chord_program);
 
     performer->container = lv_obj_create(lv_scr_act(), NULL);
     assert(performer->container);

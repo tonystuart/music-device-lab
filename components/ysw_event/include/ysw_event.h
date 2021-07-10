@@ -98,6 +98,7 @@ typedef struct {
 typedef struct {
     uint8_t channel;
     uint8_t program;
+    bool preload;
 } ysw_event_program_change_t;
 
 typedef struct {

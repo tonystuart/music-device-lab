@@ -149,9 +149,11 @@ static void initialize_audio_output(void)
 
     i2s_mclk_gpio_select(0, GPIO_NUM_0);
 
+#if 0
     ESP_LOGW(TAG, "****** Turning Speaker Off *******");
     extern esp_err_t ac101_set_spk_volume(int volume);
 	$(ac101_set_spk_volume(0));
+#endif
 }
 
 static void initialize_touch_screen(void)
