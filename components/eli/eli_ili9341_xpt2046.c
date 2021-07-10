@@ -317,14 +317,20 @@ static bool xpt2046_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
 {
     static int16_t last_x = 0;
     static int16_t last_y = 0;
+    static bool initialized = false;
+
     bool valid = true;
 
     int16_t x = 0;
     int16_t y = 0;
 
+    // NB: On some boards, the XPT2046 doesn't assert "IRQ" until tp_spi_xchg has been called several times
     uint8_t data_ready = gpio_get_level(config.irq) == LOW;
-
     if (data_ready) {
+        initialized = true;
+    }
+
+    if (!initialized || data_ready) {
         send_buffer[0] = CMD_X_READ;
         send_buffer[1] = 0;
         send_buffer[2] = CMD_Y_READ;
@@ -377,8 +383,9 @@ static bool xpt2046_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
     data->point.x = x;
     data->point.y = y;
     data->state = valid == false ? LV_INDEV_STATE_REL : LV_INDEV_STATE_PR;
+    //ESP_LOGD(TAG, "ready=%d, x=%d, y=%d, state=%d", data_ready, data->point.x, data->point.y, data->state);
 
-    return false;
+    return false; // no additional data is buffered
 }
 
 static void configure_shared_spi_bus()
@@ -403,6 +410,7 @@ static void configure_shared_spi_bus()
         .post_cb = post_cb
     };
 
+    ESP_LOGD(TAG, "configure_shared_spi_bus adding ili9341");
     $(spi_bus_add_device(config.spi_host, &ili9341_config, &ili9341_spi));
     ili9341_init();
 
@@ -415,6 +423,7 @@ static void configure_shared_spi_bus()
         .post_cb = NULL,
     };
 
+    ESP_LOGD(TAG, "configure_shared_spi_bus adding xpt2046");
     $(spi_bus_add_device(config.spi_host, &xpt2046_config, &xpt2046_spi));
     xpt2046_init();
 }
