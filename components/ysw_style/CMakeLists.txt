@@ -1,9 +1,10 @@
 idf_component_register(
   SRCS
-    eli_ili9341_xpt2046.c
+    ysw_style.c
   INCLUDE_DIRS
     include
   REQUIRES
     lvgl
+    ysw_edit_pane
   PRIV_REQUIRES
 )

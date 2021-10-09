@@ -1,0 +1,14 @@
+idf_component_register(
+  SRCS
+    zm_music.c
+  INCLUDE_DIRS
+    include
+  REQUIRES
+    ysw_array
+    ysw_common
+    ysw_csv
+    ysw_heap
+    ysw_midi
+    ysw_name
+  PRIV_REQUIRES
+)

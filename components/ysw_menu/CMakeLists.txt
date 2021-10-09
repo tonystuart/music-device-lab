@@ -1,0 +1,16 @@
+idf_component_register(
+  SRCS
+    ysw_menu.c
+  INCLUDE_DIRS
+    include
+  REQUIRES
+    lvgl
+    ysw_bus
+    ysw_common
+    ysw_event
+    ysw_heap
+    ysw_shell
+    ysw_string
+    ysw_style
+  PRIV_REQUIRES
+)

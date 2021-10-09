@@ -1,0 +1,15 @@
+idf_component_register(
+  SRCS
+    ysw_keyboard.c
+  INCLUDE_DIRS
+    include
+  REQUIRES
+    ysw_array
+    ysw_bus
+    ysw_common
+    ysw_event
+    ysw_heap
+    ysw_keystate
+    ysw_task
+  PRIV_REQUIRES
+)

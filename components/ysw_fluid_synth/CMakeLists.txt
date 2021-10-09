@@ -1,0 +1,14 @@
+idf_component_register(
+  SRCS
+    ysw_fluid_synth.c
+  INCLUDE_DIRS
+    include
+  REQUIRES
+    fluidsynth
+    ysw_bus
+    ysw_common
+    ysw_event
+    ysw_heap
+    ysw_task
+  PRIV_REQUIRES
+)

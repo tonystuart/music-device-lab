@@ -1,0 +1,14 @@
+idf_component_register(
+  SRCS
+    ysw_vs_synth.c
+  INCLUDE_DIRS
+    include
+  REQUIRES
+    ysw_bus
+    ysw_common
+    ysw_event
+    ysw_heap
+    ysw_task
+    ysw_vs1053
+  PRIV_REQUIRES
+)

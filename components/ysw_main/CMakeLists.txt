@@ -1,0 +1,42 @@
+idf_component_register(
+  SRCS
+    extractor.c
+    ysw_main_esp32.c
+    ysw_main_linux.c
+    ysw_mmv01.c
+    ysw_mmv02.c
+    ysw_mmv04.c
+    ysw_mmv05.c
+    ysw_mmv06.c
+  INCLUDE_DIRS
+  REQUIRES
+    fluidsynth
+    lvgl
+    lvgl
+    ysw_bt_synth
+    ysw_common
+    ysw_csv
+    ysw_editor
+    ysw_event
+    ysw_fluid_synth
+    ysw_heap
+    ysw_i2s
+    ysw_keyboard
+    ysw_led
+    ysw_mapper
+    ysw_midi
+    ysw_mod_synth
+    ysw_remote
+    ysw_sequencer
+    ysw_shell
+    ysw_spiffs
+    ysw_staff
+    ysw_string
+    ysw_touch
+    ysw_tty
+    ysw_vs_synth
+    zm_music
+  PRIV_REQUIRES
+)
+
+target_compile_options(${COMPONENT_LIB} PRIVATE -DMM_V01=1 -DMM_V02=2 -DMM_V04=4 -DMM_V05=5 -DMM_V06=6 -DMM_VERSION=MM_V06)

@@ -1,6 +1,17 @@
-# The following lines of boilerplate have to be in your project's
-# CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(player)
+
+idf_build_set_property(__COMPONENT_REQUIRES_COMMON audio-kit APPEND)
+idf_build_set_property(__COMPONENT_REQUIRES_COMMON cpp_utils APPEND)
+idf_build_set_property(__COMPONENT_REQUIRES_COMMON eli APPEND)
+idf_build_set_property(__COMPONENT_REQUIRES_COMMON esp_a2dp APPEND)
+idf_build_set_property(__COMPONENT_REQUIRES_COMMON fluidsynth APPEND)
+idf_build_set_property(__COMPONENT_REQUIRES_COMMON hxcmod APPEND)
+idf_build_set_property(__COMPONENT_REQUIRES_COMMON kazlib APPEND)
+idf_build_set_property(__COMPONENT_REQUIRES_COMMON lvgl APPEND)
+
+idf_build_set_property(__COMPONENT_REQUIRES_COMMON bt APPEND)
+idf_build_set_property(__COMPONENT_REQUIRES_COMMON spiffs APPEND)
+
+project(music-device-lab)

@@ -1,9 +1,7 @@
 idf_component_register(
   SRCS
-    eli_ili9341_xpt2046.c
   INCLUDE_DIRS
     include
   REQUIRES
-    lvgl
   PRIV_REQUIRES
 )

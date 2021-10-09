@@ -1,0 +1,24 @@
+idf_component_register(
+  SRCS
+    ysw_editor.c
+    ysw_field.c
+    ysw_footer.c
+    ysw_header.c
+    ysw_performer.c
+  INCLUDE_DIRS
+    include
+  REQUIRES
+    lvgl
+    ysw_bus
+    ysw_common
+    ysw_event
+    ysw_heap
+    ysw_menu
+    ysw_midi
+    ysw_staff
+    ysw_string
+    ysw_style
+    ysw_task
+    zm_music
+  PRIV_REQUIRES
+)

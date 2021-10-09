@@ -1,9 +1,10 @@
 idf_component_register(
   SRCS
-    eli_ili9341_xpt2046.c
+    ysw_i2c.c
   INCLUDE_DIRS
     include
   REQUIRES
-    lvgl
+    ysw_common
+    ysw_heap
   PRIV_REQUIRES
 )

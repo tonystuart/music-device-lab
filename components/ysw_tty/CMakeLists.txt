@@ -1,9 +1,13 @@
 idf_component_register(
   SRCS
-    eli_ili9341_xpt2046.c
+    ysw_tty.c
   INCLUDE_DIRS
     include
   REQUIRES
-    lvgl
+    ysw_bus
+    ysw_common
+    ysw_event
+    ysw_heap
+    ysw_task
   PRIV_REQUIRES
 )

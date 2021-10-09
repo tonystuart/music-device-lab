@@ -1,0 +1,13 @@
+idf_component_register(
+  SRCS
+    ysw_test_all.c
+    ysw_test_ysw_common.c
+    ysw_test_ysw_string.c
+    ysw_test_zm_music.c
+  INCLUDE_DIRS
+  REQUIRES
+    ysw_common
+    ysw_string
+    zm_music
+  PRIV_REQUIRES
+)

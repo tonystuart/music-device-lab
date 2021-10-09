@@ -1,0 +1,17 @@
+idf_component_register(
+  SRCS
+    ysw_touch.c
+  INCLUDE_DIRS
+    include
+  REQUIRES
+    ysw_array
+    ysw_bus
+    ysw_common
+    ysw_event
+    ysw_heap
+    ysw_i2c
+    ysw_keystate
+    ysw_mpr121
+    ysw_task
+  PRIV_REQUIRES
+)

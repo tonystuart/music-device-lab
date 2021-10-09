@@ -1,0 +1,27 @@
+idf_component_register(
+  SRCS
+    ysw_app.c
+    ysw_chooser.c
+    ysw_popup.c
+    ysw_shell.c
+    ysw_splash_image.c
+  INCLUDE_DIRS
+    include
+  REQUIRES
+    lvgl
+    lvgl
+    ysw_array
+    ysw_bus
+    ysw_common
+    ysw_editor
+    ysw_edit_pane
+    ysw_event
+    ysw_heap
+    ysw_menu
+    ysw_name
+    ysw_string
+    ysw_style
+    ysw_task
+    zm_music
+  PRIV_REQUIRES
+)

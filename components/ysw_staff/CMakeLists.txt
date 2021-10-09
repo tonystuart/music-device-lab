@@ -1,9 +1,14 @@
 idf_component_register(
   SRCS
-    eli_ili9341_xpt2046.c
+    MusiQwikT_48.c
+    ysw_staff.c
   INCLUDE_DIRS
     include
   REQUIRES
     lvgl
+    lvgl
+    ysw_array
+    ysw_style
+    zm_music
   PRIV_REQUIRES
 )
